@@ -1,0 +1,272 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useState, useEffect, useRef } from'react';
+import { X, Maximize, Settings, Youtube, Play, Loader, ShieldAlert } from'lucide-react';
+
+interface VideoPlayerProps {
+  type: 'movie' | 'tv';
+  id: number;
+  title: string;
+  season?: number;
+  episode?: number;
+  episodesCount?: number;
+  youtubeKey?: string | null;
+  playMode: 'movie' | 'trailer';
+  onClose: () => void;
+  onSwitchMode: (mode: 'movie' | 'trailer') => void;
+  onNextEpisode?: () => void;
+}
+
+export default function VideoPlayer({
+  type,
+  id,
+  title,
+  season = 1,
+  episode = 1,
+  episodesCount = 1,
+  youtubeKey,
+  playMode,
+  onClose,
+  onSwitchMode,
+  onNextEpisode,
+}: VideoPlayerProps) {
+  const [skin, setSkin] = useState<string>(() => localStorage.getItem('noir_skin') ||'nf');
+  const [isSkinMenuOpen, setIsSkinMenuOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Watch progression state
+  const progressKey =`noir_progress_${type}_${id}`;
+  const [progress, setProgress] = useState<number>(() => {
+    return Number(localStorage.getItem(progressKey)) || 0;
+  });
+
+  // Automated progress updates while actively watching
+  useEffect(() => {
+    if (playMode !=='movie') return;
+
+    // Immediately record that user started watching
+    const savedOnStart = Number(localStorage.getItem(progressKey)) || 0;
+    let currentVal = savedOnStart === 0 ? 8 : savedOnStart;
+
+    if (savedOnStart === 0) {
+      setProgress(8);
+      localStorage.setItem(progressKey,'8');
+      window.dispatchEvent(new Event('progress_updated'));
+    }
+
+    const timer = setInterval(() => {
+      const currentSaved = Number(localStorage.getItem(progressKey)) || 0;
+      if (currentSaved < 96) {
+        const newVal = currentSaved + 1;
+        setProgress(newVal);
+        localStorage.setItem(progressKey, String(newVal));
+        window.dispatchEvent(new Event('progress_updated'));
+      }
+    }, 10000); // Increments progress by 1% every 10 seconds of active playback
+
+    return () => clearInterval(timer);
+  }, [type, id, playMode, progressKey]);
+
+  // Auto-scroll player into perfect view center
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    setIsLoading(true);
+    // Reload progress percent for shift
+    const saved = Number(localStorage.getItem(`noir_progress_${type}_${id}`)) || 0;
+    setProgress(saved);
+  }, [type, id, season, episode, playMode, skin]);
+
+  // Compute VIT API provider url
+  const getEmbedUrl = () => {
+    if (playMode ==='trailer' && youtubeKey) {
+      return`https://www.youtube.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1`;
+    }
+
+    const params = new URLSearchParams({
+      primaryColor: 'ff453a', // Nice bright red matching Noir brand color system
+      secondaryColor: '0a0a0a',
+      iconColor: 'FFFFFF',
+      icons: 'vid',
+      player: skin,
+      title: 'true',
+      poster: 'true',
+      autoplay: 'true',
+    });
+
+    if (type ==='tv') {
+      params.set('nextbutton','true');
+      return`https://vidapi.qzz.io/tv/${id}/${season}/${episode}?${params.toString()}`;
+    }
+
+    return`https://vidapi.qzz.io/movie/${id}?${params.toString()}`;
+  };
+
+  const handleSkinChange = (selectedSkin: string) => {
+    setSkin(selectedSkin);
+    localStorage.setItem('noir_skin', selectedSkin);
+    setIsSkinMenuOpen(false);
+  };
+
+  const handleFullscreen = () => {
+    const el = containerRef.current?.querySelector('.player-shell');
+    if (el) {
+      const req =
+        el.requestFullscreen ||
+        (el as any).webkitRequestFullscreen ||
+        (el as any).msRequestFullscreen;
+      if (req) {
+        req.call(el);
+      }
+    }
+  };
+
+  return (
+    <div ref={containerRef} className="w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl animate-fade-in text-right">
+      <div className="player-shell bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl relative">
+        
+        {/* Player Header Control Bar */}
+        <div className="flex items-center justify-between gap-4 px-4 py-3 bg-gradient-to-b from-neutral-900 via-[#0a0a0a] to-[#0a0a0a] border-b border-white/5 selection:bg-transparent">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <span
+              className={`text-[10px] md:text-xs font-bold px-2 py-0.5 rounded-md shrink-0 uppercase tracking-wider ${
+                playMode ==='trailer' ?'bg-[#ff0033] text-white' :'bg-red-500 text-white'
+              }`}
+            >
+              {playMode ==='trailer' ?'إعلان ترويجي' :'المشغل الرئيسي'}
+</span>
+            <h4 className="text-white font-semibold text-xs md:text-sm truncate select-all">
+              {title} {type ==='tv' && playMode ==='movie' &&`(الموسم ${season} · الحلقة ${episode})`}
+</h4>
+</div>
+
+          <div className="flex items-center gap-1.5 shrink-0 relative">
+            {/* Play Mode Switcher (if trailer exists) */}
+            {playMode ==='movie' && youtubeKey && (
+              <button
+                onClick={() => onSwitchMode('trailer')}
+                className="flex items-center gap-1 bg-white/5 hover:bg-white/10 text-white border border-white/5 text-xs font-medium px-3 py-1.5 rounded-full cursor-pointer transition-colors"
+                title="عرض الإعلان الرسمي"
+              >
+                <Youtube className="w-4 h-4 text-red-500" />
+                <span className="hidden sm:inline">الإعلان الرسمي</span>
+</button>
+            )}
+
+            {playMode ==='trailer' && (
+              <button
+                onClick={() => onSwitchMode('movie')}
+                className="flex items-center gap-1 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold px-3 py-1.5 rounded-full cursor-pointer transition-colors"
+                title="الرجوع للفيلم أو المسلسل"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>شاهد الآن</span>
+</button>
+            )}
+
+            {/* Next Episode Button */}
+            {type ==='tv' && playMode ==='movie' && onNextEpisode && episode < episodesCount && (
+              <button
+                onClick={onNextEpisode}
+                className="flex items-center gap-1 bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full cursor-pointer transition-colors"
+                title="تشغيل الحلقة التالية للمسلسل"
+              >
+                <span>الحلقة التالية ⟵</span>
+</button>
+            )}
+
+            {/* Skin / Engine Selection Menu */}
+            {playMode ==='movie' && (
+              <div className="relative">
+                <button
+                  onClick={() => setIsSkinMenuOpen(!isSkinMenuOpen)}
+                  className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white flex items-center justify-center cursor-pointer transition-colors border border-white/5"
+                  title="تغيير نمط الترجمة والمشغل"
+                >
+                  <Settings className="w-4 h-4" />
+</button>
+
+                {isSkinMenuOpen && (
+                  <div className="absolute left-0 top-[120%] z-50 bg-neutral-900/98 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-2 min-w-[220px] text-right font-sans">
+                    <div className="text-[10px] uppercase font-bold text-gray-400 px-3 py-1.5 select-none">
+                      نمط المشغل والترجمة
+</div>
+                    {[
+                      { id: 'nf', name: 'Netflix Theme', desc: 'ترجمة بيضاء عريضة تليق بالسينما' },
+                      { id: 'default', name: 'VidApi Original', desc: 'المشغّل الافتراضي متناسق وسريع' },
+                      { id: 'plus', name: 'VideoJS Plus', desc: 'ترجمة كلاسيكية تقليدية بخلفية معتمة' },
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => handleSkinChange(item.id)}
+                        className={`w-full text-right px-3 py-2 rounded-xl flex flex-col cursor-pointer transition-colors ${
+                          skin === item.id ?'bg-red-500/10 border border-red-500/10' :'hover:bg-white/5'
+                        }`}
+                      >
+                        <span className={`text-xs font-semibold ${skin === item.id ?'text-red-400' :'text-white'}`}>
+                          {item.name} {skin === item.id &&'✓'}
+</span>
+                        <span className="text-[10px] text-gray-400 mt-0.5">{item.desc}</span>
+</button>
+                    ))}
+</div>
+                )}
+</div>
+            )}
+
+            {/* Fullscreen Button */}
+            <button
+              onClick={handleFullscreen}
+              className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white flex items-center justify-center cursor-pointer transition-colors border border-white/5"
+              title="ملء الشاشة"
+            >
+              <Maximize className="w-4 h-4" />
+</button>
+
+            {/* Close Button */}
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 flex items-center justify-center cursor-pointer transition-colors border border-red-500/50"
+              title="إغلاق المشغل"
+            >
+              <X className="w-4 h-4" />
+</button>
+</div>
+</div>
+
+        {/* Video Stage Frame */}
+        <div className="relative aspect-video w-full bg-black">
+          {isLoading && (
+            <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-10 gap-3">
+              <Loader className="w-8 h-8 text-red-500 animate-spin" />
+              <span className="text-xs text-neutral-400 select-none">جاري تحميل مسار المشغّل ومزامنة الترجمة...</span>
+</div>
+          )}
+
+          <iframe
+            src={getEmbedUrl()}
+            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+            sandbox="allow-scripts allow-same-origin allow-presentation allow-forms unicode"
+            referrerPolicy="no-referrer"
+            allowFullScreen
+            className="w-full h-full border-0 relative z-0"
+            onLoad={() => setIsLoading(false)}
+          />
+</div>
+
+         {/* Browser sandbox notification details */}
+        {playMode ==='movie' && (
+          <div className="px-4 py-3 bg-neutral-950/80 border-t border-white/5 flex items-center gap-2 text-[11px] text-gray-500 select-all justify-center">
+            <ShieldAlert className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
+            <span>نظام التشغيل خارجي. إذا لم تظهر الترجمة تلقائياً، قم بتفعيلها من قائمة الإعدادات (CC) للمشغل المدمج.</span>
+</div>
+        )}
+</div>
+</div>
+  );
+}

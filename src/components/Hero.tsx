@@ -1,0 +1,255 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useState, useEffect, useRef } from 'react';
+import { Play, Info, Flame, ChevronRight, ChevronLeft, Star } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { MovieOrShow } from '../types';
+
+interface HeroProps {
+  trendingItems: MovieOrShow[];
+  onPlayClick: (item: MovieOrShow) => void;
+  onInfoClick: (item: MovieOrShow) => void;
+}
+
+const slideVariants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? '100%' : '-100%',
+    scale: 1.04,
+    opacity: 0,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+    scale: 1.14, // Beautiful continuous Ken Burns style slow zoom
+    transition: {
+      x: { duration: 1.4, ease: [0.16, 1, 0.3, 1] }, // Entering is slow
+      opacity: { duration: 1.1, ease: 'easeOut' },
+      scale: { duration: 9, ease: 'linear' }, // Ken Burns slow zoom
+    }
+  },
+  exit: (direction: number) => ({
+    x: direction > 0 ? '-100%' : '100%',
+    opacity: 0,
+    scale: 1.18,
+    transition: {
+      x: { duration: 0.42, ease: [0.3, 0, 0.7, 0] }, // Exiting is fast
+      opacity: { duration: 0.35, ease: 'easeIn' },
+      scale: { duration: 0.42, ease: 'easeIn' }
+    }
+  })
+};
+
+const contentVariants = {
+  enter: {
+    y: 25,
+    opacity: 0,
+  },
+  center: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      y: { duration: 1.3, ease: [0.16, 1, 0.3, 1] }, // Entering of next card content is slow
+      opacity: { duration: 1.0, ease: 'easeOut' },
+    }
+  },
+  exit: {
+    y: -20,
+    opacity: 0,
+    transition: {
+      y: { duration: 0.35, ease: 'easeInOut' }, // Exit is fast
+      opacity: { duration: 0.3, ease: 'easeIn' },
+    }
+  }
+};
+
+export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroProps) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [direction, setDirection] = useState(1);
+  const rotationTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const activePool = trendingItems.slice(0, 20);
+
+  const startTimer = () => {
+    if (rotationTimer.current) clearInterval(rotationTimer.current);
+    if (activePool.length > 1) {
+      rotationTimer.current = setInterval(() => {
+        setDirection(1);
+        setCurrentIndex((prev) => (prev + 1) % activePool.length);
+      }, 7500);
+    }
+  };
+
+  useEffect(() => {
+    startTimer();
+    return () => {
+      if (rotationTimer.current) clearInterval(rotationTimer.current);
+    };
+  }, [activePool.length]);
+
+  if (!activePool.length) {
+    // Skeletons
+    return (
+      <div className="w-full h-[65vh] min-h-[500px] bg-neutral-900 animate-pulse relative flex items-end p-8 md:p-16">
+        <div className="max-w-xl space-y-4">
+          <div className="w-24 h-6 bg-neutral-800 rounded"></div>
+          <div className="w-72 h-12 bg-neutral-800 rounded"></div>
+          <div className="w-full h-20 bg-neutral-800 rounded"></div>
+          <div className="flex gap-3">
+            <div className="w-28 h-10 bg-neutral-800 rounded-full"></div>
+            <div className="w-28 h-10 bg-neutral-800 rounded-full"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const activeItem = activePool[currentIndex];
+
+  const handlePrev = () => {
+    setDirection(-1);
+    setCurrentIndex((prev) => (prev - 1 + activePool.length) % activePool.length);
+    startTimer();
+  };
+
+  const handleNext = () => {
+    setDirection(1);
+    setCurrentIndex((prev) => (prev + 1) % activePool.length);
+    startTimer();
+  };
+
+  const handleDotSelect = (index: number) => {
+    setDirection(index > currentIndex ? 1 : -1);
+    setCurrentIndex(index);
+    startTimer();
+  };
+
+  return (
+    <div className="relative h-[60vh] sm:h-[80vh] min-h-[460px] sm:min-h-[600px] max-h-[850px] w-full overflow-hidden mb-8 sm:mb-10 flex items-end group select-none">
+      
+      {/* Background with custom container */}
+      <div className="absolute inset-0 overflow-hidden">
+        <AnimatePresence initial={false} custom={direction}>
+          <motion.div
+            key={currentIndex}
+            custom={direction}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: `url(${activeItem.backdrop || activeItem.poster})`,
+            }}
+          />
+        </AnimatePresence>
+        
+        {/* Shadow overlays - Clean gradient masks */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/35 to-transparent z-[5] pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/65 via-transparent to-[#0a0a0a]/25 z-[5] pointer-events-none" />
+      </div>
+
+      {/* Hero Slide Contents - Animated concurrently */}
+      <div className="absolute inset-x-0 bottom-0 z-10 w-full px-4 sm:px-12 pb-6 sm:pb-20 md:pb-24 pointer-events-none">
+        <div className="max-w-xl text-right md:text-right pointer-events-auto">
+          <AnimatePresence initial={false} mode="wait">
+            <motion.div
+              key={currentIndex}
+              variants={contentVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              className="flex flex-col text-right"
+            >
+              {/* Trending Badge */}
+              <div className="inline-flex items-center gap-1.5 bg-red-500/10 border border-red-500/30 text-red-400 px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold mb-3 sm:mb-4 self-start">
+                <Flame className="w-3 sm:w-3.5 h-3 sm:h-3.5 fill-red-400" />
+                <span>الأكثر رواجاً هذا الأسبوع</span>
+              </div>
+
+              {/* Title */}
+              <h1 className="text-2xl sm:text-4xl md:text-6xl font-black tracking-tight mb-2 sm:mb-4 text-white line-clamp-1 leading-tight">
+                {activeItem.title}
+              </h1>
+
+              {/* Metadata */}
+              <div className="flex items-center gap-3.5 text-xs text-gray-300 font-medium mb-3 sm:mb-4 justify-start">
+                <span className="flex items-center gap-1 text-[#f5c518] font-bold">
+                  <Star className="w-3.5 h-3.5 fill-current" />
+                  {activeItem.rating > 0 ? activeItem.rating.toFixed(1) : 'جديد'}
+                </span>
+                <span className="w-1 h-1 bg-gray-500 rounded-full" />
+                <span>{activeItem.year || 'غير معروف'}</span>
+                {activeItem.genres.length > 0 && (
+                  <>
+                    <span className="w-1 h-1 bg-gray-500 rounded-full" />
+                    <span className="text-gray-400 bg-white/5 px-2 py-0.5 rounded border border-white/5 text-[10px] sm:text-xs font-bold">
+                      {activeItem.genres.slice(0, 3).join(' · ')}
+                    </span>
+                  </>
+                )}
+              </div>
+
+              {/* Overview */}
+              <p className="hidden sm:block text-gray-300 text-xs sm:text-sm md:text-base leading-relaxed mb-6 line-clamp-2 max-w-lg">
+                {activeItem.overview}
+              </p>
+
+              {/* Call to Actions */}
+              <div className="flex flex-wrap gap-2.5 sm:gap-3">
+                <button
+                  onClick={() => onPlayClick(activeItem)}
+                  className="flex items-center gap-1.5 sm:gap-2 bg-white text-black hover:bg-neutral-200 font-bold px-4 sm:px-6 py-2 sm:py-3 rounded-full transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer text-xs sm:text-sm"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current text-black" />
+                  <span>شاهد الآن</span>
+                </button>
+                <button
+                  onClick={() => onInfoClick(activeItem)}
+                  className="flex items-center gap-1.5 sm:gap-2 bg-neutral-800/80 hover:bg-neutral-700/80 backdrop-blur-md text-white font-bold px-4 sm:px-6 py-2 sm:py-3 rounded-full border border-white/10 transition-all hover:scale-[1.02] cursor-pointer text-xs sm:text-sm"
+                >
+                  <Info className="w-3.5 h-3.5" />
+                  <span>التفاصيل</span>
+                </button>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Manual Sliding Arrows */}
+      <div className="absolute inset-y-0 left-0 right-0 z-20 flex justify-between items-center px-4 md:px-8 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-none">
+        <button
+          onClick={handlePrev}
+          className="w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-transform hover:scale-105"
+          aria-label="الشريحة السابقة"
+        >
+          <ChevronRight className="w-6 h-6" /> {/* RTL flip makes right go previous */}
+        </button>
+        <button
+          onClick={handleNext}
+          className="w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-transform hover:scale-105"
+          aria-label="الشريحة التالية"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+      </div>
+
+      {/* Slider Indicator Dots in Center */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+        {activePool.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => handleDotSelect(i)}
+            className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+              i === currentIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/30 hover:bg-white/50'
+            }`}
+            aria-label={`الذهاب للشريحة ${i + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}

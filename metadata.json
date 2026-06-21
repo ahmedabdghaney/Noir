@@ -1,0 +1,6 @@
+{
+  "name": "Noir Cinema",
+  "description": "تجربة مشاهدة سينمائية أنيقة وبسيطة تتيح تصفح أحدث الأفلام والمسلسلات وتفاصيلها الكاملة.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

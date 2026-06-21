@@ -1,0 +1,175 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "IBM Plex Sans Arabic", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  background-color: #0a0a0a;
+  color: #ffffff;
+  overflow-x: hidden;
+  font-family: "IBM Plex Sans Arabic", "Inter", sans-serif;
+  direction: rtl;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Day Mode / Light Mode styling overrides */
+.light-theme {
+  background-color: #f7f8fa !important;
+  color: #0f172a !important;
+}
+
+.light-theme body {
+  background-color: #f7f8fa !important;
+  color: #0f172a !important;
+}
+
+.light-theme .bg-[#0a0a0a],
+.light-theme .bg-[#060606],
+.light-theme .min-h-screen {
+  background-color: #f7f8fa !important;
+}
+
+.light-theme .bg-black,
+.light-theme .bg-black\/80 {
+  background-color: rgba(247, 248, 250, 0.95) !important;
+}
+
+.light-theme .text-white {
+  color: #0f172a !important;
+}
+
+.light-theme .text-gray-300 {
+  color: #334155 !important;
+}
+
+.light-theme .text-gray-400 {
+  color: #475569 !important;
+}
+
+.light-theme .text-neutral-400 {
+  color: #475569 !important;
+}
+
+.light-theme .bg-neutral-950,
+.light-theme .bg-[#0a0a0abf],
+.light-theme .bg-[#0a0a0a] {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.light-theme .bg-neutral-900,
+.light-theme .bg-neutral-900\/80,
+.light-theme .bg-neutral-900\/50 {
+  background-color: #f1f5f9 !important;
+  border-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+.light-theme .bg-neutral-800,
+.light-theme .bg-white\/5,
+.light-theme .bg-white\/10 {
+  background-color: #e2e8f0 !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.light-theme .border-white\/5,
+.light-theme .border-white\/10 {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.light-theme .hover\:bg-white\/5:hover,
+.light-theme .hover\:bg-white\/10:hover,
+.light-theme .hover\:bg-white\/8:hover {
+  background-color: #cbd5e1 !important;
+}
+
+.light-theme .text-gray-500 {
+  color: #64748b !important;
+}
+
+.light-theme .text-gray-400 {
+  color: #475569 !important;
+}
+
+.light-theme .shimmer-bg {
+  background-color: #e2e8f0 !important;
+}
+
+/* Left to right entrance animation */
+@keyframes slideInLeftToRight {
+  0% {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.card-transition {
+  opacity: 0;
+  animation: slideInLeftToRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom styled arrow backgrounds for dropdowns to keep symmetry and distance */
+.custom-select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23b91c1c%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%252017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-size: 10px 10px !important;
+  background-position: left 14px center !important;
+  padding-left: 36px !important;
+  padding-right: 16px !important;
+}
+
+/* Custom micro-scrollbar support */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 99px;
+}
+.light-theme ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Keyframes for simple poster skeleton shimmer */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.shimmer-bg {
+  position: relative;
+  overflow: hidden;
+  background-color: #171717;
+}
+
+.shimmer-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+  animation: shimmer 1.6s infinite;
+}
