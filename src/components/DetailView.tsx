@@ -888,14 +888,14 @@ export default function DetailView({
         </div>
 
         {/* Bottom Synopsis and Cast grids */}
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_260px] gap-10 mt-8">
+        <div className="mt-8">
           
           <div className="space-y-8 text-right min-w-0">
             {/* Cast roster row component */}
             {cast.length > 0 && (
               <div className="space-y-4">
                 <h3 className="text-lg font-bold text-white tracking-tight border-r-2 border-red-500 pr-2">أبرز كادر العمل</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
                   {cast.map((c: CastMember) => (
                     <div
                       key={c.id}
@@ -924,22 +924,6 @@ export default function DetailView({
 </span>
 </div>
 </div>
-                  ))}
-</div>
-</div>
-            )}
-</div>
-
-          {/* Quick sidebar placeholder metrics or credits */}
-          <div className="hidden md:flex flex-col gap-6 text-right w-full shrink-0 border-r border-white/5 pr-6">
-            {genres.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="text-neutral-500 text-[10px] font-bold uppercase">التصنيفات الشاملة</h4>
-                <div className="flex flex-col gap-1.5">
-                  {genres.map((g, idx) => (
-                    <span key={idx} className="text-xs text-gray-300 font-semibold bg-neutral-900 border border-white/5 py-1.5 px-3 rounded-lg text-center">
-                      {g}
-</span>
                   ))}
 </div>
 </div>

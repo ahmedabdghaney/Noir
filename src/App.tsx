@@ -279,7 +279,15 @@ export default function App() {
         return;
       }
       const list: MovieOrShow[] = JSON.parse(listStr);
-      const activeItems = list.filter((item) => {
+      // Drop any legacy/broken entries whose type isn't a valid 'movie' or 'tv'
+      const validList = list.filter(
+        (item) => (item.type === 'movie' || item.type === 'tv') && item.id,
+      );
+      // If we removed broken entries, persist the cleaned list back
+      if (validList.length !== list.length) {
+        localStorage.setItem('noir_continue_watching_list', JSON.stringify(validList));
+      }
+      const activeItems = validList.filter((item) => {
         const progressVal = Number(localStorage.getItem(`noir_progress_${item.type}_${item.id}`)) || 0;
         // Keep anything that hasn't been (almost) finished — including freshly opened items at 0%.
         return progressVal < 95;
