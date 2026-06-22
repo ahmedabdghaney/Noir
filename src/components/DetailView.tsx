@@ -370,15 +370,24 @@ export default function DetailView({
           } catch (cloudErr: any) {
             console.error("Failed to remove item from Cloud Watchlist: ", cloudErr);
             let errMsg = 'حدث خطأ في الاتصال بالسحابة';
-            try {
-              if (cloudErr && cloudErr.message) {
-                const parsed = JSON.parse(cloudErr.message);
-                if (parsed && parsed.error) {
-                  errMsg = parsed.error;
+            if (cloudErr) {
+              if (cloudErr.message) {
+                try {
+                  const possibleJson = cloudErr.message.startsWith('Error: ')
+                    ? cloudErr.message.slice(7)
+                    : cloudErr.message;
+                  const parsed = JSON.parse(possibleJson);
+                  if (parsed && typeof parsed === 'object') {
+                    errMsg = parsed.error || parsed.message || JSON.stringify(parsed);
+                  } else {
+                    errMsg = cloudErr.message;
+                  }
+                } catch (e) {
+                  errMsg = cloudErr.message;
                 }
+              } else {
+                errMsg = String(cloudErr);
               }
-            } catch (pErr) {
-              errMsg = cloudErr?.message || String(cloudErr);
             }
             showToast(`تمت الإزالة محلياً (${errMsg})`);
           }
@@ -404,15 +413,24 @@ export default function DetailView({
           } catch (cloudErr: any) {
             console.error("Failed to add item to Cloud Watchlist: ", cloudErr);
             let errMsg = 'حدث خطأ في الاتصال بالسحابة';
-            try {
-              if (cloudErr && cloudErr.message) {
-                const parsed = JSON.parse(cloudErr.message);
-                if (parsed && parsed.error) {
-                  errMsg = parsed.error;
+            if (cloudErr) {
+              if (cloudErr.message) {
+                try {
+                  const possibleJson = cloudErr.message.startsWith('Error: ')
+                    ? cloudErr.message.slice(7)
+                    : cloudErr.message;
+                  const parsed = JSON.parse(possibleJson);
+                  if (parsed && typeof parsed === 'object') {
+                    errMsg = parsed.error || parsed.message || JSON.stringify(parsed);
+                  } else {
+                    errMsg = cloudErr.message;
+                  }
+                } catch (e) {
+                  errMsg = cloudErr.message;
                 }
+              } else {
+                errMsg = String(cloudErr);
               }
-            } catch (pErr) {
-              errMsg = cloudErr?.message || String(cloudErr);
             }
             showToast(`تم الحفظ محلياً (${errMsg})`);
           }
