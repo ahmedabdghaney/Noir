@@ -265,6 +265,41 @@ export default function DetailView({
       const startFrom = wtConnected && !wtIsHost ? Math.max(0, Math.floor(wtHostTime)) : 0;
       setStartAtSnapshot(startFrom);
       localTimeRef.current = startFrom;
+
+      // Save to Continue Watching List
+      if (data) {
+        try {
+          const listStr = localStorage.getItem('noir_continue_watching_list') || '[]';
+          let cwList: MovieOrShow[] = JSON.parse(listStr);
+          
+          // Filter out existing to avoid duplicates, then unshift
+          cwList = cwList.filter((x) => !(x.id === data.id && x.type === data.type));
+          
+          const itemToSave: MovieOrShow = {
+            id: data.id,
+            type: data.type,
+            title: data.title,
+            overview: data.overview || '',
+            poster: data.poster_path ? getPosterUrl(data.poster_path) : null,
+            backdrop: data.backdrop_path ? getBackdropUrl(data.backdrop_path) : null,
+            rating: data.vote_average || 0,
+            year: (data.release_date || data.first_air_date || '').substring(0, 4) || '—',
+            date: data.release_date || data.first_air_date || '',
+            genres: data.genres ? data.genres.map((g: any) => g.name) : []
+          };
+          
+          cwList.unshift(itemToSave);
+          if (cwList.length > 20) {
+            cwList = cwList.slice(0, 20);
+          }
+          localStorage.setItem('noir_continue_watching_list', JSON.stringify(cwList));
+          
+          // Dispatch progression updated event to notify home page
+          window.dispatchEvent(new Event('progress_updated'));
+        } catch (err) {
+          console.error("Error saving to continue_watching_list: ", err);
+        }
+      }
     }
     // If host in a live session, tell everyone to open the stream too
     if (isWatchTogetherOpen && wtConnected && wtIsHost && mode === 'movie') {

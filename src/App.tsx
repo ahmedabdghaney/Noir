@@ -267,6 +267,28 @@ export default function App() {
   const [popularMovies, setPopularMovies] = useState<MovieOrShow[]>([]);
   const [isHomeLoading, setIsHomeLoading] = useState(true);
 
+  // Continue Watching List State
+  const [continueWatching, setContinueWatching] = useState<MovieOrShow[]>([]);
+
+  // loadContinueWatching parses active sessions where progress is between 1% and 94%
+  const loadContinueWatching = () => {
+    try {
+      const listStr = localStorage.getItem('noir_continue_watching_list');
+      if (!listStr) {
+        setContinueWatching([]);
+        return;
+      }
+      const list: MovieOrShow[] = JSON.parse(listStr);
+      const activeItems = list.filter((item) => {
+        const progressVal = Number(localStorage.getItem(`noir_progress_${item.type}_${item.id}`)) || 0;
+        return progressVal > 0 && progressVal < 95;
+      });
+      setContinueWatching(activeItems);
+    } catch (err) {
+      console.error("Error loading continue watching list:", err);
+    }
+  };
+
   // Advanced Filters State (Dedicated Search Page)
   const [fQuery, setFQuery] = useState('');
   const [fSort, setFSort] = useState('trend');
@@ -543,9 +565,17 @@ export default function App() {
     loadWatchlist();
     window.addEventListener('watchlist_updated', loadWatchlist);
 
+    // Load initial continue watching feed and register sync listener
+    loadContinueWatching();
+    const handleProgressUpdate = () => {
+      loadContinueWatching();
+    };
+    window.addEventListener('progress_updated', handleProgressUpdate);
+
     return () => {
       window.removeEventListener('hashchange', handleHashRouting);
       window.removeEventListener('watchlist_updated', loadWatchlist);
+      window.removeEventListener('progress_updated', handleProgressUpdate);
       if (toastTimer.current) clearTimeout(toastTimer.current);
     };
   }, []);
@@ -1064,6 +1094,17 @@ export default function App() {
 
             {/* Custom Horizontal Cinema Rows */}
             <div className="space-y-4 md:space-y-6">
+              {continueWatching.length > 0 && (
+                <div id="continue-watching-section" className="scroll-mt-20">
+                  <MovieRow
+                    title="أكمل المشاهدة"
+                    subtitle="تابع عروضك التي لم تنهي مشاهدتها بعد من حيث توقفت"
+                    items={continueWatching}
+                    onItemClick={handleTitleClick}
+                  />
+                </div>
+              )}
+
               {watchlist.length > 0 && (
                 <div id="watchlist-section" className="scroll-mt-20">
                   <MovieRow

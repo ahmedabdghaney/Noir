@@ -125,10 +125,7 @@ export default function Header({
             >
               <Search className="w-3.5 h-3.5 text-gray-400 group-hover:text-white transition-colors shrink-0" />
               <span className="truncate text-[10px] sm:text-xs">ابحث عن عروض وأفلام...</span>
-              <kbd className="hidden lg:inline bg-neutral-850 text-neutral-400 text-[9px] px-1.5 py-0.5 rounded border border-neutral-700 font-mono select-none">
-                ⌘K
-</kbd>
-</button>
+            </button>
 </div>
 
           {/* Right Column: User profile avatar with dropdown & mobile menu trigger */}
