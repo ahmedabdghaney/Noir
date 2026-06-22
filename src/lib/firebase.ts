@@ -26,12 +26,12 @@ import {
 import { MovieOrShow } from '../types';
 
 const firebaseConfig = {
-  projectId: "ios-app-498810",
-  appId: "1:645555146334:web:f06f7e0b047ebdcf576ecf",
-  apiKey: "AIzaSyA1HQXnvooMHcuROqxcwJszDfTsLK5fIaE",
-  authDomain: "ios-app-498810.firebaseapp.com",
-  storageBucket: "ios-app-498810.firebasestorage.app",
-  messagingSenderId: "645555146334"
+  projectId: "gen-lang-client-0869096395",
+  appId: "1:562491144286:web:fc3a0c46c29c1a96fb1ccf",
+  apiKey: "AIzaSyDfg_jk-N_V1rCF61xACusGqfqZ0wwVlMw",
+  authDomain: "gen-lang-client-0869096395.firebaseapp.com",
+  storageBucket: "gen-lang-client-0869096395.firebasestorage.app",
+  messagingSenderId: "562491144286"
 };
 
 // Initialize Firebase App
