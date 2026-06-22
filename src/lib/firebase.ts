@@ -40,10 +40,8 @@ const app = initializeApp(firebaseConfig);
 // Initialize Firebase Auth with persistent standard configs
 export const auth = getAuth(app);
 
-// Use the designated custom firestore databaseId from configuration or default database for custom user project
-export const db = firebaseConfig.projectId === "ios-app-498810" 
-  ? getFirestore(app) 
-  : getFirestore(app, "ai-studio-d038e6e0-89a6-457a-a50e-97b6aadc9e67");
+// Always use the designated custom firestore databaseId to match the active database in Firebase Console
+export const db = getFirestore(app, "ai-studio-d038e6e0-89a6-457a-a50e-97b6aadc9e67");
 
 // Test connection to Firestore instantly on bootstrap
 async function testConnection() {
