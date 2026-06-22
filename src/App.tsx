@@ -6,7 +6,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, Star } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth, loginWithGoogle, logoutUser } from './lib/firebase';
+import { auth, loginWithGoogle, logoutUser, signInWithEmail, signUpWithEmail, resetPassword, translateAuthError } from './lib/firebase';
 import { MovieOrShow } from './types';
 import {
   initializeGenres,
@@ -86,7 +86,7 @@ export default function App() {
   const [watchlistSort, setWatchlistSort] = useState<'default' | 'rating' | 'year'>('default');
 
   // Authentication Management State
-  const [user, setUser] = useState<{ name: string; email?: string; photoURL?: string; type: 'guest' | 'google' } | null>(() => {
+  const [user, setUser] = useState<{ name: string; email?: string; photoURL?: string; type: 'guest' | 'google' | 'email' } | null>(() => {
     try {
       const stored = localStorage.getItem('noir_user');
       if (stored) {
@@ -103,17 +103,25 @@ export default function App() {
     }
   });
   const [isAuthLoading, setIsAuthLoading] = useState(false);
-  const [authMethod, setAuthMethod] = useState<'guest' | 'google' | null>(null);
+  const [authMethod, setAuthMethod] = useState<'guest' | 'google' | 'email' | null>(null);
+
+  // Email auth form state
+  const [authView, setAuthView] = useState<'menu' | 'signin' | 'signup' | 'reset'>('menu');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authName, setAuthName] = useState('');
+  const [authError, setAuthError] = useState('');
 
   // Synchronize authenticated identity with Firebase state-listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
+        const isEmailOnly = firebaseUser.providerData?.[0]?.providerId === 'password';
         const userData = {
-          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] ||'مسجل بجوجل',
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] ||'مستخدم نوار',
           email: firebaseUser.email || undefined,
           photoURL: firebaseUser.photoURL || undefined,
-          type: 'google' as const
+          type: (isEmailOnly ? 'email' : 'google') as 'email' | 'google',
         };
         localStorage.setItem('noir_user', JSON.stringify(userData));
         setUser(userData);
@@ -122,7 +130,7 @@ export default function App() {
         if (stored) {
           try {
             const parsed = JSON.parse(stored);
-            if (parsed.type ==='google') {
+            if (parsed.type ==='google' || parsed.type === 'email') {
               setUser(null);
               localStorage.removeItem('noir_user');
             }
@@ -206,12 +214,78 @@ export default function App() {
     }
   };
 
+  const handleEmailSignIn = async () => {
+    if (!authEmail || !authPassword) {
+      setAuthError('أدخل البريد وكلمة السر');
+      return;
+    }
+    setAuthError('');
+    setIsAuthLoading(true);
+    setAuthMethod('email');
+    try {
+      await signInWithEmail(authEmail, authPassword);
+      showToast('أهلاً بك من جديد');
+      setAuthEmail('');
+      setAuthPassword('');
+      setAuthName('');
+    } catch (e) {
+      setAuthError(translateAuthError(e));
+    } finally {
+      setIsAuthLoading(false);
+      setAuthMethod(null);
+    }
+  };
+
+  const handleEmailSignUp = async () => {
+    if (!authEmail || !authPassword || !authName) {
+      setAuthError('أكمل كل الحقول');
+      return;
+    }
+    if (authPassword.length < 6) {
+      setAuthError('كلمة السر لازم 6 خانات على الأقل');
+      return;
+    }
+    setAuthError('');
+    setIsAuthLoading(true);
+    setAuthMethod('email');
+    try {
+      await signUpWithEmail(authEmail, authPassword, authName);
+      showToast('تم إنشاء حسابك، أهلاً بك');
+      setAuthEmail('');
+      setAuthPassword('');
+      setAuthName('');
+    } catch (e) {
+      setAuthError(translateAuthError(e));
+    } finally {
+      setIsAuthLoading(false);
+      setAuthMethod(null);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!authEmail) {
+      setAuthError('أدخل البريد الإلكتروني');
+      return;
+    }
+    setAuthError('');
+    setIsAuthLoading(true);
+    try {
+      await resetPassword(authEmail);
+      showToast('أرسلنا رابط إعادة التعيين لبريدك');
+      setAuthView('signin');
+    } catch (e) {
+      setAuthError(translateAuthError(e));
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     const stored = localStorage.getItem('noir_user');
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        if (parsed.type ==='google') {
+        if (parsed.type ==='google' || parsed.type === 'email') {
           await logoutUser();
         }
       } catch (e) {
@@ -503,21 +577,161 @@ export default function App() {
 </p>
 
           <div className="flex flex-col gap-3.5 w-full">
-            <button
-              onClick={() => handleLogin('google')}
-              disabled={isAuthLoading}
-              className="w-full flex items-center justify-center gap-2.5 bg-red-600 hover:bg-red-500 text-white font-bold py-3.5 px-6 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer text-sm shadow-xl shadow-red-600/10 animate-fade-in"
-            >
-              {isAuthLoading && authMethod ==='google' ? (
-                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-              ) : (
-                <svg className="w-4 h-4 text-white fill-current" viewBox="0 0 24 24">
-                  <path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.176 4.114-3.478 0-6.3-2.823-6.3-6.3s2.822-6.3 6.3-6.3c1.706 0 3.24.68 4.363 1.774l3.076-3.075C19.494 2.895 16.143 1.5 12.24 1.5c-5.79 0-10.5 4.71-10.5 10.5s4.71 10.5 10.5 10.5c5.342 0 10.086-3.844 10.086-10.5 0-.584-.065-1.114-.175-1.714H12.24z"/>
-</svg>
-              )}
-              <span>تسجيل الدخول باستخدام Google</span>
-</button>
-</div>
+            {authView === 'menu' && (
+              <>
+                <button
+                  onClick={() => handleLogin('google')}
+                  disabled={isAuthLoading}
+                  className="w-full flex items-center justify-center gap-2.5 bg-red-600 hover:bg-red-500 text-white font-bold py-3.5 px-6 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer text-sm shadow-xl shadow-red-600/10 animate-fade-in"
+                >
+                  {isAuthLoading && authMethod === 'google' ? (
+                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-4 h-4 text-white fill-current" viewBox="0 0 24 24">
+                      <path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.176 4.114-3.478 0-6.3-2.823-6.3-6.3s2.822-6.3 6.3-6.3c1.706 0 3.24.68 4.363 1.774l3.076-3.075C19.494 2.895 16.143 1.5 12.24 1.5c-5.79 0-10.5 4.71-10.5 10.5s4.71 10.5 10.5 10.5c5.342 0 10.086-3.844 10.086-10.5 0-.584-.065-1.114-.175-1.714H12.24z"/>
+                    </svg>
+                  )}
+                  <span>تسجيل الدخول باستخدام Google</span>
+                </button>
+
+                <div className="flex items-center gap-3 my-1">
+                  <div className="h-px flex-1 bg-white/10" />
+                  <span className="text-[10px] text-gray-500 font-bold">أو</span>
+                  <div className="h-px flex-1 bg-white/10" />
+                </div>
+
+                <button
+                  onClick={() => { setAuthView('signin'); setAuthError(''); }}
+                  className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold py-3.5 px-6 rounded-xl transition-all cursor-pointer text-sm"
+                >
+                  الدخول بالبريد الإلكتروني
+                </button>
+                <button
+                  onClick={() => { setAuthView('signup'); setAuthError(''); }}
+                  className="w-full text-gray-400 hover:text-white text-xs font-semibold py-2 transition-colors cursor-pointer"
+                >
+                  ما عندك حساب؟ <span className="text-red-400">أنشئ واحد جديد</span>
+                </button>
+              </>
+            )}
+
+            {(authView === 'signin' || authView === 'signup') && (
+              <>
+                {authView === 'signup' && (
+                  <input
+                    type="text"
+                    value={authName}
+                    onChange={(e) => setAuthName(e.target.value)}
+                    placeholder="الاسم"
+                    className="w-full bg-white/5 border border-white/10 focus:border-red-500/50 focus:bg-white/[0.07] outline-none text-white text-sm font-semibold py-3.5 px-4 rounded-xl transition-colors text-right placeholder-gray-500"
+                    dir="rtl"
+                  />
+                )}
+                <input
+                  type="email"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  placeholder="البريد الإلكتروني"
+                  className="w-full bg-white/5 border border-white/10 focus:border-red-500/50 focus:bg-white/[0.07] outline-none text-white text-sm font-semibold py-3.5 px-4 rounded-xl transition-colors text-left placeholder-gray-500"
+                  dir="ltr"
+                />
+                <input
+                  type="password"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  placeholder="كلمة السر"
+                  className="w-full bg-white/5 border border-white/10 focus:border-red-500/50 focus:bg-white/[0.07] outline-none text-white text-sm font-semibold py-3.5 px-4 rounded-xl transition-colors text-left placeholder-gray-500"
+                  dir="ltr"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      authView === 'signin' ? handleEmailSignIn() : handleEmailSignUp();
+                    }
+                  }}
+                />
+
+                {authError && (
+                  <div className="text-red-400 text-xs font-semibold bg-red-500/10 border border-red-500/20 rounded-lg py-2 px-3 text-right">
+                    {authError}
+                  </div>
+                )}
+
+                <button
+                  onClick={authView === 'signin' ? handleEmailSignIn : handleEmailSignUp}
+                  disabled={isAuthLoading}
+                  className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer text-sm shadow-xl shadow-red-600/10"
+                >
+                  {isAuthLoading && authMethod === 'email' ? (
+                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <span>{authView === 'signin' ? 'دخول' : 'إنشاء الحساب'}</span>
+                  )}
+                </button>
+
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    onClick={() => { setAuthView('menu'); setAuthError(''); }}
+                    className="text-gray-400 hover:text-white text-[11px] font-semibold transition-colors cursor-pointer"
+                  >
+                    ← رجوع
+                  </button>
+                  {authView === 'signin' ? (
+                    <button
+                      onClick={() => { setAuthView('reset'); setAuthError(''); }}
+                      className="text-gray-400 hover:text-red-400 text-[11px] font-semibold transition-colors cursor-pointer"
+                    >
+                      نسيت كلمة السر؟
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => { setAuthView('signin'); setAuthError(''); }}
+                      className="text-gray-400 hover:text-red-400 text-[11px] font-semibold transition-colors cursor-pointer"
+                    >
+                      عندي حساب
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+
+            {authView === 'reset' && (
+              <>
+                <p className="text-gray-400 text-xs leading-relaxed mb-1 text-right">
+                  أدخل بريدك ونرسلك رابط لإعادة تعيين كلمة السر
+                </p>
+                <input
+                  type="email"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  placeholder="البريد الإلكتروني"
+                  className="w-full bg-white/5 border border-white/10 focus:border-red-500/50 focus:bg-white/[0.07] outline-none text-white text-sm font-semibold py-3.5 px-4 rounded-xl transition-colors text-left placeholder-gray-500"
+                  dir="ltr"
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleResetPassword(); }}
+                />
+                {authError && (
+                  <div className="text-red-400 text-xs font-semibold bg-red-500/10 border border-red-500/20 rounded-lg py-2 px-3 text-right">
+                    {authError}
+                  </div>
+                )}
+                <button
+                  onClick={handleResetPassword}
+                  disabled={isAuthLoading}
+                  className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl transition-all cursor-pointer text-sm"
+                >
+                  {isAuthLoading ? (
+                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <span>إرسال الرابط</span>
+                  )}
+                </button>
+                <button
+                  onClick={() => { setAuthView('signin'); setAuthError(''); }}
+                  className="text-gray-400 hover:text-white text-[11px] font-semibold transition-colors cursor-pointer pt-1"
+                >
+                  ← رجوع لتسجيل الدخول
+                </button>
+              </>
+            )}
+          </div>
 
           <div className="mt-8 pt-4 border-t border-white/5 flex items-center justify-center gap-1.5 text-[10px] text-gray-500">
             <span>تطبق شروط الاستخدام والأمان © {new Date().getFullYear()} نوار سينما</span>
@@ -1175,7 +1389,7 @@ export default function App() {
                     {user.name.slice(0, 2)}
 </div>
                 )}
-                <div className={`absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full border border-neutral-950 ${user.type ==='google' ?'bg-indigo-500' :'bg-emerald-500'}`} />
+                <div className={`absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full border border-neutral-950 ${user.type ==='google' ?'bg-indigo-500' : user.type === 'email' ? 'bg-red-500' : 'bg-emerald-500'}`} />
 </div>
 
               {/* User Bio Information */}
@@ -1187,6 +1401,10 @@ export default function App() {
                 {user.type ==='guest' ? (
                   <span className="inline-block bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full mt-1">
                     أنت مسجل حالياً كضيف
+</span>
+                ) : user.type === 'email' ? (
+                  <span className="inline-block bg-red-500/10 border border-red-500/25 text-red-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full mt-1">
+                    حساب نوار سينما
 </span>
                 ) : (
                   <span className="inline-block bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full mt-1">

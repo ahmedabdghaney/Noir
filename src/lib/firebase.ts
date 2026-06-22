@@ -1,5 +1,14 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  updateProfile,
+} from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -49,4 +58,61 @@ export const logoutUser = async () => {
     console.error("Error during logout:", error);
     throw error;
   }
+};
+
+/**
+ * Translate Firebase Auth error codes into clear Arabic messages.
+ */
+export const translateAuthError = (err: any): string => {
+  const code = err?.code || '';
+  switch (code) {
+    case 'auth/email-already-in-use':
+      return 'هذا البريد مسجّل مسبقاً، جرّب تسجيل الدخول';
+    case 'auth/invalid-email':
+      return 'صيغة البريد الإلكتروني غير صحيحة';
+    case 'auth/weak-password':
+      return 'كلمة السر ضعيفة، استعمل 6 خانات على الأقل';
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+      return 'البريد أو كلمة السر غير صحيحة';
+    case 'auth/too-many-requests':
+      return 'محاولات كثيرة، جرّب بعد قليل';
+    case 'auth/network-request-failed':
+      return 'تعذّر الاتصال بالشبكة';
+    case 'auth/missing-password':
+      return 'أدخل كلمة السر';
+    default:
+      return err?.message || 'حدث خطأ غير متوقع';
+  }
+};
+
+/**
+ * Sign up with email and password. Optionally sets a display name.
+ */
+export const signUpWithEmail = async (email: string, password: string, displayName?: string) => {
+  const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+  if (displayName && displayName.trim()) {
+    try {
+      await updateProfile(cred.user, { displayName: displayName.trim() });
+    } catch (e) {
+      console.warn('Failed to set display name', e);
+    }
+  }
+  return cred.user;
+};
+
+/**
+ * Sign in with email and password.
+ */
+export const signInWithEmail = async (email: string, password: string) => {
+  const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+  return cred.user;
+};
+
+/**
+ * Send a password reset email.
+ */
+export const resetPassword = async (email: string) => {
+  await sendPasswordResetEmail(auth, email.trim());
 };

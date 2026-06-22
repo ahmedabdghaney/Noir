@@ -12,7 +12,7 @@ interface HeaderProps {
   setSearchMode: (mode: 'movie' | 'tv') => void;
   goHome: () => void;
   openSearchOverlay: () => void;
-  user: { name: string; email?: string; photoURL?: string; type: 'guest' | 'google' } | null;
+  user: { name: string; email?: string; photoURL?: string; type: 'guest' | 'google' | 'email' } | null;
   onLogout: () => void;
   onOpenProfile: () => void;
   onViewWatchlist: () => void;

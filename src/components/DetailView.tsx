@@ -17,7 +17,7 @@ interface DetailViewProps {
   onBackClick: () => void;
   onItemClick: (item: MovieOrShow) => void;
   onOpenShare: (url: string) => void;
-  user: { name: string; email?: string; type: 'guest' | 'google' } | null;
+  user: { name: string; email?: string; type: 'guest' | 'google' | 'email' } | null;
   showToast: (message: string) => void;
   autoOpenWatchTogether?: string;
   onClearAutoOpenWatchTogether?: () => void;
