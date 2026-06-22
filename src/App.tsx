@@ -31,6 +31,7 @@ import ShareModal from './components/ShareModal';
 import MobileNav from './components/MobileNav';
 import Footer from './components/Footer';
 import LiveSports from './components/LiveSports';
+import LiveSportsDaddy from './components/LiveSportsDaddy';
 
 // Static Configuration Constants
 const COUNTRIES = [
@@ -76,7 +77,7 @@ const YEARS = (() => {
 
 export default function App() {
   // Navigation & View State
-  const [activeView, setActiveView] = useState<'home' | 'search' | 'detail' | 'watchlist' | 'live'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'search' | 'detail' | 'watchlist' | 'live' | 'live-daddy'>('home');
   const [searchMode, setSearchMode] = useState<'movie' | 'tv'>('movie');
   const [selectedTitle, setSelectedTitle] = useState<{ type: 'movie' | 'tv'; id: number } | null>(null);
   const [joinRoomCode, setJoinRoomCode] = useState<string>('');
@@ -1081,6 +1082,7 @@ export default function App() {
         onOpenProfile={() => setIsProfileModalOpen(true)}
         onViewWatchlist={handleViewWatchlist}
         onViewLive={() => setActiveView('live')}
+        onViewLiveDaddy={() => setActiveView('live-daddy')}
       />
 
       {/* Main Orchestration Views Switcher */}
@@ -1682,6 +1684,10 @@ export default function App() {
 
         {activeView === 'live' && (
           <LiveSports />
+        )}
+
+        {activeView === 'live-daddy' && (
+          <LiveSportsDaddy />
         )}
       </main>
 
