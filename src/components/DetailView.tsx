@@ -869,19 +869,7 @@ export default function DetailView({
 
 </div>
 
-        {/* Recomendations module list titles */}
-        {recommendations.length > 0 && (
-          <div className="border-t border-white/5 pt-12 mt-12">
-            <MovieRow
-              title="عناوين وتوصيات مشابهة"
-              subtitle="قد تنال إعجابك بناءً على هذا العمل"
-              items={recommendations}
-              onItemClick={onItemClick}
-            />
-</div>
-        )}
-
-        {/* Video Player Mount Position - placed last so details/cast/recs stay above */}
+        {/* Video Player Mount Position - placed above recommendations as requested */}
         {isPlayerOpen && (
           <VideoPlayer
             type={type}
@@ -909,6 +897,18 @@ export default function DetailView({
               }
             }}
           />
+        )}
+
+        {/* Recomendations module list titles */}
+        {recommendations.length > 0 && (
+          <div className="border-t border-white/5 pt-12 mt-12">
+            <MovieRow
+              title="عناوين وتوصيات مشابهة"
+              subtitle="قد تنال إعجابك بناءً على هذا العمل"
+              items={recommendations}
+              onItemClick={onItemClick}
+            />
+</div>
         )}
 
         {/* Explicit back route */}

@@ -7,7 +7,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, Star } from 'lucide-react';
 import LogoIcon from './components/LogoIcon';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth, loginWithGoogle, logoutUser, signInWithEmail, signUpWithEmail, resetPassword, checkSignInMethods, translateAuthError, fetchFirestoreWatchlist } from './lib/firebase';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { auth, loginWithGoogle, logoutUser, signInWithEmail, signUpWithEmail, resetPassword, checkSignInMethods, translateAuthError, fetchFirestoreWatchlist, db } from './lib/firebase';
 import { MovieOrShow } from './types';
 import {
   initializeGenres,
@@ -143,26 +144,64 @@ export default function App() {
     }
   };
 
-  // Synchronize authenticated identity with Firebase state-listener
+  // Synchronize authenticated identity with Firebase state-listener and real-time watchlist
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    let unsubscribeWatchlist: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      // Unsubscribe previous watchlist listener if exists
+      if (unsubscribeWatchlist) {
+        unsubscribeWatchlist();
+        unsubscribeWatchlist = null;
+      }
+
       if (firebaseUser) {
         const isEmailOnly = firebaseUser.providerData?.[0]?.providerId === 'password';
         const userData = {
-          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] ||'مستخدم نوار',
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'مستخدم نوار',
           email: firebaseUser.email || undefined,
           photoURL: firebaseUser.photoURL || undefined,
           type: (isEmailOnly ? 'email' : 'google') as 'email' | 'google',
         };
         localStorage.setItem('noir_user', JSON.stringify(userData));
         setUser(userData);
-        loadWatchlist();
+        
+        // Subscribe to real-time watchlist changes in Firestore
+        try {
+          const q = query(collection(db, 'users', firebaseUser.uid, 'watchlist'), orderBy('addedAt', 'desc'));
+          unsubscribeWatchlist = onSnapshot(q, (snapshot) => {
+            const list: MovieOrShow[] = [];
+            snapshot.forEach((docSnap) => {
+              const d = docSnap.data();
+              list.push({
+                id: Number(d.id),
+                type: d.type as 'movie' | 'tv',
+                title: d.title || '',
+                poster: d.poster || null,
+                backdrop: d.backdrop || null,
+                rating: Number(d.rating || 0),
+                year: String(d.year || ''),
+                genres: Array.isArray(d.genres) ? d.genres : [],
+                overview: '',
+                date: '',
+              });
+            });
+            setWatchlist(list);
+            localStorage.setItem('noir_watchlist', JSON.stringify(list));
+          }, (err) => {
+            console.error("Watchlist snapshot subscription error: ", err);
+            loadWatchlist();
+          });
+        } catch (setupErr) {
+          console.error("Failed to subscribe to watchlist: ", setupErr);
+          loadWatchlist();
+        }
       } else {
         const stored = localStorage.getItem('noir_user');
         if (stored) {
           try {
             const parsed = JSON.parse(stored);
-            if (parsed.type ==='google' || parsed.type === 'email') {
+            if (parsed.type === 'google' || parsed.type === 'email') {
               setUser(null);
               localStorage.removeItem('noir_user');
               loadWatchlist();
@@ -171,11 +210,18 @@ export default function App() {
             localStorage.removeItem('noir_user');
             loadWatchlist();
           }
+        } else {
+          loadWatchlist();
         }
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeWatchlist) {
+        unsubscribeWatchlist();
+      }
+    };
   }, []);
 
   // Home Lists Feeds State
@@ -795,17 +841,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* Terms & Privacy conditions checkbox */}
-              {authView === 'signup' && (
-                <label className="flex items-center gap-2.5 cursor-pointer text-xs text-gray-400 mr-1 select-none my-1">
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    className="rounded border-white/10 bg-[#141414] text-red-650 focus:ring-0 w-4 h-4 cursor-pointer"
-                  />
-                  <span>أوافق على الشروط والخصوصية لـ نوار</span>
-                </label>
-              )}
+
 
               {/* Form Validation Errors alerts */}
               {authError && (
@@ -911,16 +947,18 @@ export default function App() {
 
         {/* Toast notifications on the login screen */}
         {toastMessage && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[600] bg-neutral-900 border border-white/10 text-white text-xs font-semibold rounded-full py-3 px-6 shadow-2xl flex items-center gap-2.5 select-none animate-slide-up">
-            <CheckCircle className="w-4 h-4 text-green-500 fill-current text-white shrink-0" />
-            <span>{toastMessage}</span>
+          <div className="fixed bottom-6 left-0 right-0 z-[600] flex justify-center pointer-events-none px-4">
+            <div className="pointer-events-auto bg-[#111113] border border-red-550/25 text-white text-xs font-semibold rounded-2xl py-3 px-5 shadow-2xl flex items-center gap-2.5 select-none animate-slide-up [direction:rtl]">
+              <LogoIcon className="w-4 h-4 text-red-500 shrink-0" />
+              <span>{toastMessage}</span>
+            </div>
           </div>
         )}
 
         <style>{`
           @keyframes slideUp {
-            from { opacity: 0; transform: translate(-50%, 15px); }
-            to { opacity: 1; transform: translate(-50%, 0); }
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
           }
           @keyframes marqueeUp {
             0% { transform: translateY(0); }
@@ -1671,10 +1709,12 @@ export default function App() {
 
       {/* Floating Success Indicator Toast notifications */}
       {toastMessage && (
-        <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-[600] bg-neutral-900 border border-white/10 text-white text-xs font-semibold rounded-full py-3 px-6 shadow-2xl flex items-center gap-2.5 select-none animate-slide-up">
-          <CheckCircle className="w-4 h-4 text-green-500 fill-current text-white shrink-0" />
-          <span>{toastMessage}</span>
-</div>
+        <div className="fixed bottom-20 md:bottom-6 left-0 right-0 z-[600] flex justify-center pointer-events-none px-4">
+          <div className="pointer-events-auto bg-[#111113]/95 backdrop-blur-md border border-red-500/30 text-white text-xs font-semibold rounded-full py-3 px-6 shadow-2xl flex items-center gap-2.5 select-none animate-slide-up [direction:rtl]">
+            <LogoIcon className="w-4 h-4 text-red-500 shrink-0" />
+            <span>{toastMessage}</span>
+          </div>
+        </div>
       )}
 
       {/* Direct inline classes style supporting some animation frames */}
@@ -1684,8 +1724,8 @@ export default function App() {
           to { opacity: 1; transform: translateY(0); }
         }
         @keyframes slideUp {
-          from { opacity: 0; transform: translate(-50%, 15px); }
-          to { opacity: 1; transform: translate(-50%, 0); }
+          from { opacity: 0; transform: translateY(15px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         @keyframes popIn {
           from { opacity: 0; transform: scale(0.97); }

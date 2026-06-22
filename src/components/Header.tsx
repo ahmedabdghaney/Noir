@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Search, Menu, X } from 'lucide-react';
 import LogoIcon from './LogoIcon';
 
@@ -34,6 +34,8 @@ export default function Header({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 20) {
@@ -46,6 +48,21 @@ export default function Header({
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsProfileDropdownOpen(false);
+      }
+    }
+
+    if (isProfileDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProfileDropdownOpen]);
 
   return (
     <>
@@ -117,7 +134,7 @@ export default function Header({
           {/* Right Column: User profile avatar with dropdown & mobile menu trigger */}
           <div className="flex items-center gap-3 justify-end text-left relative">
             {user && (
-              <div className="relative">
+              <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                   className="w-8 h-8 rounded-full border border-white/10 hover:border-white/20 hover:scale-105 active:scale-95 transition-all overflow-hidden flex items-center justify-center bg-neutral-900 cursor-pointer select-none"
