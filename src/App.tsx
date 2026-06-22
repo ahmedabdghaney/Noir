@@ -148,6 +148,26 @@ export default function App() {
   useEffect(() => {
     let unsubscribeWatchlist: (() => void) | null = null;
 
+    // Background auto-login for iframe environments where IndexedDB/Storage persistence is restricted
+    const attemptAutoLogin = async () => {
+      const storedCreds = localStorage.getItem('noir_credentials');
+      if (storedCreds) {
+        try {
+          const { email, password } = JSON.parse(storedCreds);
+          if (email && password && !auth.currentUser) {
+            await signInWithEmail(email, password);
+          }
+        } catch (err) {
+          console.error("Background auto-login failed: ", err);
+          localStorage.removeItem('noir_credentials');
+          localStorage.removeItem('noir_user');
+          setUser(null);
+          loadWatchlist();
+        }
+      }
+    };
+    attemptAutoLogin();
+
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       // Unsubscribe previous watchlist listener if exists
       if (unsubscribeWatchlist) {
@@ -205,6 +225,12 @@ export default function App() {
           loadWatchlist();
         }
       } else {
+        // Skip immediate logout if we are in the middle of a background credentials auto-login
+        const storedCreds = localStorage.getItem('noir_credentials');
+        if (storedCreds) {
+          return;
+        }
+
         const stored = localStorage.getItem('noir_user');
         if (stored) {
           try {
@@ -309,6 +335,8 @@ export default function App() {
     setAuthMethod('email');
     try {
       await signInWithEmail(authEmail, authPassword);
+      // Save credentials for persistent session in sandboxed iframe environment
+      localStorage.setItem('noir_credentials', JSON.stringify({ email: authEmail, password: authPassword }));
       showToast('أهلاً بك من جديد');
       setAuthEmail('');
       setAuthPassword('');
@@ -347,6 +375,8 @@ export default function App() {
     setAuthMethod('email');
     try {
       await signUpWithEmail(authEmail, authPassword, authName);
+      // Save credentials for persistent session in sandboxed iframe environment
+      localStorage.setItem('noir_credentials', JSON.stringify({ email: authEmail, password: authPassword }));
       showToast('تم إنشاء حسابك، أهلاً بك');
       setAuthEmail('');
       setAuthPassword('');
@@ -403,6 +433,7 @@ export default function App() {
       }
     }
     localStorage.removeItem('noir_user');
+    localStorage.removeItem('noir_credentials');
     setUser(null);
     showToast('تم تسجيل الخروج بنجاح');
   };
