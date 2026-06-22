@@ -21,6 +21,7 @@ interface VideoPlayerProps {
   isLiveSession?: boolean;
   startAt?: number;
   onTimeUpdate?: (seconds: number) => void;
+  onSeek?: (seconds: number) => void;
   onHostPause?: () => void;
   onHostResume?: () => void;
   onClose: () => void;
@@ -43,6 +44,7 @@ export default function VideoPlayer({
   isLiveSession = false,
   startAt = 0,
   onTimeUpdate,
+  onSeek,
   onHostPause,
   onHostResume,
   onClose,
@@ -87,29 +89,56 @@ export default function VideoPlayer({
 
   // Listen for vidapi.qzz.io postMessage progress events
   // (sent from the iframe whenever playback advances or the user seeks)
+  const lastWatchedRef = useRef<number>(0);
+  const lastWatchedAtRef = useRef<number>(0);
   useEffect(() => {
     if (playMode !== 'movie') return;
+
+    // Reset baseline whenever the loaded segment changes (id/season/episode/startAt)
+    lastWatchedRef.current = 0;
+    lastWatchedAtRef.current = 0;
+
     const handler = (event: MessageEvent) => {
       const d: any = event?.data;
       if (!d || typeof d !== 'object') return;
-      // vidapi MEDIA_DATA payload: { type:'MEDIA_DATA', data:{ id, type, progress:{watched,duration,percentage} } }
+
+      let watched: number | null = null;
+      // vidapi MEDIA_DATA payload
       if (d.type === 'MEDIA_DATA' && d.data?.progress?.watched != null) {
-        const watched = Number(d.data.progress.watched);
-        if (!Number.isNaN(watched) && watched >= 0) {
-          onTimeUpdate?.(watched);
-        }
+        watched = Number(d.data.progress.watched);
+      } else if (d.type === 'PLAYER_EVENT' && d.data?.player_progress != null) {
+        watched = Number(d.data.player_progress);
       }
-      // Some vidapi builds also emit PLAYER_EVENT with player_progress
-      if (d.type === 'PLAYER_EVENT' && d.data?.player_progress != null) {
-        const watched = Number(d.data.player_progress);
-        if (!Number.isNaN(watched) && watched >= 0) {
-          onTimeUpdate?.(watched);
-        }
+      if (watched == null || Number.isNaN(watched) || watched < 0) return;
+
+      const now = Date.now();
+      const prev = lastWatchedRef.current;
+      const prevAt = lastWatchedAtRef.current;
+      lastWatchedRef.current = watched;
+      lastWatchedAtRef.current = now;
+
+      // First sample after (re)mount — just record a baseline
+      if (prev === 0 || prevAt === 0) {
+        onTimeUpdate?.(watched);
+        return;
+      }
+
+      const elapsed = (now - prevAt) / 1000;        // real seconds passed
+      const actualDelta = watched - prev;           // playback seconds moved
+      const drift = actualDelta - elapsed;
+
+      // Forward jump (drift > ~5s) or backward jump (delta < -3s) = user scrubbed
+      const isSeek = drift > 5 || actualDelta < -3;
+      if (isSeek) {
+        onSeek?.(watched);
+      } else {
+        onTimeUpdate?.(watched);
       }
     };
+
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [playMode, onTimeUpdate]);
+  }, [playMode, type, id, season, episode, startAt, onTimeUpdate, onSeek]);
 
   // Auto-scroll player into perfect view center
   useEffect(() => {

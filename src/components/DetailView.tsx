@@ -23,6 +23,16 @@ interface DetailViewProps {
   onClearAutoOpenWatchTogether?: () => void;
 }
 
+function formatHms(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const mm = String(m).padStart(2, '0');
+  const ss = String(sec).padStart(2, '0');
+  return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
+}
+
 export default function DetailView({
   type,
   id,
@@ -96,6 +106,16 @@ export default function DetailView({
         setIsPausedByHost(true);
         setHostPauseByName(sig.byName);
         showToast(`${sig.byName} أوقف التشغيل مؤقتاً`);
+      } else if (sig.action === 'seek') {
+        // Host scrubbed the timeline. Reload the iframe at the new position.
+        const t = Math.max(0, Math.floor(sig.time || 0));
+        setStartAtSnapshot(t);
+        localTimeRef.current = t;
+        if (!isPlayerOpen) {
+          setIsPlayerOpen(true);
+          setPlayerMode('movie');
+        }
+        showToast(`${sig.byName} انتقل إلى ${formatHms(t)}`);
       }
     },
   });
@@ -291,6 +311,14 @@ export default function DetailView({
       lastTimeBroadcastRef.current = now;
       wtSendTime(seconds);
     }
+  };
+
+  // Host scrubbed inside the iframe — push the new position to everyone immediately.
+  const handleSeek = (seconds: number) => {
+    localTimeRef.current = seconds;
+    if (!wtConnected || !wtIsHost) return;
+    lastTimeBroadcastRef.current = Date.now();
+    wtSendPlayer('seek', Math.floor(seconds));
   };
 
   if (isLoading) {
@@ -850,6 +878,7 @@ export default function DetailView({
             isLiveSession={isWatchTogetherOpen && wtConnected}
             startAt={startAtSnapshot}
             onTimeUpdate={handleTimeUpdate}
+            onSeek={handleSeek}
             onHostPause={handleHostPause}
             onHostResume={handleHostResume}
             onClose={() => setIsPlayerOpen(false)}
