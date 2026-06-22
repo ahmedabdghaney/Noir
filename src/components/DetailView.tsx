@@ -366,7 +366,7 @@ export default function DetailView({
         if (curUser) {
           try {
             await removeFromFirestoreWatchlist(curUser.uid, type, id);
-            showToast('تمت الإزالة من قائمتك سحابياً');
+            showToast('تمت الإزالة من قائمتك بنجاح');
           } catch (cloudErr: any) {
             console.error("Failed to remove item from Cloud Watchlist: ", cloudErr);
             let errMsg = 'حدث خطأ في الاتصال بالسحابة';
@@ -395,7 +395,7 @@ export default function DetailView({
             showToast(`تمت الإزالة محلياً (${errMsg})`);
           }
         } else {
-          showToast('تمت الإزالة من قائمتك');
+          showToast('تمت الإزالة من قائمتك بنجاح');
         }
       } else {
         const newItem = {
@@ -412,7 +412,7 @@ export default function DetailView({
         if (curUser) {
           try {
             await addToFirestoreWatchlist(curUser.uid, newItem);
-            showToast('تم الحفظ في قائمتك سحابياً بنجاح');
+            showToast('تم الحفظ في قائمتك بنجاح');
           } catch (cloudErr: any) {
             console.error("Failed to add item to Cloud Watchlist: ", cloudErr);
             let errMsg = 'حدث خطأ في الاتصال بالسحابة';
@@ -441,7 +441,7 @@ export default function DetailView({
             showToast(`تم الحفظ محلياً (${errMsg})`);
           }
         } else {
-          showToast('تم الحفظ في قائمتك');
+          showToast('تم الحفظ في قائمتك بنجاح');
         }
       }
       localStorage.setItem('noir_watchlist', JSON.stringify(list));
