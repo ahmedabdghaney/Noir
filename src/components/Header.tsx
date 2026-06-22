@@ -29,8 +29,8 @@ export default function Header({
   user,
   onLogout,
   onOpenProfile,
-  onViewLive,
   onViewWatchlist,
+  onViewLive,
 }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -118,14 +118,10 @@ export default function Header({
 </button>
               <button
                 onClick={onViewLive}
-                className={`flex items-center gap-1.5 text-xs md:text-sm font-semibold transition-colors hover:text-white cursor-pointer select-none ${
-                    activeView ==='live' ?'text-white' :'text-gray-400'
+                className={`text-xs md:text-sm font-semibold transition-colors hover:text-white cursor-pointer select-none ${
+                    activeView === 'live' ? 'text-white' : 'text-gray-400'
                 }`}
               >
-                <span className="relative flex w-1.5 h-1.5">
-                  <span className="animate-ping absolute inline-flex w-full h-full rounded-full bg-red-500 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full w-1.5 h-1.5 bg-red-600"></span>
-                </span>
                 البث المباشر
 </button>
 </div>
@@ -265,14 +261,10 @@ export default function Header({
                 onViewLive();
                 setIsMobileMenuOpen(false);
               }}
-              className={`flex items-center gap-2 text-right text-lg font-medium py-3 px-4 rounded-xl transition-colors ${
+              className={`flex items-center text-right text-lg font-medium py-3 px-4 rounded-xl transition-colors ${
                 activeView ==='live' ?'bg-white/10 text-white font-semibold' :'text-gray-300 hover:bg-white/5'
               }`}
             >
-              <span className="relative flex w-2 h-2">
-                <span className="animate-ping absolute inline-flex w-full h-full rounded-full bg-red-500 opacity-75"></span>
-                <span className="relative inline-flex rounded-full w-2 h-2 bg-red-600"></span>
-              </span>
               البث المباشر
 </button>
             <button

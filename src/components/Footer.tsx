@@ -16,7 +16,7 @@ export default function Footer({ goHome, setSearchMode }: FooterProps) {
     <footer className="border-t border-white/5 bg-neutral-950/40 text-neutral-500 py-12 md:py-16 mt-16 select-none leading-relaxed">
       <div className="max-w-6xl mx-auto px-6 md:px-12">
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 text-right">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10 text-right">
           
           {/* Brand Info */}
           <div className="space-y-4">
@@ -73,6 +73,19 @@ export default function Footer({ goHome, setSearchMode }: FooterProps) {
               <button onClick={() => setSearchMode('tv')} className="text-right hover:text-white transition-colors cursor-pointer">
                 المسلسلات التلفزيونية
               </button>
+            </div>
+          </div>
+
+          {/* Company legalities */}
+          <div className="space-y-3">
+            <h5 className="text-xs font-bold text-white uppercase tracking-wider">حول التطبيق</h5>
+            <div className="flex flex-col gap-2 text-xs text-neutral-500">
+              <span className="hover:text-white cursor-help transition-colors">من نحن</span>
+              <span className="hover:text-white cursor-help transition-colors">سياستنا للخصوصية</span>
+              <span className="hover:text-white cursor-help transition-colors">شروط الاستخدام</span>
+              <span className="text-neutral-500 mt-2 block hover:text-[#f5c518] cursor-help">
+                تُجلب البيانات الفنية تزامناً مع TMDB.
+              </span>
             </div>
           </div>
 

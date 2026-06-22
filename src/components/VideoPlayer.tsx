@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Play, Loader, ShieldAlert, Pause, Lock } from 'lucide-react';
+import { Youtube, Play, Loader, ShieldAlert, Pause, Lock } from 'lucide-react';
 
 interface VideoPlayerProps {
   type: 'movie' | 'tv';
@@ -154,8 +154,7 @@ export default function VideoPlayer({
   // Compute VIT API provider url
   const getEmbedUrl = () => {
     if (playMode ==='trailer' && youtubeKey) {
-      const origin = typeof window !== 'undefined' ? encodeURIComponent(window.location.origin) : '';
-      return `https://www.youtube-nocookie.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&origin=${origin}`;
+      return`https://www.youtube.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1`;
     }
 
     const params = new URLSearchParams({
@@ -207,40 +206,20 @@ export default function VideoPlayer({
                 className="flex items-center gap-1 bg-white/5 hover:bg-white/10 text-white border border-white/5 text-xs font-medium px-3 py-1.5 rounded-full cursor-pointer transition-colors"
                 title="عرض الإعلان الرسمي"
               >
-                <svg viewBox="0 0 28 20" className="w-6 h-[18px] shrink-0" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="28" height="20" rx="5" fill="#FF0000" />
-                  <path d="M11 6 L19 10 L11 14 Z" fill="white" />
-                </svg>
+                <Youtube className="w-4 h-4 text-red-500" />
                 <span className="hidden sm:inline">الإعلان الرسمي</span>
 </button>
             )}
 
             {playMode ==='trailer' && (
-              <>
-                {youtubeKey && (
-                  <a
-                    href={`https://www.youtube.com/watch?v=${youtubeKey}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1 bg-white/5 hover:bg-white/10 text-white border border-white/5 text-xs font-medium px-3 py-1.5 rounded-full cursor-pointer transition-colors"
-                    title="فتح الإعلان على يوتيوب إذا لم يعمل هنا"
-                  >
-                    <svg viewBox="0 0 28 20" className="w-5 h-[14px] shrink-0" xmlns="http://www.w3.org/2000/svg">
-                      <rect width="28" height="20" rx="5" fill="#FF0000" />
-                      <path d="M11 6 L19 10 L11 14 Z" fill="white" />
-                    </svg>
-                    <span className="hidden sm:inline">يوتيوب</span>
-                  </a>
-                )}
-                <button
-                  onClick={() => onSwitchMode('movie')}
-                  className="flex items-center gap-1 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold px-3 py-1.5 rounded-full cursor-pointer transition-colors"
-                  title="الرجوع للفيلم أو المسلسل"
-                >
-                  <Play className="w-3.5 h-3.5 fill-current" />
-                  <span>شاهد الآن</span>
-                </button>
-              </>
+              <button
+                onClick={() => onSwitchMode('movie')}
+                className="flex items-center gap-1 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold px-3 py-1.5 rounded-full cursor-pointer transition-colors"
+                title="الرجوع للفيلم أو المسلسل"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>شاهد الآن</span>
+</button>
             )}
 
             {/* Next Episode Button */}
@@ -290,26 +269,15 @@ export default function VideoPlayer({
 </div>
           )}
 
-          {playMode === 'trailer' ? (
-            <iframe
-              src={getEmbedUrl()}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-              referrerPolicy="strict-origin-when-cross-origin"
-              allowFullScreen
-              className="w-full h-full border-0 relative z-0"
-              onLoad={() => setIsLoading(false)}
-            />
-          ) : (
-            <iframe
-              src={isPausedByHost ? 'about:blank' : getEmbedUrl()}
-              allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-              sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
-              referrerPolicy="no-referrer"
-              allowFullScreen
-              className="w-full h-full border-0 relative z-0"
-              onLoad={() => setIsLoading(false)}
-            />
-          )}
+          <iframe
+            src={isPausedByHost ? 'about:blank' : getEmbedUrl()}
+            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+            sandbox="allow-scripts allow-same-origin allow-presentation allow-forms unicode"
+            referrerPolicy="no-referrer"
+            allowFullScreen
+            className="w-full h-full border-0 relative z-0"
+            onLoad={() => setIsLoading(false)}
+          />
 
           {/* Host-paused overlay (covers iframe completely) */}
           {isPausedByHost && playMode === 'movie' && (

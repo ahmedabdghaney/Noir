@@ -26,7 +26,6 @@ import Header from './components/Header';
 import Hero from './components/Hero';
 import MovieRow from './components/MovieRow';
 import DetailView from './components/DetailView';
-import LiveSports from './components/LiveSports';
 import SearchOverlay from './components/SearchOverlay';
 import ShareModal from './components/ShareModal';
 import MobileNav from './components/MobileNav';
@@ -280,18 +279,9 @@ export default function App() {
         return;
       }
       const list: MovieOrShow[] = JSON.parse(listStr);
-      // Drop any legacy/broken entries whose type isn't a valid 'movie' or 'tv'
-      const validList = list.filter(
-        (item) => (item.type === 'movie' || item.type === 'tv') && item.id,
-      );
-      // If we removed broken entries, persist the cleaned list back
-      if (validList.length !== list.length) {
-        localStorage.setItem('noir_continue_watching_list', JSON.stringify(validList));
-      }
-      const activeItems = validList.filter((item) => {
+      const activeItems = list.filter((item) => {
         const progressVal = Number(localStorage.getItem(`noir_progress_${item.type}_${item.id}`)) || 0;
-        // Keep anything that hasn't been (almost) finished — including freshly opened items at 0%.
-        return progressVal < 95;
+        return progressVal > 0 && progressVal < 95;
       });
       setContinueWatching(activeItems);
     } catch (err) {
@@ -496,12 +486,6 @@ export default function App() {
     window.location.hash ='#watchlist';
   };
 
-  const handleViewLive = () => {
-    setActiveView('live');
-    setSelectedTitle(null);
-    window.location.hash = '#live';
-  };
-
   // loadWatchlist definition was moved to the state section above for better initialization.
 
   // Setup Dynamic URL Hash routing system
@@ -521,9 +505,6 @@ export default function App() {
         setSelectedTitle(null);
       } else if (hash ==='#watchlist') {
         setActiveView('watchlist');
-        setSelectedTitle(null);
-      } else if (hash ==='#live') {
-        setActiveView('live');
         setSelectedTitle(null);
       } else if (hash.startsWith('#watch-together')) {
         const parts = hash.split('?');
@@ -1098,7 +1079,7 @@ export default function App() {
         onLogout={handleLogout}
         onOpenProfile={() => setIsProfileModalOpen(true)}
         onViewWatchlist={handleViewWatchlist}
-        onViewLive={handleViewLive}
+        onViewLive={() => setActiveView('live')}
       />
 
       {/* Main Orchestration Views Switcher */}
@@ -1114,17 +1095,6 @@ export default function App() {
 
             {/* Custom Horizontal Cinema Rows */}
             <div className="space-y-4 md:space-y-6">
-              {watchlist.length > 0 && (
-                <div id="watchlist-section" className="scroll-mt-20">
-                  <MovieRow
-                    title="قائمتي"
-                    subtitle="العناوين التي قمت بحفظها لمشاهدتها لاحقاً"
-                    items={watchlist}
-                    onItemClick={handleTitleClick}
-                  />
-</div>
-              )}
-
               {continueWatching.length > 0 && (
                 <div id="continue-watching-section" className="scroll-mt-20">
                   <MovieRow
@@ -1134,6 +1104,17 @@ export default function App() {
                     onItemClick={handleTitleClick}
                   />
                 </div>
+              )}
+
+              {watchlist.length > 0 && (
+                <div id="watchlist-section" className="scroll-mt-20">
+                  <MovieRow
+                    title="قائمتي"
+                    subtitle="العناوين التي قمت بحفظها لمشاهدتها لاحقاً"
+                    items={watchlist}
+                    onItemClick={handleTitleClick}
+                  />
+</div>
               )}
 
               <MovieRow
@@ -1376,8 +1357,6 @@ export default function App() {
 </div>
           );
         })()}
-
-        {activeView ==='live' && <LiveSports />}
 
         {activeView ==='search' && (
           <div className="max-w-7xl mx-auto px-6 md:px-12 py-8 animate-fade-in">
@@ -1697,9 +1676,48 @@ export default function App() {
               onClearAutoOpenWatchTogether={() => setJoinRoomCode('')}
               watchlist={watchlist}
             />
-</div>
+          </div>
         )}
-</main>
+
+        {activeView === 'live' && (
+          <div className="max-w-4xl mx-auto px-4 md:px-6 py-12 animate-fade-in text-right [direction:rtl]">
+            <div className="mb-8 space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight leading-none">
+                  البث المباشر
+                </h1>
+              </div>
+              <p className="text-neutral-400 text-sm md:text-base font-medium">
+                استمتع بمتابعة البث المباشر المدمج بأعلى دقة واستقرار وبطريقة خالية تماماً من التعقيدات والإعلانات.
+              </p>
+            </div>
+
+            {/* Video Player Frame wrapper Style */}
+            <div className="w-full aspect-video bg-neutral-950 rounded-3xl overflow-hidden border border-white/10 shadow-[0_0_50px_rgba(255,255,255,0.03)] relative group">
+              <iframe
+                src="https://daddylive.eu/embed/embed.php?id=967&player=1&source=tv.json"
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allow="autoplay; fullscreen *; picture-in-picture *; encrypted-media"
+                allowFullScreen
+                className="w-full h-full"
+              />
+            </div>
+
+            {/* Sub details footer card */}
+            <div className="mt-6 p-4 rounded-2xl bg-neutral-900/40 border border-white/5 text-xs text-neutral-500 flex flex-col md:flex-row items-center justify-between gap-4">
+              <span className="font-semibold text-neutral-400">
+                ملاحظة: البث المباشر متصل مباشرة من خوادم مشغلات الشركاء.
+              </span>
+              <span className="bg-white/5 text-neutral-300 font-mono text-[10px] px-2.5 py-1 rounded">
+                DADDYLIVE PLAYER ID: 967
+              </span>
+            </div>
+          </div>
+        )}
+      </main>
 
       {/* Global Minimalist Footer and disclaimer notes */}
       <Footer goHome={navigateToHome} setSearchMode={handleSetSearchMode} />
@@ -1712,7 +1730,7 @@ export default function App() {
         goHome={navigateToHome}
         openSearchOverlay={() => setIsSearchOverlayOpen(true)}
         onViewWatchlist={handleViewWatchlist}
-        onViewLive={handleViewLive}
+        onViewLive={() => setActiveView('live')}
       />
 
       {/* Cmd+K QuickSearch predicting suggestions overlay */}

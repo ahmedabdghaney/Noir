@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Home, Film, Tv, Radio, Bookmark } from 'lucide-react';
+import { Home, Film, Tv, Search, Bookmark, Radio } from 'lucide-react';
 
 interface MobileNavProps {
   activeView: 'home' | 'search' | 'detail' | 'watchlist' | 'live';
@@ -64,6 +64,17 @@ export default function MobileNav({
         <span className="text-[10px] font-bold leading-none">المسلسلات</span>
       </button>
 
+      {/* Live Broadcast Button */}
+      <button
+        onClick={onViewLive}
+        className={`flex flex-col items-center justify-center gap-1 flex-1 h-full py-1 text-center transition-all cursor-pointer ${
+          activeView === 'live' ? 'text-white' : 'text-gray-500'
+        }`}
+      >
+        <Radio className="w-5 h-5 transition-transform active:scale-95" />
+        <span className="text-[10px] font-bold leading-none">البث المباشر</span>
+      </button>
+
       {/* My List / Watchlist Button */}
       <button
         onClick={onViewWatchlist}
@@ -75,15 +86,13 @@ export default function MobileNav({
         <span className="text-[10px] font-bold leading-none">قائمتي</span>
       </button>
 
-      {/* Live Stream Button */}
+      {/* Search Button */}
       <button
-        onClick={onViewLive}
-        className={`flex flex-col items-center justify-center gap-1 flex-1 h-full py-1 text-center transition-all cursor-pointer ${
-          activeView === 'live' ? 'text-white' : 'text-gray-500'
-        }`}
+        onClick={openSearchOverlay}
+        className="flex flex-col items-center justify-center gap-1 flex-1 h-full py-1 text-center transition-all cursor-pointer text-gray-500 hover:text-white"
       >
-        <Radio className="w-5 h-5 transition-transform active:scale-95" />
-        <span className="text-[10px] font-bold leading-none">البث المباشر</span>
+        <Search className="w-5 h-5 transition-transform active:scale-90" />
+        <span className="text-[10px] font-bold leading-none">البحث</span>
       </button>
 
     </nav>
