@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, X, Star, ChevronLeft, Loader, Trash2 } from 'lucide-react';
+import { Search, X, Star, ChevronLeft, Loader, Trash2, Clock } from 'lucide-react';
 import { MovieOrShow } from '../types';
 import { searchMulti, fetchTrendingWeek } from '../lib/tmdb';
 
@@ -14,27 +14,46 @@ interface SearchOverlayProps {
   onSelectTitle: (type: 'movie' | 'tv', id: number) => void;
 }
 
+// A recently opened title from search, with the time it was opened.
+type RecentTitle = MovieOrShow & { openedAt: number };
+
+// Format a timestamp into a short relative Arabic label.
+function timeAgo(ts: number): string {
+  const diff = Date.now() - ts;
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'الآن';
+  if (min < 60) return `قبل ${min} دقيقة`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `قبل ${hr} ساعة`;
+  const day = Math.floor(hr / 24);
+  if (day === 1) return 'أمس';
+  if (day < 7) return `قبل ${day} أيام`;
+  const wk = Math.floor(day / 7);
+  if (wk < 4) return `قبل ${wk} أسبوع`;
+  return `قبل ${Math.floor(day / 30)} شهر`;
+}
+
 export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: SearchOverlayProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<MovieOrShow[]>([]);
   const [trending, setTrending] = useState<MovieOrShow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [recentTitles, setRecentTitles] = useState<RecentTitle[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Focus on entry & load history/trending
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 80);
-      
-      // Load recent searches from Local Storage
+
+      // Load recently opened titles from Local Storage
       try {
-        const saved = localStorage.getItem('noir_recent_searches');
+        const saved = localStorage.getItem('noir_recent_titles');
         if (saved) {
-          setRecentSearches(JSON.parse(saved));
+          setRecentTitles(JSON.parse(saved));
         }
       } catch (err) {
-        console.error("Error loading recent searches: ", err);
+        console.error("Error loading recent titles: ", err);
       }
 
       // Load trending queries list if empty
@@ -67,24 +86,24 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: Search
     return () => clearTimeout(delayDebounceRaw);
   }, [query]);
 
-  // Helper to append a search term to recent history
-  const addToRecentSearches = (term: string) => {
-    if (!term || !term.trim()) return;
-    const cleanTerm = term.trim();
+  // Save an opened title into recent history (most recent first, max 8)
+  const addToRecentTitles = (item: MovieOrShow) => {
+    if (!item) return;
     try {
-      const saved = localStorage.getItem('noir_recent_searches');
-      let currentList: string[] = saved ? JSON.parse(saved) : [];
-      currentList = [cleanTerm, ...currentList.filter(t => t !== cleanTerm)].slice(0, 5);
-      setRecentSearches(currentList);
-      localStorage.setItem('noir_recent_searches', JSON.stringify(currentList));
+      const saved = localStorage.getItem('noir_recent_titles');
+      let list: RecentTitle[] = saved ? JSON.parse(saved) : [];
+      list = list.filter((t) => !(t.id === item.id && t.type === item.type));
+      list = [{ ...item, openedAt: Date.now() }, ...list].slice(0, 8);
+      setRecentTitles(list);
+      localStorage.setItem('noir_recent_titles', JSON.stringify(list));
     } catch (err) {
       console.error(err);
     }
   };
 
-  const clearRecentSearches = () => {
-    setRecentSearches([]);
-    localStorage.removeItem('noir_recent_searches');
+  const clearRecentTitles = () => {
+    setRecentTitles([]);
+    localStorage.removeItem('noir_recent_titles');
   };
 
   if (!isOpen) return null;
@@ -140,7 +159,7 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: Search
                   <div
                     key={`${item.type}-${item.id}`}
                     onClick={() => {
-                      addToRecentSearches(query || item.title);
+                      addToRecentTitles(item);
                       onSelectTitle(item.type, item.id);
                       onClose();
                     }}
@@ -190,39 +209,63 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: Search
             )
           ) : (
             <div className="space-y-4">
-              {/* Recent Searches Section */}
-              {recentSearches.length > 0 && (
-                <div className="px-5 py-2.5 text-right font-sans">
-                  <div className="flex items-center justify-between text-[11px] font-extrabold text-neutral-400 select-none mb-2">
-                    <span>آخر عمليات البحث لك</span>
+              {/* Recently opened titles from search */}
+              {recentTitles.length > 0 && (
+                <div className="space-y-0.5">
+                  <div className="flex items-center justify-between px-5 py-1.5 select-none">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase">آخر ما شاهدته من البحث</span>
                     <button
-                      onClick={clearRecentSearches}
-                      className="text-red-500 hover:text-red-400 flex items-center gap-1 transition-colors text-[10px]"
+                      onClick={clearRecentTitles}
+                      className="text-red-500 hover:text-red-400 flex items-center gap-1 transition-colors text-[10px] font-bold"
                     >
                       <Trash2 className="w-3 h-3" />
                       <span>مسح السجل</span>
                     </button>
                   </div>
-                  <div className="flex flex-wrap gap-2 justify-start [direction:rtl]">
-                    {recentSearches.map((term, index) => (
-                      <button
-                        key={index}
-                        onClick={() => {
-                          setQuery(term);
-                          inputRef.current?.focus();
-                        }}
-                        className="bg-neutral-800 hover:bg-neutral-700/80 text-gray-200 rounded-xl px-3 py-1.5 text-xs font-semibold cursor-pointer transition-all border border-white/5 active:scale-95"
-                      >
-                        {term}
-                      </button>
-                    ))}
-                  </div>
+                  {recentTitles.map((item) => (
+                    <div
+                      key={`recent-${item.type}-${item.id}`}
+                      onClick={() => {
+                        addToRecentTitles(item);
+                        onSelectTitle(item.type, item.id);
+                        onClose();
+                      }}
+                      className="flex items-center gap-4 px-5 py-3 hover:bg-white/5 cursor-pointer transition-colors text-right"
+                    >
+                      <div className="w-10 h-14 bg-neutral-800 rounded-lg overflow-hidden shrink-0 select-none">
+                        {item.poster ? (
+                          <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-neutral-600">
+                            {item.title.slice(0, 2)}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0 pr-1">
+                        <h5 className="text-white font-semibold text-sm truncate">{item.title}</h5>
+                        <p className="text-gray-400 text-xs mt-1 font-medium flex items-center gap-1.5">
+                          <span>{item.year || '—'}</span>
+                          <span className="w-1 h-1 bg-neutral-700 rounded-full" />
+                          <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="flex items-center gap-1 text-[10px] text-neutral-500 font-medium whitespace-nowrap">
+                          <Clock className="w-3 h-3" />
+                          <span>{timeAgo(item.openedAt)}</span>
+                        </span>
+                        <ChevronLeft className="w-4 h-4 text-gray-500" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 
               {/* Suggestions / Trending List */}
               {trending.length > 0 && (
-                <div className={`space-y-0.5 ${recentSearches.length > 0 ? 'border-t border-white/5 pt-3' : ''}`}>
+                <div className={`space-y-0.5 ${recentTitles.length > 0 ? 'border-t border-white/5 pt-3' : ''}`}>
                   <div className="text-[10px] font-bold text-gray-500 px-5 py-1.5 text-right select-none uppercase">
                     أبحر في العناوين الرائجة اليوم
                   </div>
@@ -230,7 +273,7 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: Search
                     <div
                       key={`${item.type}-${item.id}`}
                       onClick={() => {
-                        addToRecentSearches(item.title);
+                        addToRecentTitles(item);
                         onSelectTitle(item.type, item.id);
                         onClose();
                       }}

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Youtube, Dot, Star, Clock, Calendar, Globe, Languages, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle } from 'lucide-react';
+import { Play, Dot, Star, Clock, Calendar, Globe, Languages, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle } from 'lucide-react';
 import { DetailedInfo, MovieOrShow, CastMember } from '../types';
 import { fetchDetailedTitle, getPosterUrl, getBackdropUrl } from '../lib/tmdb';
 import VideoPlayer from './VideoPlayer';
@@ -526,7 +526,7 @@ export default function DetailView({
 </div>
 
       {/* Main Details Panel Layout */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-12 relative -mt-36 md:-mt-48 z-10">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-16 relative -mt-36 md:-mt-48 z-10">
         
         <div className="grid grid-cols-1 md:grid-cols-[1fr_240px] gap-6 md:gap-12 items-end">
           
@@ -693,7 +693,10 @@ export default function DetailView({
                   onClick={() => handlePlayClick('trailer')}
                   className="flex items-center gap-1.5 sm:gap-2 bg-neutral-900 hover:bg-neutral-800 text-white border border-white/10 px-4 sm:px-5 py-2 md:py-3 rounded-full transition-all cursor-pointer text-xs sm:text-sm"
                 >
-                  <Youtube className="w-4.5 h-4.5 text-red-500 fill-current" />
+                  <svg viewBox="0 0 28 20" className="w-6 h-[18px] shrink-0" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="28" height="20" rx="5" fill="#FF0000" />
+                    <path d="M11 6 L19 10 L11 14 Z" fill="white" />
+                  </svg>
                   <span>الإعلان الرسمي</span>
 </button>
               )}
