@@ -526,7 +526,7 @@ export default function DetailView({
 </div>
 
       {/* Main Details Panel Layout */}
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-16 relative -mt-36 md:-mt-48 z-10">
+      <div className="w-full mx-auto px-4 sm:px-8 lg:px-16 xl:px-24 relative -mt-36 md:-mt-48 z-10">
         
         <div className="grid grid-cols-1 md:grid-cols-[1fr_240px] gap-6 md:gap-12 items-end">
           

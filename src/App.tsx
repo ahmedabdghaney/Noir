@@ -281,7 +281,8 @@ export default function App() {
       const list: MovieOrShow[] = JSON.parse(listStr);
       const activeItems = list.filter((item) => {
         const progressVal = Number(localStorage.getItem(`noir_progress_${item.type}_${item.id}`)) || 0;
-        return progressVal > 0 && progressVal < 95;
+        // Keep anything that hasn't been (almost) finished — including freshly opened items at 0%.
+        return progressVal < 95;
       });
       setContinueWatching(activeItems);
     } catch (err) {
@@ -1094,17 +1095,6 @@ export default function App() {
 
             {/* Custom Horizontal Cinema Rows */}
             <div className="space-y-4 md:space-y-6">
-              {continueWatching.length > 0 && (
-                <div id="continue-watching-section" className="scroll-mt-20">
-                  <MovieRow
-                    title="أكمل المشاهدة"
-                    subtitle="تابع عروضك التي لم تنهي مشاهدتها بعد من حيث توقفت"
-                    items={continueWatching}
-                    onItemClick={handleTitleClick}
-                  />
-                </div>
-              )}
-
               {watchlist.length > 0 && (
                 <div id="watchlist-section" className="scroll-mt-20">
                   <MovieRow
@@ -1114,6 +1104,17 @@ export default function App() {
                     onItemClick={handleTitleClick}
                   />
 </div>
+              )}
+
+              {continueWatching.length > 0 && (
+                <div id="continue-watching-section" className="scroll-mt-20">
+                  <MovieRow
+                    title="أكمل المشاهدة"
+                    subtitle="تابع عروضك التي لم تنهي مشاهدتها بعد من حيث توقفت"
+                    items={continueWatching}
+                    onItemClick={handleTitleClick}
+                  />
+                </div>
               )}
 
               <MovieRow

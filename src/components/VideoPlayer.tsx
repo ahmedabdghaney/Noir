@@ -290,15 +290,26 @@ export default function VideoPlayer({
 </div>
           )}
 
-          <iframe
-            src={isPausedByHost ? 'about:blank' : getEmbedUrl()}
-            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-            sandbox="allow-scripts allow-same-origin allow-presentation allow-forms unicode"
-            referrerPolicy="no-referrer"
-            allowFullScreen
-            className="w-full h-full border-0 relative z-0"
-            onLoad={() => setIsLoading(false)}
-          />
+          {playMode === 'trailer' ? (
+            <iframe
+              src={getEmbedUrl()}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+              className="w-full h-full border-0 relative z-0"
+              onLoad={() => setIsLoading(false)}
+            />
+          ) : (
+            <iframe
+              src={isPausedByHost ? 'about:blank' : getEmbedUrl()}
+              allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+              sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
+              referrerPolicy="no-referrer"
+              allowFullScreen
+              className="w-full h-full border-0 relative z-0"
+              onLoad={() => setIsLoading(false)}
+            />
+          )}
 
           {/* Host-paused overlay (covers iframe completely) */}
           {isPausedByHost && playMode === 'movie' && (
