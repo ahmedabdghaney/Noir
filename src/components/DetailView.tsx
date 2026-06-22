@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Play, Youtube, Dot, Star, Clock, Calendar, Globe, Languages, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle } from 'lucide-react';
 import { DetailedInfo, MovieOrShow, CastMember } from '../types';
 import { fetchDetailedTitle, getPosterUrl, getBackdropUrl } from '../lib/tmdb';
@@ -51,6 +51,13 @@ export default function DetailView({
   const [playerMode, setPlayerMode] = useState<'movie' | 'trailer'>('movie');
   const [isPausedByHost, setIsPausedByHost] = useState(false);
   const [hostPauseByName, setHostPauseByName] = useState<string>('');
+  // Local playback time reported by the iframe (for the host)
+  const localTimeRef = useRef<number>(0);
+  // Last time we relayed our time to the server (host throttle)
+  const lastTimeBroadcastRef = useRef<number>(0);
+  // Snapshot of startAt at the moment the player was opened.
+  // We DO NOT pass wtHostTime live, otherwise it would constantly reload the iframe.
+  const [startAtSnapshot, setStartAtSnapshot] = useState<number>(0);
 
   // Saved Progress Percentage
   const [savedProgressPercent, setSavedProgressPercent] = useState<number>(0);
@@ -68,8 +75,10 @@ export default function DetailView({
     members: wtMembers,
     messages: wtMessages,
     error: wtError,
+    hostTime: wtHostTime,
     sendChat: wtSendChat,
     sendPlayer: wtSendPlayer,
+    sendTime: wtSendTime,
   } = useWatchTogether({
     enabled: isWatchTogetherOpen && !!wtRoomCode,
     room: wtRoomCode,
@@ -77,6 +86,8 @@ export default function DetailView({
     onPlayerSignal: (sig) => {
       // A remote host opened/controlled the player: mirror the action locally
       if (sig.action === 'play') {
+        // Snapshot the host's current time so the iframe boots from that point.
+        setStartAtSnapshot(Math.max(0, Math.floor(sig.time || 0)));
         setIsPlayerOpen(true);
         setPlayerMode('movie');
         setIsPausedByHost(false);
@@ -115,6 +126,26 @@ export default function DetailView({
       onClearAutoOpenWatchTogether?.();
     }
   }, [autoOpenWatchTogether]);
+
+  // Late joiner: if the host is already mid-movie, auto-open the player at the host's time
+  const didAutoOpenForHostTimeRef = useRef(false);
+  useEffect(() => {
+    if (!wtConnected || wtIsHost) return;
+    if (didAutoOpenForHostTimeRef.current) return;
+    if (!isPlayerOpen && wtHostTime > 5) {
+      didAutoOpenForHostTimeRef.current = true;
+      setStartAtSnapshot(Math.floor(wtHostTime));
+      setPlayerMode('movie');
+      setIsPlayerOpen(true);
+    }
+  }, [wtConnected, wtIsHost, wtHostTime, isPlayerOpen]);
+
+  // Reset the auto-open guard whenever the live session state changes
+  useEffect(() => {
+    if (!isWatchTogetherOpen) {
+      didAutoOpenForHostTimeRef.current = false;
+    }
+  }, [isWatchTogetherOpen]);
 
   // When the panel opens without a room code, create one (this client becomes host on the server)
   useEffect(() => {
@@ -220,9 +251,15 @@ export default function DetailView({
     setIsPlayerOpen(true);
     setIsPausedByHost(false);
     setHostPauseByName('');
+    if (mode === 'movie') {
+      // Host starts fresh; a late-joining viewer should boot from the host's current time.
+      const startFrom = wtConnected && !wtIsHost ? Math.max(0, Math.floor(wtHostTime)) : 0;
+      setStartAtSnapshot(startFrom);
+      localTimeRef.current = startFrom;
+    }
     // If host in a live session, tell everyone to open the stream too
     if (isWatchTogetherOpen && wtConnected && wtIsHost && mode === 'movie') {
-      wtSendPlayer('play', 0);
+      wtSendPlayer('play', localTimeRef.current);
     }
   };
 
@@ -231,14 +268,29 @@ export default function DetailView({
     if (!wtIsHost || !wtConnected) return;
     setIsPausedByHost(true);
     setHostPauseByName(wtName);
-    wtSendPlayer('pause', 0);
+    wtSendPlayer('pause', localTimeRef.current);
   };
 
   const handleHostResume = () => {
     if (!wtIsHost || !wtConnected) return;
     setIsPausedByHost(false);
     setHostPauseByName('');
-    wtSendPlayer('play', 0);
+    // Resume from where the host was (so the iframe restart aligns for everyone)
+    setStartAtSnapshot(Math.max(0, Math.floor(localTimeRef.current)));
+    wtSendPlayer('play', localTimeRef.current);
+  };
+
+  // Receive playback time from the iframe.
+  // Host: throttle and broadcast to the room.
+  // Non-host: just keep it as a local hint (we don't broadcast).
+  const handleTimeUpdate = (seconds: number) => {
+    localTimeRef.current = seconds;
+    if (!wtConnected || !wtIsHost) return;
+    const now = Date.now();
+    if (now - lastTimeBroadcastRef.current >= 4000) {
+      lastTimeBroadcastRef.current = now;
+      wtSendTime(seconds);
+    }
   };
 
   if (isLoading) {
@@ -681,6 +733,8 @@ export default function DetailView({
             hostPauseByName={hostPauseByName}
             isLiveHost={isWatchTogetherOpen && wtConnected && wtIsHost}
             isLiveSession={isWatchTogetherOpen && wtConnected}
+            startAt={startAtSnapshot}
+            onTimeUpdate={handleTimeUpdate}
             onHostPause={handleHostPause}
             onHostResume={handleHostResume}
             onClose={() => setIsPlayerOpen(false)}

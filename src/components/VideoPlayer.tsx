@@ -19,6 +19,8 @@ interface VideoPlayerProps {
   hostPauseByName?: string;
   isLiveHost?: boolean;
   isLiveSession?: boolean;
+  startAt?: number;
+  onTimeUpdate?: (seconds: number) => void;
   onHostPause?: () => void;
   onHostResume?: () => void;
   onClose: () => void;
@@ -39,6 +41,8 @@ export default function VideoPlayer({
   hostPauseByName = '',
   isLiveHost = false,
   isLiveSession = false,
+  startAt = 0,
+  onTimeUpdate,
   onHostPause,
   onHostResume,
   onClose,
@@ -81,6 +85,32 @@ export default function VideoPlayer({
     return () => clearInterval(timer);
   }, [type, id, playMode, progressKey]);
 
+  // Listen for vidapi.qzz.io postMessage progress events
+  // (sent from the iframe whenever playback advances or the user seeks)
+  useEffect(() => {
+    if (playMode !== 'movie') return;
+    const handler = (event: MessageEvent) => {
+      const d: any = event?.data;
+      if (!d || typeof d !== 'object') return;
+      // vidapi MEDIA_DATA payload: { type:'MEDIA_DATA', data:{ id, type, progress:{watched,duration,percentage} } }
+      if (d.type === 'MEDIA_DATA' && d.data?.progress?.watched != null) {
+        const watched = Number(d.data.progress.watched);
+        if (!Number.isNaN(watched) && watched >= 0) {
+          onTimeUpdate?.(watched);
+        }
+      }
+      // Some vidapi builds also emit PLAYER_EVENT with player_progress
+      if (d.type === 'PLAYER_EVENT' && d.data?.player_progress != null) {
+        const watched = Number(d.data.player_progress);
+        if (!Number.isNaN(watched) && watched >= 0) {
+          onTimeUpdate?.(watched);
+        }
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [playMode, onTimeUpdate]);
+
   // Auto-scroll player into perfect view center
   useEffect(() => {
     if (containerRef.current) {
@@ -108,6 +138,10 @@ export default function VideoPlayer({
       poster: 'true',
       autoplay: 'true',
     });
+
+    if (startAt && startAt > 5) {
+      params.set('startAt', String(Math.floor(startAt)));
+    }
 
     if (type ==='tv') {
       params.set('nextbutton','true');

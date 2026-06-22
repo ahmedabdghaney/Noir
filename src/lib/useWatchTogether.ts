@@ -48,6 +48,8 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
   const [members, setMembers] = useState<WtMember[]>([]);
   const [messages, setMessages] = useState<WtMessage[]>([]);
   const [error, setError] = useState<string>('');
+  // Latest playback time reported by the host (seconds). 0 = not started / unknown.
+  const [hostTime, setHostTime] = useState(0);
 
   const pushMessage = useCallback((m: WtMessage) => {
     setMessages((prev) => [...prev, m]);
@@ -92,6 +94,7 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
           selfIdRef.current = msg.selfId;
           setIsHost(!!msg.isHost);
           setMembers(msg.members || []);
+          if (typeof msg.hostTime === 'number') setHostTime(msg.hostTime);
         } else if (msg.type === 'members') {
           setMembers(msg.members || []);
           const me = (msg.members || []).find((m: WtMember) => m.id === selfIdRef.current);
@@ -107,7 +110,10 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
         } else if (msg.type === 'system') {
           pushMessage({ sender: 'نظام نوار سينما', text: msg.text, time: 'الآن', type: 'system' });
         } else if (msg.type === 'player') {
+          if (typeof msg.time === 'number') setHostTime(msg.time);
           signalRef.current?.({ action: msg.action, time: msg.time, byName: msg.byName });
+        } else if (msg.type === 'time') {
+          if (typeof msg.time === 'number') setHostTime(msg.time);
         }
       };
 
@@ -140,6 +146,7 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
       setMembers([]);
       setMessages([]);
       setIsHost(false);
+      setHostTime(0);
     };
   }, [enabled, room, name, pushMessage]);
 
@@ -157,5 +164,12 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
     }
   }, []);
 
-  return { connected, isHost, members, messages, error, sendChat, sendPlayer };
+  const sendTime = useCallback((time: number) => {
+    const ws = wsRef.current;
+    if (ws && ws.readyState === ws.OPEN) {
+      ws.send(JSON.stringify({ type: 'time', time }));
+    }
+  }, []);
+
+  return { connected, isHost, members, messages, error, hostTime, sendChat, sendPlayer, sendTime };
 }
