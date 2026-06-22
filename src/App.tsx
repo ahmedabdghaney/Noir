@@ -287,22 +287,19 @@ export default function App() {
     setAuthError('');
     setIsAuthLoading(true);
     try {
-      // First check what sign-in methods exist for this email
-      const methods = await checkSignInMethods(authEmail);
-      if (methods.length === 0) {
-        setAuthError('ما عندنا حساب بهذا البريد، تأكد منه أو أنشئ حساب جديد');
-        return;
-      }
-      if (!methods.includes('password')) {
-        if (methods.includes('google.com')) {
+      // Try to detect Google-only accounts (best effort — Firebase may hide this
+      // for privacy if email enumeration protection is on)
+      try {
+        const methods = await checkSignInMethods(authEmail);
+        if (methods.length > 0 && !methods.includes('password') && methods.includes('google.com')) {
           setAuthError('هذا البريد مسجّل عبر Google، رجاءً سجّل دخولك بزر Google مباشرة');
-        } else {
-          setAuthError('هذا البريد مسجّل بطريقة لا تدعم استعادة كلمة السر');
+          return;
         }
-        return;
+      } catch {
+        // Ignore — fall through to sending reset
       }
       await resetPassword(authEmail);
-      showToast('أرسلنا رابط إعادة التعيين لبريدك، افحص الإيميل (أو مجلد السبام)');
+      showToast('لو البريد مسجّل عندنا، راح يوصلك رابط الاستعادة (افحص السبام)');
       setAuthView('signin');
       setAuthEmail('');
     } catch (e) {
