@@ -128,7 +128,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
         <div
           ref={rowRef}
           onScroll={checkScroll}
-          dir="ltr"
+          dir="rtl"
           className="flex flex-row gap-4 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none snap-x snap-mandatory"
         >
           {items.map((item, idx) => {

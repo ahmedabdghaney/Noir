@@ -528,10 +528,10 @@ export default function DetailView({
       {/* Main Details Panel Layout */}
       <div className="w-full mx-auto px-4 sm:px-8 lg:px-16 xl:px-24 relative -mt-36 md:-mt-48 z-10">
         
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_240px] gap-6 md:gap-12 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6 md:gap-12 items-end">
           
           {/* Text Information pane (Right side in standard RTL layouts) */}
-          <div className="order-2 md:order-1 flex flex-col items-start text-right min-w-0 pr-0 md:pr-4 w-full">
+          <div className="order-2 md:order-2 flex flex-col items-start text-right min-w-0 pr-0 md:pr-4 w-full">
             
             <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white mb-2 sm:mb-3 tracking-tight leading-tight select-all">
               {title}
@@ -712,7 +712,7 @@ export default function DetailView({
 </div>
 
           {/* Left Side: Solid Poster Art (Order-1 on display size to look traditional) */}
-          <div className="order-1 md:order-2">
+          <div className="order-1 md:order-1">
             <div className="w-[160px] md:w-[240px] aspect-[2/3] mx-auto md:mx-0 rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 shadow-2xl relative select-none">
               {data.poster_path ? (
                 <img
