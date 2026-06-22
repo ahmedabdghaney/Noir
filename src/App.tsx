@@ -308,9 +308,14 @@ export default function App() {
       try {
         await loginWithGoogle();
         showToast('تم تسجيل الدخول بجوجل بنجاح');
-      } catch (error) {
+      } catch (error: any) {
         console.error("Google login failed: ", error);
-        showToast('فشل تسجيل الدخول باستخدام جوجل');
+        const errMsg = translateAuthError(error);
+        if (error?.code === 'auth/operation-not-allowed') {
+          showToast('فشل: يرجى تفعيل تسجيل الدخول بجوجل في لوحة تحكم Firebase');
+        } else {
+          showToast(`فشل تسجيل الدخول بجوجل: ${errMsg}`);
+        }
         setIsAuthLoading(false);
         setAuthMethod(null);
       }
