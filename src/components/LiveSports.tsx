@@ -2,232 +2,257 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
- * البث المباشر (SportSRC) - مباريات كرة القدم الحية
+ * البث المباشر (DaddyLive) - نسخة نظيفة عبر صيغة embed الرسمية
+ * embed.php أقل إعلاناً من صفحات stream القديمة، مع إمكانية تبديل المشغّل.
  */
 
-import { useState, useEffect } from 'react';
-import { Loader, X, Radio, Calendar } from 'lucide-react';
-import {
-  fetchFootballMatches,
-  fetchSportDetail,
-  extractStreamSources,
-  SportMatch,
-} from '../lib/sports';
+import { useState, useMemo } from 'react';
+import { X, Radio, Tv, ExternalLink, RefreshCw } from 'lucide-react';
 
-function formatMatchTime(ts: number): { day: string; time: string; isLive: boolean } {
-  const d = new Date(ts);
-  const now = Date.now();
-  const isLive = now >= ts && now <= ts + 3 * 60 * 60 * 1000;
-  const time = d.toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' });
-  const day = d.toLocaleDateString('ar', { weekday: 'short', day: 'numeric', month: 'short' });
-  return { day, time, isLive };
+interface DaddyChannel {
+  id: string;     // DaddyLive channel id
+  name: string;
+  group: string;
 }
 
+// Multiple embed domains — DaddyLive rotates domains frequently due to blocks.
+// Current working list as of 2026. Update if all stop working.
+const EMBED_BASES = [
+  'https://daddylive.top/embed/stream.php',
+  'https://daddylives.sbs/embed/stream.php',
+  'https://daddylives.icu/embed/stream.php',
+  'https://daddylive.org/embed/stream.php',
+];
+
+// Build embed URL. player 1..13 selectable; source=tv for 24/7 channels.
+function buildEmbed(baseIdx: number, id: string, player: number): string {
+  const base = EMBED_BASES[baseIdx] || EMBED_BASES[0];
+  return `${base}?id=${encodeURIComponent(id)}&player=${player}&source=tv`;
+}
+
+const DADDY_CHANNELS: DaddyChannel[] = [
+  // العربية
+  { id: '91', name: 'beIN Sports 1 Arabic', group: 'العربية' },
+  { id: '92', name: 'beIN Sports 2 Arabic', group: 'العربية' },
+  { id: '93', name: 'beIN Sports 3 Arabic', group: 'العربية' },
+  { id: '94', name: 'beIN Sports 4 Arabic', group: 'العربية' },
+  { id: '95', name: 'beIN Sports 5 Arabic', group: 'العربية' },
+  { id: '96', name: 'beIN Sports 6 Arabic', group: 'العربية' },
+  { id: '97', name: 'beIN Sports 7 Arabic', group: 'العربية' },
+  { id: '98', name: 'beIN Sports 8 Arabic', group: 'العربية' },
+  { id: '99', name: 'beIN Sports 9 Arabic', group: 'العربية' },
+  { id: '100', name: 'beIN Sports XTRA 1', group: 'العربية' },
+  { id: '578', name: 'beIN Sports HD Qatar', group: 'العربية' },
+  { id: '597', name: 'beIN Sports MAX Arabic', group: 'العربية' },
+  { id: '61', name: 'beIN Sports MENA English 1', group: 'العربية' },
+  { id: '90', name: 'beIN Sports MENA English 2', group: 'العربية' },
+
+  // فرنسا
+  { id: '116', name: 'beIN Sports 1 France', group: 'فرنسا' },
+  { id: '117', name: 'beIN Sports 2 France', group: 'فرنسا' },
+  { id: '118', name: 'beIN Sports 3 France', group: 'فرنسا' },
+  { id: '494', name: 'beIN Sports MAX 4 France', group: 'فرنسا' },
+  { id: '495', name: 'beIN Sports MAX 5 France', group: 'فرنسا' },
+  { id: '496', name: 'beIN Sports MAX 6 France', group: 'فرنسا' },
+  { id: '497', name: 'beIN Sports MAX 7 France', group: 'فرنسا' },
+  { id: '498', name: 'beIN Sports MAX 8 France', group: 'فرنسا' },
+  { id: '499', name: 'beIN Sports MAX 9 France', group: 'فرنسا' },
+  { id: '500', name: 'beIN Sports MAX 10 France', group: 'فرنسا' },
+
+  // تركيا
+  { id: '62', name: 'beIN Sports 1 Turkey', group: 'تركيا' },
+  { id: '63', name: 'beIN Sports 2 Turkey', group: 'تركيا' },
+  { id: '64', name: 'beIN Sports 3 Turkey', group: 'تركيا' },
+  { id: '67', name: 'beIN Sports 4 Turkey', group: 'تركيا' },
+  { id: '1010', name: 'beIN Sports 5 Turkey', group: 'تركيا' },
+
+  // أخرى
+  { id: '425', name: 'beIN Sports USA', group: 'أخرى' },
+  { id: '372', name: 'beIN Sports en Español', group: 'أخرى' },
+];
+
+const GROUPS = ['الكل', 'العربية', 'فرنسا', 'تركيا', 'أخرى'];
+
 export default function LiveSports() {
-  const [matches, setMatches] = useState<SportMatch[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [activeGroup, setActiveGroup] = useState('الكل');
+  const [selected, setSelected] = useState<DaddyChannel | null>(null);
+  const [player, setPlayer] = useState(1);
+  const [baseIdx, setBaseIdx] = useState(0);
 
-  const [selected, setSelected] = useState<SportMatch | null>(null);
-  const [sources, setSources] = useState<{ label: string; url: string }[]>([]);
-  const [activeSource, setActiveSource] = useState<string | null>(null);
-  const [loadingStream, setLoadingStream] = useState(false);
-  const [streamError, setStreamError] = useState('');
+  const channels = useMemo(() => {
+    if (activeGroup === 'الكل') return DADDY_CHANNELS;
+    return DADDY_CHANNELS.filter((c) => c.group === activeGroup);
+  }, [activeGroup]);
 
-  useEffect(() => {
-    setLoading(true);
-    fetchFootballMatches()
-      .then((m) => {
-        m.sort((a, b) => a.date - b.date);
-        setMatches(m);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
-
-  const openMatch = async (match: SportMatch) => {
-    setSelected(match);
-    setSources([]);
-    setActiveSource(null);
-    setStreamError('');
-    setLoadingStream(true);
-    try {
-      const detail = await fetchSportDetail(match.id);
-      // Debug: log full response so we can see exact field names returned by the API.
-      // Open browser console (Cmd+Option+I) to inspect.
-      console.log('[NOIR LiveSports] match id:', match.id);
-      console.log('[NOIR LiveSports] detail response:', detail);
-      // Show first source object in full so we can see its field names
-      if (detail && Array.isArray(detail.sources) && detail.sources.length > 0) {
-        console.log('[NOIR LiveSports] first source object:', detail.sources[0]);
-        console.log('[NOIR LiveSports] first source keys:', Object.keys(detail.sources[0]));
-      }
-      const srcs = extractStreamSources(detail);
-      console.log('[NOIR LiveSports] extracted sources:', srcs);
-      if (srcs.length > 0) {
-        setSources(srcs);
-        setActiveSource(srcs[0].url);
-      } else {
-        setStreamError('لا يتوفر بث لهذه المباراة حالياً، قد يبدأ قرب موعد انطلاقها.');
-      }
-    } catch (err) {
-      console.error('[NOIR LiveSports] error:', err);
-      setStreamError('تعذّر تحميل البث، حاول لاحقاً.');
-    } finally {
-      setLoadingStream(false);
-    }
+  const open = (ch: DaddyChannel) => {
+    setSelected(ch);
+    setPlayer(1);
+    setBaseIdx(0);
   };
-
-  const closeMatch = () => {
-    setSelected(null);
-    setSources([]);
-    setActiveSource(null);
-    setStreamError('');
-  };
+  const close = () => setSelected(null);
 
   return (
     <div className="w-full text-right min-h-[70vh] px-4 sm:px-8 lg:px-16 pt-28 md:pt-32 pb-24 md:pb-16">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-2">
         <div className="w-10 h-10 rounded-2xl bg-red-600/15 border border-red-500/30 flex items-center justify-center">
           <Radio className="w-5 h-5 text-red-500" />
         </div>
         <div>
           <h1 className="text-xl md:text-2xl font-extrabold text-white">البث المباشر</h1>
-          <p className="text-neutral-500 text-xs md:text-sm">مباريات كرة القدم — اختر مباراة لمشاهدتها مباشرة</p>
+          <p className="text-neutral-500 text-xs md:text-sm">قنوات رياضية مباشرة على مدار الساعة</p>
         </div>
       </div>
 
-      {/* Matches */}
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-24 gap-3">
-          <Loader className="w-8 h-8 text-red-500 animate-spin" />
-          <span className="text-neutral-400 text-sm">جارٍ تحميل المباريات...</span>
-        </div>
-      ) : matches.length === 0 ? (
-        <div className="py-24 text-center text-neutral-500 text-sm">
-          لا توجد مباريات متاحة حالياً، تحقّق لاحقاً.
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" dir="rtl">
-          {matches.map((match) => {
-            const { day, time, isLive } = formatMatchTime(match.date);
-            return (
-              <button
-                key={match.id}
-                onClick={() => openMatch(match)}
-                className="group bg-neutral-900/70 hover:bg-neutral-800/80 border border-white/5 hover:border-red-500/30 rounded-2xl p-4 text-right transition-all active:scale-[0.98]"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      isLive ? 'bg-red-600 text-white' : 'bg-neutral-800 text-neutral-400'
-                    }`}
-                  >
-                    {isLive ? 'مباشر الآن' : 'قريباً'}
-                  </span>
-                  <span className="text-[10px] text-neutral-500 font-medium">كرة القدم</span>
-                </div>
+      {/* Tip about ads */}
+      <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl px-4 py-3 mb-6 mt-4">
+        <p className="text-[11px] md:text-xs text-amber-200/80 leading-relaxed">
+          نصيحة: إذا ظهر إعلان أو لم يبدأ البث فوراً، أغلق الإعلان وجرّب تبديل «المشغّل» أو «المصدر» من الأزرار أسفل الشاشة. استخدام مانع إعلانات في المتصفح يحسّن التجربة كثيراً.
+        </p>
+      </div>
 
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    {match.teams.home.badge ? (
-                      <img src={match.teams.home.badge} alt="" referrerPolicy="no-referrer" className="w-7 h-7 object-contain shrink-0" />
-                    ) : (
-                      <div className="w-7 h-7 rounded-full bg-neutral-800 shrink-0" />
-                    )}
-                    <span className="text-white text-xs font-bold truncate">
-                      {match.teams.home.name || match.title.split(/vs|-/)[0]?.trim() || 'الفريق الأول'}
-                    </span>
-                  </div>
+      {/* Group chips */}
+      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-8" dir="rtl">
+        {GROUPS.map((g) => (
+          <button
+            key={g}
+            onClick={() => setActiveGroup(g)}
+            className={`shrink-0 px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all border ${
+              activeGroup === g
+                ? 'bg-red-600 text-white border-red-600'
+                : 'bg-neutral-900 text-neutral-300 border-white/5 hover:bg-neutral-800'
+            }`}
+          >
+            {g}
+          </button>
+        ))}
+      </div>
 
-                  <span className="text-neutral-600 text-[10px] font-bold shrink-0">ضد</span>
+      {/* Channels grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4" dir="rtl">
+        {channels.map((ch) => (
+          <button
+            key={ch.id}
+            onClick={() => open(ch)}
+            className="group bg-neutral-900/70 hover:bg-neutral-800/80 border border-white/5 hover:border-red-500/40 rounded-2xl p-4 text-right transition-all active:scale-[0.98] flex flex-col gap-3"
+          >
+            <div className="flex items-center justify-between">
+              <div className="w-9 h-9 rounded-xl bg-red-600/15 border border-red-500/20 flex items-center justify-center shrink-0">
+                <Tv className="w-4.5 h-4.5 text-red-500" />
+              </div>
+              <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400">
+                <span className="relative flex w-1.5 h-1.5">
+                  <span className="animate-ping absolute inline-flex w-full h-full rounded-full bg-emerald-500 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full w-1.5 h-1.5 bg-emerald-500"></span>
+                </span>
+                مباشر
+              </span>
+            </div>
+            <div>
+              <h3 className="text-white text-xs md:text-sm font-bold leading-tight">{ch.name}</h3>
+              <span className="text-neutral-500 text-[10px] font-medium">{ch.group}</span>
+            </div>
+          </button>
+        ))}
+      </div>
 
-                  <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-                    <span className="text-white text-xs font-bold truncate text-left">
-                      {match.teams.away.name || match.title.split(/vs|-/)[1]?.trim() || 'الفريق الثاني'}
-                    </span>
-                    {match.teams.away.badge ? (
-                      <img src={match.teams.away.badge} alt="" referrerPolicy="no-referrer" className="w-7 h-7 object-contain shrink-0" />
-                    ) : (
-                      <div className="w-7 h-7 rounded-full bg-neutral-800 shrink-0" />
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-white/5 text-neutral-400">
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span className="text-[11px] font-medium">{day}</span>
-                  <span className="w-1 h-1 bg-neutral-700 rounded-full" />
-                  <span className="text-[11px] font-bold text-white">{time}</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Stream Modal */}
+      {/* Player Modal */}
       {selected && (
         <div
-          onClick={(e) => e.target === e.currentTarget && closeMatch()}
+          onClick={(e) => e.target === e.currentTarget && close()}
           className="fixed inset-0 bg-black/85 backdrop-blur-md z-[600] flex items-center justify-center p-4 overflow-y-auto"
         >
           <div className="w-full max-w-5xl bg-neutral-950 border border-white/10 rounded-3xl overflow-hidden my-8">
+            {/* header */}
             <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-white/5">
               <div className="flex items-center gap-2 min-w-0">
-                <Radio className="w-4 h-4 text-red-500 shrink-0" />
-                <h3 className="text-white font-bold text-sm md:text-base truncate">{selected.title}</h3>
+                <span className="relative flex w-2 h-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex w-full h-full rounded-full bg-red-500 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full w-2 h-2 bg-red-600"></span>
+                </span>
+                <h3 className="text-white font-bold text-sm md:text-base truncate">{selected.name}</h3>
               </div>
-              <button onClick={closeMatch} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center shrink-0 transition-colors">
+              <button
+                onClick={close}
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center shrink-0 transition-colors"
+              >
                 <X className="w-4 h-4 text-white" />
               </button>
             </div>
 
+            {/* player */}
             <div className="relative aspect-video w-full bg-black">
-              {loadingStream && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10">
-                  <Loader className="w-8 h-8 text-red-500 animate-spin" />
-                  <span className="text-xs text-neutral-400">جارٍ تجهيز البث...</span>
-                </div>
-              )}
-              {streamError && !loadingStream && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 z-10 px-6 text-center">
-                  <span className="text-sm text-neutral-300 font-semibold">{streamError}</span>
-                </div>
-              )}
-              {activeSource && !loadingStream && (
-                <iframe
-                  src={activeSource}
-                  allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-                  allowFullScreen
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full border-0"
-                />
-              )}
+              <iframe
+                key={`${selected.id}-${player}-${baseIdx}`}
+                src={buildEmbed(baseIdx, selected.id, player)}
+                allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                allowFullScreen
+                referrerPolicy="origin"
+                sandbox="allow-scripts allow-same-origin allow-presentation"
+                className="w-full h-full border-0"
+              />
             </div>
 
-            {sources.length > 1 && (
-              <div className="px-5 py-4">
-                <span className="text-[11px] text-neutral-500 font-bold uppercase block mb-2">السيرفرات المتاحة ({sources.length})</span>
+            {/* controls */}
+            <div className="px-5 py-4 space-y-4">
+              {/* player switch */}
+              <div>
+                <span className="text-[11px] text-neutral-500 font-bold uppercase block mb-2">
+                  المشغّل (جرّب رقم آخر لو لم يعمل)
+                </span>
                 <div className="flex flex-wrap gap-2" dir="rtl">
-                  {sources.map((s, i) => (
+                  {[1, 2, 3, 4, 5, 6].map((p) => (
                     <button
-                      key={i}
-                      onClick={() => setActiveSource(s.url)}
+                      key={p}
+                      onClick={() => setPlayer(p)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
-                        activeSource === s.url ? 'bg-red-600 text-white border-red-600' : 'bg-neutral-900 text-neutral-300 border-white/5 hover:bg-neutral-800'
+                        player === p
+                          ? 'bg-red-600 text-white border-red-600'
+                          : 'bg-neutral-900 text-neutral-300 border-white/5 hover:bg-neutral-800'
                       }`}
                     >
-                      {s.label}
+                      مشغّل {p}
                     </button>
                   ))}
                 </div>
               </div>
-            )}
 
+              {/* source/domain switch */}
+              <div>
+                <span className="text-[11px] text-neutral-500 font-bold uppercase block mb-2">
+                  المصدر (بدّله لو القناة لا تفتح)
+                </span>
+                <div className="flex flex-wrap gap-2 items-center" dir="rtl">
+                  {EMBED_BASES.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setBaseIdx(i)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                        baseIdx === i
+                          ? 'bg-red-600 text-white border-red-600'
+                          : 'bg-neutral-900 text-neutral-300 border-white/5 hover:bg-neutral-800'
+                      }`}
+                    >
+                      مصدر {i + 1}
+                    </button>
+                  ))}
+                  <a
+                    href={buildEmbed(baseIdx, selected.id, player)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-white border border-white/5 transition-colors"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    فتح بنافذة منفصلة
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* disclaimer */}
             <div className="px-5 py-3 border-t border-white/5">
               <p className="text-[10px] text-neutral-600 leading-relaxed">
-                البث يُجمَّع من مصادر طرف ثالث عامة. نوار سينما لا يستضيف أو ينتج أي بث مباشر.
+                البث يُجمَّع من مصادر طرف ثالث عامة (DaddyLive). نوار سينما لا يستضيف أو ينتج أي بث مباشر.
               </p>
             </div>
           </div>
