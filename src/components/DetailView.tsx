@@ -389,6 +389,9 @@ export default function DetailView({
                 errMsg = String(cloudErr);
               }
             }
+            if (errMsg.includes('Missing or insufficient permissions') && curUser?.emailVerified === false) {
+              errMsg = 'يرجى تفعيل بريدك الإلكتروني من الملف الشخصي لإتمام العملية';
+            }
             showToast(`تمت الإزالة محلياً (${errMsg})`);
           }
         } else {
@@ -431,6 +434,9 @@ export default function DetailView({
               } else {
                 errMsg = String(cloudErr);
               }
+            }
+            if (errMsg.includes('Missing or insufficient permissions') && curUser?.emailVerified === false) {
+              errMsg = 'يرجى تفعيل بريدك الإلكتروني من الملف الشخصي ليتم الحفظ سحابياً';
             }
             showToast(`تم الحفظ محلياً (${errMsg})`);
           }

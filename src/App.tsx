@@ -8,7 +8,7 @@ import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, 
 import LogoIcon from './components/LogoIcon';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { auth, loginWithGoogle, logoutUser, signInWithEmail, signUpWithEmail, resetPassword, checkSignInMethods, translateAuthError, fetchFirestoreWatchlist, db } from './lib/firebase';
+import { auth, loginWithGoogle, logoutUser, signInWithEmail, signUpWithEmail, resetPassword, checkSignInMethods, translateAuthError, fetchFirestoreWatchlist, db, sendVerification } from './lib/firebase';
 import { MovieOrShow } from './types';
 import {
   initializeGenres,
@@ -82,6 +82,7 @@ export default function App() {
 
   // User Profile Modal active state
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isSendingVerification, setIsSendingVerification] = useState(false);
 
   // Watchlist custom filter & sorting options
   const [watchlistFilter, setWatchlistFilter] = useState<'all' | 'movie' | 'tv'>('all');
@@ -436,6 +437,19 @@ export default function App() {
     localStorage.removeItem('noir_credentials');
     setUser(null);
     showToast('تم تسجيل الخروج بنجاح');
+  };
+
+  const handleSendVerificationEmail = async () => {
+    setIsSendingVerification(true);
+    try {
+      await sendVerification();
+      showToast('تم إرسال رابط التفعيل إلى بريدك الإلكتروني بنجاح (افحص البريد المزعج/السبام)');
+    } catch (e: any) {
+      console.error(e);
+      showToast('فشل في إرسال رابط التفعيل، يرجى المحاولة لاحقاً');
+    } finally {
+      setIsSendingVerification(false);
+    }
   };
 
   const handleViewWatchlist = () => {
@@ -1696,9 +1710,28 @@ export default function App() {
                     أنت مسجل حالياً كضيف
 </span>
                 ) : user.type === 'email' ? (
-                  <span className="inline-block bg-red-500/10 border border-red-500/25 text-red-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full mt-1">
-                    حساب نوار سينما
-</span>
+                  <div className="flex flex-col items-center gap-2 mt-1">
+                    <span className="inline-block bg-red-500/10 border border-red-500/25 text-red-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+                      حساب نوار سينما
+                    </span>
+                    {auth.currentUser?.emailVerified === false && (
+                      <div className="mt-1 flex flex-col items-center gap-1.5 p-2 bg-amber-500/10 border border-amber-500/20 rounded-xl max-w-[240px] mx-auto">
+                        <p className="text-[10px] text-amber-400 font-bold leading-normal">
+                          البريد الإلكتروني غير مفعّل ⚠️
+                        </p>
+                        <p className="text-[9px] text-gray-400 leading-normal">
+                          السحابة تمنع الحفظ لغير المفعّلين لحماية بياناتك.
+                        </p>
+                        <button
+                          onClick={handleSendVerificationEmail}
+                          disabled={isSendingVerification}
+                          className="text-[10px] text-indigo-400 hover:text-indigo-300 underline font-extrabold cursor-pointer disabled:opacity-50"
+                        >
+                          {isSendingVerification ? 'جاري الإرسال...' : 'إرسال رابط تفعيل البريد'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <span className="inline-block bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full mt-1">
                     حساب جوجل مفعل وموثق 

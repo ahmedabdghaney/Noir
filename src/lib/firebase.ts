@@ -9,6 +9,7 @@ import {
   sendPasswordResetEmail,
   updateProfile,
   fetchSignInMethodsForEmail,
+  sendEmailVerification,
 } from 'firebase/auth';
 import {
   getFirestore,
@@ -255,15 +256,24 @@ export const addToFirestoreWatchlist = async (userId: string, item: Omit<MovieOr
       id: Number(item.id),
       type: item.type,
       title: item.title,
-      poster: item.poster,
-      backdrop: item.backdrop,
-      rating: Number(item.rating),
-      year: String(item.year),
+      poster: item.poster || '',
+      backdrop: item.backdrop || '',
+      rating: Number(item.rating || 0),
+      year: String(item.year || ''),
       genres: Array.isArray(item.genres) ? item.genres : [],
       addedAt: serverTimestamp(),
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, pathSpec);
+  }
+};
+
+/**
+ * Send an email verification link to the current authenticated user.
+ */
+export const sendVerification = async () => {
+  if (auth.currentUser) {
+    await sendEmailVerification(auth.currentUser);
   }
 };
 
