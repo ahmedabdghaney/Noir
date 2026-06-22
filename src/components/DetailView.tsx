@@ -3,12 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from'react';
-import { Play, Youtube, Dot, Star, Clock, Calendar, Globe, Languages, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle } from'lucide-react';
-import { DetailedInfo, MovieOrShow, CastMember } from'../types';
-import { fetchDetailedTitle, getPosterUrl, getBackdropUrl } from'../lib/tmdb';
-import VideoPlayer from'./VideoPlayer';
-import MovieRow from'./MovieRow';
+import React, { useState, useEffect } from 'react';
+import { Play, Youtube, Dot, Star, Clock, Calendar, Globe, Languages, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle } from 'lucide-react';
+import { DetailedInfo, MovieOrShow, CastMember } from '../types';
+import { fetchDetailedTitle, getPosterUrl, getBackdropUrl } from '../lib/tmdb';
+import VideoPlayer from './VideoPlayer';
+import MovieRow from './MovieRow';
+import { useWatchTogether } from '../lib/useWatchTogether';
 
 interface DetailViewProps {
   type: 'movie' | 'tv';
@@ -52,13 +53,35 @@ export default function DetailView({
   // Saved Progress Percentage
   const [savedProgressPercent, setSavedProgressPercent] = useState<number>(0);
 
-  // Watch Together Interactive Simulation Slate
+  // Watch Together - Live (real WebSocket connection)
   const [isWatchTogetherOpen, setIsWatchTogetherOpen] = useState(false);
   const [wtRoomCode, setWtRoomCode] = useState('');
-  const [wtMessages, setWtMessages] = useState<{ sender: string; text: string; time: string; type?:'system' | 'chat' }[]>([]);
   const [wtNewMsg, setWtNewMsg] = useState('');
-  const [wtMembers, setWtMembers] = useState<string[]>([]);
   const [wtCopied, setWtCopied] = useState(false);
+
+  const wtName = user?.name || 'زائر';
+  const {
+    connected: wtConnected,
+    isHost: wtIsHost,
+    members: wtMembers,
+    messages: wtMessages,
+    error: wtError,
+    sendChat: wtSendChat,
+    sendPlayer: wtSendPlayer,
+  } = useWatchTogether({
+    enabled: isWatchTogetherOpen && !!wtRoomCode,
+    room: wtRoomCode,
+    name: wtName,
+    onPlayerSignal: (sig) => {
+      // A remote host opened/controlled the player: mirror the action locally
+      if (sig.action === 'play') {
+        setIsPlayerOpen(true);
+        setPlayerMode('movie');
+      } else if (sig.action === 'pause') {
+        showToast(`${sig.byName} أوقف التشغيل مؤقتاً`);
+      }
+    },
+  });
 
   const loadSavedProgress = () => {
     const progressKey =`noir_progress_${type}_${id}`;
@@ -78,138 +101,45 @@ export default function DetailView({
     handlePlayClick('movie');
   };
 
-  // Handle auto-joining rooms from shared links
+  // Auto-join a room from a shared link
   useEffect(() => {
     if (autoOpenWatchTogether) {
       setIsWatchTogetherOpen(true);
       setWtRoomCode(autoOpenWatchTogether);
-      const hostName ='منشئ الغرفة';
-      const myName = user?.name ||'زائر كريم';
-      setWtMembers([`${hostName} (المنظم)`,`${myName} (أنت)`]);
-      setWtMessages([
-        { sender: 'نظام نوار سينما', text: `تم الانضمام إلى غرفة المشاهدة الجماعية الرقمية بنجاح! كود الغرفة: ${autoOpenWatchTogether}`, time: 'الآن', type: 'system' },
-        { sender: hostName, text: 'يا أهلاً بالمنضم الجديد للغرفة! مشاهدة ممتعة', time: 'الآن', type: 'chat' },
-        { sender: 'نظام نوار سينما', text: 'أنت متصل الآن مع البث المباشر ومزامنة المشغل مفعلة تلقائياً.', time: 'الآن', type: 'system' }
-      ]);
-      showToast(`مرحباً بك! تم الانضمام لغرفة المشاهدة الجماعية ${autoOpenWatchTogether}`);
       onClearAutoOpenWatchTogether?.();
     }
-  }, [autoOpenWatchTogether, user]);
+  }, [autoOpenWatchTogether]);
 
+  // When the panel opens without a room code, create one (this client becomes host on the server)
   useEffect(() => {
     if (isWatchTogetherOpen && !wtRoomCode) {
-      const code ='NOIR-' + Math.floor(1000 + Math.random() * 9000);
+      const code = 'NOIR-' + Math.floor(1000 + Math.random() * 9000);
       setWtRoomCode(code);
-      const myName = user?.name ||'المنظم';
-      setWtMembers([`${myName} (أنت)`]);
-      setWtMessages([
-        { sender: 'نظام نوار سينما', text: `تم إنشاء غرفة المشاهدة الجماعية الرقمية بنجاح! كود الغرفة: ${code}`, time: 'الآن', type: 'system' },
-        { sender: 'نظام نوار سينما', text: 'شارك رابط الغرفة مع أصدقائك أو عائلتك لينضموا إليك مباشرة دقيقة بدقيقة.', time: 'الآن', type: 'system' }
-      ]);
     }
-  }, [isWatchTogetherOpen, wtRoomCode, user]);
-
-  // Periodic simulated users joining, capped strictly at maximum 6 members!
-  useEffect(() => {
-    if (!isWatchTogetherOpen || !wtRoomCode) return;
-
-    const availableNames = ['يوسف','سارة','فاطمة','عمر','عبدالله','منى'];
-
-    const timer = setInterval(() => {
-      setWtMembers((prev) => {
-        if (prev.length >= 6) {
-          clearInterval(timer);
-          return prev;
-        }
-
-        // Filter and find next joiner name
-        const cleanNames = prev.map(m => m.replace(/ \((أنت|المنظم|متصل)\)/,''));
-        const nextName = availableNames.find(n => !cleanNames.includes(n));
-
-        if (nextName) {
-          const joinedMember =`${nextName} (متصل)`;
-
-          // Add system join message
-          setWtMessages((messages) => [
-            ...messages,
-            {
-              sender: 'نظام نوار سينما',
-              text: `انضم ${nextName} إلى الغرفة الآن`,
-              time: 'الآن',
-              type: 'system'
-            }
-          ]);
-
-          // Simulate welcoming chat message after 1.5s
-          setTimeout(() => {
-            const chats = [
-'يا هلا بالشباب!',
-'سهرة سعيدة ومشاهدة ممتعة للجميع!',
-'شكراً على الدعوة الرهيبة للفيلم',
-'حياكم الله جميعاً، متحمس جداً!',
-'السلام عليكم، جيت بوكت ممتاز'
-            ];
-            const randomChat = chats[Math.floor(Math.random() * chats.length)];
-            setWtMessages((messages) => [
-              ...messages,
-              {
-                sender: nextName,
-                text: randomChat,
-                time: 'الآن',
-                type: 'chat'
-              }
-            ]);
-          }, 1500);
-
-          return [...prev, joinedMember];
-        }
-
-        return prev;
-      });
-    }, 6000); // joins every 6 seconds
-
-    return () => {
-      clearInterval(timer);
-    };
   }, [isWatchTogetherOpen, wtRoomCode]);
 
   const handleSendWtMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!wtNewMsg.trim()) return;
-    const newMsg = { sender: 'أنت', text: wtNewMsg, time: 'الآن', type: 'chat' as const };
-    setWtMessages(prev => [...prev, newMsg]);
+    const text = wtNewMsg.trim();
+    if (!text) return;
+    wtSendChat(text);
     setWtNewMsg('');
-    
-    // Auto simulate mock reply from any active list member except host/you after 1.5s
-    setTimeout(() => {
-      setWtMembers(currentMembers => {
-        const cleanMembers = currentMembers
-          .map(m => m.replace(/ \((أنت|المنظم|متصل)\)/,''))
-          .filter(name => name !=='أنت' && name !=='المنظم' && name !== (user?.name ||''));
-        
-        if (cleanMembers.length > 0) {
-          const replier = cleanMembers[Math.floor(Math.random() * cleanMembers.length)];
-          const replies = [
-'رائع ومفهوم تماماً!',
-'اتفق بشكل كبير! الجودة خرافية والبث سلس',
-'سهرة مميزة جداً بفضل نوار سينما',
-'الإنتاج والترجمة جودتهم روعة!',
-'فعلاً ممتع جداً جمعتنا هذه!'
-          ];
-          const randomReply = replies[Math.floor(Math.random() * replies.length)];
-          setWtMessages(prevMessages => [
-            ...prevMessages,
-            { sender: replier, text: randomReply, time: 'الآن', type: 'chat' }
-          ]);
-        }
-        return currentMembers;
-      });
-    }, 1500);
   };
 
   const handleCopyRoomLink = () => {
-    const link =`${window.location.origin}/#watch-together?room=${wtRoomCode}&type=${type}&id=${id}`;
-    navigator.clipboard.writeText(link);
+    const link = `${window.location.origin}/#watch-together?room=${wtRoomCode}&type=${type}&id=${id}`;
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(link);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = link;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
     setWtCopied(true);
     setTimeout(() => setWtCopied(false), 2000);
   };
@@ -282,6 +212,10 @@ export default function DetailView({
   const handlePlayClick = (mode: 'movie' | 'trailer') => {
     setPlayerMode(mode);
     setIsPlayerOpen(true);
+    // If host in a live session, tell everyone to open the stream too
+    if (isWatchTogetherOpen && wtConnected && wtIsHost && mode === 'movie') {
+      wtSendPlayer('play', 0);
+    }
   };
 
   if (isLoading) {
@@ -605,17 +539,26 @@ export default function DetailView({
                   <Users className="w-5 h-5 text-red-500" />
 </div>
                 <div className="flex flex-col text-right">
-                  <h3 className="text-white font-bold text-sm sm:text-base">استوديو المشاهدة الجماعية عائلياً</h3>
-                  <p className="text-gray-400 text-[10px] sm:text-xs">شاهد أفلامك ومسلسلاتك المفضلة مع عائلتك وأصدقائك معاً في نفس الوقت بانسجام تام!</p>
-</div>
-</div>
+                  <h3 className="text-white font-bold text-sm sm:text-base">استوديو المشاهدة الجماعية</h3>
+                  <p className="text-gray-400 text-[10px] sm:text-xs">
+                    {wtConnected
+                      ? 'متصل مباشرة الآن. شارك الرابط مع أصدقائك لينضموا إليك فعلياً.'
+                      : wtError
+                        ? wtError
+                        : 'جارٍ الاتصال بخادم المشاهدة الجماعية...'}
+                  </p>
+                </div>
+              </div>
 
               {/* Room Link Copy Option */}
               <div className="flex items-center gap-2 w-full md:w-auto">
                 <div className="bg-[#0e1117] border border-white/5 py-1 px-3 rounded-full flex items-center gap-2 text-xs text-gray-300 font-bold select-all leading-none font-mono">
+                  <span
+                    className={`w-2 h-2 rounded-full ${wtConnected ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                  />
                   <span>ROOM:</span>
                   <span className="text-red-400">{wtRoomCode}</span>
-</div>
+                </div>
                 <button
                   onClick={handleCopyRoomLink}
                   className="flex items-center gap-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-full transition-all cursor-pointer shadow-md"
@@ -635,22 +578,22 @@ export default function DetailView({
                     <div 
                       key={i} 
                       className={`flex flex-col gap-1 max-w-[85%] ${
-                        msg.sender ==='أنت' 
-                          ?'mr-auto items-start text-left' 
-                          : msg.type ==='system' 
-                            ?'mx-auto text-center items-center bg-white/5 border border-white/5 rounded-lg py-1 px-3 text-[10px] text-gray-400 w-full' 
-                            :'ml-auto items-end text-right'
+                        msg.self
+                          ? 'mr-auto items-start text-left' 
+                          : msg.type === 'system' 
+                            ? 'mx-auto text-center items-center bg-white/5 border border-white/5 rounded-lg py-1 px-3 text-[10px] text-gray-400 w-full' 
+                            : 'ml-auto items-end text-right'
                       }`}
                     >
-                      {msg.type !=='system' && (
+                      {msg.type !== 'system' && (
                         <span className="text-[10px] text-gray-500 font-bold px-1">{msg.sender}</span>
                       )}
                       <div className={`px-3 py-2 rounded-2xl text-xs font-semibold leading-relaxed ${
-                        msg.type ==='system' 
-                          ?'' 
-                          : msg.sender ==='أنت' 
-                            ?'bg-red-600 text-white rounded-tl-none' 
-                            :'bg-neutral-800 text-gray-200 rounded-tr-none'
+                        msg.type === 'system' 
+                          ? '' 
+                          : msg.self
+                            ? 'bg-red-600 text-white rounded-tl-none' 
+                            : 'bg-neutral-800 text-gray-200 rounded-tr-none'
                       }`}>
                         {msg.text}
 </div>
@@ -680,13 +623,18 @@ export default function DetailView({
               <div className="bg-neutral-900 border border-white/5 p-4 rounded-2xl flex flex-col gap-3 text-right">
                 <span className="text-xs text-gray-500 font-bold border-b border-white/5 pb-2 block">المتصلون الآن ({wtMembers.length})</span>
                 <div className="flex flex-col gap-2.5">
-                  {wtMembers.map((member, i) => (
-                    <div key={i} className="flex items-center gap-2 justify-between">
+                  {wtMembers.length === 0 && (
+                    <span className="text-[11px] text-gray-600 font-medium">لا يوجد أحد بعد. انسخ الرابط وأرسله لأصدقائك.</span>
+                  )}
+                  {wtMembers.map((member) => (
+                    <div key={member.id} className="flex items-center gap-2 justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                        <span className="text-white text-xs font-bold">{member}</span>
-</div>
-                      <span className="text-[10px] text-emerald-400 font-bold">نشط</span>
+                        <span className="text-white text-xs font-bold">{member.name}</span>
+                      </div>
+                      <span className="text-[10px] text-emerald-400 font-bold">
+                        {member.isHost ? 'المنظم' : 'متصل'}
+                      </span>
 </div>
                   ))}
 </div>

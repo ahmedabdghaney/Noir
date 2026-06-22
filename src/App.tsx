@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.5
  */
 
-import { useState, useEffect, useRef } from'react';
-import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, Star } from'lucide-react';
-import { onAuthStateChanged } from'firebase/auth';
-import { auth, loginWithGoogle, logoutUser } from'./lib/firebase';
-import { MovieOrShow } from'./types';
+import { useState, useEffect, useRef } from 'react';
+import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, Star } from 'lucide-react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, loginWithGoogle, logoutUser } from './lib/firebase';
+import { MovieOrShow } from './types';
 import {
   initializeGenres,
   fetchTrendingWeek,
@@ -17,17 +17,17 @@ import {
   discoverTitles,
   searchTitles,
   MOVIE_GENRES,
-} from'./lib/tmdb';
+} from './lib/tmdb';
 
 // Component Imports
-import Header from'./components/Header';
-import Hero from'./components/Hero';
-import MovieRow from'./components/MovieRow';
-import DetailView from'./components/DetailView';
-import SearchOverlay from'./components/SearchOverlay';
-import ShareModal from'./components/ShareModal';
-import MobileNav from'./components/MobileNav';
-import Footer from'./components/Footer';
+import Header from './components/Header';
+import Hero from './components/Hero';
+import MovieRow from './components/MovieRow';
+import DetailView from './components/DetailView';
+import SearchOverlay from './components/SearchOverlay';
+import ShareModal from './components/ShareModal';
+import MobileNav from './components/MobileNav';
+import Footer from './components/Footer';
 
 // Static Configuration Constants
 const COUNTRIES = [

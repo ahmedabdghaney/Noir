@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from'react';
-import { Search, Menu, X, Clapperboard } from'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Menu, X, Clapperboard } from 'lucide-react';
 
 interface HeaderProps {
   activeView: 'home' | 'search' | 'detail' | 'watchlist';

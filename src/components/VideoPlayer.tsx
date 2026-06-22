@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useRef } from'react';
-import { X, Maximize, Settings, Youtube, Play, Loader, ShieldAlert } from'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, Maximize, Settings, Youtube, Play, Loader, ShieldAlert } from 'lucide-react';
 
 interface VideoPlayerProps {
   type: 'movie' | 'tv';
