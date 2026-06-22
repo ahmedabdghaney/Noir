@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Youtube, Dot, Star, Clock, Calendar, Globe, Languages, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle } from 'lucide-react';
+import { Play, Dot, Star, Clock, Calendar, Globe, Languages, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle } from 'lucide-react';
 import { DetailedInfo, MovieOrShow, CastMember } from '../types';
 import { fetchDetailedTitle, getPosterUrl, getBackdropUrl } from '../lib/tmdb';
 import VideoPlayer from './VideoPlayer';
@@ -273,11 +273,11 @@ export default function DetailView({
           let cwList: MovieOrShow[] = JSON.parse(listStr);
           
           // Filter out existing to avoid duplicates, then unshift
-          cwList = cwList.filter((x) => !(x.id === data.id && x.type === data.type));
+          cwList = cwList.filter((x) => !(x.id === id && x.type === type));
           
           const itemToSave: MovieOrShow = {
-            id: data.id,
-            type: data.type,
+            id: id,
+            type: type,
             title: data.title,
             overview: data.overview || '',
             poster: data.poster_path ? getPosterUrl(data.poster_path) : null,
@@ -526,12 +526,12 @@ export default function DetailView({
 </div>
 
       {/* Main Details Panel Layout */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-12 relative -mt-36 md:-mt-48 z-10">
+      <div className="w-full mx-auto px-4 sm:px-8 lg:px-16 xl:px-24 relative -mt-36 md:-mt-48 z-10">
         
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_240px] gap-6 md:gap-12 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6 md:gap-12 items-end">
           
           {/* Text Information pane (Right side in standard RTL layouts) */}
-          <div className="order-2 md:order-1 flex flex-col items-start text-right min-w-0 pr-0 md:pr-4 w-full">
+          <div className="order-2 md:order-2 flex flex-col items-start text-right min-w-0 pr-0 md:pr-4 w-full">
             
             <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white mb-2 sm:mb-3 tracking-tight leading-tight select-all">
               {title}
@@ -693,7 +693,10 @@ export default function DetailView({
                   onClick={() => handlePlayClick('trailer')}
                   className="flex items-center gap-1.5 sm:gap-2 bg-neutral-900 hover:bg-neutral-800 text-white border border-white/10 px-4 sm:px-5 py-2 md:py-3 rounded-full transition-all cursor-pointer text-xs sm:text-sm"
                 >
-                  <Youtube className="w-4.5 h-4.5 text-red-500 fill-current" />
+                  <svg viewBox="0 0 28 20" className="w-6 h-[18px] shrink-0" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="28" height="20" rx="5" fill="#FF0000" />
+                    <path d="M11 6 L19 10 L11 14 Z" fill="white" />
+                  </svg>
                   <span>الإعلان الرسمي</span>
 </button>
               )}
@@ -709,7 +712,7 @@ export default function DetailView({
 </div>
 
           {/* Left Side: Solid Poster Art (Order-1 on display size to look traditional) */}
-          <div className="order-1 md:order-2">
+          <div className="order-1 md:order-1">
             <div className="w-[160px] md:w-[240px] aspect-[2/3] mx-auto md:mx-0 rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 shadow-2xl relative select-none">
               {data.poster_path ? (
                 <img
@@ -842,45 +845,57 @@ export default function DetailView({
         )}
 
         {/* Specs Factors Panel - Technical Details cards matrix */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-neutral-900/60 border border-white/5 rounded-2xl px-5 py-4 my-8">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">الإخراج</span>
-            <span className="text-white text-xs md:text-sm font-semibold truncate" title={director}>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 my-8">
+          <div className="flex flex-col gap-1.5 bg-gradient-to-b from-neutral-900 to-neutral-900/40 border border-white/10 rounded-2xl px-5 py-4">
+            <span className="text-[11px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5" />
+              عام الإصدار
+            </span>
+            <span className="text-white text-lg md:text-2xl font-extrabold">
+              {year || 'غ/م'}
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-1.5 bg-gradient-to-b from-neutral-900 to-neutral-900/40 border border-white/10 rounded-2xl px-5 py-4">
+            <span className="text-[11px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-1.5">
+              <RotateCcw className="w-3.5 h-3.5" />
+              الإخراج
+            </span>
+            <span className="text-white text-sm md:text-lg font-bold truncate" title={director}>
               {director}
-</span>
-</div>
+            </span>
+          </div>
 
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">دولة الإنتاج</span>
-            <span className="text-white text-xs md:text-sm font-semibold truncate" title={country}>
+          <div className="flex flex-col gap-1.5 bg-gradient-to-b from-neutral-900 to-neutral-900/40 border border-white/10 rounded-2xl px-5 py-4">
+            <span className="text-[11px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5" />
+              دولة الإنتاج
+            </span>
+            <span className="text-white text-sm md:text-lg font-bold truncate" title={country}>
               {country}
-</span>
-</div>
+            </span>
+          </div>
 
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">اللغة الأصلية</span>
-            <span className="text-white text-xs md:text-sm font-semibold truncate">
+          <div className="flex flex-col gap-1.5 bg-gradient-to-b from-neutral-900 to-neutral-900/40 border border-white/10 rounded-2xl px-5 py-4">
+            <span className="text-[11px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-1.5">
+              <Languages className="w-3.5 h-3.5" />
+              اللغة الأصلية
+            </span>
+            <span className="text-white text-sm md:text-lg font-bold truncate">
               {mainLang}
-</span>
-</div>
-
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">عام الإصدار</span>
-            <span className="text-white text-xs md:text-sm font-semibold">
-              {year ||'غ/م'}
-</span>
-</div>
-</div>
+            </span>
+          </div>
+        </div>
 
         {/* Bottom Synopsis and Cast grids */}
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_260px] gap-10 mt-8">
+        <div className="mt-8">
           
           <div className="space-y-8 text-right min-w-0">
             {/* Cast roster row component */}
             {cast.length > 0 && (
               <div className="space-y-4">
                 <h3 className="text-lg font-bold text-white tracking-tight border-r-2 border-red-500 pr-2">أبرز كادر العمل</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
                   {cast.map((c: CastMember) => (
                     <div
                       key={c.id}
@@ -909,33 +924,6 @@ export default function DetailView({
 </span>
 </div>
 </div>
-                  ))}
-</div>
-</div>
-            )}
-</div>
-
-          {/* Quick sidebar placeholder metrics or credits */}
-          <div className="hidden md:flex flex-col gap-6 text-right w-full shrink-0 border-r border-white/5 pr-6">
-            <div className="space-y-1.5">
-              <h4 className="text-neutral-500 text-[10px] font-bold uppercase">التقييم الجماهيري</h4>
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-extrabold text-[#f5c518]">
-                  {data.vote_average ? data.vote_average.toFixed(1) :'غ/م'}
-</span>
-                <span className="text-gray-500 text-xs">/ 10</span>
-</div>
-              <p className="text-[10px] text-gray-400 font-medium">مستند إلى قاعدة بيانات جماهيرية واسعة.</p>
-</div>
-
-            {genres.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="text-neutral-500 text-[10px] font-bold uppercase">التصنيفات الشاملة</h4>
-                <div className="flex flex-col gap-1.5">
-                  {genres.map((g, idx) => (
-                    <span key={idx} className="text-xs text-gray-300 font-semibold bg-neutral-900 border border-white/5 py-1.5 px-3 rounded-lg text-center">
-                      {g}
-</span>
                   ))}
 </div>
 </div>

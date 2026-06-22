@@ -128,7 +128,8 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
         <div
           ref={rowRef}
           onScroll={checkScroll}
-          className="flex gap-4 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none snap-x snap-mandatory"
+          dir="rtl"
+          className="flex flex-row gap-4 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none snap-x snap-mandatory"
         >
           {items.map((item, idx) => {
             const hasScore = item.rating > 0;
@@ -141,7 +142,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
                 key={`${item.type}-${item.id}`}
                 onClick={() => onItemClick(item)}
                 style={{ animationDelay: `${idx * 45}ms` }}
-                className="card-transition flex-none w-[125px] sm:w-[155px] md:w-[175px] snap-start cursor-pointer transition-all duration-350 hover:bg-neutral-200/50 dark:hover:bg-neutral-900/60 hover:shadow-lg rounded-2xl p-2 pb-3.5 border border-transparent select-none active:scale-[0.98]"
+                className="card-transition flex-none w-[125px] sm:w-[185px] md:w-[215px] lg:w-[230px] snap-start cursor-pointer transition-all duration-350 hover:bg-neutral-200/50 dark:hover:bg-neutral-900/60 hover:shadow-lg rounded-2xl p-2 pb-3.5 border border-transparent select-none active:scale-[0.98]"
               >
                 {/* Poster Artwork container */}
                 <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-neutral-900 border border-white/5 shadow-md">
