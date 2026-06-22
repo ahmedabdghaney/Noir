@@ -154,6 +154,93 @@ export default function LiveSports({ API_KEY = 'ea2ad74f3128a87d62b665e08ae9b799
 
         {/* Sidebar Info/Status */}
         <div className="space-y-6">
+          {/* SportSRC V2 Configuration Controller */}
+          <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-5 space-y-4 shadow-xl">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2 border-b border-white/5 pb-2">
+              <Sparkles className="w-4 h-4 text-rose-500 animate-pulse" />
+              تعديل خيارات البث (V2 Docs)
+            </h3>
+
+            <div className="space-y-3">
+              {/* API KEY Input */}
+              <div className="space-y-1">
+                <label className="text-[11px] text-zinc-400 font-bold block">مفتاح الترخيص (API Key)</label>
+                <input
+                  type="text"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  className="w-full bg-black border border-white/10 rounded-xl px-3 py-1.5 text-xs text-zinc-200 font-mono focus:border-rose-500 focus:outline-none"
+                  placeholder="أدخل مفتاح الترخيص..."
+                />
+              </div>
+
+              {/* Theme Selector */}
+              <div className="space-y-1">
+                <label className="text-[11px] text-zinc-400 font-bold block">مظهر المشغل (Theme)</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setTheme('dark')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                      theme === 'dark'
+                        ? 'bg-zinc-800 border-rose-500/50 text-white'
+                        : 'bg-black border-white/5 text-zinc-500'
+                    }`}
+                  >
+                    داكن
+                  </button>
+                  <button
+                    onClick={() => setTheme('light')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                      theme === 'light'
+                        ? 'bg-zinc-800 border-rose-500/50 text-white'
+                        : 'bg-black border-white/5 text-zinc-500'
+                    }`}
+                  >
+                    مضيء
+                  </button>
+                </div>
+              </div>
+
+              {/* Language Selector */}
+              <div className="space-y-1">
+                <label className="text-[11px] text-zinc-400 font-bold block">لغة مشغل البث (Language)</label>
+                <select
+                  value={lang}
+                  onChange={(e) => setLang(e.target.value as any)}
+                  className="w-full bg-black border border-white/10 rounded-xl px-3 py-1.5 text-xs text-zinc-200 focus:border-rose-500 focus:outline-none"
+                >
+                  <option value="ar">العربية (Arabic)</option>
+                  <option value="en">English (English)</option>
+                  <option value="es">Español (Spanish)</option>
+                  <option value="fr">Français (French)</option>
+                </select>
+              </div>
+
+              {/* Timezone Select */}
+              <div className="space-y-1">
+                <label className="text-[11px] text-zinc-400 font-bold block">المنطقة الزمنية (Timezone)</label>
+                <select
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className="w-full bg-black border border-white/10 rounded-xl px-3 py-1.5 text-xs text-zinc-200 focus:border-rose-500 focus:outline-none"
+                >
+                  <option value="Asia/Baghdad">توقيت بغداد (GMT+3)</option>
+                  <option value="Asia/Riyadh">توقيت مكة (GMT+3)</option>
+                  <option value="Africa/Cairo">توقيت القاهرة (GMT+2)</option>
+                  <option value="UTC">توقيت غرينتش (UTC)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Generated HTML Iframe preview */}
+            <div className="pt-2 border-t border-white/5">
+              <span className="text-[10px] text-zinc-500 font-bold block uppercase tracking-wide mb-1">كود التضمين النهائي:</span>
+              <pre className="text-[9px] bg-black border border-white/5 p-2 rounded-xl text-emerald-400 overflow-x-auto font-mono max-h-20 select-all">
+                {`<iframe src="${embedUrl}" allowfullscreen></iframe>`}
+              </pre>
+            </div>
+          </div>
+
           {/* Quick Stats/Guide */}
           <div className="bg-zinc-900/50 border border-white/5 rounded-2xl p-5 space-y-4">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
