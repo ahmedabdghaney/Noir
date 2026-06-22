@@ -82,6 +82,8 @@ export const translateAuthError = (err: any): string => {
       return 'تعذّر الاتصال بالشبكة';
     case 'auth/missing-password':
       return 'أدخل كلمة السر';
+    case 'auth/password-does-not-meet-requirements':
+      return 'كلمة السر ضعيفة: لازم تحتوي حرف كبير (A-Z) وحرف صغير (a-z) و 6 خانات على الأقل';
     default:
       return err?.message || 'حدث خطأ غير متوقع';
   }
