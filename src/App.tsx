@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, Star } from 'lucide-react';
+import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, Star } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, loginWithGoogle, logoutUser, signInWithEmail, signUpWithEmail, resetPassword, translateAuthError } from './lib/firebase';
 import { MovieOrShow } from './types';
@@ -109,8 +109,11 @@ export default function App() {
   const [authView, setAuthView] = useState<'menu' | 'signin' | 'signup' | 'reset'>('menu');
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
+  const [authPasswordConfirm, setAuthPasswordConfirm] = useState('');
   const [authName, setAuthName] = useState('');
   const [authError, setAuthError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
 
   // Synchronize authenticated identity with Firebase state-listener
   useEffect(() => {
@@ -237,8 +240,12 @@ export default function App() {
   };
 
   const handleEmailSignUp = async () => {
-    if (!authEmail || !authPassword || !authName) {
+    if (!authEmail || !authPassword || !authName || !authPasswordConfirm) {
       setAuthError('أكمل كل الحقول');
+      return;
+    }
+    if (authPassword !== authPasswordConfirm) {
+      setAuthError('كلمة السر والتأكيد غير متطابقتين');
       return;
     }
     if (authPassword.length < 6) {
@@ -261,6 +268,7 @@ export default function App() {
       showToast('تم إنشاء حسابك، أهلاً بك');
       setAuthEmail('');
       setAuthPassword('');
+      setAuthPasswordConfirm('');
       setAuthName('');
     } catch (e) {
       setAuthError(translateAuthError(e));
@@ -656,27 +664,58 @@ export default function App() {
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
                   placeholder="البريد الإلكتروني"
-                  className="w-full bg-white/5 border border-white/10 focus:border-red-500/60 focus:bg-white/[0.07] outline-none text-white text-sm font-semibold py-3.5 px-4 rounded-xl transition-colors text-left placeholder-gray-500"
-                  dir="ltr"
+                  className="w-full bg-white/5 border border-white/10 focus:border-red-500/60 focus:bg-white/[0.07] outline-none text-white text-sm font-semibold py-3.5 px-4 rounded-xl transition-colors text-right placeholder-gray-500"
+                  dir="rtl"
                 />
-                <input
-                  type="password"
-                  value={authPassword}
-                  onChange={(e) => setAuthPassword(e.target.value)}
-                  placeholder="كلمة السر"
-                  className="w-full bg-white/5 border border-white/10 focus:border-red-500/60 focus:bg-white/[0.07] outline-none text-white text-sm font-semibold py-3.5 px-4 rounded-xl transition-colors text-left placeholder-gray-500"
-                  dir="ltr"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      authView === 'signin' ? handleEmailSignIn() : handleEmailSignUp();
-                    }
-                  }}
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    placeholder="كلمة السر"
+                    className="w-full bg-white/5 border border-white/10 focus:border-red-500/60 focus:bg-white/[0.07] outline-none text-white text-sm font-semibold py-3.5 pr-4 pl-11 rounded-xl transition-colors text-right placeholder-gray-500"
+                    dir="rtl"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && authView === 'signin') {
+                        handleEmailSignIn();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer p-1"
+                    title={showPassword ? 'إخفاء' : 'إظهار'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
 
                 {authView === 'signup' && (
-                  <p className="text-gray-500 text-[10px] leading-relaxed text-right -mt-1">
-                    6 خانات على الأقل، حرف كبير وحرف صغير
-                  </p>
+                  <>
+                    <div className="relative">
+                      <input
+                        type={showPasswordConfirm ? 'text' : 'password'}
+                        value={authPasswordConfirm}
+                        onChange={(e) => setAuthPasswordConfirm(e.target.value)}
+                        placeholder="أعد كلمة السر"
+                        className="w-full bg-white/5 border border-white/10 focus:border-red-500/60 focus:bg-white/[0.07] outline-none text-white text-sm font-semibold py-3.5 pr-4 pl-11 rounded-xl transition-colors text-right placeholder-gray-500"
+                        dir="rtl"
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleEmailSignUp(); }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer p-1"
+                        title={showPasswordConfirm ? 'إخفاء' : 'إظهار'}
+                      >
+                        {showPasswordConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="text-gray-500 text-[10px] leading-relaxed text-right -mt-1">
+                      6 خانات على الأقل، حرف كبير وحرف صغير
+                    </p>
+                  </>
                 )}
 
                 {authError && (
@@ -755,8 +794,8 @@ export default function App() {
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
                   placeholder="البريد الإلكتروني"
-                  className="w-full bg-white/5 border border-white/10 focus:border-red-500/60 focus:bg-white/[0.07] outline-none text-white text-sm font-semibold py-3.5 px-4 rounded-xl transition-colors text-left placeholder-gray-500"
-                  dir="ltr"
+                  className="w-full bg-white/5 border border-white/10 focus:border-red-500/60 focus:bg-white/[0.07] outline-none text-white text-sm font-semibold py-3.5 px-4 rounded-xl transition-colors text-right placeholder-gray-500"
+                  dir="rtl"
                   onKeyDown={(e) => { if (e.key === 'Enter') handleResetPassword(); }}
                 />
                 {authError && (
