@@ -107,7 +107,7 @@ export default function App() {
   const [authMethod, setAuthMethod] = useState<'guest' | 'google' | 'email' | null>(null);
 
   // Email auth form state
-  const [authView, setAuthView] = useState<'menu' | 'signin' | 'signup' | 'reset'>('menu');
+  const [authView, setAuthView] = useState<'menu' | 'signin' | 'signup' | 'reset'>('signin');
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authPasswordConfirm, setAuthPasswordConfirm] = useState('');
@@ -596,266 +596,315 @@ export default function App() {
   };
 
   if (!user) {
+    const col1Posters = [
+      'https://images.unsplash.com/photo-1542204172-e7052809a862?q=80&w=350&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=350&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?q=80&w=350&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=350&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=350&auto=format&fit=crop'
+    ];
+
+    const col2Posters = [
+      'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=350&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1574375927938-d5a98e8edd86?q=80&w=350&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=350&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=350&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1524985069026-dd2f4049773a?q=80&w=350&auto=format&fit=crop'
+    ];
+
     return (
-      <div className="relative min-h-screen bg-[#060606] text-white flex flex-col items-center justify-center font-sans overflow-hidden">
-        {/* Subtle dynamic background posters backdrop */}
-        <div className="absolute inset-0 z-0 bg-cover bg-center opacity-30 blur-[6px] select-none scale-105 transition-all duration-1000"
-          style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1425&auto=format&fit=crop')",
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/85 to-transparent z-0" />
+      <div className="relative min-h-screen bg-[#070707] text-white flex items-center justify-center font-sans overflow-hidden p-3.5 sm:p-6 md:p-10 select-none">
+        
+        {/* Main Double-Pane Card Layout */}
+        <div className="relative z-10 w-full max-w-5xl bg-[#0d0d0d] border border-white/5 shadow-2xl rounded-3xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[660px] animate-pop-in" dir="ltr">
+          
+          {/* LEFT COLUMN: Tilted & Scrolling Movie Covers Pattern */}
+          <div className="hidden lg:flex lg:col-span-5 relative flex-col justify-between p-12 overflow-hidden bg-black border-r border-white/5">
+            {/* Tilted Poster Grid container rotated 30 degrees */}
+            <div className="absolute inset-0 z-0 pointer-events-none select-none opacity-25">
+              <div className="absolute -inset-10 flex gap-4 rotate-[30deg] scale-125 justify-center">
+                {/* Column 1: Moves upward */}
+                <div className="flex flex-col gap-4 animate-marquee-up shrink-0">
+                  {[...col1Posters, ...col1Posters, ...col1Posters].map((url, index) => (
+                    <div key={`col1-${index}`} className="w-28 h-40 bg-neutral-950 rounded-2xl overflow-hidden border border-white/10 shadow-lg shrink-0">
+                      <img src={url} alt="Cover" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Column 2: Moves downward */}
+                <div className="flex flex-col gap-4 animate-marquee-down shrink-0">
+                  {[...col2Posters, ...col2Posters, ...col2Posters].map((url, index) => (
+                    <div key={`col2-${index}`} className="w-28 h-40 bg-neutral-950 rounded-2xl overflow-hidden border border-white/10 shadow-lg shrink-0">
+                      <img src={url} alt="Cover" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    </div>
+                  ))}
+                </div>
 
-        {/* Center Container */}
-        <div className="relative z-10 w-full max-w-md px-8 py-12 md:px-10 md:py-14 bg-[#0a0a0abf] backdrop-blur-2xl border border-white/5 rounded-3xl shadow-3xl text-center select-none animate-pop-in mx-4">
-          {/* Logo brand */}
-          <div className="flex flex-col items-center justify-center gap-4 mb-3">
-            <div className="w-14 h-14 rounded-2xl bg-red-600 flex items-center justify-center shadow-xl shadow-red-600/30">
-              <Clapperboard className="w-8 h-8 text-white shrink-0" strokeWidth={2.5} />
-</div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-white m-0">نوار <span className="text-red-500 font-black">سينما</span></h1>
-</div>
+                {/* Column 3: Moves upward */}
+                <div className="flex flex-col gap-4 animate-marquee-up shrink-0">
+                  {[...col1Posters.reverse(), ...col1Posters.reverse()].map((url, index) => (
+                    <div key={`col3-${index}`} className="w-28 h-40 bg-neutral-950 rounded-2xl overflow-hidden border border-white/10 shadow-lg shrink-0">
+                      <img src={url} alt="Cover" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
 
-          <p className="text-gray-500 text-xs font-medium mb-10 max-w-xs mx-auto leading-relaxed">
-            بوابتك لمشاهدة الأفلام والعروض، اختر طريقة الدخول للبدء
-</p>
+            {/* Dark gradient overlay over posters for text readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent z-1" />
 
-          <div className="flex flex-col gap-3.5 w-full">
-            {authView === 'menu' && (
-              <>
+            {/* Content Top */}
+            <div className="relative z-10" dir="rtl">
+              <div className="flex items-center gap-2.5 mb-8 justify-end">
+                <span className="text-lg font-black tracking-tight text-white m-0">نوار <span className="text-red-500">سينما</span></span>
+                <div className="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center shadow-lg shadow-red-600/30">
+                  <Clapperboard className="w-5 h-5 text-white shrink-0" strokeWidth={2.5} />
+                </div>
+              </div>
+
+              <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2 block">بكل بساطة وسرور</span>
+              <h2 className="text-2xl font-extrabold text-white leading-snug">بوابتك لمشاهدة الأفلام والعروض جماعياً مع أصدقائك بلمسة واحدة</h2>
+            </div>
+
+            {/* Empty space at bottom layout to replace deleted tech stack footer */}
+            <div className="relative z-10" />
+          </div>
+
+          {/* RIGHT COLUMN: Stylish Login / Signup Input Form */}
+          <div className="col-span-1 lg:col-span-7 flex flex-col justify-center p-8 sm:p-12 md:p-16 select-none relative z-10 bg-[#0d0d0d]" dir="rtl">
+            
+            {/* Form Header */}
+            <div className="text-right mb-8">
+              <h1 className="text-2xl font-black text-white leading-tight">
+                {authView === 'signin' && 'سجل الدخول الآن'}
+                {authView === 'signup' && 'ابدأ حسابك الآن'}
+                {authView === 'reset' && 'استعادة كلمة السر'}
+              </h1>
+              <p className="text-gray-500 text-xs mt-1.5 leading-relaxed font-semibold">
+                {authView === 'signin' && 'من فضلك قم بتسجيل الدخول إلى حسابك للاستمرار.'}
+                {authView === 'signup' && 'قم بملء البيانات التالية لتسجيل حسابك الجديد.'}
+                {authView === 'reset' && 'أدخل بريدك الإلكتروني وسنقوم بإرسال رابط الاستعادة.'}
+              </p>
+            </div>
+
+            {/* Actual Input form fields */}
+            <div className="flex flex-col gap-4 w-full">
+              
+              {/* Name Field (Sign up only) */}
+              {authView === 'signup' && (
+                <div className="flex flex-col gap-1.5 text-right w-full">
+                  <label className="text-gray-400 text-xs font-bold mr-1">الاسم</label>
+                  <input
+                    type="text"
+                    value={authName}
+                    onChange={(e) => setAuthName(e.target.value)}
+                    placeholder="ادخل اسمك الكامل..."
+                    className="w-full bg-[#141414] border border-white/10 hover:border-white/20 focus:border-red-500/60 focus:bg-[#181818] outline-none text-white text-sm font-semibold py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-600 focus:ring-1 focus:ring-red-500/20"
+                    dir="rtl"
+                  />
+                </div>
+              )}
+
+              {/* Email address field */}
+              <div className="flex flex-col gap-1.5 text-right w-full">
+                <label className="text-gray-400 text-xs font-bold mr-1">البريد الإلكتروني</label>
+                <input
+                  type="email"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  className="w-full bg-[#141414] border border-white/10 hover:border-white/20 focus:border-red-500/60 focus:bg-[#181818] outline-none text-white text-sm font-semibold py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-600 focus:ring-1 focus:ring-red-500/20"
+                  dir="ltr"
+                />
+              </div>
+
+              {/* Password field with built-in "Forgot password" Link inside the label row */}
+              {authView !== 'reset' && (
+                <div className="flex flex-col gap-1.5 w-full">
+                  <div className="flex items-center justify-between mr-1 ml-1 text-xs">
+                    <label className="text-gray-400 font-bold block">كلمة السر</label>
+                    {authView === 'signin' && (
+                      <button
+                        onClick={() => { setAuthView('reset'); setAuthError(''); }}
+                        className="text-red-400 hover:text-red-300 font-bold transition-colors cursor-pointer text-[11px]"
+                      >
+                        نسيت كلمة السر؟
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={authPassword}
+                      onChange={(e) => setAuthPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full bg-[#141414] border border-white/10 hover:border-white/20 focus:border-red-500/60 focus:bg-[#181818] outline-none text-white text-sm font-semibold py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-600"
+                      dir="rtl"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          if (authView === 'signin') handleEmailSignIn();
+                          else if (authView === 'signup') handleEmailSignUp();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer p-1"
+                      title={showPassword ? 'إخفاء' : 'إظهار'}
+                    >
+                      {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Confirm Password Field (Sign up only) */}
+              {authView === 'signup' && (
+                <div className="flex flex-col gap-1.5 w-full">
+                  <div className="flex items-center justify-between mr-1 text-xs">
+                    <label className="text-gray-400 font-bold block">تأكيد كلمة السر</label>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPasswordConfirm ? 'text' : 'password'}
+                      value={authPasswordConfirm}
+                      onChange={(e) => setAuthPasswordConfirm(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full bg-[#141414] border border-white/10 hover:border-white/20 focus:border-red-500/60 focus:bg-[#181818] outline-none text-white text-sm font-semibold py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-600"
+                      dir="rtl"
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleEmailSignUp(); }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer p-1"
+                      title={showPasswordConfirm ? 'إخفاء' : 'إظهار'}
+                    >
+                      {showPasswordConfirm ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-gray-500 text-[10px] leading-relaxed text-right -mt-0.5 mr-1">
+                    6 خانات على الأقل، حرف كبير وحرف صغير
+                  </p>
+                </div>
+              )}
+
+              {/* Terms & Privacy conditions checkbox */}
+              {authView === 'signup' && (
+                <label className="flex items-center gap-2.5 cursor-pointer text-xs text-gray-400 mr-1 select-none my-1">
+                  <input
+                    type="checkbox"
+                    defaultChecked
+                    className="rounded border-white/10 bg-[#141414] text-red-650 focus:ring-0 w-4 h-4 cursor-pointer"
+                  />
+                  <span>أوافق على الشروط والخصوصية لـ نوار</span>
+                </label>
+              )}
+
+              {/* Form Validation Errors alerts */}
+              {authError && (
+                <div className="text-red-400 text-xs font-semibold bg-red-500/10 border border-red-500/20 rounded-xl py-3 px-4 text-right leading-relaxed animate-fade-in">
+                  {authError}
+                </div>
+              )}
+
+              {/* Submit Action Button */}
+              <button
+                onClick={() => {
+                  if (authView === 'signin') handleEmailSignIn();
+                  else if (authView === 'signup') handleEmailSignUp();
+                  else if (authView === 'reset') handleResetPassword();
+                }}
+                disabled={isAuthLoading}
+                className="w-full flex items-center justify-center gap-2 bg-[#dc2626] hover:bg-red-500 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer text-sm shadow-xl shadow-red-700/20 mt-2"
+              >
+                {isAuthLoading && authMethod === 'email' ? (
+                  <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <span>
+                    {authView === 'signin' && 'تسجيل الدخول'}
+                    {authView === 'signup' && 'إنشاء حساب جديد'}
+                    {authView === 'reset' && 'إرسال رابط استعادة'}
+                  </span>
+                )}
+              </button>
+
+              {/* Switch View Trigger Text link */}
+              <div className="text-center text-xs my-2.5">
+                {authView === 'signin' && (
+                  <>
+                    <span className="text-gray-500 font-medium">ليس لديك حساب؟ </span>
+                    <button
+                      onClick={() => { setAuthView('signup'); setAuthError(''); setAuthPassword(''); }}
+                      className="text-[#dc2626] hover:text-red-400 font-bold transition-colors cursor-pointer"
+                    >
+                      أنشئ حساباً جديداً
+                    </button>
+                  </>
+                )}
+                {authView === 'signup' && (
+                  <>
+                    <span className="text-gray-500 font-medium">لديك حساب بالفعل؟ </span>
+                    <button
+                      onClick={() => { setAuthView('signin'); setAuthError(''); setAuthPassword(''); }}
+                      className="text-[#dc2626] hover:text-red-400 font-bold transition-colors cursor-pointer"
+                    >
+                      سجل دخولك
+                    </button>
+                  </>
+                )}
+                {authView === 'reset' && (
+                  <button
+                    onClick={() => { setAuthView('signin'); setAuthError(''); }}
+                    className="text-gray-400 hover:text-white font-semibold transition-colors cursor-pointer text-[11px]"
+                  >
+                    ← العودة لصفحة تسجيل الدخول
+                  </button>
+                )}
+              </div>
+
+              {/* OR Divider Line exactly matching mockup "Or" layout */}
+              {authView !== 'reset' && (
+                <div className="flex items-center gap-3 my-2.5">
+                  <div className="h-px flex-1 bg-white/5" />
+                  <span className="text-[10px] text-gray-500 uppercase font-black">أو</span>
+                  <div className="h-px flex-1 bg-white/5" />
+                </div>
+              )}
+
+              {/* Google Social login button styled with full width */}
+              {authView !== 'reset' && (
                 <button
                   onClick={() => handleLogin('google')}
                   disabled={isAuthLoading}
-                  className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 disabled:opacity-50 text-gray-900 font-bold py-3.5 px-6 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer text-sm shadow-xl shadow-black/20"
+                  className="w-full flex items-center justify-center gap-2.5 bg-white hover:bg-[#eaeaea] disabled:opacity-50 text-gray-900 font-extrabold py-3.5 px-4 rounded-xl cursor-pointer hover:scale-[1.01] transition-all text-xs shadow-md"
                 >
                   {isAuthLoading && authMethod === 'google' ? (
-                    <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" />
+                    <div className="w-3.5 h-3.5 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" />
                   ) : (
-                    <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <svg className="w-[14px] h-[14px] shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                       <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                       <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                     </svg>
                   )}
-                  <span>تسجيل الدخول باستخدام Google</span>
+                  <span>دخول بجوجل</span>
                 </button>
+              )}
 
-                <div className="flex items-center gap-3 my-2">
-                  <div className="h-px flex-1 bg-white/10" />
-                  <span className="text-[10px] text-gray-500 font-bold">أو</span>
-                  <div className="h-px flex-1 bg-white/10" />
-                </div>
+            </div>
 
-                <button
-                  onClick={() => { setAuthView('signin'); setAuthError(''); }}
-                  className="w-full bg-white/5 hover:bg-white/[0.08] border border-white/10 hover:border-white/20 text-white font-bold py-3.5 px-6 rounded-xl transition-all cursor-pointer text-sm"
-                >
-                  الدخول بالبريد الإلكتروني
-                </button>
-
-                <div className="text-center pt-5 text-xs">
-                  <span className="text-gray-500">ما عندك حساب؟ </span>
-                  <button
-                    onClick={() => { setAuthView('signup'); setAuthError(''); }}
-                    className="text-red-400 hover:text-red-300 font-bold transition-colors cursor-pointer"
-                  >
-                    أنشئ حساب جديد
-                  </button>
-                </div>
-              </>
-            )}
-
-            {(authView === 'signin' || authView === 'signup') && (
-              <>
-                <div className="text-right mb-3">
-                  <h2 className="text-white text-lg font-extrabold">
-                    {authView === 'signin' ? 'تسجيل الدخول' : 'إنشاء حساب'}
-                  </h2>
-                  <p className="text-gray-500 text-xs mt-1">
-                    {authView === 'signin' ? 'مرحباً بعودتك، أكمل بياناتك للدخول' : 'كم خطوة وتنضم لـ نوار سينما'}
-                  </p>
-                </div>
-
-                {authView === 'signup' && (
-                  <input
-                    type="text"
-                    value={authName}
-                    onChange={(e) => setAuthName(e.target.value)}
-                    placeholder="الاسم"
-                    className="w-full bg-white/5 border border-white/10 focus:border-red-500/60 focus:bg-white/[0.07] outline-none text-white text-sm font-semibold py-3.5 px-4 rounded-xl transition-colors text-right placeholder-gray-500"
-                    dir="rtl"
-                  />
-                )}
-                <input
-                  type="email"
-                  value={authEmail}
-                  onChange={(e) => setAuthEmail(e.target.value)}
-                  placeholder="البريد الإلكتروني"
-                  className="w-full bg-white/5 border border-white/10 focus:border-red-500/60 focus:bg-white/[0.07] outline-none text-white text-sm font-semibold py-3.5 px-4 rounded-xl transition-colors text-right placeholder-gray-500"
-                  dir="rtl"
-                />
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={authPassword}
-                    onChange={(e) => setAuthPassword(e.target.value)}
-                    placeholder="كلمة السر"
-                    className="w-full bg-white/5 border border-white/10 focus:border-red-500/60 focus:bg-white/[0.07] outline-none text-white text-sm font-semibold py-3.5 pr-4 pl-11 rounded-xl transition-colors text-right placeholder-gray-500"
-                    dir="rtl"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && authView === 'signin') {
-                        handleEmailSignIn();
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer p-1"
-                    title={showPassword ? 'إخفاء' : 'إظهار'}
-                  >
-                    {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                  </button>
-                </div>
-
-                {authView === 'signup' && (
-                  <>
-                    <div className="relative">
-                      <input
-                        type={showPasswordConfirm ? 'text' : 'password'}
-                        value={authPasswordConfirm}
-                        onChange={(e) => setAuthPasswordConfirm(e.target.value)}
-                        placeholder="أعد كلمة السر"
-                        className="w-full bg-white/5 border border-white/10 focus:border-red-500/60 focus:bg-white/[0.07] outline-none text-white text-sm font-semibold py-3.5 pr-4 pl-11 rounded-xl transition-colors text-right placeholder-gray-500"
-                        dir="rtl"
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleEmailSignUp(); }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer p-1"
-                        title={showPasswordConfirm ? 'إخفاء' : 'إظهار'}
-                      >
-                        {showPasswordConfirm ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    <p className="text-gray-500 text-[10px] leading-relaxed text-right -mt-1">
-                      6 خانات على الأقل، حرف كبير وحرف صغير
-                    </p>
-                  </>
-                )}
-
-                {authError && (
-                  <div className="text-red-400 text-xs font-semibold bg-red-500/10 border border-red-500/20 rounded-lg py-2 px-3 text-right leading-relaxed">
-                    {authError}
-                  </div>
-                )}
-
-                <button
-                  onClick={authView === 'signin' ? handleEmailSignIn : handleEmailSignUp}
-                  disabled={isAuthLoading}
-                  className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer text-sm shadow-xl shadow-red-600/20 mt-1"
-                >
-                  {isAuthLoading && authMethod === 'email' ? (
-                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <span>{authView === 'signin' ? 'دخول' : 'إنشاء الحساب'}</span>
-                  )}
-                </button>
-
-                {authView === 'signin' && (
-                  <button
-                    onClick={() => { setAuthView('reset'); setAuthError(''); }}
-                    className="text-gray-400 hover:text-red-400 text-[11px] font-semibold transition-colors cursor-pointer text-center pt-1"
-                  >
-                    نسيت كلمة السر؟
-                  </button>
-                )}
-
-                <div className="h-px bg-white/10 my-1" />
-
-                <div className="text-center text-xs">
-                  {authView === 'signin' ? (
-                    <>
-                      <span className="text-gray-500">ما عندك حساب؟ </span>
-                      <button
-                        onClick={() => { setAuthView('signup'); setAuthError(''); setAuthPassword(''); }}
-                        className="text-red-400 hover:text-red-300 font-bold transition-colors cursor-pointer"
-                      >
-                        أنشئ حساب جديد
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-gray-500">عندك حساب؟ </span>
-                      <button
-                        onClick={() => { setAuthView('signin'); setAuthError(''); setAuthPassword(''); }}
-                        className="text-red-400 hover:text-red-300 font-bold transition-colors cursor-pointer"
-                      >
-                        سجّل الدخول
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                <button
-                  onClick={() => { setAuthView('menu'); setAuthError(''); }}
-                  className="text-gray-500 hover:text-gray-300 text-[11px] font-semibold transition-colors cursor-pointer text-center"
-                >
-                  ← رجوع للخيارات
-                </button>
-              </>
-            )}
-
-            {authView === 'reset' && (
-              <>
-                <div className="text-right mb-3">
-                  <h2 className="text-white text-lg font-extrabold">استعادة كلمة السر</h2>
-                  <p className="text-gray-500 text-xs mt-1">
-                    أدخل بريدك ونرسلك رابط لإعادة التعيين
-                  </p>
-                </div>
-
-                <input
-                  type="email"
-                  value={authEmail}
-                  onChange={(e) => setAuthEmail(e.target.value)}
-                  placeholder="البريد الإلكتروني"
-                  className="w-full bg-white/5 border border-white/10 focus:border-red-500/60 focus:bg-white/[0.07] outline-none text-white text-sm font-semibold py-3.5 px-4 rounded-xl transition-colors text-right placeholder-gray-500"
-                  dir="rtl"
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleResetPassword(); }}
-                />
-                {authError && (
-                  <div className="text-red-400 text-xs font-semibold bg-red-500/10 border border-red-500/20 rounded-lg py-2 px-3 text-right">
-                    {authError}
-                  </div>
-                )}
-                <button
-                  onClick={handleResetPassword}
-                  disabled={isAuthLoading}
-                  className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl transition-all cursor-pointer text-sm"
-                >
-                  {isAuthLoading ? (
-                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <span>إرسال الرابط</span>
-                  )}
-                </button>
-                <button
-                  onClick={() => { setAuthView('signin'); setAuthError(''); }}
-                  className="text-gray-400 hover:text-white text-[11px] font-semibold transition-colors cursor-pointer pt-1 text-center"
-                >
-                  ← رجوع لتسجيل الدخول
-                </button>
-              </>
-            )}
+            {/* Bottom mini disclaimer footer */}
+            <div className="mt-14 pt-4 border-t border-white/5 flex items-center justify-center gap-1.5 text-[9px] text-gray-600">
+              <span>تطبق شروط الاستخدام والأمان الكاملة © {new Date().getFullYear()} نوار سينما</span>
+            </div>
           </div>
 
-          <div className="mt-8 pt-4 border-t border-white/5 flex items-center justify-center gap-1.5 text-[10px] text-gray-500">
-            <span>تطبق شروط الاستخدام والأمان © {new Date().getFullYear()} نوار سينما</span>
-</div>
-</div>
+        </div>
 
         {/* Toast notifications on the login screen */}
         {toastMessage && (
@@ -870,9 +919,19 @@ export default function App() {
             from { opacity: 0; transform: translate(-50%, 15px); }
             to { opacity: 1; transform: translate(-50%, 0); }
           }
+          @keyframes marqueeUp {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-33.33%); }
+          }
+          @keyframes marqueeDown {
+            0% { transform: translateY(-33.33%); }
+            100% { transform: translateY(0); }
+          }
           .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
+          .animate-marquee-up { animation: marqueeUp 24s linear infinite; }
+          .animate-marquee-down { animation: marqueeDown 24s linear infinite; }
         `}</style>
-</div>
+      </div>
     );
   }
 
