@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { X, Maximize, Settings, Youtube, Play, Loader, ShieldAlert, Pause, Lock } from 'lucide-react';
+import { Youtube, Play, Loader, ShieldAlert, Pause, Lock } from 'lucide-react';
 
 interface VideoPlayerProps {
   type: 'movie' | 'tv';
@@ -45,8 +45,6 @@ export default function VideoPlayer({
   onSwitchMode,
   onNextEpisode,
 }: VideoPlayerProps) {
-  const [skin, setSkin] = useState<string>(() => localStorage.getItem('noir_skin') ||'nf');
-  const [isSkinMenuOpen, setIsSkinMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -92,7 +90,7 @@ export default function VideoPlayer({
     // Reload progress percent for shift
     const saved = Number(localStorage.getItem(`noir_progress_${type}_${id}`)) || 0;
     setProgress(saved);
-  }, [type, id, season, episode, playMode, skin]);
+  }, [type, id, season, episode, playMode]);
 
   // Compute VIT API provider url
   const getEmbedUrl = () => {
@@ -105,7 +103,7 @@ export default function VideoPlayer({
       secondaryColor: '0a0a0a',
       iconColor: 'FFFFFF',
       icons: 'vid',
-      player: skin,
+      player: 'plus',
       title: 'true',
       poster: 'true',
       autoplay: 'true',
@@ -117,25 +115,6 @@ export default function VideoPlayer({
     }
 
     return`https://vidapi.qzz.io/movie/${id}?${params.toString()}`;
-  };
-
-  const handleSkinChange = (selectedSkin: string) => {
-    setSkin(selectedSkin);
-    localStorage.setItem('noir_skin', selectedSkin);
-    setIsSkinMenuOpen(false);
-  };
-
-  const handleFullscreen = () => {
-    const el = containerRef.current?.querySelector('.player-shell');
-    if (el) {
-      const req =
-        el.requestFullscreen ||
-        (el as any).webkitRequestFullscreen ||
-        (el as any).msRequestFullscreen;
-      if (req) {
-        req.call(el);
-      }
-    }
   };
 
   return (
@@ -192,44 +171,7 @@ export default function VideoPlayer({
 </button>
             )}
 
-            {/* Skin / Engine Selection Menu */}
-            {playMode ==='movie' && (
-              <div className="relative">
-                <button
-                  onClick={() => setIsSkinMenuOpen(!isSkinMenuOpen)}
-                  className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white flex items-center justify-center cursor-pointer transition-colors border border-white/5"
-                  title="تغيير نمط الترجمة والمشغل"
-                >
-                  <Settings className="w-4 h-4" />
-</button>
-
-                {isSkinMenuOpen && (
-                  <div className="absolute left-0 top-[120%] z-50 bg-neutral-900/98 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-2 min-w-[220px] text-right font-sans">
-                    <div className="text-[10px] uppercase font-bold text-gray-400 px-3 py-1.5 select-none">
-                      نمط المشغل والترجمة
-</div>
-                    {[
-                      { id: 'nf', name: 'Netflix Theme', desc: 'ترجمة بيضاء عريضة تليق بالسينما' },
-                      { id: 'default', name: 'VidApi Original', desc: 'المشغّل الافتراضي متناسق وسريع' },
-                      { id: 'plus', name: 'VideoJS Plus', desc: 'ترجمة كلاسيكية تقليدية بخلفية معتمة' },
-                    ].map((item) => (
-                      <button
-                        key={item.id}
-                        onClick={() => handleSkinChange(item.id)}
-                        className={`w-full text-right px-3 py-2 rounded-xl flex flex-col cursor-pointer transition-colors ${
-                          skin === item.id ?'bg-red-500/10 border border-red-500/10' :'hover:bg-white/5'
-                        }`}
-                      >
-                        <span className={`text-xs font-semibold ${skin === item.id ?'text-red-400' :'text-white'}`}>
-                          {item.name} {skin === item.id &&'✓'}
-</span>
-                        <span className="text-[10px] text-gray-400 mt-0.5">{item.desc}</span>
-</button>
-                    ))}
-</div>
-                )}
-</div>
-            )}
+            {/* Skin / Engine Selection Menu — removed (locked to VideoJS Plus) */}
 
             {/* Host-only Pause/Resume control (live sessions) */}
             {playMode === 'movie' && isLiveHost && (
@@ -253,24 +195,6 @@ export default function VideoPlayer({
 </button>
               )
             )}
-
-            {/* Fullscreen Button */}
-            <button
-              onClick={handleFullscreen}
-              className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white flex items-center justify-center cursor-pointer transition-colors border border-white/5"
-              title="ملء الشاشة"
-            >
-              <Maximize className="w-4 h-4" />
-</button>
-
-            {/* Close Button */}
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 flex items-center justify-center cursor-pointer transition-colors border border-red-500/50"
-              title="إغلاق المشغل"
-            >
-              <X className="w-4 h-4" />
-</button>
 </div>
 </div>
 
