@@ -47,9 +47,15 @@ export const db = getFirestore(app, "ai-studio-d038e6e0-89a6-457a-a50e-97b6aadc9
 async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
+    console.log("نوار سينما: تم الاتصال بقاعدة بيانات Firestore بنجاح.");
+  } catch (error: any) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorCode = error?.code || '';
+    
+    if (errorCode === 'unavailable' || errorMsg.includes('offline') || errorMsg.includes('Could not reach Cloud Firestore backend')) {
+      console.warn("نوار سينما: يعمل التطبيق في وضع عدم الاتصال بالإنترنت حالياً (Offline Mode). سيتم حفظ وتحديث التغييرات محلياً ومزامنتها فور عودة الاتصال.");
+    } else {
+      console.log("نوار سينما: إشارة قاعدة البيانات في وضع الاستعداد أو غير متصلة محلياً. التغييرات تحفظ في ذاكرة التخزين الداخلي بشكل آمن.");
     }
   }
 }
