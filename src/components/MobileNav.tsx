@@ -3,15 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Home, Film, Tv, Search, Bookmark } from 'lucide-react';
+import { Home, Film, Tv, Search, Bookmark, Radio } from 'lucide-react';
 
 interface MobileNavProps {
-  activeView: 'home' | 'search' | 'detail' | 'watchlist';
+  activeView: 'home' | 'search' | 'detail' | 'watchlist' | 'live';
   searchMode: 'movie' | 'tv';
   setSearchMode: (mode: 'movie' | 'tv') => void;
   goHome: () => void;
   openSearchOverlay: () => void;
   onViewWatchlist: () => void;
+  onViewLive: () => void;
 }
 
 export default function MobileNav({
@@ -21,6 +22,7 @@ export default function MobileNav({
   goHome,
   openSearchOverlay,
   onViewWatchlist,
+  onViewLive,
 }: MobileNavProps) {
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[200] h-16 bg-neutral-950/90 backdrop-blur-xl border-t border-white/5 flex items-center justify-around px-1 selection:bg-transparent safe-bottom">
@@ -73,6 +75,17 @@ export default function MobileNav({
       >
         <Bookmark className="w-5 h-5 transition-transform active:scale-95" />
         <span className="text-[10px] font-bold leading-none">قائمتي</span>
+      </button>
+
+      {/* Live Broadcast Button */}
+      <button
+        onClick={onViewLive}
+        className={`flex flex-col items-center justify-center gap-1 flex-1 h-full py-1 text-center transition-all cursor-pointer ${
+          activeView === 'live' ? 'text-white' : 'text-gray-500'
+        }`}
+      >
+        <Radio className="w-5 h-5 transition-transform active:scale-95 text-rose-500" />
+        <span className="text-[10px] font-bold leading-none">مباشر 🔴</span>
       </button>
 
       {/* Search Button */}
