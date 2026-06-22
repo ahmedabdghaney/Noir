@@ -367,9 +367,20 @@ export default function DetailView({
           try {
             await removeFromFirestoreWatchlist(curUser.uid, type, id);
             showToast('تمت الإزالة من قائمتك سحابياً');
-          } catch (cloudErr) {
+          } catch (cloudErr: any) {
             console.error("Failed to remove item from Cloud Watchlist: ", cloudErr);
-            showToast('تمت الإزالة محلياً (حدث خطأ في الاتصال بالسحابة)');
+            let errMsg = 'حدث خطأ في الاتصال بالسحابة';
+            try {
+              if (cloudErr && cloudErr.message) {
+                const parsed = JSON.parse(cloudErr.message);
+                if (parsed && parsed.error) {
+                  errMsg = parsed.error;
+                }
+              }
+            } catch (pErr) {
+              errMsg = cloudErr?.message || String(cloudErr);
+            }
+            showToast(`تمت الإزالة محلياً (${errMsg})`);
           }
         } else {
           showToast('تمت الإزالة من قائمتك');
@@ -390,9 +401,20 @@ export default function DetailView({
           try {
             await addToFirestoreWatchlist(curUser.uid, newItem);
             showToast('تم الحفظ في قائمتك سحابياً بنجاح');
-          } catch (cloudErr) {
+          } catch (cloudErr: any) {
             console.error("Failed to add item to Cloud Watchlist: ", cloudErr);
-            showToast('تم الحفظ محلياً (حدث خطأ في الاتصال بالسحابة)');
+            let errMsg = 'حدث خطأ في الاتصال بالسحابة';
+            try {
+              if (cloudErr && cloudErr.message) {
+                const parsed = JSON.parse(cloudErr.message);
+                if (parsed && parsed.error) {
+                  errMsg = parsed.error;
+                }
+              }
+            } catch (pErr) {
+              errMsg = cloudErr?.message || String(cloudErr);
+            }
+            showToast(`تم الحفظ محلياً (${errMsg})`);
           }
         } else {
           showToast('تم الحفظ في قائمتك');
