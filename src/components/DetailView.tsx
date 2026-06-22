@@ -49,6 +49,8 @@ export default function DetailView({
   // Player Playback States
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [playerMode, setPlayerMode] = useState<'movie' | 'trailer'>('movie');
+  const [isPausedByHost, setIsPausedByHost] = useState(false);
+  const [hostPauseByName, setHostPauseByName] = useState<string>('');
 
   // Saved Progress Percentage
   const [savedProgressPercent, setSavedProgressPercent] = useState<number>(0);
@@ -77,7 +79,11 @@ export default function DetailView({
       if (sig.action === 'play') {
         setIsPlayerOpen(true);
         setPlayerMode('movie');
+        setIsPausedByHost(false);
+        setHostPauseByName('');
       } else if (sig.action === 'pause') {
+        setIsPausedByHost(true);
+        setHostPauseByName(sig.byName);
         showToast(`${sig.byName} أوقف التشغيل مؤقتاً`);
       }
     },
@@ -212,10 +218,27 @@ export default function DetailView({
   const handlePlayClick = (mode: 'movie' | 'trailer') => {
     setPlayerMode(mode);
     setIsPlayerOpen(true);
+    setIsPausedByHost(false);
+    setHostPauseByName('');
     // If host in a live session, tell everyone to open the stream too
     if (isWatchTogetherOpen && wtConnected && wtIsHost && mode === 'movie') {
       wtSendPlayer('play', 0);
     }
+  };
+
+  // Host-only pause/resume handlers for live sessions
+  const handleHostPause = () => {
+    if (!wtIsHost || !wtConnected) return;
+    setIsPausedByHost(true);
+    setHostPauseByName(wtName);
+    wtSendPlayer('pause', 0);
+  };
+
+  const handleHostResume = () => {
+    if (!wtIsHost || !wtConnected) return;
+    setIsPausedByHost(false);
+    setHostPauseByName('');
+    wtSendPlayer('play', 0);
   };
 
   if (isLoading) {
@@ -654,6 +677,12 @@ export default function DetailView({
             episodesCount={episodesCount}
             youtubeKey={youtubeKey}
             playMode={playerMode}
+            isPausedByHost={isPausedByHost}
+            hostPauseByName={hostPauseByName}
+            isLiveHost={isWatchTogetherOpen && wtConnected && wtIsHost}
+            isLiveSession={isWatchTogetherOpen && wtConnected}
+            onHostPause={handleHostPause}
+            onHostResume={handleHostResume}
             onClose={() => setIsPlayerOpen(false)}
             onSwitchMode={(mode) => setPlayerMode(mode)}
             onNextEpisode={() => {

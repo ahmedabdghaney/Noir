@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { X, Maximize, Settings, Youtube, Play, Loader, ShieldAlert } from 'lucide-react';
+import { X, Maximize, Settings, Youtube, Play, Loader, ShieldAlert, Pause, Lock } from 'lucide-react';
 
 interface VideoPlayerProps {
   type: 'movie' | 'tv';
@@ -15,6 +15,12 @@ interface VideoPlayerProps {
   episodesCount?: number;
   youtubeKey?: string | null;
   playMode: 'movie' | 'trailer';
+  isPausedByHost?: boolean;
+  hostPauseByName?: string;
+  isLiveHost?: boolean;
+  isLiveSession?: boolean;
+  onHostPause?: () => void;
+  onHostResume?: () => void;
   onClose: () => void;
   onSwitchMode: (mode: 'movie' | 'trailer') => void;
   onNextEpisode?: () => void;
@@ -29,6 +35,12 @@ export default function VideoPlayer({
   episodesCount = 1,
   youtubeKey,
   playMode,
+  isPausedByHost = false,
+  hostPauseByName = '',
+  isLiveHost = false,
+  isLiveSession = false,
+  onHostPause,
+  onHostResume,
   onClose,
   onSwitchMode,
   onNextEpisode,
@@ -219,6 +231,29 @@ export default function VideoPlayer({
 </div>
             )}
 
+            {/* Host-only Pause/Resume control (live sessions) */}
+            {playMode === 'movie' && isLiveHost && (
+              isPausedByHost ? (
+                <button
+                  onClick={onHostResume}
+                  className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-full cursor-pointer transition-colors"
+                  title="استئناف التشغيل للجميع"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <span className="hidden sm:inline">استئناف</span>
+</button>
+              ) : (
+                <button
+                  onClick={onHostPause}
+                  className="flex items-center gap-1 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-full cursor-pointer transition-colors"
+                  title="إيقاف التشغيل للجميع"
+                >
+                  <Pause className="w-3.5 h-3.5 fill-current" />
+                  <span className="hidden sm:inline">إيقاف للجميع</span>
+</button>
+              )
+            )}
+
             {/* Fullscreen Button */}
             <button
               onClick={handleFullscreen}
@@ -241,7 +276,7 @@ export default function VideoPlayer({
 
         {/* Video Stage Frame */}
         <div className="relative aspect-video w-full bg-black">
-          {isLoading && (
+          {isLoading && !isPausedByHost && (
             <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-10 gap-3">
               <Loader className="w-8 h-8 text-red-500 animate-spin" />
               <span className="text-xs text-neutral-400 select-none">جاري تحميل مسار المشغّل ومزامنة الترجمة...</span>
@@ -249,7 +284,7 @@ export default function VideoPlayer({
           )}
 
           <iframe
-            src={getEmbedUrl()}
+            src={isPausedByHost ? 'about:blank' : getEmbedUrl()}
             allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
             sandbox="allow-scripts allow-same-origin allow-presentation allow-forms unicode"
             referrerPolicy="no-referrer"
@@ -257,7 +292,36 @@ export default function VideoPlayer({
             className="w-full h-full border-0 relative z-0"
             onLoad={() => setIsLoading(false)}
           />
+
+          {/* Host-paused overlay (covers iframe completely) */}
+          {isPausedByHost && playMode === 'movie' && (
+            <div className="absolute inset-0 z-20 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center gap-4 select-none">
+              <div className="w-16 h-16 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center">
+                <Pause className="w-7 h-7 text-amber-400 fill-amber-400" />
 </div>
+              <div className="text-center px-6">
+                <h3 className="text-white text-base md:text-lg font-bold mb-1">
+                  أوقف المنظم التشغيل
+</h3>
+                {hostPauseByName && (
+                  <p className="text-gray-400 text-xs md:text-sm">
+                    بانتظار <span className="text-amber-400 font-semibold">{hostPauseByName}</span> ليستأنف العرض
+</p>
+                )}
+                {isLiveHost && (
+                  <p className="text-gray-500 text-[11px] mt-3">
+                    اضغط زر الاستئناف بالأعلى لإكمال المشاهدة (ينعاد الفلم من البداية)
+</p>
+                )}
+                {!isLiveHost && isLiveSession && (
+                  <p className="text-gray-500 text-[11px] mt-3 flex items-center justify-center gap-1.5">
+                    <Lock className="w-3 h-3" />
+                    التحكم بالتشغيل بيد المنظم فقط
+</p>
+                )}
+</div>
+</div>
+          )}</div>
 
          {/* Browser sandbox notification details */}
         {playMode ==='movie' && (
