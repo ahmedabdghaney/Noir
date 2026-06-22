@@ -4,7 +4,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Search, Menu, X, Clapperboard } from 'lucide-react';
+import { Search, Menu, X } from 'lucide-react';
+import LogoIcon from './LogoIcon';
 
 interface HeaderProps {
   activeView: 'home' | 'search' | 'detail' | 'watchlist';
@@ -65,7 +66,7 @@ export default function Header({
               tabIndex={0}
               onKeyDown={(e) => e.key ==='Enter' && goHome()}
             >
-              <Clapperboard className="w-5 h-5 text-red-500 shrink-0" />
+              <LogoIcon className="w-5 h-5 text-red-500 shrink-0" />
               <span className="hidden sm:inline">نوار</span>
               <span className="text-gray-500 font-normal text-[10px] mr-1 bg-white/5 px-1.5 py-0.5 rounded">سينما</span>
 </div>

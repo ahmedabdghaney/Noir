@@ -4,7 +4,8 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, Star, Clapperboard } from 'lucide-react';
+import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, Star } from 'lucide-react';
+import LogoIcon from './components/LogoIcon';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, loginWithGoogle, logoutUser, signInWithEmail, signUpWithEmail, resetPassword, checkSignInMethods, translateAuthError, fetchFirestoreWatchlist } from './lib/firebase';
 import { MovieOrShow } from './types';
@@ -612,6 +613,8 @@ export default function App() {
       'https://images.unsplash.com/photo-1524985069026-dd2f4049773a?q=80&w=350&auto=format&fit=crop'
     ];
 
+    const col1PostersReverse = [...col1Posters].reverse();
+
     return (
       <div className="relative min-h-screen bg-[#070707] text-white flex items-center justify-center font-sans overflow-hidden p-3.5 sm:p-6 md:p-10 select-none">
         
@@ -625,7 +628,7 @@ export default function App() {
               <div className="absolute -inset-10 flex gap-4 rotate-[30deg] scale-125 justify-center">
                 {/* Column 1: Moves upward */}
                 <div className="flex flex-col gap-4 animate-marquee-up shrink-0">
-                  {[...col1Posters, ...col1Posters, ...col1Posters].map((url, index) => (
+                  {[...col1Posters, ...col1Posters].map((url, index) => (
                     <div key={`col1-${index}`} className="w-28 h-40 bg-neutral-950 rounded-2xl overflow-hidden border border-white/10 shadow-lg shrink-0">
                       <img src={url} alt="Cover" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     </div>
@@ -634,7 +637,7 @@ export default function App() {
                 
                 {/* Column 2: Moves downward */}
                 <div className="flex flex-col gap-4 animate-marquee-down shrink-0">
-                  {[...col2Posters, ...col2Posters, ...col2Posters].map((url, index) => (
+                  {[...col2Posters, ...col2Posters].map((url, index) => (
                     <div key={`col2-${index}`} className="w-28 h-40 bg-neutral-950 rounded-2xl overflow-hidden border border-white/10 shadow-lg shrink-0">
                       <img src={url} alt="Cover" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     </div>
@@ -643,7 +646,7 @@ export default function App() {
 
                 {/* Column 3: Moves upward */}
                 <div className="flex flex-col gap-4 animate-marquee-up shrink-0">
-                  {[...col1Posters.reverse(), ...col1Posters.reverse()].map((url, index) => (
+                  {[...col1PostersReverse, ...col1PostersReverse].map((url, index) => (
                     <div key={`col3-${index}`} className="w-28 h-40 bg-neutral-950 rounded-2xl overflow-hidden border border-white/10 shadow-lg shrink-0">
                       <img src={url} alt="Cover" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     </div>
@@ -660,7 +663,7 @@ export default function App() {
               <div className="flex items-center gap-2.5 mb-8 justify-end">
                 <span className="text-lg font-black tracking-tight text-white m-0">نوار <span className="text-red-500">سينما</span></span>
                 <div className="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center shadow-lg shadow-red-600/30">
-                  <Clapperboard className="w-5 h-5 text-white shrink-0" strokeWidth={2.5} />
+                  <LogoIcon className="w-5 h-5 text-white shrink-0" />
                 </div>
               </div>
 
@@ -921,10 +924,10 @@ export default function App() {
           }
           @keyframes marqueeUp {
             0% { transform: translateY(0); }
-            100% { transform: translateY(-33.33%); }
+            100% { transform: translateY(-50%); }
           }
           @keyframes marqueeDown {
-            0% { transform: translateY(-33.33%); }
+            0% { transform: translateY(-50%); }
             100% { transform: translateY(0); }
           }
           .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
