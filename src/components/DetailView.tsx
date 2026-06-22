@@ -718,35 +718,6 @@ export default function DetailView({
 </div>
         )}
 
-        {/* Video Player Mount Position */}
-        {isPlayerOpen && (
-          <VideoPlayer
-            type={type}
-            id={id}
-            title={title}
-            season={selectedSeason}
-            episode={selectedEpisode}
-            episodesCount={episodesCount}
-            youtubeKey={youtubeKey}
-            playMode={playerMode}
-            isPausedByHost={isPausedByHost}
-            hostPauseByName={hostPauseByName}
-            isLiveHost={isWatchTogetherOpen && wtConnected && wtIsHost}
-            isLiveSession={isWatchTogetherOpen && wtConnected}
-            startAt={startAtSnapshot}
-            onTimeUpdate={handleTimeUpdate}
-            onHostPause={handleHostPause}
-            onHostResume={handleHostResume}
-            onClose={() => setIsPlayerOpen(false)}
-            onSwitchMode={(mode) => setPlayerMode(mode)}
-            onNextEpisode={() => {
-              if (selectedEpisode < episodesCount) {
-                setSelectedEpisode((prev) => prev + 1);
-              }
-            }}
-          />
-        )}
-
         {/* Specs Factors Panel - Technical Details cards matrix */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-neutral-900/60 border border-white/5 rounded-2xl px-5 py-4 my-8">
           <div className="flex flex-col gap-0.5">
@@ -860,6 +831,35 @@ export default function DetailView({
               onItemClick={onItemClick}
             />
 </div>
+        )}
+
+        {/* Video Player Mount Position - placed last so details/cast/recs stay above */}
+        {isPlayerOpen && (
+          <VideoPlayer
+            type={type}
+            id={id}
+            title={title}
+            season={selectedSeason}
+            episode={selectedEpisode}
+            episodesCount={episodesCount}
+            youtubeKey={youtubeKey}
+            playMode={playerMode}
+            isPausedByHost={isPausedByHost}
+            hostPauseByName={hostPauseByName}
+            isLiveHost={isWatchTogetherOpen && wtConnected && wtIsHost}
+            isLiveSession={isWatchTogetherOpen && wtConnected}
+            startAt={startAtSnapshot}
+            onTimeUpdate={handleTimeUpdate}
+            onHostPause={handleHostPause}
+            onHostResume={handleHostResume}
+            onClose={() => setIsPlayerOpen(false)}
+            onSwitchMode={(mode) => setPlayerMode(mode)}
+            onNextEpisode={() => {
+              if (selectedEpisode < episodesCount) {
+                setSelectedEpisode((prev) => prev + 1);
+              }
+            }}
+          />
         )}
 
         {/* Explicit back route */}

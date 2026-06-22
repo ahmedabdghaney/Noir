@@ -133,7 +133,6 @@ export default function VideoPlayer({
       secondaryColor: '0a0a0a',
       iconColor: 'FFFFFF',
       icons: 'vid',
-      player: 'plus',
       title: 'true',
       poster: 'true',
       autoplay: 'true',
