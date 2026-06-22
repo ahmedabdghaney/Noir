@@ -273,11 +273,11 @@ export default function DetailView({
           let cwList: MovieOrShow[] = JSON.parse(listStr);
           
           // Filter out existing to avoid duplicates, then unshift
-          cwList = cwList.filter((x) => !(x.id === data.id && x.type === data.type));
+          cwList = cwList.filter((x) => !(x.id === id && x.type === type));
           
           const itemToSave: MovieOrShow = {
-            id: data.id,
-            type: data.type,
+            id: id,
+            type: type,
             title: data.title,
             overview: data.overview || '',
             poster: data.poster_path ? getPosterUrl(data.poster_path) : null,
@@ -845,35 +845,47 @@ export default function DetailView({
         )}
 
         {/* Specs Factors Panel - Technical Details cards matrix */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-neutral-900/60 border border-white/5 rounded-2xl px-5 py-4 my-8">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">الإخراج</span>
-            <span className="text-white text-xs md:text-sm font-semibold truncate" title={director}>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 my-8">
+          <div className="flex flex-col gap-1.5 bg-gradient-to-b from-neutral-900 to-neutral-900/40 border border-white/10 rounded-2xl px-5 py-4">
+            <span className="text-[11px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5" />
+              عام الإصدار
+            </span>
+            <span className="text-white text-lg md:text-2xl font-extrabold">
+              {year || 'غ/م'}
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-1.5 bg-gradient-to-b from-neutral-900 to-neutral-900/40 border border-white/10 rounded-2xl px-5 py-4">
+            <span className="text-[11px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-1.5">
+              <RotateCcw className="w-3.5 h-3.5" />
+              الإخراج
+            </span>
+            <span className="text-white text-sm md:text-lg font-bold truncate" title={director}>
               {director}
-</span>
-</div>
+            </span>
+          </div>
 
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">دولة الإنتاج</span>
-            <span className="text-white text-xs md:text-sm font-semibold truncate" title={country}>
+          <div className="flex flex-col gap-1.5 bg-gradient-to-b from-neutral-900 to-neutral-900/40 border border-white/10 rounded-2xl px-5 py-4">
+            <span className="text-[11px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5" />
+              دولة الإنتاج
+            </span>
+            <span className="text-white text-sm md:text-lg font-bold truncate" title={country}>
               {country}
-</span>
-</div>
+            </span>
+          </div>
 
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">اللغة الأصلية</span>
-            <span className="text-white text-xs md:text-sm font-semibold truncate">
+          <div className="flex flex-col gap-1.5 bg-gradient-to-b from-neutral-900 to-neutral-900/40 border border-white/10 rounded-2xl px-5 py-4">
+            <span className="text-[11px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-1.5">
+              <Languages className="w-3.5 h-3.5" />
+              اللغة الأصلية
+            </span>
+            <span className="text-white text-sm md:text-lg font-bold truncate">
               {mainLang}
-</span>
-</div>
-
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">عام الإصدار</span>
-            <span className="text-white text-xs md:text-sm font-semibold">
-              {year ||'غ/م'}
-</span>
-</div>
-</div>
+            </span>
+          </div>
+        </div>
 
         {/* Bottom Synopsis and Cast grids */}
         <div className="grid grid-cols-1 md:grid-cols-[1fr_260px] gap-10 mt-8">
@@ -920,17 +932,6 @@ export default function DetailView({
 
           {/* Quick sidebar placeholder metrics or credits */}
           <div className="hidden md:flex flex-col gap-6 text-right w-full shrink-0 border-r border-white/5 pr-6">
-            <div className="space-y-1.5">
-              <h4 className="text-neutral-500 text-[10px] font-bold uppercase">التقييم الجماهيري</h4>
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-extrabold text-[#f5c518]">
-                  {data.vote_average ? data.vote_average.toFixed(1) :'غ/م'}
-</span>
-                <span className="text-gray-500 text-xs">/ 10</span>
-</div>
-              <p className="text-[10px] text-gray-400 font-medium">مستند إلى قاعدة بيانات جماهيرية واسعة.</p>
-</div>
-
             {genres.length > 0 && (
               <div className="space-y-2">
                 <h4 className="text-neutral-500 text-[10px] font-bold uppercase">التصنيفات الشاملة</h4>
