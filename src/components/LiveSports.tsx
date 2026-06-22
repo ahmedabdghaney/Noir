@@ -67,10 +67,20 @@ export default function LiveSports({ API_KEY = 'ea2ad74f3128a87d62b665e08ae9b799
   const [playerMode, setPlayerMode] = useState<PlayerMode>('smart');
   const [embedUrlType, setEmbedUrlType] = useState<'slash' | 'param'>('slash');
   
+  // API Key & Embed Base URL Customizers
+  const [apiKey, setApiKey] = useState(() => {
+    return localStorage.getItem('noir_custom_live_api_key') || API_KEY;
+  });
+  const [embedBaseUrl, setEmbedBaseUrl] = useState(() => {
+    return localStorage.getItem('noir_custom_embed_base_url') || 'https://sportsrc.me/embed';
+  });
+
   // Editing state for channels details
   const [isEditingChan, setIsEditingChan] = useState(false);
   const [editIdValue, setEditIdValue] = useState('');
   const [editM3u8Value, setEditM3u8Value] = useState('');
+  const [editApiKey, setEditApiKey] = useState(apiKey);
+  const [editEmbedBaseUrl, setEditEmbedBaseUrl] = useState(embedBaseUrl);
 
   // Video references & player control states
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -91,8 +101,10 @@ export default function LiveSports({ API_KEY = 'ea2ad74f3128a87d62b665e08ae9b799
     if (currentChannel) {
       setEditIdValue(currentChannel.id);
       setEditM3u8Value(currentChannel.m3u8Url);
+      setEditApiKey(apiKey);
+      setEditEmbedBaseUrl(embedBaseUrl);
     }
-  }, [selectedChanId, currentChannel]);
+  }, [selectedChanId, currentChannel, apiKey, embedBaseUrl]);
 
   // Handle stream loader inside Video Tag using hls.js
   useEffect(() => {
@@ -270,6 +282,13 @@ export default function LiveSports({ API_KEY = 'ea2ad74f3128a87d62b665e08ae9b799
     setChannels(updated);
     localStorage.setItem('noir_custom_live_channels_v2', JSON.stringify(updated));
     setSelectedChanId(editIdValue.trim());
+
+    // Update global provider keys/URLs
+    setApiKey(editApiKey);
+    setEmbedBaseUrl(editEmbedBaseUrl);
+    localStorage.setItem('noir_custom_live_api_key', editApiKey);
+    localStorage.setItem('noir_custom_embed_base_url', editEmbedBaseUrl);
+
     setIsEditingChan(false);
   };
 
@@ -278,6 +297,12 @@ export default function LiveSports({ API_KEY = 'ea2ad74f3128a87d62b665e08ae9b799
       setChannels(DEFAULT_CHANNELS);
       localStorage.removeItem('noir_custom_live_channels_v2');
       localStorage.removeItem('noir_custom_live_channels');
+      localStorage.removeItem('noir_custom_live_api_key');
+      localStorage.removeItem('noir_custom_embed_base_url');
+      setApiKey(API_KEY);
+      setEmbedBaseUrl('https://sportsrc.me/embed');
+      setEditApiKey(API_KEY);
+      setEditEmbedBaseUrl('https://sportsrc.me/embed');
       setSelectedChanId('bein1');
       setIsEditingChan(false);
       setLiveStreamReloadToken(t => t + 1);
@@ -295,11 +320,10 @@ export default function LiveSports({ API_KEY = 'ea2ad74f3128a87d62b665e08ae9b799
   });
 
   const getStreamIframeUrl = () => {
-    const baseUrl = 'https://sportsrc.me/embed';
     if (embedUrlType === 'slash') {
-      return `${baseUrl}/${currentChannel.id}?key=${API_KEY}`;
+      return `${embedBaseUrl}/${currentChannel.id}?key=${apiKey}`;
     } else {
-      return `${baseUrl}?id=${currentChannel.id}&key=${API_KEY}`;
+      return `${embedBaseUrl}?id=${currentChannel.id}&key=${apiKey}`;
     }
   };
 
@@ -605,11 +629,13 @@ export default function LiveSports({ API_KEY = 'ea2ad74f3128a87d62b665e08ae9b799
             {/* Custom Stream Modifiers & Persist Config Box */}
             <div className="mt-5 pt-5 border-t border-white/5">
               {isEditingChan ? (
-                <div className="space-y-3 p-4 bg-neutral-950 rounded-2xl border border-white/5">
-                  <span className="text-xs font-bold text-neutral-300 block">إعداد مبرمج القناة للبث المباشر:</span>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-4 p-4 bg-neutral-950 rounded-2xl border border-white/5">
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold text-rose-400 block">تعديل رابط القناة الفردية:</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-3 border-b border-white/5">
                     <div className="space-y-1">
-                      <label className="text-[10px] text-neutral-500 font-bold block">معرف القناة لتضمين الويب (ID):</label>
+                      <label className="text-[10px] text-neutral-400 font-bold block">معرف القناة لتضمين الويب (ID):</label>
                       <input
                         type="text"
                         value={editIdValue}
@@ -620,7 +646,7 @@ export default function LiveSports({ API_KEY = 'ea2ad74f3128a87d62b665e08ae9b799
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] text-neutral-500 font-bold block">رابط البث الذكي المباشر (HLS / M3U8):</label>
+                      <label className="text-[10px] text-neutral-400 font-bold block">رابط البث الذكي المباشر (HLS / M3U8):</label>
                       <input
                         type="text"
                         value={editM3u8Value}
@@ -631,18 +657,52 @@ export default function LiveSports({ API_KEY = 'ea2ad74f3128a87d62b665e08ae9b799
                       />
                     </div>
                   </div>
-                  <div className="flex items-center justify-end gap-2 pt-1">
+
+                  <div className="space-y-3 pt-1">
+                    <span className="text-xs font-bold text-rose-400 block">إعدادات مزود البث المضمن ومفتاح الترخيص (لتجاوز التوقف):</span>
+                    <p className="text-[10px] text-neutral-500">
+                      إذا توقف موقع sportsrc.me أو حُجب، يمكنك تحديث رابط المزوّد البديل أدناه ومفتاح الترخيص الخاص بك لتعمل جميع قنوات التضمين فوراً.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-neutral-400 font-bold block font-sans">رابط مصدر التضمين الممتد (Iframe Base URL):</label>
+                        <input
+                          type="text"
+                          value={editEmbedBaseUrl}
+                          onChange={(e) => setEditEmbedBaseUrl(e.target.value)}
+                          placeholder="مثال: https://sportsrc.me/embed"
+                          className="w-full bg-neutral-900 text-white text-xs px-3 py-2.5 rounded-xl border border-white/10 focus:outline-none focus:border-rose-500/50 font-mono text-left"
+                          dir="ltr"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-neutral-400 font-bold block">مفتاح ترخيص البث (API Key):</label>
+                        <input
+                          type="text"
+                          value={editApiKey}
+                          onChange={(e) => setEditApiKey(e.target.value)}
+                          placeholder="أدخل مفتاح الترخيص الجديد..."
+                          className="w-full bg-neutral-900 text-white text-xs px-3 py-2.5 rounded-xl border border-white/10 focus:outline-none focus:border-rose-500/50 font-mono text-left"
+                          dir="ltr"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2">
                     <button
                       onClick={handleUpdateChannel}
                       className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
                     >
-                      حفظ التعديلات للقناة
+                      حفظ كافة التغييرات
                     </button>
                     <button
                       onClick={() => {
                         setIsEditingChan(false);
                         setEditIdValue(currentChannel.id);
                         setEditM3u8Value(currentChannel.m3u8Url);
+                        setEditApiKey(apiKey);
+                        setEditEmbedBaseUrl(embedBaseUrl);
                       }}
                       className="px-3 py-2 bg-neutral-900 text-neutral-400 text-xs font-bold rounded-xl hover:text-white transition-all cursor-pointer"
                     >
