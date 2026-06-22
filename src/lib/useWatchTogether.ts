@@ -28,12 +28,14 @@ interface UseWatchTogetherOpts {
   onPlayerSignal?: (sig: PlayerSignal) => void;
 }
 
-// Server URL: set VITE_WS_URL in Netlify env, e.g. wss://noir-watch.up.railway.app
+// Server URL: defaults to the deployed Railway server.
+// Can be overridden with VITE_WS_URL at build time if needed.
+const RAILWAY_WS = 'wss://noir-movies-production.up.railway.app';
 const WS_URL =
   (import.meta as any).env?.VITE_WS_URL ||
   (typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'ws://localhost:8080'
-    : '');
+    : RAILWAY_WS);
 
 export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWatchTogetherOpts) {
   const wsRef = useRef<WebSocket | null>(null);
