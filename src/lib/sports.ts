@@ -78,9 +78,39 @@ export function extractStreamSources(detail: any): { label: string; url: string 
         if (typeof s === 'string') {
           pushUrl(s, `سيرفر ${i + 1}`);
         } else if (s && typeof s === 'object') {
-          const url = s.url || s.embed || s.link || s.src;
-          const label = s.name || s.label || s.title || `سيرفر ${i + 1}`;
-          pushUrl(url, label);
+          // Try every common field name for the stream URL
+          const url =
+            s.url ||
+            s.embed ||
+            s.embedUrl ||
+            s.embed_url ||
+            s.link ||
+            s.src ||
+            s.source ||
+            s.stream ||
+            s.streamUrl ||
+            s.stream_url ||
+            s.file ||
+            s.player ||
+            s.iframe ||
+            s.iframeUrl ||
+            s.iframe_url ||
+            s.uri;
+          const label =
+            s.name || s.label || s.title || s.server || s.lang || s.language || s.quality || `سيرفر ${i + 1}`;
+
+          if (url) {
+            pushUrl(url, String(label));
+          } else {
+            // Fallback: scan ALL string fields, pick the first that looks like a URL
+            for (const k of Object.keys(s)) {
+              const v = s[k];
+              if (typeof v === 'string' && v.startsWith('http')) {
+                pushUrl(v, String(label));
+                break;
+              }
+            }
+          }
         }
       });
     }

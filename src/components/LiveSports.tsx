@@ -56,6 +56,11 @@ export default function LiveSports() {
       // Open browser console (Cmd+Option+I) to inspect.
       console.log('[NOIR LiveSports] match id:', match.id);
       console.log('[NOIR LiveSports] detail response:', detail);
+      // Show first source object in full so we can see its field names
+      if (detail && Array.isArray(detail.sources) && detail.sources.length > 0) {
+        console.log('[NOIR LiveSports] first source object:', detail.sources[0]);
+        console.log('[NOIR LiveSports] first source keys:', Object.keys(detail.sources[0]));
+      }
       const srcs = extractStreamSources(detail);
       console.log('[NOIR LiveSports] extracted sources:', srcs);
       if (srcs.length > 0) {
