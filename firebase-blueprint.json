@@ -1,0 +1,27 @@
+{
+  "entities": {
+    "WatchlistItem": {
+      "title": "WatchlistItem",
+      "description": "An item saved in user's watchlist",
+      "type": "object",
+      "properties": {
+        "id": { "type": "integer", "description": "The TMDB ID of the title" },
+        "type": { "type": "string", "enum": ["movie", "tv"], "description": "The media type (movie or tv)" },
+        "title": { "type": "string", "description": "The Arabic or original title" },
+        "poster": { "type": "string", "description": "The poster image URL" },
+        "backdrop": { "type": "string", "description": "The backdrop image URL" },
+        "rating": { "type": "number", "description": "The vote average rating" },
+        "year": { "type": "string", "description": "The release year" },
+        "genres": { "type": "array", "description": "List of genres" },
+        "addedAt": { "type": "string", "format": "date-time", "description": "The server timestamp when added" }
+      },
+      "required": ["id", "type", "title", "rating", "year", "genres", "addedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/watchlist/{itemId}": {
+      "schema": "WatchlistItem",
+      "description": "User specific watchlist documents"
+    }
+  }
+}

@@ -10,7 +10,19 @@ import {
   updateProfile,
   fetchSignInMethodsForEmail,
 } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import {
+  getFirestore,
+  collection,
+  doc,
+  setDoc,
+  deleteDoc,
+  getDocs,
+  query,
+  orderBy,
+  serverTimestamp,
+  getDocFromServer,
+} from 'firebase/firestore';
+import { MovieOrShow } from '../types';
 
 const firebaseConfig = {
   projectId: "ios-app-498810",
@@ -29,6 +41,18 @@ export const auth = getAuth(app);
 
 // Use the designated custom firestore databaseId from configuration
 export const db = getFirestore(app, "ai-studio-d038e6e0-89a6-457a-a50e-97b6aadc9e67");
+
+// Test connection to Firestore instantly on bootstrap
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.error("Please check your Firebase configuration.");
+    }
+  }
+}
+testConnection();
 
 // Configure Google Sign-In Provider
 export const googleProvider = new GoogleAuthProvider();
@@ -127,3 +151,125 @@ export const resetPassword = async (email: string) => {
 export const checkSignInMethods = async (email: string): Promise<string[]> => {
   return await fetchSignInMethodsForEmail(auth, email.trim());
 };
+
+// --- FIRESTORE SECURE SYNC OPERATIONS ---
+
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  }
+}
+
+/**
+ * Standard Firestore error wrapping handler conforming to strict platform guidelines.
+ */
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+       })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+/**
+ * Fetch the authenticated user's cloud watchlist from Firestore, ordered by addition date.
+ */
+export const fetchFirestoreWatchlist = async (userId: string): Promise<MovieOrShow[]> => {
+  const pathSpec = `users/${userId}/watchlist`;
+  try {
+    const q = query(collection(db, 'users', userId, 'watchlist'), orderBy('addedAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    const list: MovieOrShow[] = [];
+    querySnapshot.forEach((docSnap) => {
+      const d = docSnap.data();
+      list.push({
+        id: Number(d.id),
+        type: d.type as 'movie' | 'tv',
+        title: d.title || '',
+        poster: d.poster || null,
+        backdrop: d.backdrop || null,
+        rating: Number(d.rating || 0),
+        year: String(d.year || ''),
+        genres: Array.isArray(d.genres) ? d.genres : [],
+        overview: '',
+        date: '',
+      });
+    });
+    return list;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, pathSpec);
+    return [];
+  }
+};
+
+/**
+ * Add an item to the authenticated user's cloud watchlist inside Firestore.
+ */
+export const addToFirestoreWatchlist = async (userId: string, item: Omit<MovieOrShow, 'date' | 'overview'>): Promise<void> => {
+  const itemId = `${item.type}_${item.id}`;
+  const pathSpec = `users/${userId}/watchlist/${itemId}`;
+  try {
+    const docRef = doc(db, 'users', userId, 'watchlist', itemId);
+    await setDoc(docRef, {
+      id: Number(item.id),
+      type: item.type,
+      title: item.title,
+      poster: item.poster,
+      backdrop: item.backdrop,
+      rating: Number(item.rating),
+      year: String(item.year),
+      genres: Array.isArray(item.genres) ? item.genres : [],
+      addedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, pathSpec);
+  }
+};
+
+/**
+ * Remove an item from the authenticated user's cloud watchlist inside Firestore.
+ */
+export const removeFromFirestoreWatchlist = async (userId: string, type: 'movie' | 'tv', id: number): Promise<void> => {
+  const itemId = `${type}_${id}`;
+  const pathSpec = `users/${userId}/watchlist/${itemId}`;
+  try {
+    const docRef = doc(db, 'users', userId, 'watchlist', itemId);
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, pathSpec);
+  }
+};
+

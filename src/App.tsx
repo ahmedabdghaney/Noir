@@ -4,9 +4,9 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, Star } from 'lucide-react';
+import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, Star, Clapperboard } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth, loginWithGoogle, logoutUser, signInWithEmail, signUpWithEmail, resetPassword, checkSignInMethods, translateAuthError } from './lib/firebase';
+import { auth, loginWithGoogle, logoutUser, signInWithEmail, signUpWithEmail, resetPassword, checkSignInMethods, translateAuthError, fetchFirestoreWatchlist } from './lib/firebase';
 import { MovieOrShow } from './types';
 import {
   initializeGenres,
@@ -116,6 +116,32 @@ export default function App() {
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
 
+  // Bookmark / Watchlist feeds
+  const [watchlist, setWatchlist] = useState<MovieOrShow[]>([]);
+
+  // loadWatchlist checks cloud for authenticated users or local storage for guests
+  const loadWatchlist = async () => {
+    const curUser = auth.currentUser;
+    if (curUser) {
+      try {
+        const cloudList = await fetchFirestoreWatchlist(curUser.uid);
+        setWatchlist(cloudList);
+        localStorage.setItem('noir_watchlist', JSON.stringify(cloudList));
+      } catch (err) {
+        console.error("Failed to load watchlist from Firestore: ", err);
+        const saved = localStorage.getItem('noir_watchlist');
+        setWatchlist(saved ? JSON.parse(saved) : []);
+      }
+    } else {
+      try {
+        const saved = localStorage.getItem('noir_watchlist');
+        setWatchlist(saved ? JSON.parse(saved) : []);
+      } catch {
+        setWatchlist([]);
+      }
+    }
+  };
+
   // Synchronize authenticated identity with Firebase state-listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -129,6 +155,7 @@ export default function App() {
         };
         localStorage.setItem('noir_user', JSON.stringify(userData));
         setUser(userData);
+        loadWatchlist();
       } else {
         const stored = localStorage.getItem('noir_user');
         if (stored) {
@@ -137,9 +164,11 @@ export default function App() {
             if (parsed.type ==='google' || parsed.type === 'email') {
               setUser(null);
               localStorage.removeItem('noir_user');
+              loadWatchlist();
             }
           } catch {
             localStorage.removeItem('noir_user');
+            loadWatchlist();
           }
         }
       }
@@ -147,9 +176,6 @@ export default function App() {
 
     return () => unsubscribe();
   }, []);
-
-  // Bookmark / Watchlist feeds
-  const [watchlist, setWatchlist] = useState<MovieOrShow[]>([]);
 
   // Home Lists Feeds State
   const [trendingWeek, setTrendingWeek] = useState<MovieOrShow[]>([]);
@@ -332,18 +358,7 @@ export default function App() {
     window.location.hash ='#watchlist';
   };
 
-  const loadWatchlist = () => {
-    try {
-      const saved = localStorage.getItem('noir_watchlist');
-      if (saved) {
-        setWatchlist(JSON.parse(saved));
-      } else {
-        setWatchlist([]);
-      }
-    } catch {
-      setWatchlist([]);
-    }
-  };
+  // loadWatchlist definition was moved to the state section above for better initialization.
 
   // Setup Dynamic URL Hash routing system
   useEffect(() => {
@@ -596,7 +611,7 @@ export default function App() {
           {/* Logo brand */}
           <div className="flex flex-col items-center justify-center gap-4 mb-3">
             <div className="w-14 h-14 rounded-2xl bg-red-600 flex items-center justify-center shadow-xl shadow-red-600/30">
-              <span className="text-white text-3xl font-black leading-none">N</span>
+              <Clapperboard className="w-8 h-8 text-white shrink-0" strokeWidth={2.5} />
 </div>
             <h1 className="text-2xl font-extrabold tracking-tight text-white m-0">نوار <span className="text-red-500 font-black">سينما</span></h1>
 </div>

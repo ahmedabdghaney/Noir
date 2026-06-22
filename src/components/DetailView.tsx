@@ -10,6 +10,7 @@ import { fetchDetailedTitle, getPosterUrl, getBackdropUrl } from '../lib/tmdb';
 import VideoPlayer from './VideoPlayer';
 import MovieRow from './MovieRow';
 import { useWatchTogether } from '../lib/useWatchTogether';
+import { auth, addToFirestoreWatchlist, removeFromFirestoreWatchlist } from '../lib/firebase';
 
 interface DetailViewProps {
   type: 'movie' | 'tv';
@@ -359,20 +360,31 @@ export default function DetailView({
   const country = data.production_countries && data.production_countries[0] ? data.production_countries[0].name :'غير معروف';
   const mainLang = data.spoken_languages && data.spoken_languages[0] ? data.spoken_languages[0].name :'الأصلية';
 
-  const handleToggleSave = () => {
-    if (user?.type ==='guest') {
-      showToast('يجب تسجيل الدخول باستخدام حساب جوجل أولاً لإضافة عناوين لقائمتك');
+  const handleToggleSave = async () => {
+    if (user?.type === 'guest') {
+      showToast('يجب تسجيل الدخول باستخدام حساب جوجل أو بريد إلكتروني لإضافة عناوين لقائمتك');
       return;
     }
     if (!data) return;
     try {
       const savedList = localStorage.getItem('noir_watchlist');
       let list = savedList ? JSON.parse(savedList) : [];
-      if (isSaved) {
+      
+      const curUser = auth.currentUser;
+      const isItemSaved = isSaved;
+
+      if (isItemSaved) {
         list = list.filter((item: any) => !(item.id === id && item.type === type));
         setIsSaved(false);
+        if (curUser) {
+          try {
+            await removeFromFirestoreWatchlist(curUser.uid, type, id);
+          } catch (cloudErr) {
+            console.error("Failed to remove item from Cloud Watchlist: ", cloudErr);
+          }
+        }
       } else {
-        list.push({
+        const newItem = {
           id,
           type,
           title,
@@ -381,8 +393,16 @@ export default function DetailView({
           rating: data.vote_average || 0,
           year,
           genres
-        });
+        };
+        list.push(newItem);
         setIsSaved(true);
+        if (curUser) {
+          try {
+            await addToFirestoreWatchlist(curUser.uid, newItem);
+          } catch (cloudErr) {
+            console.error("Failed to add item to Cloud Watchlist: ", cloudErr);
+          }
+        }
       }
       localStorage.setItem('noir_watchlist', JSON.stringify(list));
       window.dispatchEvent(new Event('watchlist_updated'));
