@@ -15,17 +15,19 @@ interface DaddyChannel {
   group: string;
 }
 
-// Multiple embed domains/bases — if one is down, user can switch.
+// Multiple embed domains — DaddyLive rotates domains frequently due to blocks.
+// Current working list as of 2026. Update if all stop working.
 const EMBED_BASES = [
-  'https://daddylive.sx/embed/embed.php',
-  'https://daddylive.eu/embed/embed.php',
-  'https://thedaddy.click/embed/embed.php',
+  'https://daddylive.top/embed/stream.php',
+  'https://daddylives.sbs/embed/stream.php',
+  'https://daddylives.icu/embed/stream.php',
+  'https://daddylive.org/embed/stream.php',
 ];
 
-// Build embed URL. player 1..13 selectable; source=tv.json for 24/7 channels.
+// Build embed URL. player 1..13 selectable; source=tv for 24/7 channels.
 function buildEmbed(baseIdx: number, id: string, player: number): string {
   const base = EMBED_BASES[baseIdx] || EMBED_BASES[0];
-  return `${base}?id=${encodeURIComponent(id)}&player=${player}&source=tv.json`;
+  return `${base}?id=${encodeURIComponent(id)}&player=${player}&source=tv`;
 }
 
 const DADDY_CHANNELS: DaddyChannel[] = [

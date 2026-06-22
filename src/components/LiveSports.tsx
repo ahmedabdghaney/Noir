@@ -52,14 +52,20 @@ export default function LiveSports() {
     setLoadingStream(true);
     try {
       const detail = await fetchSportDetail(match.id);
+      // Debug: log full response so we can see exact field names returned by the API.
+      // Open browser console (Cmd+Option+I) to inspect.
+      console.log('[NOIR LiveSports] match id:', match.id);
+      console.log('[NOIR LiveSports] detail response:', detail);
       const srcs = extractStreamSources(detail);
+      console.log('[NOIR LiveSports] extracted sources:', srcs);
       if (srcs.length > 0) {
         setSources(srcs);
         setActiveSource(srcs[0].url);
       } else {
         setStreamError('لا يتوفر بث لهذه المباراة حالياً، قد يبدأ قرب موعد انطلاقها.');
       }
-    } catch {
+    } catch (err) {
+      console.error('[NOIR LiveSports] error:', err);
       setStreamError('تعذّر تحميل البث، حاول لاحقاً.');
     } finally {
       setLoadingStream(false);
