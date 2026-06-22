@@ -210,9 +210,9 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 export const fetchFirestoreWatchlist = async (userId: string): Promise<MovieOrShow[]> => {
   const pathSpec = `users/${userId}/watchlist`;
   try {
-    const q = query(collection(db, 'users', userId, 'watchlist'), orderBy('addedAt', 'desc'));
+    const q = collection(db, 'users', userId, 'watchlist');
     const querySnapshot = await getDocs(q);
-    const list: MovieOrShow[] = [];
+    const list: any[] = [];
     querySnapshot.forEach((docSnap) => {
       const d = docSnap.data();
       list.push({
@@ -226,9 +226,17 @@ export const fetchFirestoreWatchlist = async (userId: string): Promise<MovieOrSh
         genres: Array.isArray(d.genres) ? d.genres : [],
         overview: '',
         date: '',
+        addedAt: d.addedAt || null,
       });
     });
-    return list;
+    // Sort client-side safely by addedAt decreasingly
+    list.sort((a, b) => {
+      const valA = a.addedAt?.seconds || (a.addedAt ? new Date(a.addedAt).getTime() : 0);
+      const valB = b.addedAt?.seconds || (b.addedAt ? new Date(b.addedAt).getTime() : 0);
+      return valB - valA;
+    });
+    const normalizedList: MovieOrShow[] = list.map(({ addedAt, ...rest }) => rest);
+    return normalizedList;
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, pathSpec);
     return [];

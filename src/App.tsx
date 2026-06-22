@@ -168,9 +168,9 @@ export default function App() {
         
         // Subscribe to real-time watchlist changes in Firestore
         try {
-          const q = query(collection(db, 'users', firebaseUser.uid, 'watchlist'), orderBy('addedAt', 'desc'));
+          const q = collection(db, 'users', firebaseUser.uid, 'watchlist');
           unsubscribeWatchlist = onSnapshot(q, (snapshot) => {
-            const list: MovieOrShow[] = [];
+            const list: any[] = [];
             snapshot.forEach((docSnap) => {
               const d = docSnap.data();
               list.push({
@@ -184,10 +184,18 @@ export default function App() {
                 genres: Array.isArray(d.genres) ? d.genres : [],
                 overview: '',
                 date: '',
+                addedAt: d.addedAt || null,
               });
             });
-            setWatchlist(list);
-            localStorage.setItem('noir_watchlist', JSON.stringify(list));
+            // Sort client-side safely by addedAt decreasingly
+            list.sort((a, b) => {
+              const valA = a.addedAt?.seconds || (a.addedAt ? new Date(a.addedAt).getTime() : 0);
+              const valB = b.addedAt?.seconds || (b.addedAt ? new Date(b.addedAt).getTime() : 0);
+              return valB - valA;
+            });
+            const normalizedList: MovieOrShow[] = list.map(({ addedAt, ...rest }) => rest);
+            setWatchlist(normalizedList);
+            localStorage.setItem('noir_watchlist', JSON.stringify(normalizedList));
           }, (err) => {
             console.error("Watchlist snapshot subscription error: ", err);
             loadWatchlist();
@@ -1573,6 +1581,7 @@ export default function App() {
               showToast={showToast}
               autoOpenWatchTogether={joinRoomCode}
               onClearAutoOpenWatchTogether={() => setJoinRoomCode('')}
+              watchlist={watchlist}
             />
 </div>
         )}

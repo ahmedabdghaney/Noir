@@ -22,6 +22,7 @@ interface DetailViewProps {
   showToast: (message: string) => void;
   autoOpenWatchTogether?: string;
   onClearAutoOpenWatchTogether?: () => void;
+  watchlist: MovieOrShow[];
 }
 
 function formatHms(seconds: number): string {
@@ -42,15 +43,16 @@ export default function DetailView({
   onOpenShare,
   user,
   showToast,
-  autoOpenWatchTogether ='',
+  autoOpenWatchTogether = '',
   onClearAutoOpenWatchTogether,
+  watchlist,
 }: DetailViewProps) {
   const [data, setData] = useState<DetailedInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
 
   // Watchlist Save state
-  const [isSaved, setIsSaved] = useState(false);
+  const isSaved = (watchlist || []).some((item) => item.id === id && item.type === type);
 
   // TV Episode States
   const [selectedSeason, setSelectedSeason] = useState(1);
@@ -213,20 +215,6 @@ export default function DetailView({
       window.scrollTo(0, 0);
       document.documentElement.scrollTop = 0;
       if (document.body) document.body.scrollTop = 0;
-      
-      // Load current watchlist state
-      try {
-        const savedList = localStorage.getItem('noir_watchlist');
-        if (savedList) {
-          const parsed = JSON.parse(savedList);
-          const exists = parsed.some((item: any) => item.id === id && item.type === type);
-          setIsSaved(exists);
-        } else {
-          setIsSaved(false);
-        }
-      } catch (e) {
-        console.error(e);
-      }
 
       try {
         const details = await fetchDetailedTitle(type, id);
@@ -375,7 +363,6 @@ export default function DetailView({
 
       if (isItemSaved) {
         list = list.filter((item: any) => !(item.id === id && item.type === type));
-        setIsSaved(false);
         if (curUser) {
           try {
             await removeFromFirestoreWatchlist(curUser.uid, type, id);
@@ -395,7 +382,6 @@ export default function DetailView({
           genres
         };
         list.push(newItem);
-        setIsSaved(true);
         if (curUser) {
           try {
             await addToFirestoreWatchlist(curUser.uid, newItem);
