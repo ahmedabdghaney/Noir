@@ -8,6 +8,7 @@ import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   updateProfile,
+  fetchSignInMethodsForEmail,
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
@@ -117,4 +118,12 @@ export const signInWithEmail = async (email: string, password: string) => {
  */
 export const resetPassword = async (email: string) => {
   await sendPasswordResetEmail(auth, email.trim());
+};
+
+/**
+ * Check which sign-in methods are registered for an email.
+ * Returns e.g. ['password'], ['google.com'], or both, or [] if no account.
+ */
+export const checkSignInMethods = async (email: string): Promise<string[]> => {
+  return await fetchSignInMethodsForEmail(auth, email.trim());
 };

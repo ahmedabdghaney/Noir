@@ -6,7 +6,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, Star } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth, loginWithGoogle, logoutUser, signInWithEmail, signUpWithEmail, resetPassword, translateAuthError } from './lib/firebase';
+import { auth, loginWithGoogle, logoutUser, signInWithEmail, signUpWithEmail, resetPassword, checkSignInMethods, translateAuthError } from './lib/firebase';
 import { MovieOrShow } from './types';
 import {
   initializeGenres,
@@ -286,9 +286,24 @@ export default function App() {
     setAuthError('');
     setIsAuthLoading(true);
     try {
+      // First check what sign-in methods exist for this email
+      const methods = await checkSignInMethods(authEmail);
+      if (methods.length === 0) {
+        setAuthError('ما عندنا حساب بهذا البريد، تأكد منه أو أنشئ حساب جديد');
+        return;
+      }
+      if (!methods.includes('password')) {
+        if (methods.includes('google.com')) {
+          setAuthError('هذا البريد مسجّل عبر Google، رجاءً سجّل دخولك بزر Google مباشرة');
+        } else {
+          setAuthError('هذا البريد مسجّل بطريقة لا تدعم استعادة كلمة السر');
+        }
+        return;
+      }
       await resetPassword(authEmail);
-      showToast('أرسلنا رابط إعادة التعيين لبريدك');
+      showToast('أرسلنا رابط إعادة التعيين لبريدك، افحص الإيميل (أو مجلد السبام)');
       setAuthView('signin');
+      setAuthEmail('');
     } catch (e) {
       setAuthError(translateAuthError(e));
     } finally {
@@ -828,6 +843,22 @@ export default function App() {
             <span>تطبق شروط الاستخدام والأمان © {new Date().getFullYear()} نوار سينما</span>
 </div>
 </div>
+
+        {/* Toast notifications on the login screen */}
+        {toastMessage && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[600] bg-neutral-900 border border-white/10 text-white text-xs font-semibold rounded-full py-3 px-6 shadow-2xl flex items-center gap-2.5 select-none animate-slide-up">
+            <CheckCircle className="w-4 h-4 text-green-500 fill-current text-white shrink-0" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
+
+        <style>{`
+          @keyframes slideUp {
+            from { opacity: 0; transform: translate(-50%, 15px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+          }
+          .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
+        `}</style>
 </div>
     );
   }
