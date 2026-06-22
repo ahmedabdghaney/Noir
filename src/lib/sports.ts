@@ -2,172 +2,76 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
- * SportSRC live-stream data helpers.
- * Free JSON API, CORS-enabled, no key required.
+ * Live sports channels (DaddyLive / DLHD).
+ * Player pages are public; no API key needed to embed a channel by id.
+ * Stream URL pattern: https://dlhd.pk/stream/stream-<id>.php
+ * Fallback folders if one is blocked: cast, watch, plus, casting, player.
  */
 
-const BASE = 'https://api.sportsrc.org/';
-
-export interface SportCategory {
+export interface LiveChannel {
   id: string;
   name: string;
+  group: string;
 }
 
-export interface SportTeam {
-  name: string | null;
-  badge: string;
+const BASE = 'https://dlhd.pk';
+
+export const STREAM_FOLDERS = ['stream', 'cast', 'watch', 'plus', 'casting', 'player'];
+
+export function buildStreamUrl(id: string, folder: string = 'stream'): string {
+  const f = STREAM_FOLDERS.includes(folder) ? folder : 'stream';
+  return `${BASE}/${f}/stream-${id}.php`;
 }
 
-export interface SportMatch {
-  id: string;
-  title: string;
-  category: string;
-  date: number; // Unix ms
-  popular?: boolean;
-  poster: string;
-  teams: {
-    home: SportTeam;
-    away: SportTeam;
-  };
-}
+export const LIVE_CHANNELS: LiveChannel[] = [
+  // العربية (MENA)
+  { id: '91', name: 'beIN Sports 1 Arabic', group: 'العربية' },
+  { id: '92', name: 'beIN Sports 2 Arabic', group: 'العربية' },
+  { id: '93', name: 'beIN Sports 3 Arabic', group: 'العربية' },
+  { id: '94', name: 'beIN Sports 4 Arabic', group: 'العربية' },
+  { id: '95', name: 'beIN Sports 5 Arabic', group: 'العربية' },
+  { id: '96', name: 'beIN Sports 6 Arabic', group: 'العربية' },
+  { id: '97', name: 'beIN Sports 7 Arabic', group: 'العربية' },
+  { id: '98', name: 'beIN Sports 8 Arabic', group: 'العربية' },
+  { id: '99', name: 'beIN Sports 9 Arabic', group: 'العربية' },
+  { id: '100', name: 'beIN Sports XTRA 1', group: 'العربية' },
+  { id: '578', name: 'beIN Sports HD Qatar', group: 'العربية' },
+  { id: '597', name: 'beIN Sports MAX AR', group: 'العربية' },
+  { id: '61', name: 'beIN Sports MENA English 1', group: 'العربية' },
+  { id: '90', name: 'beIN Sports MENA English 2', group: 'العربية' },
 
-// Arabic names for the categories we surface (keeps the UI simple/localized).
-export const CATEGORY_LABELS_AR: Record<string, string> = {
-  football: 'كرة القدم',
-  basketball: 'كرة السلة',
-  'american-football': 'كرة القدم الأمريكية',
-  hockey: 'الهوكي',
-  baseball: 'البيسبول',
-  'motor-sports': 'رياضة السيارات',
-  fight: 'النزالات (UFC والملاكمة)',
-  tennis: 'التنس',
-  rugby: 'الرغبي',
-  golf: 'الغولف',
-  billiards: 'البلياردو',
-  afl: 'الكرة الأسترالية',
-  darts: 'الدارتس',
-  cricket: 'الكريكيت',
-  other: 'رياضات أخرى',
-};
+  // فرنسا
+  { id: '116', name: 'beIN Sports 1 France', group: 'فرنسا' },
+  { id: '117', name: 'beIN Sports 2 France', group: 'فرنسا' },
+  { id: '118', name: 'beIN Sports 3 France', group: 'فرنسا' },
+  { id: '494', name: 'beIN Sports MAX 4 France', group: 'فرنسا' },
+  { id: '495', name: 'beIN Sports MAX 5 France', group: 'فرنسا' },
+  { id: '496', name: 'beIN Sports MAX 6 France', group: 'فرنسا' },
+  { id: '497', name: 'beIN Sports MAX 7 France', group: 'فرنسا' },
+  { id: '498', name: 'beIN Sports MAX 8 France', group: 'فرنسا' },
+  { id: '499', name: 'beIN Sports MAX 9 France', group: 'فرنسا' },
+  { id: '500', name: 'beIN Sports MAX 10 France', group: 'فرنسا' },
 
-export async function fetchSportCategories(): Promise<SportCategory[]> {
-  try {
-    const res = await fetch(`${BASE}?data=sports`);
-    const json = await res.json();
-    return json?.data || [];
-  } catch (err) {
-    console.error('fetchSportCategories error:', err);
-    return [];
-  }
-}
+  // تركيا
+  { id: '62', name: 'beIN Sports 1 Turkey', group: 'تركيا' },
+  { id: '63', name: 'beIN Sports 2 Turkey', group: 'تركيا' },
+  { id: '64', name: 'beIN Sports 3 Turkey', group: 'تركيا' },
+  { id: '67', name: 'beIN Sports 4 Turkey', group: 'تركيا' },
+  { id: '1010', name: 'beIN Sports 5 Turkey', group: 'تركيا' },
 
-export async function fetchSportMatches(category: string): Promise<SportMatch[]> {
-  try {
-    const res = await fetch(`${BASE}?data=matches&category=${encodeURIComponent(category)}`);
-    const json = await res.json();
-    return json?.data || [];
-  } catch (err) {
-    console.error('fetchSportMatches error:', err);
-    return [];
-  }
-}
+  // أستراليا
+  { id: '491', name: 'beIN Sports Australia 1', group: 'أستراليا' },
+  { id: '492', name: 'beIN Sports Australia 2', group: 'أستراليا' },
+  { id: '493', name: 'beIN Sports Australia 3', group: 'أستراليا' },
 
-// Detail returns the streaming embed. Shape varies, so we return the raw object
-// and extract an embed URL/iframe defensively in the component.
-export async function fetchSportDetail(category: string, id: string): Promise<any | null> {
-  try {
-    const res = await fetch(
-      `${BASE}?data=detail&category=${encodeURIComponent(category)}&id=${encodeURIComponent(id)}`,
-    );
-    const json = await res.json();
-    const data = json?.data;
-    if (Array.isArray(data)) {
-      return data.find((m) => m.id === id) || data[0] || null;
-    }
-    return data || null;
-  } catch (err) {
-    console.error('fetchSportDetail error:', err);
-    return null;
-  }
-}
+  // ماليزيا
+  { id: '712', name: 'beIN Sports 1 Malaysia', group: 'ماليزيا' },
+  { id: '713', name: 'beIN Sports 2 Malaysia', group: 'ماليزيا' },
+  { id: '714', name: 'beIN Sports 3 Malaysia', group: 'ماليزيا' },
 
-// Pull a usable stream/embed URL out of a detail object, whatever shape it takes.
-export function extractStreamUrl(detail: any): string | null {
-  if (!detail) return null;
-  // Common possible fields
-  const candidates = [
-    detail.embed,
-    detail.embedUrl,
-    detail.stream,
-    detail.streamUrl,
-    detail.url,
-    detail.iframe,
-    detail.link,
-  ];
-  for (const c of candidates) {
-    if (typeof c === 'string' && c.startsWith('http')) return c;
-  }
-  // sources array
-  if (Array.isArray(detail.sources) && detail.sources.length) {
-    const s = detail.sources[0];
-    if (typeof s === 'string' && s.startsWith('http')) return s;
-    if (s && typeof s.url === 'string') return s.url;
-    if (s && typeof s.embed === 'string') return s.embed;
-  }
-  // servers array
-  if (Array.isArray(detail.servers) && detail.servers.length) {
-    const s = detail.servers[0];
-    if (typeof s === 'string' && s.startsWith('http')) return s;
-    if (s && typeof s.url === 'string') return s.url;
-    if (s && typeof s.embed === 'string') return s.embed;
-  }
-  // If detail has raw html iframe, extract src
-  if (typeof detail.embedCode === 'string') {
-    const m = detail.embedCode.match(/src=["']([^"']+)["']/);
-    if (m) return m[1];
-  }
-  return null;
-}
+  // أخرى
+  { id: '425', name: 'beIN Sports USA', group: 'أخرى' },
+  { id: '372', name: 'beIN Sports en Español', group: 'أخرى' },
+];
 
-// Collect ALL stream sources/servers for a match, for a simple channel list.
-export function extractStreamSources(detail: any): { label: string; url: string }[] {
-  if (!detail) return [];
-  const out: { label: string; url: string }[] = [];
-
-  const pushUrl = (url: any, label: string) => {
-    if (typeof url === 'string' && url.startsWith('http')) {
-      out.push({ label, url });
-    }
-  };
-
-  // Single fields
-  pushUrl(detail.embed, 'البث');
-  pushUrl(detail.embedUrl, 'البث');
-  pushUrl(detail.stream, 'البث');
-  pushUrl(detail.streamUrl, 'البث');
-  pushUrl(detail.iframe, 'البث');
-
-  // Arrays of sources / servers / streams
-  const arrays = [detail.sources, detail.servers, detail.streams, detail.channels];
-  arrays.forEach((arr) => {
-    if (Array.isArray(arr)) {
-      arr.forEach((s: any, i: number) => {
-        if (typeof s === 'string') {
-          pushUrl(s, `قناة ${i + 1}`);
-        } else if (s && typeof s === 'object') {
-          const url = s.url || s.embed || s.link || s.src;
-          const label = s.name || s.label || s.title || `قناة ${i + 1}`;
-          pushUrl(url, label);
-        }
-      });
-    }
-  });
-
-  // De-duplicate by url
-  const seen = new Set<string>();
-  return out.filter((s) => {
-    if (seen.has(s.url)) return false;
-    seen.add(s.url);
-    return true;
-  });
-}
+export const CHANNEL_GROUPS = ['الكل', 'العربية', 'فرنسا', 'تركيا', 'أستراليا', 'ماليزيا', 'أخرى'];
