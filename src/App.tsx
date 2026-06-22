@@ -84,6 +84,7 @@ export default function App() {
   // Watchlist custom filter & sorting options
   const [watchlistFilter, setWatchlistFilter] = useState<'all' | 'movie' | 'tv'>('all');
   const [watchlistSort, setWatchlistSort] = useState<'default' | 'rating' | 'year'>('default');
+  const [watchlistSortDir, setWatchlistSortDir] = useState<'asc' | 'desc'>('desc');
 
   // Authentication Management State
   const [user, setUser] = useState<{ name: string; email?: string; photoURL?: string; type: 'guest' | 'google' | 'email' } | null>(() => {
@@ -594,20 +595,20 @@ export default function App() {
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/85 to-transparent z-0" />
 
         {/* Center Container */}
-        <div className="relative z-10 w-full max-w-md px-8 py-10 bg-[#0a0a0abf] backdrop-blur-2xl border border-white/5 rounded-3xl shadow-3xl text-center select-none animate-pop-in mx-4">
+        <div className="relative z-10 w-full max-w-md px-8 py-12 md:px-10 md:py-14 bg-[#0a0a0abf] backdrop-blur-2xl border border-white/5 rounded-3xl shadow-3xl text-center select-none animate-pop-in mx-4">
           {/* Logo brand */}
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <div className="w-10 h-10 rounded-2xl bg-red-600 flex items-center justify-center shadow-lg shadow-red-600/25">
-              <span className="text-white text-xl font-black">N</span>
+          <div className="flex flex-col items-center justify-center gap-4 mb-3">
+            <div className="w-14 h-14 rounded-2xl bg-red-600 flex items-center justify-center shadow-xl shadow-red-600/30">
+              <span className="text-white text-3xl font-black leading-none">N</span>
 </div>
             <h1 className="text-2xl font-extrabold tracking-tight text-white m-0">نوار <span className="text-red-500 font-black">سينما</span></h1>
 </div>
 
-          <p className="text-gray-400 text-xs md:text-sm font-semibold mb-8 max-w-sm mx-auto leading-relaxed">
-            مرحباً بك في بوابتك لمشاهدة وتصفح العروض والأفلام. اختر وسيلة تسجيل الدخول المناسبة للبدء فوراً بمتابعة سهرتك الليلة
+          <p className="text-gray-500 text-xs font-medium mb-10 max-w-xs mx-auto leading-relaxed">
+            بوابتك لمشاهدة الأفلام والعروض، اختر طريقة الدخول للبدء
 </p>
 
-          <div className="flex flex-col gap-3 w-full">
+          <div className="flex flex-col gap-3.5 w-full">
             {authView === 'menu' && (
               <>
                 <button
@@ -628,7 +629,7 @@ export default function App() {
                   <span>تسجيل الدخول باستخدام Google</span>
                 </button>
 
-                <div className="flex items-center gap-3 my-1">
+                <div className="flex items-center gap-3 my-2">
                   <div className="h-px flex-1 bg-white/10" />
                   <span className="text-[10px] text-gray-500 font-bold">أو</span>
                   <div className="h-px flex-1 bg-white/10" />
@@ -641,7 +642,7 @@ export default function App() {
                   الدخول بالبريد الإلكتروني
                 </button>
 
-                <div className="text-center pt-3 text-xs">
+                <div className="text-center pt-5 text-xs">
                   <span className="text-gray-500">ما عندك حساب؟ </span>
                   <button
                     onClick={() => { setAuthView('signup'); setAuthError(''); }}
@@ -655,11 +656,11 @@ export default function App() {
 
             {(authView === 'signin' || authView === 'signup') && (
               <>
-                <div className="text-right mb-1">
-                  <h2 className="text-white text-base font-extrabold">
+                <div className="text-right mb-3">
+                  <h2 className="text-white text-lg font-extrabold">
                     {authView === 'signin' ? 'تسجيل الدخول' : 'إنشاء حساب'}
                   </h2>
-                  <p className="text-gray-500 text-[11px] mt-0.5">
+                  <p className="text-gray-500 text-xs mt-1">
                     {authView === 'signin' ? 'مرحباً بعودتك، أكمل بياناتك للدخول' : 'كم خطوة وتنضم لـ نوار سينما'}
                   </p>
                 </div>
@@ -702,7 +703,7 @@ export default function App() {
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer p-1"
                     title={showPassword ? 'إخفاء' : 'إظهار'}
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                   </button>
                 </div>
 
@@ -724,7 +725,7 @@ export default function App() {
                         className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer p-1"
                         title={showPasswordConfirm ? 'إخفاء' : 'إظهار'}
                       >
-                        {showPasswordConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPasswordConfirm ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                       </button>
                     </div>
                     <p className="text-gray-500 text-[10px] leading-relaxed text-right -mt-1">
@@ -797,9 +798,9 @@ export default function App() {
 
             {authView === 'reset' && (
               <>
-                <div className="text-right mb-1">
-                  <h2 className="text-white text-base font-extrabold">استعادة كلمة السر</h2>
-                  <p className="text-gray-500 text-[11px] mt-0.5">
+                <div className="text-right mb-3">
+                  <h2 className="text-white text-lg font-extrabold">استعادة كلمة السر</h2>
+                  <p className="text-gray-500 text-xs mt-1">
                     أدخل بريدك ونرسلك رابط لإعادة التعيين
                   </p>
                 </div>
@@ -942,12 +943,14 @@ export default function App() {
             processedItems = processedItems.filter(item => item.type === watchlistFilter);
           }
           if (watchlistSort ==='rating') {
-            processedItems.sort((a, b) => b.rating - a.rating);
+            processedItems.sort((a, b) =>
+              watchlistSortDir === 'asc' ? a.rating - b.rating : b.rating - a.rating
+            );
           } else if (watchlistSort ==='year') {
             processedItems.sort((a, b) => {
               const yearA = parseInt(itemYear(a.year)) || 0;
               const yearB = parseInt(itemYear(b.year)) || 0;
-              return yearB - yearA;
+              return watchlistSortDir === 'asc' ? yearA - yearB : yearB - yearA;
             });
           }
 
@@ -1001,33 +1004,49 @@ export default function App() {
 </button>
 </div>
 
-                    {/* Sort Segmented Control */}
-                    <div className="flex bg-neutral-900 border border-white/5 p-1 rounded-xl">
-                      <button
-                        onClick={() => setWatchlistSort('default')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          watchlistSort ==='default' ?'bg-red-600 text-white shadow-md' :'text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        الافتراضي
+                    {/* Sort Segmented Control + direction toggle */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex bg-neutral-900 border border-white/5 p-1 rounded-xl">
+                        <button
+                          onClick={() => setWatchlistSort('default')}
+                          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            watchlistSort ==='default' ?'bg-red-600 text-white shadow-md' :'text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          الافتراضي
 </button>
-                      <button
-                        onClick={() => setWatchlistSort('rating')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          watchlistSort ==='rating' ?'bg-red-600 text-white shadow-md' :'text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        الأعلى تقييماً
+                        <button
+                          onClick={() => setWatchlistSort('rating')}
+                          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            watchlistSort ==='rating' ?'bg-red-600 text-white shadow-md' :'text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          التقييم
 </button>
-                      <button
-                        onClick={() => setWatchlistSort('year')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          watchlistSort ==='year' ?'bg-red-600 text-white shadow-md' :'text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        أحدث العروض
+                        <button
+                          onClick={() => setWatchlistSort('year')}
+                          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            watchlistSort ==='year' ?'bg-red-600 text-white shadow-md' :'text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          السنة
 </button>
 </div>
+                      {watchlistSort !== 'default' && (
+                        <button
+                          onClick={() => setWatchlistSortDir(watchlistSortDir === 'desc' ? 'asc' : 'desc')}
+                          className="flex items-center gap-1 bg-neutral-900 border border-white/5 hover:border-white/15 text-gray-300 hover:text-white px-3 py-2 rounded-xl text-[11px] font-bold transition-all cursor-pointer"
+                          title={watchlistSortDir === 'desc' ? 'تنازلي (الأعلى أولاً)' : 'تصاعدي (الأدنى أولاً)'}
+                        >
+                          <ArrowUpDown className="w-3.5 h-3.5" />
+                          <span>
+                            {watchlistSort === 'rating'
+                              ? (watchlistSortDir === 'desc' ? 'الأعلى' : 'الأدنى')
+                              : (watchlistSortDir === 'desc' ? 'الأحدث' : 'الأقدم')}
+                          </span>
+                        </button>
+                      )}
+                    </div>
 </div>
                 )}
 </div>
