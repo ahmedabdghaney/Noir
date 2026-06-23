@@ -64,7 +64,16 @@ export default function MobileNav({
         <span className="text-[10px] font-bold leading-none">المسلسلات</span>
       </button>
 
-
+      {/* Live Broadcast Button */}
+      <button
+        onClick={onViewLive}
+        className={`flex flex-col items-center justify-center gap-1 flex-1 h-full py-1 text-center transition-all cursor-pointer ${
+          activeView === 'live' ? 'text-white' : 'text-gray-500'
+        }`}
+      >
+        <Radio className="w-5 h-5 transition-transform active:scale-95" />
+        <span className="text-[10px] font-bold leading-none">البث المباشر</span>
+      </button>
 
       {/* My List / Watchlist Button */}
       <button
@@ -75,17 +84,6 @@ export default function MobileNav({
       >
         <Bookmark className="w-5 h-5 transition-transform active:scale-95" />
         <span className="text-[10px] font-bold leading-none">قائمتي</span>
-      </button>
-
-      {/* Live Broadcast Button */}
-      <button
-        onClick={onViewLive}
-        className={`flex flex-col items-center justify-center gap-1 flex-1 h-full py-1 text-center transition-all cursor-pointer ${
-          activeView === 'live' ? 'text-white' : 'text-gray-500'
-        }`}
-      >
-        <Radio className="w-5 h-5 transition-transform active:scale-95 text-rose-500" />
-        <span className="text-[10px] font-bold leading-none">مباشر 🔴</span>
       </button>
 
       {/* Search Button */}

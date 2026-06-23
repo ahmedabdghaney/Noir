@@ -1663,7 +1663,7 @@ export default function App() {
 </div>
         )}
 
-        {activeView === 'detail' && selectedTitle && (
+        {activeView ==='detail' && selectedTitle && (
           <div className="animate-fade-in block">
             <DetailView
               type={selectedTitle.type}
@@ -1683,8 +1683,6 @@ export default function App() {
         {activeView === 'live' && (
           <LiveSports />
         )}
-
-
       </main>
 
       {/* Global Minimalist Footer and disclaimer notes */}
