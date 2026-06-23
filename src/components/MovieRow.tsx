@@ -84,7 +84,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
       <div className="px-6 md:px-12 mb-3 flex flex-col text-right">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex flex-col text-right">
-            <h2 className="text-xl md:text-2xl font-black tracking-tight text-white flex items-center">
+            <h2 className="font-display text-xl md:text-2xl font-black tracking-tight text-white flex items-center">
               <span>{title}</span>
             </h2>
             {subtitle && <p className="text-stone-500 font-medium text-[11px] md:text-xs mt-0.5">{subtitle}</p>}

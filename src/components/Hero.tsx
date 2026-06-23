@@ -171,7 +171,7 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
               </div>
 
               {/* Title */}
-              <h1 className="text-2xl sm:text-4xl md:text-6xl font-black tracking-tight mb-2 sm:mb-4 text-white line-clamp-1 leading-tight">
+              <h1 className="font-display text-3xl sm:text-5xl md:text-7xl font-black tracking-tight mb-2 sm:mb-4 text-gradient-noir line-clamp-2 leading-[1.05] drop-shadow-2xl">
                 {activeItem.title}
               </h1>
 

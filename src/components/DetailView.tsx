@@ -522,7 +522,8 @@ export default function DetailView({
             backgroundImage: `url(${getBackdropUrl(data.backdrop_path) || getPosterUrl(data.poster_path) ||''})`,
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#08080a] via-[#08080a]/70 to-[#08080a]/20" />
+        <div className="absolute inset-0 bg-gradient-to-l from-[#08080a]/80 via-transparent to-transparent" />
 </div>
 
       {/* Main Details Panel Layout */}
@@ -533,7 +534,7 @@ export default function DetailView({
           {/* Text Information pane (Right side in standard RTL layouts) */}
           <div className="order-2 md:order-2 flex flex-col items-start text-right min-w-0 pr-0 md:pr-4 w-full">
             
-            <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white mb-2 sm:mb-3 tracking-tight leading-tight select-all">
+            <h1 className="font-display text-3xl sm:text-4xl md:text-6xl font-black text-gradient-noir mb-2 sm:mb-3 tracking-tight leading-[1.05] select-all drop-shadow-2xl">
               {title}
 </h1>
 

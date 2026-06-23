@@ -1,17 +1,56 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Rubik:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "IBM Plex Sans Arabic", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Rubik", "IBM Plex Sans Arabic", sans-serif;
 }
 
 body {
-  background-color: #0a0a0a;
+  background-color: #08080a;
   color: #ffffff;
   overflow-x: hidden;
   font-family: "IBM Plex Sans Arabic", "Inter", sans-serif;
   direction: rtl;
   transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Cinematic background: subtle warm-to-cool depth + faint film grain.
+   This kills the flat "boring" black and gives a dramatic noir mood. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(120, 30, 30, 0.16), transparent 55%),
+    radial-gradient(100% 60% at 100% 100%, rgba(40, 30, 60, 0.12), transparent 60%),
+    radial-gradient(80% 50% at 0% 80%, rgba(60, 40, 20, 0.10), transparent 55%);
+}
+
+/* Faint film-grain texture overlay for cinematic feel */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
+/* Make app content sit above the atmosphere layers */
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* Display headings use the heavier dramatic font */
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
 }
 
 /* Day Mode / Light Mode styling overrides */
@@ -172,4 +211,43 @@ body {
   inset: 0;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
   animation: shimmer 1.6s infinite;
+}
+
+/* === Dramatic / elegant enhancements === */
+
+/* Cinematic card hover: gentle lift + warm glow + crisp poster */
+.card-transition {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+}
+.card-transition:hover {
+  transform: translateY(-6px) scale(1.015);
+  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.7), 0 0 22px -8px rgba(255, 69, 58, 0.25);
+}
+
+/* Elegant gradient text for hero/section emphasis */
+.text-gradient-noir {
+  background: linear-gradient(180deg, #ffffff 0%, #cfcfd2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Soft fade-up entrance for sections */
+@keyframes noir-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.noir-fade-up {
+  animation: noir-fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Refined focus ring */
+button:focus-visible, a:focus-visible {
+  outline: 2px solid rgba(255, 69, 58, 0.6);
+  outline-offset: 2px;
+}
+
+/* Smooth global transitions for interactive elements */
+button, a {
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
