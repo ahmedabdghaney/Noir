@@ -8,7 +8,7 @@ import { Search, Menu, X } from 'lucide-react';
 import LogoIcon from './LogoIcon';
 
 interface HeaderProps {
-  activeView: 'home' | 'search' | 'detail' | 'watchlist';
+  activeView: 'home' | 'search' | 'detail' | 'watchlist' | 'live';
   searchMode: 'movie' | 'tv';
   setSearchMode: (mode: 'movie' | 'tv') => void;
   goHome: () => void;
@@ -17,6 +17,7 @@ interface HeaderProps {
   onLogout: () => void;
   onOpenProfile: () => void;
   onViewWatchlist: () => void;
+  onViewLive: () => void;
 }
 
 export default function Header({
@@ -29,6 +30,7 @@ export default function Header({
   onLogout,
   onOpenProfile,
   onViewWatchlist,
+  onViewLive,
 }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -109,11 +111,19 @@ export default function Header({
               <button
                 onClick={() => setSearchMode('tv')}
                 className={`text-xs md:text-sm font-semibold transition-colors hover:text-white cursor-pointer select-none ${
-                    activeView === 'search' && searchMode === 'tv' ? 'text-white' : 'text-gray-400'
+                    activeView ==='search' && searchMode ==='tv' ?'text-white' :'text-gray-400'
                 }`}
               >
                 المسلسلات
-              </button>
+</button>
+              <button
+                onClick={onViewLive}
+                className={`text-xs md:text-sm font-semibold transition-colors hover:text-white cursor-pointer select-none ${
+                    activeView === 'live' ? 'text-white' : 'text-gray-400'
+                }`}
+              >
+                البث المباشر
+</button>
 </div>
 </div>
 
@@ -248,6 +258,17 @@ export default function Header({
 </button>
             <button
               onClick={() => {
+                onViewLive();
+                setIsMobileMenuOpen(false);
+              }}
+              className={`flex items-center text-right text-lg font-medium py-3 px-4 rounded-xl transition-colors ${
+                activeView ==='live' ?'bg-white/10 text-white font-semibold' :'text-gray-300 hover:bg-white/5'
+              }`}
+            >
+              البث المباشر
+</button>
+            <button
+              onClick={() => {
                 onViewWatchlist();
                 setIsMobileMenuOpen(false);
               }}
@@ -256,7 +277,7 @@ export default function Header({
               }`}
             >
               قائمتي 
-            </button>
+</button>
 </div>
 </div>
       )}

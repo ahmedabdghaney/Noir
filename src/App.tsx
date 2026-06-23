@@ -30,6 +30,7 @@ import SearchOverlay from './components/SearchOverlay';
 import ShareModal from './components/ShareModal';
 import MobileNav from './components/MobileNav';
 import Footer from './components/Footer';
+import LiveSports from './components/LiveSports';
 
 // Static Configuration Constants
 const COUNTRIES = [
@@ -75,7 +76,7 @@ const YEARS = (() => {
 
 export default function App() {
   // Navigation & View State
-  const [activeView, setActiveView] = useState<'home' | 'search' | 'detail' | 'watchlist'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'search' | 'detail' | 'watchlist' | 'live'>('home');
   const [searchMode, setSearchMode] = useState<'movie' | 'tv'>('movie');
   const [selectedTitle, setSelectedTitle] = useState<{ type: 'movie' | 'tv'; id: number } | null>(null);
   const [joinRoomCode, setJoinRoomCode] = useState<string>('');
@@ -1079,6 +1080,7 @@ export default function App() {
         onLogout={handleLogout}
         onOpenProfile={() => setIsProfileModalOpen(true)}
         onViewWatchlist={handleViewWatchlist}
+        onViewLive={() => setActiveView('live')}
       />
 
       {/* Main Orchestration Views Switcher */}
@@ -1661,7 +1663,7 @@ export default function App() {
 </div>
         )}
 
-        {activeView === 'detail' && selectedTitle && (
+        {activeView ==='detail' && selectedTitle && (
           <div className="animate-fade-in block">
             <DetailView
               type={selectedTitle.type}
@@ -1678,7 +1680,9 @@ export default function App() {
           </div>
         )}
 
-
+        {activeView === 'live' && (
+          <LiveSports />
+        )}
       </main>
 
       {/* Global Minimalist Footer and disclaimer notes */}
@@ -1692,6 +1696,7 @@ export default function App() {
         goHome={navigateToHome}
         openSearchOverlay={() => setIsSearchOverlayOpen(true)}
         onViewWatchlist={handleViewWatchlist}
+        onViewLive={() => setActiveView('live')}
       />
 
       {/* Cmd+K QuickSearch predicting suggestions overlay */}
