@@ -158,14 +158,27 @@ export default function VideoPlayer({
       return `https://www.youtube-nocookie.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&origin=${origin}`;
     }
 
-    // vidsrc.cc — fast multi-server player with its OWN internal failover.
-    // It tries its sources internally and plays the fastest one automatically,
-    // so we don't need our own server-switch UI.
-    if (type === 'tv') {
-      return `https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}?autoPlay=true&autoNext=true`;
+    // vidapi.qzz.io streaming provider
+    const params = new URLSearchParams({
+      primaryColor: 'ff453a',   // Noir brand red
+      secondaryColor: '0a0a0a',
+      iconColor: 'FFFFFF',
+      icons: 'vid',
+      title: 'true',
+      poster: 'true',
+      autoplay: 'true',
+    });
+
+    if (startAt && startAt > 5) {
+      params.set('startAt', String(Math.floor(startAt)));
     }
-    const sa = startAt && startAt > 5 ? `&startAt=${Math.floor(startAt)}` : '';
-    return `https://vidsrc.cc/v2/embed/movie/${id}?autoPlay=true${sa}`;
+
+    if (type === 'tv') {
+      params.set('nextbutton', 'true');
+      return `https://vidapi.qzz.io/tv/${id}/${season}/${episode}?${params.toString()}`;
+    }
+
+    return `https://vidapi.qzz.io/movie/${id}?${params.toString()}`;
   };
 
   return (
