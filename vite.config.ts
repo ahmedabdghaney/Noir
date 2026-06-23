@@ -11,6 +11,22 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      // Split large dependencies into separate chunks so the first load is faster.
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'react-vendor': ['react', 'react-dom'],
+            'firebase-vendor': [
+              'firebase/app',
+              'firebase/auth',
+              'firebase/firestore',
+            ],
+          },
+        },
+      },
+      chunkSizeWarningLimit: 900,
+    },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.

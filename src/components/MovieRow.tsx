@@ -60,7 +60,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
   if (!items.length) {
     // Skeletons
     return (
-      <div className="mb-10 px-6 md:px-12 flex flex-col gap-4">
+      <div className="mb-14 px-6 md:px-12 flex flex-col gap-4">
         <div className="space-y-1">
           <div className="w-48 h-6 bg-neutral-800 rounded animate-pulse" />
           <div className="w-32 h-4 bg-neutral-800 rounded animate-pulse" />
@@ -84,7 +84,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
       <div className="px-6 md:px-12 mb-3 flex flex-col text-right">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex flex-col text-right">
-            <h2 className="text-lg md:text-xl font-bold tracking-tight text-white flex items-center">
+            <h2 className="text-xl md:text-2xl font-black tracking-tight text-white flex items-center">
               <span>{title}</span>
             </h2>
             {subtitle && <p className="text-neutral-500 font-medium text-[11px] md:text-xs mt-0.5">{subtitle}</p>}
@@ -129,7 +129,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
           ref={rowRef}
           onScroll={checkScroll}
           dir="rtl"
-          className="flex flex-row gap-4 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none snap-x snap-mandatory"
+          className="flex flex-row gap-4 md:gap-6 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none snap-x snap-mandatory"
         >
           {items.map((item, idx) => {
             const hasScore = item.rating > 0;
@@ -142,7 +142,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
                 key={`${item.type}-${item.id}`}
                 onClick={() => onItemClick(item)}
                 style={{ animationDelay: `${idx * 45}ms` }}
-                className="card-transition flex-none w-[125px] sm:w-[185px] md:w-[215px] lg:w-[230px] snap-start cursor-pointer transition-all duration-350 hover:bg-neutral-200/50 dark:hover:bg-neutral-900/60 hover:shadow-lg rounded-2xl p-2 pb-3.5 border border-transparent select-none active:scale-[0.98]"
+                className="card-transition flex-none w-[125px] sm:w-[185px] md:w-[225px] lg:w-[255px] snap-start cursor-pointer transition-all duration-350 hover:bg-neutral-200/50 dark:hover:bg-neutral-900/60 hover:shadow-lg rounded-2xl p-2 pb-3.5 border border-transparent select-none active:scale-[0.98]"
               >
                 {/* Poster Artwork container */}
                 <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-neutral-900 border border-white/5 shadow-md">

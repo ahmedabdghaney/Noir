@@ -26,7 +26,6 @@ import Header from './components/Header';
 import Hero from './components/Hero';
 import MovieRow from './components/MovieRow';
 import DetailView from './components/DetailView';
-import LiveSports from './components/LiveSports';
 import SearchOverlay from './components/SearchOverlay';
 import ShareModal from './components/ShareModal';
 import MobileNav from './components/MobileNav';
@@ -76,7 +75,7 @@ const YEARS = (() => {
 
 export default function App() {
   // Navigation & View State
-  const [activeView, setActiveView] = useState<'home' | 'search' | 'detail' | 'watchlist' | 'live'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'search' | 'detail' | 'watchlist'>('home');
   const [searchMode, setSearchMode] = useState<'movie' | 'tv'>('movie');
   const [selectedTitle, setSelectedTitle] = useState<{ type: 'movie' | 'tv'; id: number } | null>(null);
   const [joinRoomCode, setJoinRoomCode] = useState<string>('');
@@ -496,12 +495,6 @@ export default function App() {
     window.location.hash ='#watchlist';
   };
 
-  const handleViewLive = () => {
-    setActiveView('live');
-    setSelectedTitle(null);
-    window.location.hash = '#live';
-  };
-
   // loadWatchlist definition was moved to the state section above for better initialization.
 
   // Setup Dynamic URL Hash routing system
@@ -521,9 +514,6 @@ export default function App() {
         setSelectedTitle(null);
       } else if (hash ==='#watchlist') {
         setActiveView('watchlist');
-        setSelectedTitle(null);
-      } else if (hash ==='#live') {
-        setActiveView('live');
         setSelectedTitle(null);
       } else if (hash.startsWith('#watch-together')) {
         const parts = hash.split('?');
@@ -1098,7 +1088,6 @@ export default function App() {
         onLogout={handleLogout}
         onOpenProfile={() => setIsProfileModalOpen(true)}
         onViewWatchlist={handleViewWatchlist}
-        onViewLive={handleViewLive}
       />
 
       {/* Main Orchestration Views Switcher */}
@@ -1377,7 +1366,6 @@ export default function App() {
           );
         })()}
 
-        {activeView ==='live' && <LiveSports />}
 
         {activeView ==='search' && (
           <div className="max-w-7xl mx-auto px-6 md:px-12 py-8 animate-fade-in">
@@ -1712,7 +1700,6 @@ export default function App() {
         goHome={navigateToHome}
         openSearchOverlay={() => setIsSearchOverlayOpen(true)}
         onViewWatchlist={handleViewWatchlist}
-        onViewLive={handleViewLive}
       />
 
       {/* Cmd+K QuickSearch predicting suggestions overlay */}
