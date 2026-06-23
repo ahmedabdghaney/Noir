@@ -84,10 +84,19 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
       <div className="px-6 md:px-12 mb-3 flex flex-col text-right">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex flex-col text-right">
-            <h2 className="font-display text-xl md:text-2xl font-black tracking-tight text-white flex items-center">
-              <span>{title}</span>
-            </h2>
-            {subtitle && <p className="text-stone-500 font-medium text-[11px] md:text-xs mt-0.5">{subtitle}</p>}
+            {viewAllHash ? (
+              <a
+                href={viewAllHash}
+                className="group/title font-display text-xl md:text-2xl font-black tracking-tight text-white flex items-center gap-1.5 hover:text-white/80 transition-colors cursor-pointer"
+              >
+                <span>{title}</span>
+                <ChevronLeft className="w-5 h-5 text-stone-500 group-hover/title:text-white group-hover/title:-translate-x-0.5 transition-all" />
+              </a>
+            ) : (
+              <h2 className="font-display text-xl md:text-2xl font-black tracking-tight text-white flex items-center">
+                <span>{title}</span>
+              </h2>
+            )}
           </div>
           {viewAllHash && (
             <a

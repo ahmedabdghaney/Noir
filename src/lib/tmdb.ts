@@ -48,6 +48,7 @@ async function tmdbFetch(path: string, params: Record<string, any> = {}): Promis
 export const getPosterUrl = (path: string | null) => path ? `${IMG_BASE}/w500${path}` : null;
 export const getBackdropUrl = (path: string | null) => path ? `${IMG_BASE}/w1280${path}` : null;
 export const getProfileUrl = (path: string | null) => path ? `${IMG_BASE}/w185${path}` : null;
+export const getStillUrl = (path: string | null) => path ? `${IMG_BASE}/w454_and_h254_bestv2${path}` : null;
 
 // Normalize utility
 export function normalizeItem(item: any, customType?: 'movie' | 'tv'): MovieOrShow {
@@ -143,6 +144,36 @@ export async function fetchDetailedTitle(type: 'movie' | 'tv', id: number): Prom
     append_to_response: 'videos,credits,similar',
     language: 'en-US',
   });
+}
+
+export interface EpisodeInfo {
+  episode_number: number;
+  name: string;
+  overview: string;
+  still_path: string | null;
+  runtime: number | null;
+  air_date: string | null;
+  vote_average: number;
+}
+
+export async function fetchSeasonEpisodes(tvId: number, seasonNumber: number): Promise<EpisodeInfo[]> {
+  try {
+    const res = await tmdbFetch(`/tv/${tvId}/season/${seasonNumber}`, {
+      language: 'en-US',
+    });
+    return (res.episodes || []).map((e: any) => ({
+      episode_number: e.episode_number,
+      name: e.name || `الحلقة ${e.episode_number}`,
+      overview: e.overview || '',
+      still_path: e.still_path || null,
+      runtime: e.runtime || null,
+      air_date: e.air_date || null,
+      vote_average: e.vote_average || 0,
+    }));
+  } catch (err) {
+    console.error('fetchSeasonEpisodes error:', err);
+    return [];
+  }
 }
 
 // Discover/search parameters types

@@ -4,12 +4,13 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Dot, Star, Clock, Calendar, Globe, Languages, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle } from 'lucide-react';
+import { Play, Dot, Star, Clock, Calendar, Globe, Languages, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle, ChevronsUpDown } from 'lucide-react';
 import { DetailedInfo, MovieOrShow, CastMember } from '../types';
 import { fetchDetailedTitle, getPosterUrl, getBackdropUrl } from '../lib/tmdb';
 import VideoPlayer from './VideoPlayer';
 import MovieRow from './MovieRow';
 import { useWatchTogether } from '../lib/useWatchTogether';
+import { fetchSeasonEpisodes, EpisodeInfo, getStillUrl, getProfileUrl } from '../lib/tmdb';
 import { auth, addToFirestoreWatchlist, removeFromFirestoreWatchlist } from '../lib/firebase';
 
 interface DetailViewProps {
@@ -58,6 +59,9 @@ export default function DetailView({
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
   const [episodesCount, setEpisodesCount] = useState(1);
+  const [episodes, setEpisodes] = useState<EpisodeInfo[]>([]);
+  const [loadingEpisodes, setLoadingEpisodes] = useState(false);
+  const [seasonMenuOpen, setSeasonMenuOpen] = useState(false);
 
   // Player Playback States
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
@@ -169,6 +173,27 @@ export default function DetailView({
       didAutoOpenForHostTimeRef.current = false;
     }
   }, [isWatchTogetherOpen]);
+
+  // Fetch episode details (images, titles, overviews) for the selected season
+  useEffect(() => {
+    if (type !== 'tv' || !id) return;
+    let cancelled = false;
+    setLoadingEpisodes(true);
+    setEpisodes([]);
+    fetchSeasonEpisodes(id, selectedSeason)
+      .then((eps) => {
+        if (!cancelled) {
+          setEpisodes(eps);
+          setLoadingEpisodes(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLoadingEpisodes(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [type, id, selectedSeason]);
 
   // When the panel opens without a room code, create one (this client becomes host on the server)
   useEffect(() => {
@@ -375,7 +400,7 @@ export default function DetailView({
   const year = (data.release_date || data.first_air_date ||'').slice(0, 4);
   const runtime = data.runtime || (data.episode_run_time && data.episode_run_time[0]) || 0;
   const genres = data.genres ? data.genres.map((g) => g.name) : [];
-  const cast = data.credits?.cast ? data.credits.cast.slice(0, 8) : [];
+  const cast = data.credits?.cast ? data.credits.cast.slice(0, 12) : [];
   const crew = data.credits?.crew || [];
   const directors = crew.filter((c) => c.job ==='Director').map((c) => c.name);
   const director = directors.length > 0 ? directors.join('،') : (data.created_by && data.created_by[0] ? data.created_by[0].name :'غير محدد');
@@ -592,44 +617,141 @@ export default function DetailView({
 </p>
 </div>
 
-            {/* TV Series Episode Grid Selectors */}
+            {/* TV Series: season selector + Apple-TV style episode cards */}
             {type ==='tv' && data.seasons && data.seasons.length > 0 && (
-              <div className="flex flex-wrap gap-3 p-4 bg-stone-900/80 border border-white/5 rounded-2xl mb-6 w-full max-w-lg">
-                <div className="flex flex-col gap-1.5 min-w-[120px] flex-1">
-                  <span className="text-[10px] text-gray-500 font-bold">الموسم</span>
-                  <select
-                    value={selectedSeason}
-                    onChange={handleSeasonSelectChange}
-                    className="w-full bg-stone-800 text-white rounded-xl py-2 px-3.5 text-sm font-semibold border border-white/10 focus:outline-none focus:border-red-500 custom-select"
-                  >
-                    {data.seasons
-                      .filter((s) => s.season_number > 0)
-                      .map((s) => (
-                        <option key={s.id} value={s.season_number}>
-                          الموسم {s.season_number} ({s.episode_count || 1} حلقة)
-</option>
-                      ))}
-</select>
-</div>
+              <div className="w-full mb-8">
+                {/* Season selector — Apple TV style */}
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="relative">
+                    <button
+                      onClick={() => setSeasonMenuOpen((v) => !v)}
+                      className="flex items-center gap-2 text-white text-lg sm:text-xl font-display font-black tracking-tight hover:text-white/80 transition-colors cursor-pointer"
+                    >
+                      <span>الموسم {selectedSeason}</span>
+                      <ChevronsUpDown className="w-4 h-4 text-stone-400" />
+                    </button>
 
-                <div className="flex flex-col gap-1.5 min-w-[120px] flex-1">
-                  <span className="text-[10px] text-gray-500 font-bold">الحلقة</span>
-                  <select
-                    value={selectedEpisode}
-                    onChange={(e) => setSelectedEpisode(Number(e.target.value))}
-                    className="w-full bg-stone-800 text-white rounded-xl py-2 px-3.5 text-sm font-semibold border border-white/10 focus:outline-none focus:border-red-500 custom-select"
-                  >
-                    {Array.from({ length: episodesCount }).map((_, i) => (
-                      <option key={i} value={i + 1}>
-                        الحلقة {i + 1}
-</option>
+                    {seasonMenuOpen && (
+                      <>
+                        {/* click-away backdrop */}
+                        <div
+                          className="fixed inset-0 z-[80]"
+                          onClick={() => setSeasonMenuOpen(false)}
+                        />
+                        <div className="absolute top-full right-0 mt-2 z-[90] min-w-[180px] glass-strong rounded-2xl p-1.5 shadow-2xl noir-fade-up">
+                          {data.seasons
+                            .filter((s) => s.season_number > 0)
+                            .map((s) => (
+                              <button
+                                key={s.id}
+                                onClick={() => {
+                                  const seasonNum = s.season_number;
+                                  setSelectedSeason(seasonNum);
+                                  setSelectedEpisode(1);
+                                  setEpisodesCount(s.episode_count || 1);
+                                  setSeasonMenuOpen(false);
+                                }}
+                                className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-bold transition-colors ${
+                                  selectedSeason === s.season_number
+                                    ? 'bg-red-500 text-white'
+                                    : 'text-stone-200 hover:bg-white/10'
+                                }`}
+                              >
+                                الموسم {s.season_number}
+                              </button>
+                            ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <span className="text-stone-500 text-xs font-semibold">{episodesCount} حلقة</span>
+                </div>
+
+                {/* Episode cards row */}
+                {loadingEpisodes ? (
+                  <div className="flex gap-4 overflow-hidden">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="flex-none w-[260px]">
+                        <div className="aspect-video rounded-2xl bg-stone-900 animate-pulse" />
+                        <div className="h-3 w-24 bg-stone-900 rounded mt-3 animate-pulse" />
+                      </div>
                     ))}
-</select>
-</div>
-</div>
+                  </div>
+                ) : (
+                  <div className="flex gap-4 overflow-x-auto no-scrollbar pb-3 -mx-1 px-1" dir="rtl">
+                    {(episodes.length > 0
+                      ? episodes
+                      : Array.from({ length: episodesCount }).map((_, i) => ({
+                          episode_number: i + 1,
+                          name: `الحلقة ${i + 1}`,
+                          overview: '',
+                          still_path: null,
+                          runtime: null,
+                          air_date: null,
+                          vote_average: 0,
+                        }) as EpisodeInfo)
+                    ).map((ep) => {
+                      const still = getStillUrl(ep.still_path);
+                      return (
+                        <button
+                          key={ep.episode_number}
+                          onClick={() => {
+                            setSelectedEpisode(ep.episode_number);
+                            handlePlayClick('movie');
+                          }}
+                          className="group/ep flex-none w-[240px] sm:w-[280px] text-right snap-start"
+                        >
+                          {/* Still image */}
+                          <div className="relative aspect-video rounded-2xl overflow-hidden bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+                            {still ? (
+                              <img
+                                src={still}
+                                alt={ep.name}
+                                loading="lazy"
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover/ep:scale-105"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-stone-700">
+                                <Play className="w-8 h-8" />
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                            {/* Play icon on hover */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/ep:opacity-100 transition-opacity">
+                              <div className="w-12 h-12 rounded-full glass-strong flex items-center justify-center">
+                                <Play className="w-5 h-5 fill-white text-white" />
+                              </div>
+                            </div>
+                            {/* Episode number + runtime bottom */}
+                            <div className="absolute bottom-2.5 right-3 left-3 flex items-end justify-between">
+                              <span className="text-[10px] font-bold text-white/70 uppercase tracking-wide">
+                                الحلقة {ep.episode_number}
+                              </span>
+                              {ep.runtime ? (
+                                <span className="flex items-center gap-1 text-[10px] font-bold text-white/90">
+                                  <Play className="w-2.5 h-2.5 fill-current" />
+                                  {ep.runtime}د
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                          {/* Title + overview */}
+                          <div className="mt-2.5 px-0.5">
+                            <h4 className="text-white font-bold text-sm leading-tight line-clamp-1">{ep.name}</h4>
+                            {ep.overview ? (
+                              <p className="text-stone-500 text-xs leading-relaxed line-clamp-2 mt-1">{ep.overview}</p>
+                            ) : null}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             )}
 
-            {/* Action buttons (Streaming Play / Share / Save) */}
+            {/* Action buttons: Resume/Play -> Start over -> Trailer -> Save(+) -> Share */}
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full">
               {savedProgressPercent > 0 ? (
                 <>
@@ -659,55 +781,37 @@ export default function DetailView({
 </button>
               )}
 
-              <button
-                onClick={handleToggleSave}
-                className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 md:py-3 rounded-full transition-all text-xs sm:text-sm font-bold cursor-pointer border ${
-                  isSaved 
-                    ?'bg-emerald-600/10 border-emerald-500/40 text-emerald-400 hover:bg-emerald-600/20' 
-                    :'bg-stone-900 border-white/10 text-white hover:bg-stone-800'
-                }`}
-              >
-                {isSaved ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                <span>{isSaved ?'محفوظ في قائمتي' :'حفظ في قائمتي'}</span>
-</button>
-
-              <button
-                onClick={() => {
-                  if (user?.type ==='guest') {
-                    showToast('يجب تسجيل الدخول باستخدام حساب جوجل أولاً لبدء مشاهدة جماعية');
-                    return;
-                  }
-                  setIsWatchTogetherOpen(!isWatchTogetherOpen);
-                }}
-                className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 md:py-3 rounded-full transition-all text-xs sm:text-sm font-bold cursor-pointer border ${
-                  isWatchTogetherOpen 
-                    ?'bg-red-600/20 border-red-500/40 text-red-400 hover:bg-red-600/30' 
-                    :'bg-stone-900 border-white/10 text-white hover:bg-stone-800'
-                }`}
-              >
-                <Users className="w-4 h-4 text-red-500" />
-                <span>مشاهدة جماعية</span>
-</button>
-
               {youtubeKey && (
                 <button
                   onClick={() => handlePlayClick('trailer')}
-                  className="flex items-center gap-1.5 sm:gap-2 bg-stone-900 hover:bg-stone-800 text-white border border-white/10 px-4 sm:px-5 py-2 md:py-3 rounded-full transition-all cursor-pointer text-xs sm:text-sm"
+                  className="flex items-center gap-1.5 sm:gap-2 glass hover:bg-white/15 text-white px-4 sm:px-5 py-2 md:py-3 rounded-full transition-all cursor-pointer text-xs sm:text-sm font-bold"
                 >
                   <svg viewBox="0 0 28 20" className="w-6 h-[18px] shrink-0" xmlns="http://www.w3.org/2000/svg">
                     <rect width="28" height="20" rx="5" fill="#FF0000" />
                     <path d="M11 6 L19 10 L11 14 Z" fill="white" />
                   </svg>
-                  <span>الإعلان الرسمي</span>
+                  <span>الإعلان</span>
 </button>
               )}
 
               <button
+                onClick={handleToggleSave}
+                title={isSaved ? 'محفوظ في قائمتي' : 'حفظ في قائمتي'}
+                className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all cursor-pointer border shrink-0 hover:scale-105 active:scale-95 ${
+                  isSaved 
+                    ?'bg-emerald-500 border-emerald-400 text-white' 
+                    :'glass text-white hover:bg-white/15'
+                }`}
+              >
+                {isSaved ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+</button>
+
+              <button
                 onClick={() => onOpenShare(window.location.href)}
-                className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-stone-900 border border-white/10 flex items-center justify-center text-gray-300 hover:text-white hover:bg-stone-800 transition-colors cursor-pointer shrink-0"
+                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full glass flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/15 transition-colors cursor-pointer shrink-0"
                 title="مشاركة الرابط الحالي"
               >
-                <Share2 className="w-3.5 h-3.5" />
+                <Share2 className="w-4 h-4" />
 </button>
 </div>
 </div>
@@ -895,35 +999,34 @@ export default function DetailView({
             {/* Cast roster row component */}
             {cast.length > 0 && (
               <div className="space-y-4">
-                <h3 className="text-lg font-bold text-white tracking-tight border-r-2 border-red-500 pr-2">أبرز كادر العمل</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                <h3 className="font-display text-xl font-black text-white tracking-tight">طاقم العمل</h3>
+                <div className="flex gap-5 overflow-x-auto no-scrollbar pb-3 -mx-1 px-1" dir="rtl">
                   {cast.map((c: CastMember) => (
                     <div
                       key={c.id}
-                      className="p-2.5 bg-stone-900/80 border border-white/5 rounded-2xl flex items-center gap-3"
+                      className="flex-none w-[110px] flex flex-col items-center text-center group/cast"
                     >
-                      <div className="w-10 h-10 rounded-xl overflow-hidden bg-stone-800 shrink-0 select-none">
+                      <div className="w-[100px] h-[100px] rounded-full overflow-hidden bg-stone-800 select-none border border-white/8 shadow-[0_8px_20px_-8px_rgba(0,0,0,0.6)] transition-transform duration-300 group-hover/cast:scale-105">
                         {c.profile_path ? (
                           <img
-                            src={getPosterUrl(c.profile_path) || undefined}
+                            src={getProfileUrl(c.profile_path) || undefined}
                             alt={c.name}
                             loading="lazy"
+                            referrerPolicy="no-referrer"
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-stone-600 text-[10px] font-bold">
+                          <div className="w-full h-full flex items-center justify-center text-stone-600 text-lg font-bold">
                             {c.name.slice(0, 2)}
 </div>
                         )}
 </div>
-                      <div className="flex flex-col justify-center min-w-0 text-right">
-                        <span className="text-xs font-bold text-white truncate" title={c.name}>
-                          {c.name}
+                      <span className="text-sm font-bold text-white mt-3 leading-tight line-clamp-1 w-full" title={c.name}>
+                        {c.name}
 </span>
-                        <span className="text-[10px] text-gray-500 truncate mt-0.5" title={c.character}>
-                          بدور {c.character ||'—'}
+                      <span className="text-xs text-stone-500 truncate mt-0.5 w-full" title={c.character}>
+                        {c.character ||'—'}
 </span>
-</div>
 </div>
                   ))}
 </div>

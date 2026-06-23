@@ -1107,7 +1107,7 @@ export default function App() {
                 <div id="watchlist-section" className="scroll-mt-20">
                   <MovieRow
                     title="قائمتي"
-                    subtitle="العناوين التي قمت بحفظها لمشاهدتها لاحقاً"
+                    viewAllHash="#watchlist"
                     items={watchlist}
                     onItemClick={handleTitleClick}
                   />
@@ -1118,7 +1118,6 @@ export default function App() {
                 <div id="continue-watching-section" className="scroll-mt-20">
                   <MovieRow
                     title="أكمل المشاهدة"
-                    subtitle="تابع عروضك التي لم تنهي مشاهدتها بعد من حيث توقفت"
                     items={continueWatching}
                     onItemClick={handleTitleClick}
                   />
@@ -1127,28 +1126,24 @@ export default function App() {
 
               <MovieRow
                 title="الرائج هذا الأسبوع"
-                subtitle="أبرز العروض الأكثر تداولاً وتفضيلاً عالمياً"
                 items={trendingWeek}
                 onItemClick={handleTitleClick}
               />
 
               <MovieRow
                 title="جديد دور السينما"
-                subtitle="أحدث الإصدارات السينمائية المعروضة حالياً"
                 items={nowPlaying}
                 onItemClick={handleTitleClick}
               />
 
               <MovieRow
                 title="المسلسلات الموصى بها"
-                subtitle="عناوين ومواسم تليفزيونية مثيرة ومثالية للمشاهدة"
                 items={popularTV}
                 onItemClick={handleTitleClick}
               />
 
               <MovieRow
                 title="أفلام شعبية مميزة"
-                subtitle="ترشيحات كلاسيكية وحديثة ممتازة لسهرة الليلة"
                 items={popularMovies}
                 onItemClick={handleTitleClick}
               />
