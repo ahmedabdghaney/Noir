@@ -617,139 +617,6 @@ export default function DetailView({
 </p>
 </div>
 
-            {/* TV Series: season selector + Apple-TV style episode cards */}
-            {type ==='tv' && data.seasons && data.seasons.length > 0 && (
-              <div className="w-full mb-8">
-                {/* Season selector — Apple TV style */}
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="relative">
-                    <button
-                      onClick={() => setSeasonMenuOpen((v) => !v)}
-                      className="flex items-center gap-2 text-white text-lg sm:text-xl font-display font-black tracking-tight hover:text-white/80 transition-colors cursor-pointer"
-                    >
-                      <span>الموسم {selectedSeason}</span>
-                      <ChevronsUpDown className="w-4 h-4 text-stone-400" />
-                    </button>
-
-                    {seasonMenuOpen && (
-                      <>
-                        {/* click-away backdrop */}
-                        <div
-                          className="fixed inset-0 z-[80]"
-                          onClick={() => setSeasonMenuOpen(false)}
-                        />
-                        <div className="absolute top-full right-0 mt-2 z-[90] min-w-[180px] glass-strong rounded-2xl p-1.5 shadow-2xl noir-fade-up">
-                          {data.seasons
-                            .filter((s) => s.season_number > 0)
-                            .map((s) => (
-                              <button
-                                key={s.id}
-                                onClick={() => {
-                                  const seasonNum = s.season_number;
-                                  setSelectedSeason(seasonNum);
-                                  setSelectedEpisode(1);
-                                  setEpisodesCount(s.episode_count || 1);
-                                  setSeasonMenuOpen(false);
-                                }}
-                                className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-bold transition-colors ${
-                                  selectedSeason === s.season_number
-                                    ? 'bg-red-500 text-white'
-                                    : 'text-stone-200 hover:bg-white/10'
-                                }`}
-                              >
-                                الموسم {s.season_number}
-                              </button>
-                            ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  <span className="text-stone-500 text-xs font-semibold">{episodesCount} حلقة</span>
-                </div>
-
-                {/* Episode cards row */}
-                {loadingEpisodes ? (
-                  <div className="flex gap-4 overflow-hidden">
-                    {[...Array(4)].map((_, i) => (
-                      <div key={i} className="flex-none w-[260px]">
-                        <div className="aspect-video rounded-2xl bg-stone-900 animate-pulse" />
-                        <div className="h-3 w-24 bg-stone-900 rounded mt-3 animate-pulse" />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex gap-4 overflow-x-auto no-scrollbar pb-3 -mx-1 px-1" dir="rtl">
-                    {(episodes.length > 0
-                      ? episodes
-                      : Array.from({ length: episodesCount }).map((_, i) => ({
-                          episode_number: i + 1,
-                          name: `الحلقة ${i + 1}`,
-                          overview: '',
-                          still_path: null,
-                          runtime: null,
-                          air_date: null,
-                          vote_average: 0,
-                        }) as EpisodeInfo)
-                    ).map((ep) => {
-                      const still = getStillUrl(ep.still_path);
-                      return (
-                        <button
-                          key={ep.episode_number}
-                          onClick={() => {
-                            setSelectedEpisode(ep.episode_number);
-                            handlePlayClick('movie');
-                          }}
-                          className="group/ep flex-none w-[240px] sm:w-[280px] text-right snap-start"
-                        >
-                          {/* Still image */}
-                          <div className="relative aspect-video rounded-2xl overflow-hidden bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
-                            {still ? (
-                              <img
-                                src={still}
-                                alt={ep.name}
-                                loading="lazy"
-                                referrerPolicy="no-referrer"
-                                className="w-full h-full object-cover transition-transform duration-500 group-hover/ep:scale-105"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-stone-700">
-                                <Play className="w-8 h-8" />
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                            {/* Play icon on hover */}
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/ep:opacity-100 transition-opacity">
-                              <div className="w-12 h-12 rounded-full glass-strong flex items-center justify-center">
-                                <Play className="w-5 h-5 fill-white text-white" />
-                              </div>
-                            </div>
-                            {/* Episode number + runtime bottom */}
-                            <div className="absolute bottom-2.5 right-3 left-3 flex items-end justify-between">
-                              <span className="text-[10px] font-bold text-white/70 uppercase tracking-wide">
-                                الحلقة {ep.episode_number}
-                              </span>
-                              {ep.runtime ? (
-                                <span className="flex items-center gap-1 text-[10px] font-bold text-white/90">
-                                  <Play className="w-2.5 h-2.5 fill-current" />
-                                  {ep.runtime}د
-                                </span>
-                              ) : null}
-                            </div>
-                          </div>
-                          {/* Title + overview */}
-                          <div className="mt-2.5 px-0.5">
-                            <h4 className="text-white font-bold text-sm leading-tight line-clamp-1">{ep.name}</h4>
-                            {ep.overview ? (
-                              <p className="text-stone-500 text-xs leading-relaxed line-clamp-2 mt-1">{ep.overview}</p>
-                            ) : null}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Action buttons: Resume/Play -> Start over -> Trailer -> Save(+) -> Share */}
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full">
@@ -991,6 +858,142 @@ export default function DetailView({
             </span>
           </div>
         </div>
+
+
+        {/* TV Episodes section - full width below info cards */}
+            {/* TV Series: season selector + Apple-TV style episode cards */}
+            {type ==='tv' && data.seasons && data.seasons.length > 0 && (
+              <div className="w-full mb-8">
+                {/* Season selector — Apple TV style */}
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="relative">
+                    <button
+                      onClick={() => setSeasonMenuOpen((v) => !v)}
+                      className="flex items-center gap-2 text-white text-lg sm:text-xl font-display font-black tracking-tight hover:text-white/80 transition-colors cursor-pointer"
+                    >
+                      <span>الموسم {selectedSeason}</span>
+                      <ChevronsUpDown className="w-4 h-4 text-stone-400" />
+                    </button>
+
+                    {seasonMenuOpen && (
+                      <>
+                        {/* click-away backdrop */}
+                        <div
+                          className="fixed inset-0 z-[80]"
+                          onClick={() => setSeasonMenuOpen(false)}
+                        />
+                        <div className="absolute top-full right-0 mt-2 z-[90] min-w-[180px] glass-strong rounded-2xl p-1.5 shadow-2xl noir-fade-up">
+                          {data.seasons
+                            .filter((s) => s.season_number > 0)
+                            .map((s) => (
+                              <button
+                                key={s.id}
+                                onClick={() => {
+                                  const seasonNum = s.season_number;
+                                  setSelectedSeason(seasonNum);
+                                  setSelectedEpisode(1);
+                                  setEpisodesCount(s.episode_count || 1);
+                                  setSeasonMenuOpen(false);
+                                }}
+                                className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-bold transition-colors ${
+                                  selectedSeason === s.season_number
+                                    ? 'bg-red-500 text-white'
+                                    : 'text-stone-200 hover:bg-white/10'
+                                }`}
+                              >
+                                الموسم {s.season_number}
+                              </button>
+                            ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <span className="text-stone-500 text-xs font-semibold">{episodesCount} حلقة</span>
+                </div>
+
+                {/* Episode cards row */}
+                {loadingEpisodes ? (
+                  <div className="flex gap-4 overflow-hidden">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="flex-none w-[260px]">
+                        <div className="aspect-video rounded-2xl bg-stone-900 animate-pulse" />
+                        <div className="h-3 w-24 bg-stone-900 rounded mt-3 animate-pulse" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex gap-4 overflow-x-auto no-scrollbar pb-3 -mx-1 px-1" dir="rtl">
+                    {(episodes.length > 0
+                      ? episodes
+                      : Array.from({ length: episodesCount }).map((_, i) => ({
+                          episode_number: i + 1,
+                          name: `الحلقة ${i + 1}`,
+                          overview: '',
+                          still_path: null,
+                          runtime: null,
+                          air_date: null,
+                          vote_average: 0,
+                        }) as EpisodeInfo)
+                    ).map((ep) => {
+                      const still = getStillUrl(ep.still_path);
+                      return (
+                        <button
+                          key={ep.episode_number}
+                          onClick={() => {
+                            setSelectedEpisode(ep.episode_number);
+                            handlePlayClick('movie');
+                          }}
+                          className="group/ep flex-none w-[240px] sm:w-[280px] text-right snap-start"
+                        >
+                          {/* Still image */}
+                          <div className="relative aspect-video rounded-2xl overflow-hidden bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+                            {still ? (
+                              <img
+                                src={still}
+                                alt={ep.name}
+                                loading="lazy"
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover/ep:scale-105"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-stone-700">
+                                <Play className="w-8 h-8" />
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                            {/* Play icon on hover */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/ep:opacity-100 transition-opacity">
+                              <div className="w-12 h-12 rounded-full glass-strong flex items-center justify-center">
+                                <Play className="w-5 h-5 fill-white text-white" />
+                              </div>
+                            </div>
+                            {/* Episode number + runtime bottom */}
+                            <div className="absolute bottom-2.5 right-3 left-3 flex items-end justify-between">
+                              <span className="text-[10px] font-bold text-white/70 uppercase tracking-wide">
+                                الحلقة {ep.episode_number}
+                              </span>
+                              {ep.runtime ? (
+                                <span className="flex items-center gap-1 text-[10px] font-bold text-white/90">
+                                  <Play className="w-2.5 h-2.5 fill-current" />
+                                  {ep.runtime}د
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                          {/* Title + overview */}
+                          <div className="mt-2.5 px-0.5">
+                            <h4 className="text-white font-bold text-sm leading-tight line-clamp-1">{ep.name}</h4>
+                            {ep.overview ? (
+                              <p className="text-stone-500 text-xs leading-relaxed line-clamp-2 mt-1">{ep.overview}</p>
+                            ) : null}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
         {/* Bottom Synopsis and Cast grids */}
         <div className="mt-8">
