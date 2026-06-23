@@ -632,7 +632,7 @@ export default function DetailView({
 
                   <button
                     onClick={handleStartFromBeginning}
-                    className="flex items-center gap-1.5 sm:gap-2 bg-stone-900 hover:bg-stone-800 text-gray-300 hover:text-white border border-white/10 font-bold px-4 sm:px-6 py-2 md:py-3 rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer text-xs sm:text-sm"
+                    className="flex items-center gap-1.5 sm:gap-2 glass hover:bg-white/15 text-white font-bold px-4 sm:px-6 py-2 md:py-3 rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer text-xs sm:text-sm"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>البدء من البداية</span>
@@ -817,7 +817,7 @@ export default function DetailView({
         )}
 
         {/* Specs Factors Panel - Technical Details cards matrix */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 my-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 my-12 md:my-16">
           <div className="flex flex-col gap-1.5 glass rounded-2xl px-5 py-4">
             <span className="text-[11px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5" />
@@ -863,7 +863,7 @@ export default function DetailView({
         {/* TV Episodes section - full width below info cards */}
             {/* TV Series: season selector + Apple-TV style episode cards */}
             {type ==='tv' && data.seasons && data.seasons.length > 0 && (
-              <div className="w-full mb-8">
+              <div className="w-full mb-12 md:mb-16 mt-4">
                 {/* Season selector — Apple TV style */}
                 <div className="flex items-center gap-3 mb-5">
                   <div className="relative">
@@ -943,10 +943,10 @@ export default function DetailView({
                             setSelectedEpisode(ep.episode_number);
                             handlePlayClick('movie');
                           }}
-                          className="group/ep flex-none w-[240px] sm:w-[280px] text-right snap-start"
+                          className="group/ep flex-none w-[300px] sm:w-[380px] text-right snap-start"
                         >
-                          {/* Still image */}
-                          <div className="relative aspect-video rounded-2xl overflow-hidden bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+                          {/* Card with image + overlaid text */}
+                          <div className="relative aspect-video rounded-3xl overflow-hidden bg-stone-900 border border-white/8 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.7)]">
                             {still ? (
                               <img
                                 src={still}
@@ -960,32 +960,38 @@ export default function DetailView({
                                 <Play className="w-8 h-8" />
                               </div>
                             )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                            {/* Play icon on hover */}
+
+                            {/* Bottom blur + gradient so overlaid text stays readable */}
+                            <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/95 via-black/55 to-transparent backdrop-blur-[2px] [mask-image:linear-gradient(to_top,black_55%,transparent)]" />
+
+                            {/* Hover play icon */}
                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/ep:opacity-100 transition-opacity">
-                              <div className="w-12 h-12 rounded-full glass-strong flex items-center justify-center">
-                                <Play className="w-5 h-5 fill-white text-white" />
+                              <div className="w-14 h-14 rounded-full glass-strong flex items-center justify-center">
+                                <Play className="w-6 h-6 fill-white text-white" />
                               </div>
                             </div>
-                            {/* Episode number + runtime bottom */}
-                            <div className="absolute bottom-2.5 right-3 left-3 flex items-end justify-between">
-                              <span className="text-[10px] font-bold text-white/70 uppercase tracking-wide">
+
+                            {/* Overlaid text content */}
+                            <div className="absolute inset-x-0 bottom-0 p-4 text-right">
+                              <span className="text-[11px] font-bold text-white/60 uppercase tracking-wider block mb-1">
                                 الحلقة {ep.episode_number}
                               </span>
-                              {ep.runtime ? (
-                                <span className="flex items-center gap-1 text-[10px] font-bold text-white/90">
-                                  <Play className="w-2.5 h-2.5 fill-current" />
-                                  {ep.runtime}د
-                                </span>
-                              ) : null}
+                              <h4 className="text-white font-bold text-base leading-tight line-clamp-1 mb-1">{ep.name}</h4>
+                              {ep.overview ? (
+                                <p className="text-white/70 text-xs leading-relaxed line-clamp-2 mb-2.5">{ep.overview}</p>
+                              ) : <div className="mb-2.5" />}
+
+                              {/* Footer: runtime + more */}
+                              <div className="flex items-center justify-between">
+                                {ep.runtime ? (
+                                  <span className="flex items-center gap-1.5 text-xs font-bold text-white">
+                                    <Play className="w-3 h-3 fill-current" />
+                                    {ep.runtime}د
+                                  </span>
+                                ) : <span />}
+                                <span className="text-white/50 text-lg leading-none font-black tracking-widest">···</span>
+                              </div>
                             </div>
-                          </div>
-                          {/* Title + overview */}
-                          <div className="mt-2.5 px-0.5">
-                            <h4 className="text-white font-bold text-sm leading-tight line-clamp-1">{ep.name}</h4>
-                            {ep.overview ? (
-                              <p className="text-stone-500 text-xs leading-relaxed line-clamp-2 mt-1">{ep.overview}</p>
-                            ) : null}
                           </div>
                         </button>
                       );
@@ -998,7 +1004,7 @@ export default function DetailView({
         {/* Bottom Synopsis and Cast grids */}
         <div className="mt-8">
           
-          <div className="space-y-8 text-right min-w-0">
+          <div className="space-y-12 text-right min-w-0">
             {/* Cast roster row component */}
             {cast.length > 0 && (
               <div className="space-y-4">
@@ -1074,9 +1080,9 @@ export default function DetailView({
           <div className="border-t border-white/5 pt-12 mt-12">
             <MovieRow
               title="عناوين وتوصيات مشابهة"
-              subtitle="قد تنال إعجابك بناءً على هذا العمل"
               items={recommendations}
               onItemClick={onItemClick}
+              flush
             />
 </div>
         )}

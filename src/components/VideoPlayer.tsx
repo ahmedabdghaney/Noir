@@ -186,14 +186,18 @@ export default function VideoPlayer({
       <div className="player-shell bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl relative">
         
         {/* Player Header Control Bar */}
-        <div className="flex items-center justify-between gap-4 px-4 py-3 bg-gradient-to-b from-stone-900 via-[#0a0a0a] to-[#0a0a0a] border-b border-white/5 selection:bg-transparent">
+        <div className="flex items-center justify-between gap-4 px-4 py-3 glass-strong border-b border-white/8 selection:bg-transparent">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <span
-              className={`text-[10px] md:text-xs font-bold px-2 py-0.5 rounded-md shrink-0 uppercase tracking-wider ${
-                playMode ==='trailer' ?'bg-[#ff0033] text-white' :'bg-red-500 text-white'
+              className={`flex items-center gap-1.5 text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${
+                playMode ==='trailer' ?'bg-white/10 text-white' :'bg-red-500/90 text-white'
               }`}
             >
-              {playMode ==='trailer' ?'إعلان ترويجي' :'المشغل الرئيسي'}
+              <span className="relative flex w-1.5 h-1.5">
+                <span className="animate-ping absolute inline-flex w-full h-full rounded-full bg-white opacity-60"></span>
+                <span className="relative inline-flex rounded-full w-1.5 h-1.5 bg-white"></span>
+              </span>
+              {playMode ==='trailer' ?'إعلان' :'مباشر'}
 </span>
             <h4 className="text-white font-semibold text-xs md:text-sm truncate select-all">
               {title} {type ==='tv' && playMode ==='movie' &&`(الموسم ${season} · الحلقة ${episode})`}
@@ -205,14 +209,14 @@ export default function VideoPlayer({
             {playMode ==='movie' && youtubeKey && (
               <button
                 onClick={() => onSwitchMode('trailer')}
-                className="flex items-center gap-1 bg-white/5 hover:bg-white/10 text-white border border-white/5 text-xs font-medium px-3 py-1.5 rounded-full cursor-pointer transition-colors"
+                className="flex items-center gap-1.5 bg-white/8 hover:bg-white/15 text-white text-xs font-semibold px-3.5 py-2 rounded-full cursor-pointer transition-colors"
                 title="عرض الإعلان الرسمي"
               >
-                <svg viewBox="0 0 28 20" className="w-6 h-[18px] shrink-0" xmlns="http://www.w3.org/2000/svg">
+                <svg viewBox="0 0 28 20" className="w-5 h-[15px] shrink-0" xmlns="http://www.w3.org/2000/svg">
                   <rect width="28" height="20" rx="5" fill="#FF0000" />
                   <path d="M11 6 L19 10 L11 14 Z" fill="white" />
                 </svg>
-                <span className="hidden sm:inline">الإعلان الرسمي</span>
+                <span className="hidden sm:inline">الإعلان</span>
 </button>
             )}
 
@@ -223,7 +227,7 @@ export default function VideoPlayer({
                     href={`https://www.youtube.com/watch?v=${youtubeKey}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-1 bg-white/5 hover:bg-white/10 text-white border border-white/5 text-xs font-medium px-3 py-1.5 rounded-full cursor-pointer transition-colors"
+                    className="flex items-center gap-1.5 bg-white/8 hover:bg-white/15 text-white text-xs font-semibold px-3.5 py-2 rounded-full cursor-pointer transition-colors"
                     title="فتح الإعلان على يوتيوب إذا لم يعمل هنا"
                   >
                     <svg viewBox="0 0 28 20" className="w-5 h-[14px] shrink-0" xmlns="http://www.w3.org/2000/svg">
@@ -235,7 +239,7 @@ export default function VideoPlayer({
                 )}
                 <button
                   onClick={() => onSwitchMode('movie')}
-                  className="flex items-center gap-1 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold px-3 py-1.5 rounded-full cursor-pointer transition-colors"
+                  className="flex items-center gap-1.5 bg-white text-black hover:bg-white/90 text-xs font-bold px-3.5 py-2 rounded-full cursor-pointer transition-colors"
                   title="الرجوع للفيلم أو المسلسل"
                 >
                   <Play className="w-3.5 h-3.5 fill-current" />
@@ -248,7 +252,7 @@ export default function VideoPlayer({
             {type ==='tv' && playMode ==='movie' && onNextEpisode && episode < episodesCount && (
               <button
                 onClick={onNextEpisode}
-                className="flex items-center gap-1 bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full cursor-pointer transition-colors"
+                className="flex items-center gap-1.5 bg-white/8 hover:bg-white/15 text-white text-xs font-bold px-3.5 py-2 rounded-full cursor-pointer transition-colors"
                 title="تشغيل الحلقة التالية للمسلسل"
               >
                 <span>الحلقة التالية ⟵</span>

@@ -13,9 +13,10 @@ interface MovieRowProps {
   items: MovieOrShow[];
   onItemClick: (item: MovieOrShow) => void;
   viewAllHash?: string;
+  flush?: boolean;
 }
 
-export default function MovieRow({ title, subtitle, items, onItemClick, viewAllHash }: MovieRowProps) {
+export default function MovieRow({ title, subtitle, items, onItemClick, viewAllHash, flush = false }: MovieRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
@@ -60,7 +61,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
   if (!items.length) {
     // Skeletons
     return (
-      <div className="mb-14 px-6 md:px-12 flex flex-col gap-4">
+      <div className={`mb-14 flex flex-col gap-4 ${flush ? "" : "px-6 md:px-12"}`}>
         <div className="space-y-1">
           <div className="w-48 h-6 bg-stone-800 rounded animate-pulse" />
           <div className="w-32 h-4 bg-stone-800 rounded animate-pulse" />
@@ -79,9 +80,9 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
   }
 
   return (
-    <div className="mb-10 relative group/row flex flex-col">
+    <div className="mb-16 md:mb-20 relative group/row flex flex-col">
       {/* Category Header */}
-      <div className="px-6 md:px-12 mb-3 flex flex-col text-right">
+      <div className={`mb-4 md:mb-5 flex flex-col text-right ${flush ? "" : "px-6 md:px-12"}`}>
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex flex-col text-right">
             {viewAllHash ? (
@@ -111,7 +112,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
       </div>
 
       {/* Row Shell with Overlay Arrows */}
-      <div className="relative px-6 md:px-12">
+      <div className={`relative ${flush ? "" : "px-6 md:px-12"}`}>
          {/* Navigation Arrows for desktop hover */}
         {showRightArrow && (
           <button
