@@ -773,7 +773,7 @@ export default function App() {
                 {/* Column 1: Moves upward */}
                 <div className="flex flex-col gap-4 animate-marquee-up shrink-0">
                   {[...col1Posters, ...col1Posters].map((url, index) => (
-                    <div key={`col1-${index}`} className="w-28 h-40 bg-neutral-950 rounded-2xl overflow-hidden border border-white/10 shadow-lg shrink-0">
+                    <div key={`col1-${index}`} className="w-28 h-40 bg-stone-950 rounded-2xl overflow-hidden border border-white/10 shadow-lg shrink-0">
                       <img src={url} alt="Cover" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     </div>
                   ))}
@@ -782,7 +782,7 @@ export default function App() {
                 {/* Column 2: Moves downward */}
                 <div className="flex flex-col gap-4 animate-marquee-down shrink-0">
                   {[...col2Posters, ...col2Posters].map((url, index) => (
-                    <div key={`col2-${index}`} className="w-28 h-40 bg-neutral-950 rounded-2xl overflow-hidden border border-white/10 shadow-lg shrink-0">
+                    <div key={`col2-${index}`} className="w-28 h-40 bg-stone-950 rounded-2xl overflow-hidden border border-white/10 shadow-lg shrink-0">
                       <img src={url} alt="Cover" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     </div>
                   ))}
@@ -791,7 +791,7 @@ export default function App() {
                 {/* Column 3: Moves upward */}
                 <div className="flex flex-col gap-4 animate-marquee-up shrink-0">
                   {[...col1PostersReverse, ...col1PostersReverse].map((url, index) => (
-                    <div key={`col3-${index}`} className="w-28 h-40 bg-neutral-950 rounded-2xl overflow-hidden border border-white/10 shadow-lg shrink-0">
+                    <div key={`col3-${index}`} className="w-28 h-40 bg-stone-950 rounded-2xl overflow-hidden border border-white/10 shadow-lg shrink-0">
                       <img src={url} alt="Cover" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     </div>
                   ))}
@@ -1190,7 +1190,7 @@ export default function App() {
                   <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight leading-none">
                     قائمتي الخاصة 
 </h1>
-                  <p className="text-neutral-400 text-sm font-medium">
+                  <p className="text-stone-400 text-sm font-medium">
                     العناوين والأعمال المميزة التي قمت بحفظها لتشاهدها بكل سهولة لاحقاً.
 </p>
 </div>
@@ -1198,7 +1198,7 @@ export default function App() {
                 {watchlist.length > 0 && (
                   <div className="flex flex-wrap gap-4 items-center justify-start md:justify-end">
                     {/* Filter Segmented Control */}
-                    <div className="flex bg-neutral-900 border border-white/5 p-1 rounded-xl">
+                    <div className="flex bg-stone-900 border border-white/5 p-1 rounded-xl">
                       <button
                         onClick={() => setWatchlistFilter('all')}
                         className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -1227,7 +1227,7 @@ export default function App() {
 
                     {/* Sort Segmented Control + direction toggle */}
                     <div className="flex items-center gap-2">
-                      <div className="flex bg-neutral-900 border border-white/5 p-1 rounded-xl">
+                      <div className="flex bg-stone-900 border border-white/5 p-1 rounded-xl">
                         <button
                           onClick={() => setWatchlistSort('default')}
                           className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -1256,7 +1256,7 @@ export default function App() {
                       {watchlistSort !== 'default' && (
                         <button
                           onClick={() => setWatchlistSortDir(watchlistSortDir === 'desc' ? 'asc' : 'desc')}
-                          className="flex items-center gap-1 bg-neutral-900 border border-white/5 hover:border-white/15 text-gray-300 hover:text-white px-3 py-2 rounded-xl text-[11px] font-bold transition-all cursor-pointer"
+                          className="flex items-center gap-1 bg-stone-900 border border-white/5 hover:border-white/15 text-gray-300 hover:text-white px-3 py-2 rounded-xl text-[11px] font-bold transition-all cursor-pointer"
                           title={watchlistSortDir === 'desc' ? 'تنازلي (الأعلى أولاً)' : 'تصاعدي (الأدنى أولاً)'}
                         >
                           <ArrowUpDown className="w-3.5 h-3.5" />
@@ -1273,7 +1273,7 @@ export default function App() {
 </div>
 
               {watchlist.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-12 text-center bg-neutral-950 border border-white/5 rounded-3xl mt-6 min-h-[300px]">
+                <div className="flex flex-col items-center justify-center p-12 text-center bg-stone-950 border border-white/5 rounded-3xl mt-6 min-h-[300px]">
                   <span className="text-5xl mb-4"></span>
                   <h3 className="text-lg font-bold text-white mb-2">قائمتك فارغة حالياً!</h3>
                   <p className="text-xs text-gray-400 max-w-sm leading-relaxed">
@@ -1287,7 +1287,7 @@ export default function App() {
 </button>
 </div>
               ) : processedItems.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-12 text-center bg-neutral-950 border border-white/5 rounded-3xl mt-6 min-h-[250px]">
+                <div className="flex flex-col items-center justify-center p-12 text-center bg-stone-950 border border-white/5 rounded-3xl mt-6 min-h-[250px]">
                   <span className="text-4xl mb-3"></span>
                   <h3 className="text-base font-bold text-white mb-1">لا توجد نتائج مطابقة!</h3>
                   <p className="text-xs text-gray-400 max-w-sm">
@@ -1307,10 +1307,10 @@ export default function App() {
                         key={`${item.type}-${item.id}`}
                         onClick={() => handleTitleClick(item)}
                         style={{ animationDelay: `${idx * 40}ms` }}
-                        className="card-transition cursor-pointer transition-all duration-350 hover:bg-neutral-900/60 hover:shadow-xl rounded-2xl p-2 pb-3.5 border border-white/5 bg-neutral-950 hover:scale-[1.03] active:scale-[0.98]"
+                        className="card-transition cursor-pointer transition-all duration-350 hover:bg-stone-900/60 hover:shadow-xl rounded-2xl p-2 pb-3.5 border border-white/5 bg-stone-950 hover:scale-[1.03] active:scale-[0.98]"
                       >
                         {/* Poster Artwork container */}
-                        <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-neutral-900 border border-white/5 shadow-md">
+                        <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-white/5 shadow-md">
                           {item.poster || item.backdrop ? (
                             <img
                               src={item.poster || item.backdrop || undefined}
@@ -1320,7 +1320,7 @@ export default function App() {
                               className="w-full h-full object-cover select-none"
                             />
                           ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center p-3 text-neutral-600 bg-neutral-950">
+                            <div className="w-full h-full flex flex-col items-center justify-center p-3 text-stone-600 bg-stone-950">
                               <span className="text-[10px] sm:text-xs font-semibold text-center leading-normal break-all line-clamp-2">
                                 {item.title}
 </span>
@@ -1337,7 +1337,7 @@ export default function App() {
 
                           {/* Watch progression indicator red bar */}
                           {progress > 0 && (
-                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-neutral-800">
+                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-stone-800">
                               <div 
                                 className="h-full bg-red-600 transition-all duration-300" 
                                 style={{ width: `${progress}%` }}
@@ -1351,9 +1351,9 @@ export default function App() {
                           <span className="text-white font-bold text-xs sm:text-sm line-clamp-1 leading-tight transition-colors">
                             {item.title}
 </span>
-                          <span className="text-neutral-500 font-semibold text-[10px] sm:text-xs mt-1 flex items-center gap-1 justify-start">
+                          <span className="text-stone-500 font-semibold text-[10px] sm:text-xs mt-1 flex items-center gap-1 justify-start">
                             <span>{item.year ||'—'}</span>
-                            <span className="w-1 h-1 bg-neutral-800 rounded-full" />
+                            <span className="w-1 h-1 bg-stone-800 rounded-full" />
                             <span>{item.type ==='movie' ?'فيلم' :'مسلسل'}</span>
 </span>
 </div>
@@ -1374,14 +1374,14 @@ export default function App() {
               <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight leading-none mb-3">
                 {searchMode ==='tv' ?'دليل المسلسلات' :'دليل الأفلام'}
 </h1>
-              <p className="text-neutral-400 text-sm font-medium">
+              <p className="text-stone-400 text-sm font-medium">
                 اعثر على عملك القادم من خلال تصفية كامل المكتبة السينمائية بسرعة فائقة ومقاييس مخصصة.
 </p>
 </div>
 
             {/* Direct Input Filter bar */}
             <div className="flex gap-3 mb-6 relative z-10 select-none">
-              <div className="flex-1 flex items-center gap-3 bg-neutral-900 border border-white/5 focus-within:border-white/15 px-4 py-3 rounded-2xl transition-all">
+              <div className="flex-1 flex items-center gap-3 bg-stone-900 border border-white/5 focus-within:border-white/15 px-4 py-3 rounded-2xl transition-all">
                 <Search className="w-5 h-5 text-gray-500 shrink-0" />
                 <input
                   type="text"
@@ -1397,8 +1397,8 @@ export default function App() {
                 onClick={() => setIsFilterSidebarOpen(!isFilterSidebarOpen)}
                 className={`md:hidden flex items-center justify-center gap-2 px-4 rounded-2xl border text-xs font-semibold cursor-pointer transition-colors ${
                   isFilterSidebarOpen
-                    ?'bg-neutral-800 text-white border-neutral-700'
-                    :'bg-neutral-900 text-gray-400 border-white/5'
+                    ?'bg-stone-800 text-white border-stone-700'
+                    :'bg-stone-900 text-gray-400 border-white/5'
                 }`}
               >
                 <Filter className="w-4 h-4" />
@@ -1414,16 +1414,16 @@ export default function App() {
                 
                 {/* Search Sorting Metrics controller */}
                 <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
-                  <span className="text-xs text-neutral-400 font-medium">
+                  <span className="text-xs text-stone-400 font-medium">
                     {searchResults.length > 0 ?`تم العثور على ${searchResults.length} عنوان` :'لا توجد نتائج مناسبة'}
 </span>
                   
                   <div className="flex items-center gap-1.5 min-w-[140px]">
-                    <ArrowUpDown className="w-4 h-4 text-neutral-500" />
+                    <ArrowUpDown className="w-4 h-4 text-stone-500" />
                     <select
                       value={fSort}
                       onChange={(e) => setFSort(e.target.value)}
-                      className="bg-neutral-900 text-white border border-white/5 hover:border-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-red-500 cursor-pointer"
+                      className="bg-stone-900 text-white border border-white/5 hover:border-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-red-500 cursor-pointer"
                     >
                       <option value="trend">الرائج عالمياً</option>
                       <option value="rating">الأعلى تقييماً</option>
@@ -1438,11 +1438,11 @@ export default function App() {
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {Array.from({ length: 15 }).map((_, i) => (
                       <div key={i} className="flex flex-col gap-3">
-                        <div className="aspect-[2/3] w-full rounded-2xl bg-neutral-950 border border-white/5 flex flex-col justify-end p-2 animate-pulse">
-                          <div className="w-full h-full bg-neutral-900 rounded-xl shimmer-bg" />
+                        <div className="aspect-[2/3] w-full rounded-2xl bg-stone-950 border border-white/5 flex flex-col justify-end p-2 animate-pulse">
+                          <div className="w-full h-full bg-stone-900 rounded-xl shimmer-bg" />
 </div>
-                        <div className="w-24 h-4 bg-neutral-900 rounded animate-pulse" />
-                        <div className="w-16 h-3 bg-neutral-900 rounded animate-pulse" />
+                        <div className="w-24 h-4 bg-stone-900 rounded animate-pulse" />
+                        <div className="w-16 h-3 bg-stone-900 rounded animate-pulse" />
 </div>
                     ))}
 </div>
@@ -1455,9 +1455,9 @@ export default function App() {
                           key={`${item.type}-${item.id}`}
                           onClick={() => handleTitleClick(item)}
                           style={{ animationDelay: `${idx * 40}ms` }}
-                          className="card-transition group cursor-pointer rounded-2xl p-2.5 pb-3.5 hover:bg-neutral-200/50 dark:hover:bg-neutral-900/60 hover:shadow-lg transition-all duration-300 select-none active:scale-[0.98]"
+                          className="card-transition group cursor-pointer rounded-2xl p-2.5 pb-3.5 hover:bg-stone-200/50 dark:hover:bg-stone-900/60 hover:shadow-lg transition-all duration-300 select-none active:scale-[0.98]"
                         >
-                          <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-neutral-900 border border-white/5 shadow-md">
+                          <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-white/5 shadow-md">
                             {item.poster || item.backdrop ? (
                               <img
                                 src={item.poster || item.backdrop || undefined}
@@ -1466,7 +1466,7 @@ export default function App() {
                                 className="w-full h-full object-cover select-none"
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-neutral-950 text-neutral-600 text-center text-xs p-2 font-bold break-all line-clamp-2 leading-tight">
+                              <div className="w-full h-full flex items-center justify-center bg-stone-950 text-stone-600 text-center text-xs p-2 font-bold break-all line-clamp-2 leading-tight">
                                 {item.title}
 </div>
                             )}
@@ -1482,7 +1482,7 @@ export default function App() {
                             <span className="text-white font-bold text-xs sm:text-sm line-clamp-1 leading-tight transition-colors">
                               {item.title}
 </span>
-                            <span className="text-neutral-500 font-semibold text-[10px] sm:text-xs mt-1.5">
+                            <span className="text-stone-500 font-semibold text-[10px] sm:text-xs mt-1.5">
                               {item.year ||'—'}
 </span>
 </div>
@@ -1496,7 +1496,7 @@ export default function App() {
                         <button
                           onClick={() => triggerSearchQuery(true)}
                           disabled={isLoadingMore}
-                          className="flex items-center gap-2 bg-neutral-900 hover:bg-neutral-800 text-gray-300 hover:text-white border border-white/5 hover:border-white/10 px-8 py-3 rounded-full text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                          className="flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-gray-300 hover:text-white border border-white/5 hover:border-white/10 px-8 py-3 rounded-full text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
                         >
                           {isLoadingMore ? (
                             <>
@@ -1511,8 +1511,8 @@ export default function App() {
                     )}
 </div>
                 ) : (
-                  <div className="py-24 text-center flex flex-col items-center justify-center gap-4 border border-white/5 bg-neutral-900/10 rounded-3xl">
-                    <span className="text-4xl text-neutral-600">∅</span>
+                  <div className="py-24 text-center flex flex-col items-center justify-center gap-4 border border-white/5 bg-stone-900/10 rounded-3xl">
+                    <span className="text-4xl text-stone-600">∅</span>
                     <h3 className="text-sm font-bold text-white">لم نجد أي عناوين مطابقة</h3>
                     <p className="text-xs text-gray-500 max-w-xs">
                       جرب تغيير عوامل التصفية المختارة، أو اختصر العناوين في مربع البحث للوصول لنتائج أفضل.
@@ -1535,7 +1535,7 @@ export default function App() {
                     <h3 className="text-lg font-extrabold text-white">خيارات التصفية</h3>
                     <button
                       onClick={() => setIsFilterSidebarOpen(false)}
-                      className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold rounded-xl cursor-pointer"
+                      className="px-4 py-2 bg-stone-800 hover:bg-stone-700 text-white text-xs font-bold rounded-xl cursor-pointer"
                     >
                       إغلاق
 </button>
@@ -1552,7 +1552,7 @@ export default function App() {
                       className="bg-transparent text-gray-400 hover:text-white transition-colors cursor-pointer text-xs font-semibold flex items-center gap-1"
                       title="مسح جميع فلاتر التصفية"
                     >
-                      <Trash2 className="w-3.5 h-3.5 text-neutral-500" />
+                      <Trash2 className="w-3.5 h-3.5 text-stone-500" />
                       <span>مسح الكل</span>
 </button>
 </div>
@@ -1569,7 +1569,7 @@ export default function App() {
                           setSelectedGenres(next);
                         }}
                         value={Array.from(selectedGenres)[0] ||""}
-                        className="w-full bg-neutral-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
                       >
                         <option value="">كل التصنيفات</option>
                         {MOVIE_GENRES.map((g) => (
@@ -1586,7 +1586,7 @@ export default function App() {
                       <select
                         value={selectedYear ||""}
                         onChange={(e) => setSelectedYear(e.target.value || null)}
-                        className="w-full bg-neutral-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
                       >
                         <option value="">كل السنوات</option>
                         {YEARS.map((y) => (
@@ -1603,7 +1603,7 @@ export default function App() {
                       <select
                         value={selectedRating ||""}
                         onChange={(e) => setSelectedRating(e.target.value || null)}
-                        className="w-full bg-neutral-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
                       >
                         <option value="">كل التقييمات</option>
                         {RATINGS.map(([val, label]) => (
@@ -1620,7 +1620,7 @@ export default function App() {
                       <select
                         value={selectedCountry ||""}
                         onChange={(e) => setSelectedCountry(e.target.value || null)}
-                        className="w-full bg-neutral-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
                       >
                         <option value="">كل جهات الإنتاج</option>
                         {COUNTRIES.map(([val, label]) => (
@@ -1637,7 +1637,7 @@ export default function App() {
                       <select
                         value={selectedLanguage ||""}
                         onChange={(e) => setSelectedLanguage(e.target.value || null)}
-                        className="w-full bg-neutral-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
                       >
                         <option value="">كل اللغات</option>
                         {LANGS.map(([val, label]) => (
@@ -1654,7 +1654,7 @@ export default function App() {
                       <select
                         value={selectedRuntime ||""}
                         onChange={(e) => setSelectedRuntime(e.target.value || null)}
-                        className="w-full bg-neutral-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
                       >
                         <option value="">كل المدد</option>
                         {RUNTIMES.map(([val, label]) => (
@@ -1727,7 +1727,7 @@ export default function App() {
           />
 
           {/* Modal Container */}
-          <div className="relative z-10 w-full max-w-sm bg-neutral-950 border border-white/5 rounded-3xl p-6 md:p-8 shadow-3xl text-center select-none animate-scale-in">
+          <div className="relative z-10 w-full max-w-sm bg-stone-950 border border-white/5 rounded-3xl p-6 md:p-8 shadow-3xl text-center select-none animate-scale-in">
             {/* Close Trigger Button */}
             <button
               onClick={() => setIsProfileModalOpen(false)}
@@ -1753,7 +1753,7 @@ export default function App() {
                     {user.name.slice(0, 2)}
 </div>
                 )}
-                <div className={`absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full border border-neutral-950 ${user.type ==='google' ?'bg-indigo-500' : user.type === 'email' ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                <div className={`absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full border border-stone-950 ${user.type ==='google' ?'bg-indigo-500' : user.type === 'email' ? 'bg-red-500' : 'bg-emerald-500'}`} />
 </div>
 
               {/* User Bio Information */}
@@ -1820,7 +1820,7 @@ export default function App() {
                     <p className="text-[10px] text-gray-400 leading-relaxed">
                       بما أن هذا نطاق تطبيق جديد أو مختلف، فلن يعمل تسجيل الدخول بجوجل إلا بعد إضافة هذا النطاق إلى قائمة النطاقات المصرح بها في لوحة تحكم Firebase وتفعيل الموفر.
                     </p>
-                    <div className="p-2 bg-neutral-900 rounded-lg text-left select-all font-mono text-[9px] text-gray-400 border border-white/5">
+                    <div className="p-2 bg-stone-900 rounded-lg text-left select-all font-mono text-[9px] text-gray-400 border border-white/5">
                       {window.location.host}
                     </div>
                     <p className="text-[10px] text-amber-500 font-bold leading-relaxed">
@@ -1836,7 +1836,7 @@ export default function App() {
                     <p className="text-[10px] text-gray-400 leading-relaxed">
                       قاعدة البيانات تمنع الحفظ التلقائي أو المزامنة بسبب قواعد الأمان الافتراضية (Firestore Rules) المغلقة في تطبيق الـ Firebase الخاص بك. لتفعيل الحفظ الفوري التلقائي والتزامن بين بقية الهواتف والأجهزة، انسخ الكود التالي:
                     </p>
-                    <pre className="p-2.5 bg-neutral-900 rounded-lg text-left font-mono text-[9px] text-[#34d399] overflow-x-auto select-all leading-normal border border-white/5">
+                    <pre className="p-2.5 bg-stone-900 rounded-lg text-left font-mono text-[9px] text-[#34d399] overflow-x-auto select-all leading-normal border border-white/5">
 {`rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -1864,7 +1864,7 @@ service cloud.firestore {
             </div>
 
             {/* Restrict warning or list status */}
-            <div className="mt-8 p-3.5 rounded-2xl bg-neutral-900/60 border border-white/5 text-right space-y-1">
+            <div className="mt-8 p-3.5 rounded-2xl bg-stone-900/60 border border-white/5 text-right space-y-1">
               <p className="text-[10px] text-gray-500 font-bold leading-normal">إحصائيات القائمة والنشاط</p>
               <div className="text-xs text-gray-300 font-semibold leading-relaxed">
                 {user.type ==='guest' ? (
@@ -1893,7 +1893,7 @@ service cloud.firestore {
                   handleLogout();
                   setIsProfileModalOpen(false);
                 }}
-                className="w-full bg-neutral-900 border border-white/5 hover:border-white/10 text-red-400 hover:text-red-300 font-bold py-3 rounded-xl transition-all cursor-pointer text-xs flex items-center justify-center gap-2"
+                className="w-full bg-stone-900 border border-white/5 hover:border-white/10 text-red-400 hover:text-red-300 font-bold py-3 rounded-xl transition-all cursor-pointer text-xs flex items-center justify-center gap-2"
               >
                 <span></span>
                 <span>تسجيل الخروج من الحساب</span>

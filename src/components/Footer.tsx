@@ -13,7 +13,7 @@ interface FooterProps {
 
 export default function Footer({ goHome, setSearchMode }: FooterProps) {
   return (
-    <footer className="border-t border-white/5 bg-neutral-950/40 text-neutral-500 py-12 md:py-16 mt-16 select-none leading-relaxed">
+    <footer className="border-t border-white/5 bg-stone-950/40 text-stone-500 py-12 md:py-16 mt-16 select-none leading-relaxed">
       <div className="max-w-6xl mx-auto px-6 md:px-12">
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 text-right">
@@ -28,7 +28,7 @@ export default function Footer({ goHome, setSearchMode }: FooterProps) {
               <span>نوار</span>
               <span className="text-gray-500 font-normal text-xs mr-1 bg-white/5 px-1.5 py-0.5 rounded">سينما</span>
             </div>
-            <p className="text-xs text-neutral-400 font-medium max-w-sm">
+            <p className="text-xs text-stone-400 font-medium max-w-sm">
               تجربة بثّ راقية صُمّمت لمحبّي السينما وعائلاتهم. مجموعات منسّقة، استعراض فائق السرعة، ومستوى راقٍ خالٍ من الفوضى والإعلانات المزعجة.
             </p>
             <div className="flex gap-2.5">
@@ -36,7 +36,7 @@ export default function Footer({ goHome, setSearchMode }: FooterProps) {
                 href="https://youtube.com"
                 target="_blank"
                 rel="noreferrer"
-                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all text-neutral-400"
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all text-stone-400"
                 aria-label="YouTube Channel"
               >
                 <Youtube className="w-4 h-4" />
@@ -45,14 +45,14 @@ export default function Footer({ goHome, setSearchMode }: FooterProps) {
                 href="https://github.com"
                 target="_blank"
                 rel="noreferrer"
-                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all text-neutral-400"
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all text-stone-400"
                 aria-label="Github Repo"
               >
                 <Github className="w-4 h-4" />
               </a>
               <a
                 href="mailto:support@noir.cinema"
-                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all text-neutral-400"
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all text-stone-400"
                 aria-label="Email support"
               >
                 <Mail className="w-4 h-4" />
@@ -79,7 +79,7 @@ export default function Footer({ goHome, setSearchMode }: FooterProps) {
         </div>
 
         {/* Footer Bottom copyright notes */}
-        <div className="border-t border-white/5 pt-6 flex flex-wrap justify-between items-center text-[11px] text-neutral-600 gap-4">
+        <div className="border-t border-white/5 pt-6 flex flex-wrap justify-between items-center text-[11px] text-stone-600 gap-4">
           <span>
             © 2026 نوار سينما — للاستخدام العائلي والترفيه الشخصي التجريبي. كافة الحقوق محفوظة.
           </span>

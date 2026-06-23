@@ -121,7 +121,7 @@ export default function Header({
           <div className="flex justify-center">
             <button
               onClick={openSearchOverlay}
-              className="flex items-center gap-2 bg-neutral-900/60 border border-white/5 hover:border-white/15 px-3 py-1.5 rounded-full transition-all text-gray-400 hover:text-white text-xs cursor-pointer group w-full max-w-[280px]"
+              className="flex items-center gap-2 bg-stone-900/60 border border-white/5 hover:border-white/15 px-3 py-1.5 rounded-full transition-all text-gray-400 hover:text-white text-xs cursor-pointer group w-full max-w-[280px]"
             >
               <Search className="w-3.5 h-3.5 text-gray-400 group-hover:text-white transition-colors shrink-0" />
               <span className="truncate text-[10px] sm:text-xs">ابحث عن عروض وأفلام...</span>
@@ -134,7 +134,7 @@ export default function Header({
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                  className="w-8 h-8 rounded-full border border-white/10 hover:border-white/20 hover:scale-105 active:scale-95 transition-all overflow-hidden flex items-center justify-center bg-neutral-900 cursor-pointer select-none"
+                  className="w-8 h-8 rounded-full border border-white/10 hover:border-white/20 hover:scale-105 active:scale-95 transition-all overflow-hidden flex items-center justify-center bg-stone-900 cursor-pointer select-none"
                   title="خيارات الحساب"
                 >
                   {user.photoURL ? (
@@ -152,7 +152,7 @@ export default function Header({
 </button>
 
                 {isProfileDropdownOpen && (
-                  <div className="absolute left-0 mt-2.5 w-48 bg-neutral-950 border border-white/5 rounded-2xl shadow-2xl py-2 z-[250] text-right animate-pop-in">
+                  <div className="absolute left-0 mt-2.5 w-48 bg-stone-950 border border-white/5 rounded-2xl shadow-2xl py-2 z-[250] text-right animate-pop-in">
                     <div className="px-4 py-2 border-b border-white/5">
                       <p className="text-[9px] text-gray-500 font-bold mb-0.5">تسجيل الدخول كـ</p>
                       <p className="text-xs text-white font-bold truncate leading-tight">{user.name}</p>

@@ -23,7 +23,7 @@ export default function MobileNav({
   onViewWatchlist,
 }: MobileNavProps) {
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[200] h-16 bg-neutral-950/90 backdrop-blur-xl border-t border-white/5 flex items-center justify-around px-1 selection:bg-transparent safe-bottom">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[200] h-16 bg-stone-950/90 backdrop-blur-xl border-t border-white/5 flex items-center justify-around px-1 selection:bg-transparent safe-bottom">
       
       {/* Home Button */}
       <button

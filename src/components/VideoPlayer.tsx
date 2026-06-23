@@ -218,7 +218,7 @@ export default function VideoPlayer({
       <div className="player-shell bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl relative">
         
         {/* Player Header Control Bar */}
-        <div className="flex items-center justify-between gap-4 px-4 py-3 bg-gradient-to-b from-neutral-900 via-[#0a0a0a] to-[#0a0a0a] border-b border-white/5 selection:bg-transparent">
+        <div className="flex items-center justify-between gap-4 px-4 py-3 bg-gradient-to-b from-stone-900 via-[#0a0a0a] to-[#0a0a0a] border-b border-white/5 selection:bg-transparent">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <span
               className={`text-[10px] md:text-xs font-bold px-2 py-0.5 rounded-md shrink-0 uppercase tracking-wider ${
@@ -319,7 +319,7 @@ export default function VideoPlayer({
           {isLoading && !isPausedByHost && (
             <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-10 gap-3">
               <Loader className="w-8 h-8 text-red-500 animate-spin" />
-              <span className="text-xs text-neutral-400 select-none">جاري تحميل مسار المشغّل ومزامنة الترجمة...</span>
+              <span className="text-xs text-stone-400 select-none">جاري تحميل مسار المشغّل ومزامنة الترجمة...</span>
 </div>
           )}
 
@@ -377,7 +377,7 @@ export default function VideoPlayer({
 
          {/* Server switcher — try another source if a title won't play */}
         {playMode !== 'trailer' && (
-          <div className="px-4 py-3 bg-neutral-950/80 border-t border-white/5 text-right">
+          <div className="px-4 py-3 bg-stone-950/80 border-t border-white/5 text-right">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <span className="text-[11px] text-gray-500 font-bold">
                 لا يعمل الفيلم؟ جرّب سيرفر آخر
@@ -393,7 +393,7 @@ export default function VideoPlayer({
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
                       serverIdx === i
                         ? 'bg-red-600 text-white border-red-600'
-                        : 'bg-neutral-900 text-neutral-300 border-white/5 hover:bg-neutral-800'
+                        : 'bg-stone-900 text-stone-300 border-white/5 hover:bg-stone-800'
                     }`}
                   >
                     {label}
@@ -406,8 +406,8 @@ export default function VideoPlayer({
 
          {/* Browser sandbox notification details */}
         {playMode ==='movie' && (
-          <div className="px-4 py-3 bg-neutral-950/80 border-t border-white/5 flex items-center gap-2 text-[11px] text-gray-500 select-all justify-center">
-            <ShieldAlert className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
+          <div className="px-4 py-3 bg-stone-950/80 border-t border-white/5 flex items-center gap-2 text-[11px] text-gray-500 select-all justify-center">
+            <ShieldAlert className="w-3.5 h-3.5 text-stone-600 shrink-0" />
             <span>نظام التشغيل خارجي. إذا لم تظهر الترجمة تلقائياً، قم بتفعيلها من قائمة الإعدادات (CC) للمشغل المدمج.</span>
 </div>
         )}

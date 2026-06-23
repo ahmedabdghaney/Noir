@@ -113,7 +113,7 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: Search
       onClick={(e) => e.target === e.currentTarget && onClose()}
       className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[500] pt-24 md:pt-32 px-4 selection:bg-red-500/30 overflow-y-auto"
     >
-      <div className="max-w-2xl mx-auto bg-neutral-900/95 border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-pop-in">
+      <div className="max-w-2xl mx-auto bg-stone-900/95 border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-pop-in">
         
         {/* Input area */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-white/5">
@@ -165,11 +165,11 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: Search
                     }}
                     className="flex items-center gap-4 px-5 py-3 hover:bg-white/5 cursor-pointer transition-colors text-right"
                   >
-                    <div className="w-10 h-14 bg-neutral-800 rounded-lg overflow-hidden shrink-0 select-none">
+                    <div className="w-10 h-14 bg-stone-800 rounded-lg overflow-hidden shrink-0 select-none">
                       {item.poster ? (
                         <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-neutral-600">
+                        <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-stone-600">
                           {item.title.slice(0, 2)}
                         </div>
                       )}
@@ -179,11 +179,11 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: Search
                       <h5 className="text-white font-semibold text-sm truncate">{item.title}</h5>
                       <p className="text-gray-400 text-xs mt-1 font-medium flex items-center gap-1.5">
                         <span>{item.year || '—'}</span>
-                        <span className="w-1 h-1 bg-neutral-700 rounded-full" />
+                        <span className="w-1 h-1 bg-stone-700 rounded-full" />
                         <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
                         {item.genres.length > 0 && (
                           <>
-                            <span className="w-1 h-1 bg-neutral-700 rounded-full" />
+                            <span className="w-1 h-1 bg-stone-700 rounded-full" />
                             <span className="truncate">{item.genres[0]}</span>
                           </>
                         )}
@@ -232,11 +232,11 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: Search
                       }}
                       className="flex items-center gap-4 px-5 py-3 hover:bg-white/5 cursor-pointer transition-colors text-right"
                     >
-                      <div className="w-10 h-14 bg-neutral-800 rounded-lg overflow-hidden shrink-0 select-none">
+                      <div className="w-10 h-14 bg-stone-800 rounded-lg overflow-hidden shrink-0 select-none">
                         {item.poster ? (
                           <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-neutral-600">
+                          <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-stone-600">
                             {item.title.slice(0, 2)}
                           </div>
                         )}
@@ -246,13 +246,13 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: Search
                         <h5 className="text-white font-semibold text-sm truncate">{item.title}</h5>
                         <p className="text-gray-400 text-xs mt-1 font-medium flex items-center gap-1.5">
                           <span>{item.year || '—'}</span>
-                          <span className="w-1 h-1 bg-neutral-700 rounded-full" />
+                          <span className="w-1 h-1 bg-stone-700 rounded-full" />
                           <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
                         </p>
                       </div>
 
                       <div className="flex items-center gap-3 shrink-0">
-                        <span className="flex items-center gap-1 text-[10px] text-neutral-500 font-medium whitespace-nowrap">
+                        <span className="flex items-center gap-1 text-[10px] text-stone-500 font-medium whitespace-nowrap">
                           <Clock className="w-3 h-3" />
                           <span>{timeAgo(item.openedAt)}</span>
                         </span>
@@ -279,11 +279,11 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: Search
                       }}
                       className="flex items-center gap-4 px-5 py-3 hover:bg-white/5 cursor-pointer transition-colors text-right"
                     >
-                      <div className="w-10 h-14 bg-neutral-800 rounded-lg overflow-hidden shrink-0 select-none">
+                      <div className="w-10 h-14 bg-stone-800 rounded-lg overflow-hidden shrink-0 select-none">
                         {item.poster ? (
                           <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-neutral-600">
+                          <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-stone-600">
                             {item.title.slice(0, 2)}
                           </div>
                         )}
@@ -293,7 +293,7 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: Search
                         <h5 className="text-white font-semibold text-sm truncate">{item.title}</h5>
                         <p className="text-gray-400 text-xs mt-1 font-medium flex items-center gap-1.5">
                           <span>{item.year || '—'}</span>
-                          <span className="w-1 h-1 bg-neutral-700 rounded-full" />
+                          <span className="w-1 h-1 bg-stone-700 rounded-full" />
                           <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
                         </p>
                       </div>

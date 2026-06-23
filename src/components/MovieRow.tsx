@@ -62,15 +62,15 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
     return (
       <div className="mb-14 px-6 md:px-12 flex flex-col gap-4">
         <div className="space-y-1">
-          <div className="w-48 h-6 bg-neutral-800 rounded animate-pulse" />
-          <div className="w-32 h-4 bg-neutral-800 rounded animate-pulse" />
+          <div className="w-48 h-6 bg-stone-800 rounded animate-pulse" />
+          <div className="w-32 h-4 bg-stone-800 rounded animate-pulse" />
         </div>
         <div className="flex gap-4 overflow-hidden">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex-none w-[160px] sm:w-[220px] aspect-[16/9] bg-neutral-950 border border-white/5 rounded-2xl p-2 flex flex-col justify-end gap-3 animate-pulse">
-              <div className="w-full h-full bg-neutral-900 rounded-xl shimmer-bg" />
-              <div className="w-24 h-4 bg-neutral-900 rounded" />
-              <div className="w-12 h-3 bg-neutral-900 rounded" />
+            <div key={i} className="flex-none w-[160px] sm:w-[220px] aspect-[16/9] bg-stone-950 border border-white/5 rounded-2xl p-2 flex flex-col justify-end gap-3 animate-pulse">
+              <div className="w-full h-full bg-stone-900 rounded-xl shimmer-bg" />
+              <div className="w-24 h-4 bg-stone-900 rounded" />
+              <div className="w-12 h-3 bg-stone-900 rounded" />
             </div>
           ))}
         </div>
@@ -87,7 +87,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
             <h2 className="text-xl md:text-2xl font-black tracking-tight text-white flex items-center">
               <span>{title}</span>
             </h2>
-            {subtitle && <p className="text-neutral-500 font-medium text-[11px] md:text-xs mt-0.5">{subtitle}</p>}
+            {subtitle && <p className="text-stone-500 font-medium text-[11px] md:text-xs mt-0.5">{subtitle}</p>}
           </div>
           {viewAllHash && (
             <a
@@ -107,7 +107,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
         {showRightArrow && (
           <button
             onClick={() => handleScroll('right')}
-            className="absolute right-8 top-[41%] z-45 w-10 h-10 rounded-full bg-black/80 hover:bg-neutral-900 border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-all shadow-xl hover:scale-110 hidden md:flex"
+            className="absolute right-8 top-[41%] z-45 w-10 h-10 rounded-full bg-black/80 hover:bg-stone-900 border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-all shadow-xl hover:scale-110 hidden md:flex"
             aria-label="قناة سابقة"
           >
             <ChevronRight className="w-5 h-5" />
@@ -117,7 +117,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
         {showLeftArrow && (
           <button
             onClick={() => handleScroll('left')}
-            className="absolute left-8 top-[41%] z-45 w-10 h-10 rounded-full bg-black/80 hover:bg-neutral-900 border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-all shadow-xl hover:scale-110 hidden md:flex"
+            className="absolute left-8 top-[41%] z-45 w-10 h-10 rounded-full bg-black/80 hover:bg-stone-900 border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-all shadow-xl hover:scale-110 hidden md:flex"
             aria-label="قناة لاحقة"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -142,10 +142,10 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
                 key={`${item.type}-${item.id}`}
                 onClick={() => onItemClick(item)}
                 style={{ animationDelay: `${idx * 45}ms` }}
-                className="card-transition flex-none w-[125px] sm:w-[185px] md:w-[225px] lg:w-[255px] snap-start cursor-pointer transition-all duration-350 hover:bg-neutral-200/50 dark:hover:bg-neutral-900/60 hover:shadow-lg rounded-2xl p-2 pb-3.5 border border-transparent select-none active:scale-[0.98]"
+                className="card-transition flex-none w-[125px] sm:w-[185px] md:w-[225px] lg:w-[255px] snap-start cursor-pointer transition-all duration-350 hover:bg-stone-200/50 dark:hover:bg-stone-900/60 hover:shadow-lg rounded-2xl p-2 pb-3.5 border border-transparent select-none active:scale-[0.98]"
               >
                 {/* Poster Artwork container */}
-                <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-neutral-900 border border-white/5 shadow-md">
+                <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-white/5 shadow-md">
                   {item.poster || item.backdrop ? (
                     <img
                       src={item.poster || item.backdrop || undefined}
@@ -155,7 +155,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
                       className="w-full h-full object-cover select-none"
                     />
                   ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center p-3 text-neutral-600 bg-neutral-950">
+                    <div className="w-full h-full flex flex-col items-center justify-center p-3 text-stone-600 bg-stone-950">
                       <span className="text-[10px] sm:text-xs font-semibold text-center leading-normal break-all line-clamp-2">
                         {item.title}
                       </span>
@@ -171,7 +171,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
 
                   {/* Watch progression indicator red bar */}
                   {progress > 0 && (
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-neutral-800">
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-stone-800">
                       <div 
                         className="h-full bg-red-600 transition-all duration-300" 
                         style={{ width: `${progress}%` }}
@@ -185,9 +185,9 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
                   <span className="text-white font-bold text-xs sm:text-sm line-clamp-1 leading-tight transition-colors">
                     {item.title}
                   </span>
-                  <span className="text-neutral-500 font-semibold text-[10px] sm:text-xs mt-1 flex items-center gap-1 justify-start">
+                  <span className="text-stone-500 font-semibold text-[10px] sm:text-xs mt-1 flex items-center gap-1 justify-start">
                     <span>{item.year || '—'}</span>
-                    <span className="w-1 h-1 bg-neutral-800 rounded-full" />
+                    <span className="w-1 h-1 bg-stone-800 rounded-full" />
                     <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
                   </span>
                 </div>

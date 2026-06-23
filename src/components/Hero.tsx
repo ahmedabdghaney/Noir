@@ -92,14 +92,14 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
   if (!activePool.length) {
     // Skeletons
     return (
-      <div className="w-full h-[65vh] min-h-[500px] bg-neutral-900 animate-pulse relative flex items-end p-8 md:p-16">
+      <div className="w-full h-[65vh] min-h-[500px] bg-stone-900 animate-pulse relative flex items-end p-8 md:p-16">
         <div className="max-w-xl space-y-4">
-          <div className="w-24 h-6 bg-neutral-800 rounded"></div>
-          <div className="w-72 h-12 bg-neutral-800 rounded"></div>
-          <div className="w-full h-20 bg-neutral-800 rounded"></div>
+          <div className="w-24 h-6 bg-stone-800 rounded"></div>
+          <div className="w-72 h-12 bg-stone-800 rounded"></div>
+          <div className="w-full h-20 bg-stone-800 rounded"></div>
           <div className="flex gap-3">
-            <div className="w-28 h-10 bg-neutral-800 rounded-full"></div>
-            <div className="w-28 h-10 bg-neutral-800 rounded-full"></div>
+            <div className="w-28 h-10 bg-stone-800 rounded-full"></div>
+            <div className="w-28 h-10 bg-stone-800 rounded-full"></div>
           </div>
         </div>
       </div>
@@ -127,7 +127,7 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
   };
 
   return (
-    <div className="relative h-[60vh] sm:h-[80vh] min-h-[460px] sm:min-h-[600px] max-h-[850px] w-full overflow-hidden mb-8 sm:mb-10 flex items-end group select-none">
+    <div className="relative h-[68vh] sm:h-[88vh] min-h-[500px] sm:min-h-[680px] max-h-[920px] w-full overflow-hidden mb-10 sm:mb-14 flex items-end group select-none">
       
       {/* Background with custom container */}
       <div className="absolute inset-0 overflow-hidden">
@@ -147,7 +147,8 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
         </AnimatePresence>
         
         {/* Shadow overlays - Clean gradient masks */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/35 to-transparent z-[5] pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/55 to-transparent z-[5] pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0a0a0a] to-transparent z-[5] pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/65 via-transparent to-[#0a0a0a]/25 z-[5] pointer-events-none" />
       </div>
 
@@ -201,14 +202,14 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
               <div className="flex flex-wrap gap-2.5 sm:gap-3">
                 <button
                   onClick={() => onPlayClick(activeItem)}
-                  className="flex items-center gap-1.5 sm:gap-2 bg-white text-black hover:bg-neutral-200 font-bold px-4 sm:px-6 py-2 sm:py-3 rounded-full transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer text-xs sm:text-sm"
+                  className="flex items-center gap-1.5 sm:gap-2 bg-white text-black hover:bg-stone-200 font-bold px-4 sm:px-6 py-2 sm:py-3 rounded-full transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer text-xs sm:text-sm"
                 >
                   <Play className="w-3.5 h-3.5 fill-current text-black" />
                   <span>شاهد الآن</span>
                 </button>
                 <button
                   onClick={() => onInfoClick(activeItem)}
-                  className="flex items-center gap-1.5 sm:gap-2 bg-neutral-800/80 hover:bg-neutral-700/80 backdrop-blur-md text-white font-bold px-4 sm:px-6 py-2 sm:py-3 rounded-full border border-white/10 transition-all hover:scale-[1.02] cursor-pointer text-xs sm:text-sm"
+                  className="flex items-center gap-1.5 sm:gap-2 bg-stone-800/80 hover:bg-stone-700/80 backdrop-blur-md text-white font-bold px-4 sm:px-6 py-2 sm:py-3 rounded-full border border-white/10 transition-all hover:scale-[1.02] cursor-pointer text-xs sm:text-sm"
                 >
                   <Info className="w-3.5 h-3.5" />
                   <span>التفاصيل</span>

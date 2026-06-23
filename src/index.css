@@ -48,25 +48,25 @@ body {
   color: #475569 !important;
 }
 
-.light-theme .text-neutral-400 {
+.light-theme .text-stone-400 {
   color: #475569 !important;
 }
 
-.light-theme .bg-neutral-950,
+.light-theme .bg-stone-950,
 .light-theme .bg-[#0a0a0abf],
 .light-theme .bg-[#0a0a0a] {
   background-color: rgba(255, 255, 255, 0.85) !important;
   border-color: rgba(15, 23, 42, 0.08) !important;
 }
 
-.light-theme .bg-neutral-900,
-.light-theme .bg-neutral-900\/80,
-.light-theme .bg-neutral-900\/50 {
+.light-theme .bg-stone-900,
+.light-theme .bg-stone-900\/80,
+.light-theme .bg-stone-900\/50 {
   background-color: #f1f5f9 !important;
   border-color: rgba(15, 23, 42, 0.06) !important;
 }
 
-.light-theme .bg-neutral-800,
+.light-theme .bg-stone-800,
 .light-theme .bg-white\/5,
 .light-theme .bg-white\/10 {
   background-color: #e2e8f0 !important;
