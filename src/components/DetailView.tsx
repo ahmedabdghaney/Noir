@@ -847,7 +847,7 @@ export default function DetailView({
 
         {/* Specs Factors Panel - Technical Details cards matrix */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 my-8">
-          <div className="flex flex-col gap-1.5 bg-gradient-to-b from-stone-900 to-stone-900/40 border border-white/10 rounded-2xl px-5 py-4">
+          <div className="flex flex-col gap-1.5 glass rounded-2xl px-5 py-4">
             <span className="text-[11px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5" />
               عام الإصدار
@@ -857,7 +857,7 @@ export default function DetailView({
             </span>
           </div>
 
-          <div className="flex flex-col gap-1.5 bg-gradient-to-b from-stone-900 to-stone-900/40 border border-white/10 rounded-2xl px-5 py-4">
+          <div className="flex flex-col gap-1.5 glass rounded-2xl px-5 py-4">
             <span className="text-[11px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-1.5">
               <RotateCcw className="w-3.5 h-3.5" />
               الإخراج
@@ -867,7 +867,7 @@ export default function DetailView({
             </span>
           </div>
 
-          <div className="flex flex-col gap-1.5 bg-gradient-to-b from-stone-900 to-stone-900/40 border border-white/10 rounded-2xl px-5 py-4">
+          <div className="flex flex-col gap-1.5 glass rounded-2xl px-5 py-4">
             <span className="text-[11px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-1.5">
               <Globe className="w-3.5 h-3.5" />
               دولة الإنتاج
@@ -877,7 +877,7 @@ export default function DetailView({
             </span>
           </div>
 
-          <div className="flex flex-col gap-1.5 bg-gradient-to-b from-stone-900 to-stone-900/40 border border-white/10 rounded-2xl px-5 py-4">
+          <div className="flex flex-col gap-1.5 glass rounded-2xl px-5 py-4">
             <span className="text-[11px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-1.5">
               <Languages className="w-3.5 h-3.5" />
               اللغة الأصلية

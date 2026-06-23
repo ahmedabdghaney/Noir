@@ -202,16 +202,16 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
               <div className="flex flex-wrap gap-2.5 sm:gap-3">
                 <button
                   onClick={() => onPlayClick(activeItem)}
-                  className="flex items-center gap-1.5 sm:gap-2 bg-white text-black hover:bg-stone-200 font-bold px-4 sm:px-6 py-2 sm:py-3 rounded-full transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer text-xs sm:text-sm"
+                  className="flex items-center gap-2 bg-white text-black hover:bg-white/90 font-bold px-6 sm:px-8 py-2.5 sm:py-3.5 rounded-2xl transition-all hover:scale-[1.03] active:scale-[0.98] cursor-pointer text-sm shadow-xl shadow-black/30"
                 >
-                  <Play className="w-3.5 h-3.5 fill-current text-black" />
+                  <Play className="w-4 h-4 fill-current text-black" />
                   <span>شاهد الآن</span>
                 </button>
                 <button
                   onClick={() => onInfoClick(activeItem)}
-                  className="flex items-center gap-1.5 sm:gap-2 bg-stone-800/80 hover:bg-stone-700/80 backdrop-blur-md text-white font-bold px-4 sm:px-6 py-2 sm:py-3 rounded-full border border-white/10 transition-all hover:scale-[1.02] cursor-pointer text-xs sm:text-sm"
+                  className="glass flex items-center gap-2 hover:bg-white/15 text-white font-bold px-6 sm:px-8 py-2.5 sm:py-3.5 rounded-2xl transition-all hover:scale-[1.03] cursor-pointer text-sm"
                 >
-                  <Info className="w-3.5 h-3.5" />
+                  <Info className="w-4 h-4" />
                   <span>التفاصيل</span>
                 </button>
               </div>

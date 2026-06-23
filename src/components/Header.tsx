@@ -69,8 +69,8 @@ export default function Header({
       <nav
         className={`fixed top-0 left-0 right-0 z-[200] h-14 flex items-center transition-all duration-300 ${
           isScrolled
-            ?'backdrop-blur-md bg-black/85 border-b border-white/8'
-            :'backdrop-blur-sm bg-black/60 border-b border-transparent'
+            ?'backdrop-blur-2xl bg-[#0b0b0d]/70 border-b border-white/8 saturate-150'
+            :'backdrop-blur-xl bg-gradient-to-b from-black/50 to-transparent border-b border-transparent'
         }`}
       >
         <div className="w-full px-4 md:px-12 grid grid-cols-3 items-center">

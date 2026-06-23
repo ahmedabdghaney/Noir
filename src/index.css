@@ -7,7 +7,7 @@
 }
 
 body {
-  background-color: #08080a;
+  background-color: #0b0b0d;
   color: #ffffff;
   overflow-x: hidden;
   font-family: "IBM Plex Sans Arabic", "Inter", sans-serif;
@@ -15,8 +15,8 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Cinematic background: subtle warm-to-cool depth + faint film grain.
-   This kills the flat "boring" black and gives a dramatic noir mood. */
+/* Clean, quiet depth — a single soft vertical gradient, Apple-TV style.
+   No grain, no heavy color washes; calm and premium. */
 body::before {
   content: "";
   position: fixed;
@@ -24,33 +24,33 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(120% 80% at 50% -10%, rgba(120, 30, 30, 0.16), transparent 55%),
-    radial-gradient(100% 60% at 100% 100%, rgba(40, 30, 60, 0.12), transparent 60%),
-    radial-gradient(80% 50% at 0% 80%, rgba(60, 40, 20, 0.10), transparent 55%);
+    radial-gradient(140% 70% at 50% 0%, rgba(40, 42, 52, 0.55), transparent 60%),
+    linear-gradient(180deg, #0d0d10 0%, #0b0b0d 40%, #090909 100%);
 }
 
-/* Faint film-grain texture overlay for cinematic feel */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.025;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  mix-blend-mode: overlay;
-}
-
-/* Make app content sit above the atmosphere layers */
 #root {
   position: relative;
   z-index: 1;
 }
 
-/* Display headings use the heavier dramatic font */
+/* Display headings */
 .font-display {
   font-family: var(--font-display);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
+}
+
+/* Glass surface — the signature Apple-TV material */
+.glass {
+  background: rgba(28, 28, 32, 0.55);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.glass-strong {
+  background: rgba(20, 20, 24, 0.78);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Day Mode / Light Mode styling overrides */
@@ -213,41 +213,39 @@ body::after {
   animation: shimmer 1.6s infinite;
 }
 
-/* === Dramatic / elegant enhancements === */
+/* === Apple-TV style enhancements === */
 
-/* Cinematic card hover: gentle lift + warm glow + crisp poster */
+/* Card hover: smooth lift with soft wide shadow, no loud glow */
 .card-transition {
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s ease;
 }
 .card-transition:hover {
-  transform: translateY(-6px) scale(1.015);
-  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.7), 0 0 22px -8px rgba(255, 69, 58, 0.25);
+  transform: translateY(-8px) scale(1.03);
+  box-shadow: 0 24px 50px -16px rgba(0, 0, 0, 0.75);
+  z-index: 5;
 }
 
-/* Elegant gradient text for hero/section emphasis */
+/* Elegant gradient text */
 .text-gradient-noir {
-  background: linear-gradient(180deg, #ffffff 0%, #cfcfd2 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #c8c8cf 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* Soft fade-up entrance for sections */
 @keyframes noir-fade-up {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
 .noir-fade-up {
-  animation: noir-fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: noir-fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Refined focus ring */
 button:focus-visible, a:focus-visible {
-  outline: 2px solid rgba(255, 69, 58, 0.6);
+  outline: 2px solid rgba(255, 255, 255, 0.5);
   outline-offset: 2px;
 }
 
-/* Smooth global transitions for interactive elements */
 button, a {
   transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
