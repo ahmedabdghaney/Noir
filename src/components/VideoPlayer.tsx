@@ -52,7 +52,6 @@ export default function VideoPlayer({
   onNextEpisode,
 }: VideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
-  const [serverIdx, setServerIdx] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Watch progression state
@@ -159,59 +158,15 @@ export default function VideoPlayer({
       return `https://www.youtube-nocookie.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&origin=${origin}`;
     }
 
-    const params = new URLSearchParams({
-      primaryColor: 'ff453a', // Nice bright red matching Noir brand color system
-      secondaryColor: '0a0a0a',
-      iconColor: 'FFFFFF',
-      icons: 'vid',
-      title: 'true',
-      poster: 'true',
-      autoplay: 'true',
-    });
-
-    if (startAt && startAt > 5) {
-      params.set('startAt', String(Math.floor(startAt)));
+    // vidsrc.cc — fast multi-server player with its OWN internal failover.
+    // It tries its sources internally and plays the fastest one automatically,
+    // so we don't need our own server-switch UI.
+    if (type === 'tv') {
+      return `https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}?autoPlay=true&autoNext=true`;
     }
-
-    // Multiple streaming providers — if one fails for a title, user can switch.
-    // Each entry builds the embed URL for the current movie/episode.
-    const buildVidApi = () => {
-      if (type === 'tv') {
-        const p = new URLSearchParams(params);
-        p.set('nextbutton', 'true');
-        return `https://vidapi.qzz.io/tv/${id}/${season}/${episode}?${p.toString()}`;
-      }
-      return `https://vidapi.qzz.io/movie/${id}?${params.toString()}`;
-    };
-
-    const buildVidsrc = () => {
-      if (type === 'tv') {
-        return `https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}?autoPlay=true`;
-      }
-      return `https://vidsrc.cc/v2/embed/movie/${id}?autoPlay=true`;
-    };
-
-    const buildEmbedSu = () => {
-      if (type === 'tv') {
-        return `https://embed.su/embed/tv/${id}/${season}/${episode}`;
-      }
-      return `https://embed.su/embed/movie/${id}`;
-    };
-
-    const buildVidsrcTo = () => {
-      if (type === 'tv') {
-        return `https://vidsrc.to/embed/tv/${id}/${season}/${episode}`;
-      }
-      return `https://vidsrc.to/embed/movie/${id}`;
-    };
-
-    const servers = [buildVidApi, buildVidsrc, buildEmbedSu, buildVidsrcTo];
-    const idx = Math.min(serverIdx, servers.length - 1);
-    return servers[idx]();
+    const sa = startAt && startAt > 5 ? `&startAt=${Math.floor(startAt)}` : '';
+    return `https://vidsrc.cc/v2/embed/movie/${id}?autoPlay=true${sa}`;
   };
-
-  // Server labels for the switcher
-  const SERVER_LABELS = ['سيرفر 1', 'سيرفر 2', 'سيرفر 3', 'سيرفر 4'];
 
   return (
     <div ref={containerRef} className="w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl animate-fade-in text-right">
@@ -334,7 +289,7 @@ export default function VideoPlayer({
             />
           ) : (
             <iframe
-              key={`player-${serverIdx}-${id}-${episode}`}
+              key={`player-${id}-${episode}`}
               src={isPausedByHost ? 'about:blank' : getEmbedUrl()}
               allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
               sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
@@ -374,35 +329,6 @@ export default function VideoPlayer({
 </div>
 </div>
           )}</div>
-
-         {/* Server switcher — try another source if a title won't play */}
-        {playMode !== 'trailer' && (
-          <div className="px-4 py-3 bg-stone-950/80 border-t border-white/5 text-right">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <span className="text-[11px] text-gray-500 font-bold">
-                لا يعمل الفيلم؟ جرّب سيرفر آخر
-              </span>
-              <div className="flex flex-wrap gap-2" dir="rtl">
-                {SERVER_LABELS.map((label, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      setServerIdx(i);
-                      setIsLoading(true);
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
-                      serverIdx === i
-                        ? 'bg-red-600 text-white border-red-600'
-                        : 'bg-stone-900 text-stone-300 border-white/5 hover:bg-stone-800'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
 
          {/* Browser sandbox notification details */}
         {playMode ==='movie' && (
