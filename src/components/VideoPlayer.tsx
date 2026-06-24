@@ -178,14 +178,14 @@ export default function VideoPlayer({
       return `https://vidsrc.cc/v2/embed/movie/${id}?autoPlay=true${sa}`;
     };
 
-    // 2) vsembed / vidsrc-embed.ru — fast, Arabic default subs
+    // 2) vsembed.ru (new domain) — fast, Arabic default subs
     const buildVsembed = () => {
       const p = new URLSearchParams({ autoplay: '1', ds_lang: 'ar' });
       if (type === 'tv') {
         p.set('autonext', '1');
-        return `https://vidsrc-embed.ru/embed/tv?tmdb=${id}&season=${season}&episode=${episode}&${p.toString()}`;
+        return `https://vsembed.ru/embed/tv?tmdb=${id}&season=${season}&episode=${episode}&${p.toString()}`;
       }
-      return `https://vidsrc-embed.ru/embed/movie?tmdb=${id}&${p.toString()}`;
+      return `https://vsembed.ru/embed/movie?tmdb=${id}&${p.toString()}`;
     };
 
     // 3) vidapi.qzz.io — fallback
