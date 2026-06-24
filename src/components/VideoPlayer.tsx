@@ -334,24 +334,12 @@ export default function VideoPlayer({
               className="w-full h-full border-0 relative z-0"
               onLoad={() => setIsLoading(false)}
             />
-          ) : sourceIdx === 2 ? (
-            // سيرفر 3 (vidlink.pro) — يرفض sandbox بالكامل
-            <iframe
-              key={`player-${sourceIdx}-${id}-${episode}`}
-              src={isPausedByHost ? 'about:blank' : getEmbedUrl()}
-              allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-              referrerPolicy="no-referrer"
-              allowFullScreen
-              className="w-full h-full border-0 relative z-0"
-              onLoad={() => setIsLoading(false)}
-            />
           ) : (
-            // سيرفر 1 و 2
             <iframe
               key={`player-${sourceIdx}-${id}-${episode}`}
               src={isPausedByHost ? 'about:blank' : getEmbedUrl()}
               allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-              sandbox="allow-scripts allow-same-origin allow-presentation allow-forms allow-popups allow-popups-to-escape-sandbox"
+              {...(sourceIdx === 2 ? {} : { sandbox: 'allow-scripts allow-same-origin allow-presentation allow-forms' })}
               referrerPolicy="no-referrer"
               allowFullScreen
               className="w-full h-full border-0 relative z-0"
