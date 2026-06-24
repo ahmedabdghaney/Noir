@@ -80,18 +80,18 @@ export default function Hero({
 
   return (
     <div className="relative w-full mb-12 sm:mb-16 pt-4 sm:pt-8 select-none overflow-hidden">
-      <div className="relative flex items-stretch justify-center gap-4 sm:gap-6">
+      <div className="relative flex items-stretch justify-center gap-3 sm:gap-4 px-2 sm:px-4">
         {/* Side peek card (right / previous in RTL) */}
         <button
           onClick={() => goTo(-1)}
-          className="hidden lg:block flex-none w-[7%] rounded-3xl overflow-hidden opacity-45 hover:opacity-75 transition-opacity cursor-pointer aspect-[2.3/1]"
+          className="hidden lg:block flex-none w-[12%] rounded-3xl overflow-hidden opacity-45 hover:opacity-75 transition-opacity cursor-pointer aspect-[2.3/1]"
           aria-label="السابق"
         >
           <img src={wideImg(prevItem)} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" style={{ objectPosition: 'left center' }} />
         </button>
 
         {/* Center wide card */}
-        <div className="flex-1 max-w-[1100px] px-2 sm:px-0">
+        <div className="flex-1 max-w-[1500px] px-2 sm:px-0">
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
               key={`card-${activeItem.type}-${activeItem.id}`}
@@ -103,7 +103,7 @@ export default function Hero({
               className="relative rounded-3xl overflow-hidden border border-white/12 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)] ring-1 ring-white/10"
             >
               {/* Wide backdrop */}
-              <div className="relative aspect-[16/10] sm:aspect-[2.3/1]">
+              <div className="relative aspect-[16/11] sm:aspect-[16/8] lg:aspect-[2/1]">
                 <img
                   src={wideImg(activeItem)}
                   alt={activeItem.title}
@@ -115,8 +115,8 @@ export default function Hero({
                 <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 to-transparent" />
 
                 {/* Details — right aligned */}
-                <div className="absolute inset-0 flex flex-col items-end justify-center text-right p-6 sm:p-10 md:p-14">
-                  <div className="max-w-[85%] sm:max-w-[60%] flex flex-col items-end">
+                <div className="absolute inset-0 flex flex-col items-end justify-end sm:justify-center text-right p-6 sm:p-10 md:p-16">
+                  <div className="w-full sm:max-w-[55%] flex flex-col items-end">
                     {/* Logo or title */}
                     {activeLogo ? (
                       <img src={activeLogo} alt={activeItem.title} referrerPolicy="no-referrer" className="max-h-16 sm:max-h-24 md:max-h-28 max-w-full object-contain object-right mb-3 sm:mb-4 drop-shadow-2xl" />
@@ -209,7 +209,7 @@ export default function Hero({
         {/* Side peek card (left / next in RTL) */}
         <button
           onClick={() => goTo(1)}
-          className="hidden lg:block flex-none w-[7%] rounded-3xl overflow-hidden opacity-45 hover:opacity-75 transition-opacity cursor-pointer aspect-[2.3/1]"
+          className="hidden lg:block flex-none w-[12%] rounded-3xl overflow-hidden opacity-45 hover:opacity-75 transition-opacity cursor-pointer aspect-[2.3/1]"
           aria-label="التالي"
         >
           <img src={wideImg(nextItem)} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" style={{ objectPosition: 'right center' }} />
