@@ -25,6 +25,7 @@ import {
 import Header from './components/Header';
 import Hero from './components/Hero';
 import MovieRow from './components/MovieRow';
+import ContinueWatchingRow from './components/ContinueWatchingRow';
 import DetailView from './components/DetailView';
 import SearchOverlay from './components/SearchOverlay';
 import ShareModal from './components/ShareModal';
@@ -1116,10 +1117,18 @@ export default function App() {
 
               {continueWatching.length > 0 && (
                 <div id="continue-watching-section" className="scroll-mt-20">
-                  <MovieRow
+                  <ContinueWatchingRow
                     title="أكمل المشاهدة"
                     items={continueWatching}
                     onItemClick={handleTitleClick}
+                    onRemove={(item) => {
+                      const next = continueWatching.filter(
+                        (c) => !(c.id === item.id && c.type === item.type)
+                      );
+                      setContinueWatching(next);
+                      localStorage.setItem('noir_continue_watching_list', JSON.stringify(next));
+                      localStorage.removeItem(`noir_progress_${item.type}_${item.id}`);
+                    }}
                   />
                 </div>
               )}

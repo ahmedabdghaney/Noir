@@ -114,6 +114,14 @@ export default function Header({
               >
                 المسلسلات
 </button>
+              <button
+                onClick={onViewWatchlist}
+                className={`text-xs md:text-sm font-semibold transition-colors hover:text-white cursor-pointer select-none ${
+                    activeView ==='watchlist' ?'text-white' :'text-gray-400'
+                }`}
+              >
+                قائمتي
+</button>
 </div>
 </div>
 
@@ -157,28 +165,6 @@ export default function Header({
                       <p className="text-[9px] text-gray-500 font-bold mb-0.5">تسجيل الدخول كـ</p>
                       <p className="text-xs text-white font-bold truncate leading-tight">{user.name}</p>
 </div>
-
-                    <button
-                      onClick={() => {
-                        onOpenProfile();
-                        setIsProfileDropdownOpen(false);
-                      }}
-                      className="w-full text-right px-4 py-2.5 text-xs text-gray-300 hover:text-white hover:bg-white/5 flex items-center gap-2 transition-colors cursor-pointer"
-                    >
-                      <span className="text-sm"></span>
-                      <span>الملف الشخصي</span>
-</button>
-
-                    <button
-                      onClick={() => {
-                        onViewWatchlist();
-                        setIsProfileDropdownOpen(false);
-                      }}
-                      className="w-full text-right px-4 py-2.5 text-xs text-gray-300 hover:text-white hover:bg-white/5 flex items-center gap-2 transition-colors cursor-pointer"
-                    >
-                      <span className="text-sm"></span>
-                      <span>قائمتي</span>
-</button>
 
                     <div className="h-px bg-white/5 my-1" />
 

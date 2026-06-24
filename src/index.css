@@ -270,8 +270,9 @@ button, a {
   animation: ken-burns 20s ease-out forwards;
 }
 
-/* Card press feedback */
+/* Card press feedback — overrides entrance animation's transform */
 .card-transition:active {
-  transform: translateY(-4px) scale(0.985);
-  transition: transform 0.12s ease;
+  transform: translateY(-4px) scale(0.96) !important;
+  transition: transform 0.1s ease !important;
+  animation: none !important;
 }
