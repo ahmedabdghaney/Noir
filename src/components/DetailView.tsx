@@ -1018,7 +1018,7 @@ export default function DetailView({
                           className="group/ep flex-none w-[300px] sm:w-[380px] text-right snap-start cursor-pointer"
                         >
                           {/* Card with image + overlaid text */}
-                          <div className={`relative h-[280px] sm:h-[320px] rounded-3xl overflow-hidden bg-stone-900 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.7)] ${watchedEps.includes(ep.episode_number) ? 'ring-1 ring-red-500' : 'border border-white/8'}`}>
+                          <div className="relative h-[280px] sm:h-[320px] rounded-3xl overflow-hidden bg-stone-900 border border-white/8 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.7)]">
                             {still ? (
                               <img
                                 src={still}
@@ -1035,6 +1035,17 @@ export default function DetailView({
 
                             {/* Bottom blur + gradient so overlaid text stays readable */}
                             <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/95 via-black/65 to-transparent backdrop-blur-[2px] [mask-image:linear-gradient(to_top,black_60%,transparent)]" />
+
+                            {/* Watched state: subtle dim + elegant check badge */}
+                            {watchedEps.includes(ep.episode_number) && (
+                              <>
+                                <div className="absolute inset-0 bg-black/45 pointer-events-none" />
+                                <div className="absolute top-3 left-3 flex items-center gap-1.5 glass-strong px-2.5 py-1 rounded-full">
+                                  <Check className="w-3 h-3 text-emerald-400" strokeWidth={3} />
+                                  <span className="text-[10px] font-bold text-white">شوهدت</span>
+                                </div>
+                              </>
+                            )}
 
                             {/* Hover play icon */}
                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/ep:opacity-100 transition-opacity">
