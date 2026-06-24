@@ -4,11 +4,11 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, Star } from 'lucide-react';
+import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, Star, X } from 'lucide-react';
 import LogoIcon from './components/LogoIcon';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { auth, loginWithGoogle, logoutUser, signInWithEmail, signUpWithEmail, resetPassword, checkSignInMethods, translateAuthError, fetchFirestoreWatchlist, db, sendVerification } from './lib/firebase';
+import { auth, loginWithGoogle, logoutUser, signInWithEmail, signUpWithEmail, resetPassword, checkSignInMethods, translateAuthError, fetchFirestoreWatchlist, db, sendVerification, removeFromFirestoreWatchlist } from './lib/firebase';
 import { MovieOrShow } from './types';
 import {
   initializeGenres,
@@ -713,6 +713,18 @@ export default function App() {
     window.location.hash =`#${item.type}/${item.id}`;
   };
 
+  const removeFromWatchlist = (item: MovieOrShow) => {
+    const next = watchlist.filter((w) => !(w.id === item.id && w.type === item.type));
+    setWatchlist(next);
+    localStorage.setItem('noir_watchlist', JSON.stringify(next));
+    const curUser = auth.currentUser;
+    if (curUser) {
+      removeFromFirestoreWatchlist(curUser.uid, item.type, item.id).catch((e) =>
+        console.error('Failed to remove from cloud watchlist:', e)
+      );
+    }
+  };
+
   const handleQuickSelectTitle = (type: 'movie' | 'tv', id: number) => {
     window.location.hash =`#${type}/${id}`;
   };
@@ -1318,6 +1330,17 @@ export default function App() {
                       >
                         {/* Poster Artwork container */}
                         <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+                          {/* Remove from watchlist button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeFromWatchlist(item);
+                            }}
+                            className="absolute top-2 left-2 z-10 w-8 h-8 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-0 group-hover/card:opacity-100 transition-all hover:bg-white/20 cursor-pointer"
+                            title="إزالة من قائمتي"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
                           {item.poster || item.backdrop ? (
                             <img
                               src={item.poster || item.backdrop || undefined}

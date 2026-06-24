@@ -159,6 +159,33 @@ export default function DetailView({
   const episodesRowRef = useRef<HTMLDivElement>(null);
   const [epShowLeft, setEpShowLeft] = useState(false);
   const [epShowRight, setEpShowRight] = useState(false);
+  const [watchedEps, setWatchedEps] = useState<number[]>([]);
+
+  // Load watched episodes for this season
+  useEffect(() => {
+    if (type !== 'tv' || !id) return;
+    try {
+      const key = `noir_watched_eps_${id}_s${selectedSeason}`;
+      const stored = localStorage.getItem(key);
+      setWatchedEps(stored ? JSON.parse(stored) : []);
+    } catch {
+      setWatchedEps([]);
+    }
+  }, [type, id, selectedSeason]);
+
+  const markEpisodeWatched = (epNum: number) => {
+    if (type !== 'tv' || !id) return;
+    try {
+      const key = `noir_watched_eps_${id}_s${selectedSeason}`;
+      const stored = localStorage.getItem(key);
+      const list: number[] = stored ? JSON.parse(stored) : [];
+      if (!list.includes(epNum)) {
+        const next = [...list, epNum];
+        localStorage.setItem(key, JSON.stringify(next));
+        setWatchedEps(next);
+      }
+    } catch { /* ignore */ }
+  };
 
   const checkEpScroll = () => {
     if (episodesRowRef.current) {
@@ -985,12 +1012,13 @@ export default function DetailView({
                           key={ep.episode_number}
                           onClick={() => {
                             setSelectedEpisode(ep.episode_number);
+                            markEpisodeWatched(ep.episode_number);
                             handlePlayClick('movie');
                           }}
                           className="group/ep flex-none w-[300px] sm:w-[380px] text-right snap-start cursor-pointer"
                         >
                           {/* Card with image + overlaid text */}
-                          <div className="relative h-[280px] sm:h-[320px] rounded-3xl overflow-hidden bg-stone-900 border border-white/8 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.7)]">
+                          <div className={`relative h-[280px] sm:h-[320px] rounded-3xl overflow-hidden bg-stone-900 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.7)] ${watchedEps.includes(ep.episode_number) ? 'ring-1 ring-red-500' : 'border border-white/8'}`}>
                             {still ? (
                               <img
                                 src={still}

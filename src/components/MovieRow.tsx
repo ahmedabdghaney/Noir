@@ -104,6 +104,13 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
 
       {/* Row Shell with Overlay Arrows */}
       <div className={`relative ${flush ? "" : "px-6 md:px-12"}`}>
+        {/* Edge fade gradients (only when scrollable in that direction) */}
+        {showRightArrow && (
+          <div className="hidden md:block absolute right-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-l from-[#0b0b0d] to-transparent" />
+        )}
+        {showLeftArrow && (
+          <div className="hidden md:block absolute left-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-r from-[#0b0b0d] to-transparent" />
+        )}
          {/* Navigation Arrows for desktop hover */}
         {showRightArrow && (
           <button
@@ -130,7 +137,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
           ref={rowRef}
           onScroll={checkScroll}
           dir="rtl"
-          className="flex flex-row gap-4 md:gap-6 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none snap-x snap-mandatory"
+          className="flex flex-row gap-4 md:gap-6 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none"
         >
           {items.map((item, idx) => {
             const hasScore = item.rating > 0;
@@ -143,10 +150,10 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
                 key={`${item.type}-${item.id}`}
                 onClick={() => onItemClick(item)}
                 style={{ animationDelay: `${idx * 45}ms` }}
-                className="group/card card-transition flex-none w-[125px] sm:w-[185px] md:w-[225px] lg:w-[255px] snap-start cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
+                className="group/card card-transition flex-none w-[125px] sm:w-[185px] md:w-[225px] lg:w-[255px] cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
               >
                 {/* Poster Artwork container */}
-                <div className={`relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)] ${progress >= 90 ? 'ring-2 ring-red-500 border border-red-500' : 'border border-white/8'}`}>
+                <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
                   {item.poster || item.backdrop ? (
                     <img
                       src={item.poster || item.backdrop || undefined}
