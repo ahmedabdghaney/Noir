@@ -66,13 +66,6 @@ const contentVariants = {
   }
 };
 
-/* ── Side-peek slide animation ── */
-const peekVariants = {
-  hidden: { opacity: 0, scale: 1.2 },
-  visible: { opacity: 1, scale: 1, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } },
-  exit: { opacity: 0, scale: 1.15, transition: { duration: 0.4, ease: 'easeIn' } },
-};
-
 function getHighRes(url: string | undefined) {
   if (!url) return '';
   return url.replace('/w1280', '/original').replace('/w500', '/original');
@@ -163,59 +156,60 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
   return (
     <div className="relative h-[68vh] sm:h-[88vh] min-h-[500px] sm:min-h-[680px] max-h-[920px] w-full overflow-hidden mb-10 sm:mb-14 flex items-end group select-none">
 
-      {/* ══════════════════════════════════════
-          SIDE PEEK — Apple TV+ Style
-          ══════════════════════════════════════ */}
-
-      {/* Right Peek (previous in RTL) */}
-      <div className="absolute top-0 bottom-0 right-0 w-[6%] sm:w-[8%] md:w-[10%] z-[2] overflow-hidden pointer-events-none">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`peek-r-${currentIndex}`}
-            variants={peekVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className="absolute inset-0"
-          >
-            <img
+      {/* ══════════════════════════════════════════
+          LAYER 1 — Side Peek Backgrounds (z-0)
+          الصور الجانبية كخلفية خلف الصورة الرئيسية
+          ══════════════════════════════════════════ */}
+      <div className="absolute inset-0 z-0 flex">
+        {/* Right side — previous movie (RTL) */}
+        <div className="w-[18%] sm:w-[15%] md:w-[12%] h-full overflow-hidden flex-shrink-0">
+          <AnimatePresence mode="wait">
+            <motion.img
+              key={`peek-r-${currentIndex}`}
               src={getHighRes(prevItem?.backdrop || prevItem?.poster)}
               alt=""
-              className="w-[350%] h-full object-cover object-center opacity-40 blur-[3px] brightness-[0.5] scale-110"
+              initial={{ opacity: 0, scale: 1.1 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+              className="w-[250%] h-full object-cover object-center"
               draggable={false}
             />
-          </motion.div>
-        </AnimatePresence>
-        {/* Edge fade mask */}
-        <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-[#0a0a0a] z-[1]" />
-      </div>
+          </AnimatePresence>
+        </div>
 
-      {/* Left Peek (next in RTL) */}
-      <div className="absolute top-0 bottom-0 left-0 w-[6%] sm:w-[8%] md:w-[10%] z-[2] overflow-hidden pointer-events-none">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`peek-l-${currentIndex}`}
-            variants={peekVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className="absolute inset-0"
-          >
-            <img
+        {/* Center — empty space for main backdrop */}
+        <div className="flex-1 h-full" />
+
+        {/* Left side — next movie (RTL) */}
+        <div className="w-[18%] sm:w-[15%] md:w-[12%] h-full overflow-hidden flex-shrink-0">
+          <AnimatePresence mode="wait">
+            <motion.img
+              key={`peek-l-${currentIndex}`}
               src={getHighRes(nextItem?.backdrop || nextItem?.poster)}
               alt=""
-              className="w-[350%] h-full object-cover object-center opacity-40 blur-[3px] brightness-[0.5] scale-110"
+              initial={{ opacity: 0, scale: 1.1 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+              className="w-[250%] h-full object-cover object-center"
               draggable={false}
             />
-          </motion.div>
-        </AnimatePresence>
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#0a0a0a] z-[1]" />
+          </AnimatePresence>
+        </div>
       </div>
 
-      {/* ══════════════════════════════════════
-          MAIN BACKDROP
-          ══════════════════════════════════════ */}
-      <div className="absolute inset-0 overflow-hidden z-[3]">
+      {/* ══════════════════════════════════════════
+          LAYER 2 — Shadow Dividers (z-1)
+          ظلال بين الصورة المركزية والجانبية
+          ══════════════════════════════════════════ */}
+      <div className="absolute top-0 bottom-0 right-[12%] sm:right-[15%] md:right-[12%] w-20 sm:w-28 md:w-36 bg-gradient-to-l from-black/90 via-black/50 to-transparent z-[1] pointer-events-none" />
+      <div className="absolute top-0 bottom-0 left-[12%] sm:left-[15%] md:left-[12%] w-20 sm:w-28 md:w-36 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-[1] pointer-events-none" />
+
+      {/* ══════════════════════════════════════════
+          LAYER 3 — Main Backdrop (z-2)
+          ══════════════════════════════════════════ */}
+      <div className="absolute inset-0 overflow-hidden z-[2]">
         <AnimatePresence initial={false} custom={direction}>
           <motion.div
             key={currentIndex}
@@ -232,19 +226,16 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
         </AnimatePresence>
       </div>
 
-      {/* ══════════════════════════════════════
-          GRADIENT OVERLAYS
-          ══════════════════════════════════════ */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/55 to-transparent z-[5] pointer-events-none" />
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0a0a0a] to-transparent z-[5] pointer-events-none" />
+      {/* ══════════════════════════════════════════
+          LAYER 4 — Gradient Overlays (z-5)
+          تدرجات النص فقط — بدون تدرجات جانبية
+          ══════════════════════════════════════════ */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/50 to-transparent z-[5] pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-[#0a0a0a] to-transparent z-[5] pointer-events-none" />
 
-      {/* Side gradient overlays — blend side peeks into center */}
-      <div className="absolute top-0 bottom-0 right-0 w-[12%] sm:w-[15%] md:w-[18%] bg-gradient-to-l from-[#0a0a0a]/80 to-transparent z-[4] pointer-events-none" />
-      <div className="absolute top-0 bottom-0 left-0 w-[10%] sm:w-[12%] md:w-[14%] bg-gradient-to-r from-[#0a0a0a]/60 to-transparent z-[4] pointer-events-none" />
-
-      {/* ══════════════════════════════════════
-          CONTENT
-          ══════════════════════════════════════ */}
+      {/* ══════════════════════════════════════════
+          LAYER 5 — Content (z-10)
+          ══════════════════════════════════════════ */}
       <div className="absolute inset-x-0 bottom-0 z-10 w-full px-4 sm:px-12 pb-6 sm:pb-20 md:pb-24 pointer-events-none">
         <div className="max-w-xl text-right md:text-right pointer-events-auto">
           <AnimatePresence initial={false} mode="wait">
@@ -262,7 +253,7 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
                 <span>الأكثر رواجاً هذا الأسبوع</span>
               </div>
 
-              {/* Title (logo if available, else text) */}
+              {/* Title */}
               {activeLogo ? (
                 <img
                   src={activeLogo}
@@ -299,7 +290,7 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
                 {activeItem.overview}
               </p>
 
-              {/* Call to Actions */}
+              {/* Actions */}
               <div className="flex flex-wrap gap-2.5 sm:gap-3">
                 <button
                   onClick={() => onPlayClick(activeItem)}
@@ -321,9 +312,9 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
         </div>
       </div>
 
-      {/* ══════════════════════════════════════
-          NAVIGATION ARROWS
-          ══════════════════════════════════════ */}
+      {/* ══════════════════════════════════════════
+          LAYER 6 — Arrows (z-20)
+          ══════════════════════════════════════════ */}
       <div className="absolute inset-y-0 left-0 right-0 z-20 flex justify-between items-center px-4 md:px-8 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-none">
         <button
           onClick={handlePrev}
@@ -341,9 +332,9 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
         </button>
       </div>
 
-      {/* ══════════════════════════════════════
-          DOTS
-          ══════════════════════════════════════ */}
+      {/* ══════════════════════════════════════════
+          LAYER 7 — Dots (z-20)
+          ══════════════════════════════════════════ */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
         {activePool.map((_, i) => (
           <button
