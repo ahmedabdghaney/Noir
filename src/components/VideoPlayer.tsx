@@ -87,7 +87,7 @@ export default function VideoPlayer({
     return () => clearInterval(timer);
   }, [type, id, playMode, progressKey]);
 
-  // Listen for vidapi.qzz.io postMessage progress events
+  // Listen for player postMessage progress events
   // (sent from the iframe whenever playback advances or the user seeks)
   const lastWatchedRef = useRef<number>(0);
   const lastWatchedAtRef = useRef<number>(0);
@@ -103,11 +103,19 @@ export default function VideoPlayer({
       if (!d || typeof d !== 'object') return;
 
       let watched: number | null = null;
-      // vidapi MEDIA_DATA payload
+      // MEDIA_DATA payload
       if (d.type === 'MEDIA_DATA' && d.data?.progress?.watched != null) {
         watched = Number(d.data.progress.watched);
       } else if (d.type === 'PLAYER_EVENT' && d.data?.player_progress != null) {
         watched = Number(d.data.player_progress);
+      } else if (d.type === 'PLAYER_EVENT' && d.data?.currentTime != null) {
+        // vidsrc / vsembed player event payload
+        watched = Number(d.data.currentTime);
+      } else if (d.event === 'time' && d.currentTime != null) {
+        // generic { event:'time', currentTime } payload
+        watched = Number(d.currentTime);
+      } else if (typeof d.currentTime === 'number') {
+        watched = d.currentTime;
       }
       if (watched == null || Number.isNaN(watched) || watched < 0) return;
 
@@ -158,27 +166,19 @@ export default function VideoPlayer({
       return `https://www.youtube-nocookie.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&origin=${origin}`;
     }
 
-    // vidapi.qzz.io streaming provider
+    // vsembed / vidsrc-embed.ru — fast streaming provider.
+    // Supports Arabic default subtitles (ds_lang) + autoplay + autonext.
     const params = new URLSearchParams({
-      primaryColor: 'ff453a',   // Noir brand red
-      secondaryColor: '0a0a0a',
-      iconColor: 'FFFFFF',
-      icons: 'vid',
-      title: 'true',
-      poster: 'true',
-      autoplay: 'true',
+      autoplay: '1',
+      ds_lang: 'ar',   // default subtitle language: Arabic
     });
 
-    if (startAt && startAt > 5) {
-      params.set('startAt', String(Math.floor(startAt)));
-    }
-
     if (type === 'tv') {
-      params.set('nextbutton', 'true');
-      return `https://vidapi.qzz.io/tv/${id}/${season}/${episode}?${params.toString()}`;
+      params.set('autonext', '1');
+      return `https://vidsrc-embed.ru/embed/tv?tmdb=${id}&season=${season}&episode=${episode}&${params.toString()}`;
     }
 
-    return `https://vidapi.qzz.io/movie/${id}?${params.toString()}`;
+    return `https://vidsrc-embed.ru/embed/movie?tmdb=${id}&${params.toString()}`;
   };
 
   return (
