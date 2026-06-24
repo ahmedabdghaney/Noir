@@ -1126,6 +1126,7 @@ export default function App() {
                     viewAllHash="#watchlist"
                     items={watchlist}
                     onItemClick={handleTitleClick}
+                    onRemove={removeFromWatchlist}
                   />
 </div>
               )}

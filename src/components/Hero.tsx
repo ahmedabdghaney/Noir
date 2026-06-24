@@ -163,7 +163,7 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
             exit="exit"
             className="absolute inset-0 bg-cover bg-center"
             style={{
-              backgroundImage: `url(${activeItem.backdrop || activeItem.poster})`,
+              backgroundImage: `url(${(activeItem.backdrop || activeItem.poster || '').replace('/w1280', '/original').replace('/w500', '/original')})`,
             }}
           />
         </AnimatePresence>

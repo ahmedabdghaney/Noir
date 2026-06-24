@@ -4,7 +4,7 @@
  */
 
 import { useRef, useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, Star } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Star, X } from 'lucide-react';
 import { MovieOrShow } from '../types';
 
 interface MovieRowProps {
@@ -14,9 +14,10 @@ interface MovieRowProps {
   onItemClick: (item: MovieOrShow) => void;
   viewAllHash?: string;
   flush?: boolean;
+  onRemove?: (item: MovieOrShow) => void;
 }
 
-export default function MovieRow({ title, subtitle, items, onItemClick, viewAllHash, flush = false }: MovieRowProps) {
+export default function MovieRow({ title, subtitle, items, onItemClick, viewAllHash, flush = false, onRemove }: MovieRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
@@ -154,6 +155,19 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
               >
                 {/* Poster Artwork container */}
                 <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+                  {onRemove && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        onRemove(item);
+                      }}
+                      className="absolute top-2 left-2 z-10 w-8 h-8 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-0 group-hover/card:opacity-100 transition-all hover:bg-white/20 cursor-pointer"
+                      title="إزالة من قائمتي"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                   {item.poster || item.backdrop ? (
                     <img
                       src={item.poster || item.backdrop || undefined}

@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Dot, Star, Clock, Calendar, Globe, Languages, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DetailedInfo, MovieOrShow, CastMember } from '../types';
-import { fetchDetailedTitle, getPosterUrl, getBackdropUrl } from '../lib/tmdb';
+import { fetchDetailedTitle, getPosterUrl, getBackdropUrl, getOriginalBackdropUrl } from '../lib/tmdb';
 import VideoPlayer from './VideoPlayer';
 import MovieRow from './MovieRow';
 import { useWatchTogether } from '../lib/useWatchTogether';
@@ -159,33 +159,6 @@ export default function DetailView({
   const episodesRowRef = useRef<HTMLDivElement>(null);
   const [epShowLeft, setEpShowLeft] = useState(false);
   const [epShowRight, setEpShowRight] = useState(false);
-  const [watchedEps, setWatchedEps] = useState<number[]>([]);
-
-  // Load watched episodes for this season
-  useEffect(() => {
-    if (type !== 'tv' || !id) return;
-    try {
-      const key = `noir_watched_eps_${id}_s${selectedSeason}`;
-      const stored = localStorage.getItem(key);
-      setWatchedEps(stored ? JSON.parse(stored) : []);
-    } catch {
-      setWatchedEps([]);
-    }
-  }, [type, id, selectedSeason]);
-
-  const markEpisodeWatched = (epNum: number) => {
-    if (type !== 'tv' || !id) return;
-    try {
-      const key = `noir_watched_eps_${id}_s${selectedSeason}`;
-      const stored = localStorage.getItem(key);
-      const list: number[] = stored ? JSON.parse(stored) : [];
-      if (!list.includes(epNum)) {
-        const next = [...list, epNum];
-        localStorage.setItem(key, JSON.stringify(next));
-        setWatchedEps(next);
-      }
-    } catch { /* ignore */ }
-  };
 
   const checkEpScroll = () => {
     if (episodesRowRef.current) {
@@ -601,7 +574,7 @@ export default function DetailView({
         <div
           className="absolute inset-0 bg-cover bg-center ken-burns"
           style={{
-            backgroundImage: `url(${getBackdropUrl(data.backdrop_path) || getPosterUrl(data.poster_path) ||''})`,
+            backgroundImage: `url(${getOriginalBackdropUrl(data.backdrop_path) || getPosterUrl(data.poster_path) ||''})`,
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#08080a] via-[#08080a]/70 to-[#08080a]/20" />
@@ -1012,13 +985,12 @@ export default function DetailView({
                           key={ep.episode_number}
                           onClick={() => {
                             setSelectedEpisode(ep.episode_number);
-                            markEpisodeWatched(ep.episode_number);
                             handlePlayClick('movie');
                           }}
                           className="group/ep flex-none w-[300px] sm:w-[380px] text-right snap-start cursor-pointer"
                         >
                           {/* Card with image + overlaid text */}
-                          <div className="relative h-[280px] sm:h-[320px] rounded-3xl overflow-hidden bg-stone-900 border border-white/8 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.7)]">
+                          <div className={`relative h-[280px] sm:h-[320px] rounded-3xl overflow-hidden bg-stone-900 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.7)] ${selectedEpisode === ep.episode_number ? 'ring-2 ring-red-500/80' : 'border border-white/8'}`}>
                             {still ? (
                               <img
                                 src={still}
@@ -1035,17 +1007,6 @@ export default function DetailView({
 
                             {/* Bottom blur + gradient so overlaid text stays readable */}
                             <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/95 via-black/65 to-transparent backdrop-blur-[2px] [mask-image:linear-gradient(to_top,black_60%,transparent)]" />
-
-                            {/* Watched state: subtle dim + elegant check badge */}
-                            {watchedEps.includes(ep.episode_number) && (
-                              <>
-                                <div className="absolute inset-0 bg-black/45 pointer-events-none" />
-                                <div className="absolute top-3 left-3 flex items-center gap-1.5 glass-strong px-2.5 py-1 rounded-full">
-                                  <Check className="w-3 h-3 text-emerald-400" strokeWidth={3} />
-                                  <span className="text-[10px] font-bold text-white">شوهدت</span>
-                                </div>
-                              </>
-                            )}
 
                             {/* Hover play icon */}
                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/ep:opacity-100 transition-opacity">
