@@ -168,7 +168,17 @@ export default function VideoPlayer({
       return `https://www.youtube-nocookie.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&origin=${origin}`;
     }
 
-    // Two providers: vsembed (fast, default) + vidapi (fallback for missing titles)
+    // Three providers, ordered by coverage/quality. User can switch if one lacks a title.
+    // 1) vidsrc.cc — newest, widest library, documented PLAYER_EVENT for resume support
+    const buildVidsrcCC = () => {
+      if (type === 'tv') {
+        return `https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}?autoPlay=true&autoNext=true`;
+      }
+      const sa = startAt && startAt > 5 ? `&startAt=${Math.floor(startAt)}` : '';
+      return `https://vidsrc.cc/v2/embed/movie/${id}?autoPlay=true${sa}`;
+    };
+
+    // 2) vsembed / vidsrc-embed.ru — fast, Arabic default subs
     const buildVsembed = () => {
       const p = new URLSearchParams({ autoplay: '1', ds_lang: 'ar' });
       if (type === 'tv') {
@@ -178,6 +188,7 @@ export default function VideoPlayer({
       return `https://vidsrc-embed.ru/embed/movie?tmdb=${id}&${p.toString()}`;
     };
 
+    // 3) vidapi.qzz.io — fallback
     const buildVidApi = () => {
       const p = new URLSearchParams({
         primaryColor: 'ff453a',
@@ -196,12 +207,12 @@ export default function VideoPlayer({
       return `https://vidapi.qzz.io/movie/${id}?${p.toString()}`;
     };
 
-    const sources = [buildVsembed, buildVidApi];
+    const sources = [buildVidsrcCC, buildVsembed, buildVidApi];
     const idx = Math.min(sourceIdx, sources.length - 1);
     return sources[idx]();
   };
 
-  const SOURCE_LABELS = ['سيرفر 1 (سريع)', 'سيرفر 2'];
+  const SOURCE_LABELS = ['سيرفر 1', 'سيرفر 2', 'سيرفر 3'];
 
   return (
     <div ref={containerRef} className="w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl animate-fade-in text-right">
