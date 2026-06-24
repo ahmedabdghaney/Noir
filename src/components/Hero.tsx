@@ -66,13 +66,6 @@ const contentVariants = {
   }
 };
 
-/* ── Side-peek slide animation ── */
-const peekVariants = {
-  hidden: { opacity: 0, scale: 1.2 },
-  visible: { opacity: 1, scale: 1, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } },
-  exit: { opacity: 0, scale: 1.15, transition: { duration: 0.4, ease: 'easeIn' } },
-};
-
 function getHighRes(url: string | undefined) {
   if (!url) return '';
   return url.replace('/w1280', '/original').replace('/w500', '/original');
@@ -167,55 +160,48 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
           SIDE PEEK — Apple TV+ Style
           ══════════════════════════════════════ */}
 
-      {/* Right Peek (previous in RTL) */}
-      <div className="absolute top-0 bottom-0 right-0 w-[6%] sm:w-[8%] md:w-[10%] z-[2] overflow-hidden pointer-events-none">
+      {/* Right Peek — previous movie (RTL) */}
+      <div className="absolute top-0 bottom-0 right-0 w-[14%] sm:w-[12%] md:w-[10%] z-[1] overflow-hidden pointer-events-none">
         <AnimatePresence mode="wait">
           <motion.div
-            key={`peek-r-${currentIndex}`}
-            variants={peekVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className="absolute inset-0"
-          >
-            <img
-              src={getHighRes(prevItem?.backdrop || prevItem?.poster)}
-              alt=""
-              className="w-[350%] h-full object-cover object-center opacity-40 blur-[3px] brightness-[0.5] scale-110"
-              draggable={false}
-            />
-          </motion.div>
+            key={`pr-${currentIndex}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: `url(${getHighRes(prevItem?.backdrop || prevItem?.poster)})`,
+              transform: 'scaleX(2.5)',
+              transformOrigin: 'right center',
+            }}
+          />
         </AnimatePresence>
-        {/* Edge fade mask */}
-        <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-[#0a0a0a] z-[1]" />
       </div>
 
-      {/* Left Peek (next in RTL) */}
-      <div className="absolute top-0 bottom-0 left-0 w-[6%] sm:w-[8%] md:w-[10%] z-[2] overflow-hidden pointer-events-none">
+      {/* Left Peek — next movie (RTL) */}
+      <div className="absolute top-0 bottom-0 left-0 w-[14%] sm:w-[12%] md:w-[10%] z-[1] overflow-hidden pointer-events-none">
         <AnimatePresence mode="wait">
           <motion.div
-            key={`peek-l-${currentIndex}`}
-            variants={peekVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className="absolute inset-0"
-          >
-            <img
-              src={getHighRes(nextItem?.backdrop || nextItem?.poster)}
-              alt=""
-              className="w-[350%] h-full object-cover object-center opacity-40 blur-[3px] brightness-[0.5] scale-110"
-              draggable={false}
-            />
-          </motion.div>
+            key={`nl-${currentIndex}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: `url(${getHighRes(nextItem?.backdrop || nextItem?.poster)})`,
+              transform: 'scaleX(2.5)',
+              transformOrigin: 'left center',
+            }}
+          />
         </AnimatePresence>
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#0a0a0a] z-[1]" />
       </div>
 
       {/* ══════════════════════════════════════
           MAIN BACKDROP
           ══════════════════════════════════════ */}
-      <div className="absolute inset-0 overflow-hidden z-[3]">
+      <div className="absolute inset-0 overflow-hidden z-[2]">
         <AnimatePresence initial={false} custom={direction}>
           <motion.div
             key={currentIndex}
@@ -237,10 +223,11 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
           ══════════════════════════════════════ */}
       <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/55 to-transparent z-[5] pointer-events-none" />
       <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0a0a0a] to-transparent z-[5] pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/65 via-transparent to-[#0a0a0a]/25 z-[5] pointer-events-none" />
 
-      {/* Side gradient overlays — blend side peeks into center */}
-      <div className="absolute top-0 bottom-0 right-0 w-[12%] sm:w-[15%] md:w-[18%] bg-gradient-to-l from-[#0a0a0a]/80 to-transparent z-[4] pointer-events-none" />
-      <div className="absolute top-0 bottom-0 left-0 w-[10%] sm:w-[12%] md:w-[14%] bg-gradient-to-r from-[#0a0a0a]/60 to-transparent z-[4] pointer-events-none" />
+      {/* Shadow dividers to separate peek from main */}
+      <div className="absolute top-0 bottom-0 right-[10%] sm:right-[12%] md:right-[10%] w-16 sm:w-24 md:w-32 bg-gradient-to-l from-black/80 to-transparent z-[6] pointer-events-none" />
+      <div className="absolute top-0 bottom-0 left-[10%] sm:left-[12%] md:left-[10%] w-16 sm:w-20 md:w-24 bg-gradient-to-r from-black/60 to-transparent z-[6] pointer-events-none" />
 
       {/* ══════════════════════════════════════
           CONTENT
@@ -262,7 +249,7 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
                 <span>الأكثر رواجاً هذا الأسبوع</span>
               </div>
 
-              {/* Title (logo if available, else text) */}
+              {/* Title */}
               {activeLogo ? (
                 <img
                   src={activeLogo}
@@ -299,7 +286,7 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
                 {activeItem.overview}
               </p>
 
-              {/* Call to Actions */}
+              {/* Actions */}
               <div className="flex flex-wrap gap-2.5 sm:gap-3">
                 <button
                   onClick={() => onPlayClick(activeItem)}
@@ -322,7 +309,7 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
       </div>
 
       {/* ══════════════════════════════════════
-          NAVIGATION ARROWS
+          ARROWS
           ══════════════════════════════════════ */}
       <div className="absolute inset-y-0 left-0 right-0 z-20 flex justify-between items-center px-4 md:px-8 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-none">
         <button
