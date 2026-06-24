@@ -11,6 +11,7 @@ import VideoPlayer from './VideoPlayer';
 import MovieRow from './MovieRow';
 import { useWatchTogether } from '../lib/useWatchTogether';
 import { fetchSeasonEpisodes, EpisodeInfo, getStillUrl, getProfileUrl, getTitleLogoUrl } from '../lib/tmdb';
+import { fetchStreamingSources, dedupeSources, sourceTypeLabel, StreamingSource } from '../lib/watchmode';
 import { auth, addToFirestoreWatchlist, removeFromFirestoreWatchlist } from '../lib/firebase';
 
 interface DetailViewProps {
@@ -159,6 +160,22 @@ export default function DetailView({
   const episodesRowRef = useRef<HTMLDivElement>(null);
   const [epShowLeft, setEpShowLeft] = useState(false);
   const [epShowRight, setEpShowRight] = useState(false);
+  const [streamingSources, setStreamingSources] = useState<StreamingSource[]>([]);
+
+  // Fetch "available on" streaming sources from Watchmode
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    setStreamingSources([]);
+    fetchStreamingSources(type, id, 'US')
+      .then((src) => {
+        if (!cancelled) setStreamingSources(dedupeSources(src));
+      })
+      .catch(() => {
+        if (!cancelled) setStreamingSources([]);
+      });
+    return () => { cancelled = true; };
+  }, [type, id]);
 
   const checkEpScroll = () => {
     if (episodesRowRef.current) {
@@ -639,6 +656,29 @@ export default function DetailView({
                 {data.overview ||'لا يوجد وصف متاح بنسق اللغة العربية لهذا العنوان حالياً.'}
 </p>
 </div>
+
+            {/* Available on (Watchmode streaming sources) */}
+            {streamingSources.length > 0 && (
+              <div className="mb-5 sm:mb-6">
+                <h3 className="text-xs font-bold text-stone-400 mb-2.5">متوفر للمشاهدة الرسمية على</h3>
+                <div className="flex flex-wrap gap-2">
+                  {streamingSources.slice(0, 10).map((s) => (
+                    <a
+                      key={`${s.source_id}-${s.type}`}
+                      href={s.web_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="glass hover:bg-white/15 flex items-center gap-2 px-3 py-2 rounded-xl transition-all hover:scale-[1.03] cursor-pointer"
+                      title={`${s.name} — ${sourceTypeLabel(s.type)}`}
+                    >
+                      <span className="text-xs font-bold text-white">{s.name}</span>
+                      <span className="text-[9px] text-stone-400 font-semibold">{sourceTypeLabel(s.type)}</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
 
 
             {/* Action buttons: Resume/Play -> Start over -> Trailer -> Save(+) -> Share */}
