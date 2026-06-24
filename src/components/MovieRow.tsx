@@ -99,15 +99,6 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
               </h2>
             )}
           </div>
-          {viewAllHash && (
-            <a
-              href={viewAllHash}
-              className="group/all flex items-center gap-1 text-red-500 hover:text-red-400 text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap"
-            >
-              <span>عرض الكل</span>
-              <ChevronLeft className="w-3.5 h-3.5 transition-transform group-hover/all:-translate-x-1" />
-            </a>
-          )}
         </div>
       </div>
 

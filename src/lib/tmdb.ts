@@ -48,7 +48,7 @@ async function tmdbFetch(path: string, params: Record<string, any> = {}): Promis
 export const getPosterUrl = (path: string | null) => path ? `${IMG_BASE}/w500${path}` : null;
 export const getBackdropUrl = (path: string | null) => path ? `${IMG_BASE}/w1280${path}` : null;
 export const getProfileUrl = (path: string | null) => path ? `${IMG_BASE}/w185${path}` : null;
-export const getStillUrl = (path: string | null) => path ? `${IMG_BASE}/w454_and_h254_bestv2${path}` : null;
+export const getStillUrl = (path: string | null) => path ? `${IMG_BASE}/w780${path}` : null;
 
 // Normalize utility
 export function normalizeItem(item: any, customType?: 'movie' | 'tv'): MovieOrShow {
@@ -141,10 +141,20 @@ export async function fetchPopularMovies(): Promise<MovieOrShow[]> {
 // Detailed queries
 export async function fetchDetailedTitle(type: 'movie' | 'tv', id: number): Promise<DetailedInfo> {
   return await tmdbFetch(`/${type}/${id}`, {
-    append_to_response: 'videos,credits,similar',
+    append_to_response: 'videos,credits,similar,images',
+    include_image_language: 'en,null',
     language: 'en-US',
   });
 }
+
+// Picks the best title logo (prefers English, falls back to any) from TMDB images
+export const getTitleLogoUrl = (data: any): string | null => {
+  const logos = data?.images?.logos;
+  if (!logos || logos.length === 0) return null;
+  const en = logos.find((l: any) => l.iso_639_1 === 'en');
+  const chosen = en || logos[0];
+  return chosen?.file_path ? `${IMG_BASE}/w500${chosen.file_path}` : null;
+};
 
 export interface EpisodeInfo {
   episode_number: number;

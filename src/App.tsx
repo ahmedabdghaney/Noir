@@ -1302,17 +1302,17 @@ export default function App() {
                         key={`${item.type}-${item.id}`}
                         onClick={() => handleTitleClick(item)}
                         style={{ animationDelay: `${idx * 40}ms` }}
-                        className="card-transition cursor-pointer transition-all duration-350 hover:bg-stone-900/60 hover:shadow-xl rounded-2xl p-2 pb-3.5 border border-white/5 bg-stone-950 hover:scale-[1.03] active:scale-[0.98]"
+                        className="group/card card-transition cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
                       >
                         {/* Poster Artwork container */}
-                        <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-white/5 shadow-md">
+                        <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
                           {item.poster || item.backdrop ? (
                             <img
                               src={item.poster || item.backdrop || undefined}
                               alt={item.title}
                               loading="lazy"
                               referrerPolicy="no-referrer"
-                              className="w-full h-full object-cover select-none"
+                              className="w-full h-full object-cover select-none transition-transform duration-500"
                             />
                           ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center p-3 text-stone-600 bg-stone-950">
@@ -1322,9 +1322,12 @@ export default function App() {
 </div>
                           )}
 
-                          {/* Rating stamp directly overlaying backdrop */}
+                          {/* Subtle gradient at bottom of poster for depth */}
+                          <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+                          {/* Rating stamp */}
                           {hasScore && (
-                            <div className="absolute bottom-2 right-2 bg-black/85 backdrop-blur-md text-[#f5c518] text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 border border-white/5">
+                            <div className="absolute bottom-2 right-2 glass text-[#f5c518] text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5">
                               <Star className="w-2.5 h-2.5 fill-current" />
                               <span>{item.rating.toFixed(1)}</span>
 </div>
@@ -1332,7 +1335,7 @@ export default function App() {
 
                           {/* Watch progression indicator red bar */}
                           {progress > 0 && (
-                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-stone-800">
+                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40">
                               <div 
                                 className="h-full bg-red-600 transition-all duration-300" 
                                 style={{ width: `${progress}%` }}

@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Play, Info, Flame, ChevronRight, ChevronLeft, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MovieOrShow } from '../types';
+import { fetchDetailedTitle, getTitleLogoUrl } from '../lib/tmdb';
 
 interface HeroProps {
   trendingItems: MovieOrShow[];
@@ -108,6 +109,25 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
 
   const activeItem = activePool[currentIndex];
 
+  // Lazy-load TMDB title logos for hero items (cache by type-id)
+  const [logoCache, setLogoCache] = useState<Record<string, string | null>>({});
+  useEffect(() => {
+    if (!activeItem) return;
+    const key = `${activeItem.type}-${activeItem.id}`;
+    if (key in logoCache) return;
+    let cancelled = false;
+    fetchDetailedTitle(activeItem.type, activeItem.id)
+      .then((d) => {
+        if (!cancelled) setLogoCache((c) => ({ ...c, [key]: getTitleLogoUrl(d) }));
+      })
+      .catch(() => {
+        if (!cancelled) setLogoCache((c) => ({ ...c, [key]: null }));
+      });
+    return () => { cancelled = true; };
+  }, [activeItem]);
+
+  const activeLogo = activeItem ? logoCache[`${activeItem.type}-${activeItem.id}`] : null;
+
   const handlePrev = () => {
     setDirection(-1);
     setCurrentIndex((prev) => (prev - 1 + activePool.length) % activePool.length);
@@ -170,10 +190,19 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
                 <span>الأكثر رواجاً هذا الأسبوع</span>
               </div>
 
-              {/* Title */}
-              <h1 className="font-display text-3xl sm:text-5xl md:text-7xl font-black tracking-tight mb-2 sm:mb-4 text-gradient-noir line-clamp-2 leading-[1.05] drop-shadow-2xl">
-                {activeItem.title}
-              </h1>
+              {/* Title (logo if available, else text) */}
+              {activeLogo ? (
+                <img
+                  src={activeLogo}
+                  alt={activeItem.title}
+                  referrerPolicy="no-referrer"
+                  className="max-h-24 sm:max-h-36 md:max-h-44 max-w-[300px] sm:max-w-[480px] object-contain object-right mb-2 sm:mb-4 drop-shadow-2xl select-none"
+                />
+              ) : (
+                <h1 className="font-display text-3xl sm:text-5xl md:text-7xl font-black tracking-tight mb-2 sm:mb-4 text-gradient-noir line-clamp-2 leading-[1.05] drop-shadow-2xl">
+                  {activeItem.title}
+                </h1>
+              )}
 
               {/* Metadata */}
               <div className="flex items-center gap-3.5 text-xs text-gray-300 font-medium mb-3 sm:mb-4 justify-start">

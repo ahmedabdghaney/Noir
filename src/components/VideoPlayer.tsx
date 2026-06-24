@@ -52,7 +52,6 @@ export default function VideoPlayer({
   onNextEpisode,
 }: VideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
-  const [sourceIdx, setSourceIdx] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Watch progression state
@@ -155,7 +154,6 @@ export default function VideoPlayer({
       containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     setIsLoading(true);
-    setSourceIdx(0);
     // Reload progress percent for shift
     const saved = Number(localStorage.getItem(`noir_progress_${type}_${id}`)) || 0;
     setProgress(saved);
@@ -168,48 +166,23 @@ export default function VideoPlayer({
       return `https://www.youtube-nocookie.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&origin=${origin}`;
     }
 
-    // Three iframe-friendly providers. vidapi default; 2embed + vidlink as fallbacks.
-    // 1) vidapi.qzz.io — reliable inside iframe, autoplay, brand colors
-    const buildVidApi = () => {
-      const p = new URLSearchParams({
-        primaryColor: 'ff453a',
-        secondaryColor: '0a0a0a',
-        iconColor: 'FFFFFF',
-        icons: 'vid',
-        title: 'true',
-        poster: 'true',
-        autoplay: 'true',
-      });
-      if (startAt && startAt > 5) p.set('startAt', String(Math.floor(startAt)));
-      if (type === 'tv') {
-        p.set('nextbutton', 'true');
-        return `https://vidapi.qzz.io/tv/${id}/${season}/${episode}?${p.toString()}`;
-      }
-      return `https://vidapi.qzz.io/movie/${id}?${p.toString()}`;
-    };
-
-    // 2) 2embed.online
-    const build2Embed = () => {
-      if (type === 'tv') {
-        return `https://www.2embed.online/embed/tv/${id}/${season}/${episode}`;
-      }
-      return `https://www.2embed.online/embed/movie/${id}`;
-    };
-
-    // 3) vidlink.pro
-    const buildVidlink = () => {
-      if (type === 'tv') {
-        return `https://vidlink.pro/tv/${id}/${season}/${episode}?autoplay=true`;
-      }
-      return `https://vidlink.pro/movie/${id}?autoplay=true`;
-    };
-
-    const sources = [buildVidApi, build2Embed, buildVidlink];
-    const idx = Math.min(sourceIdx, sources.length - 1);
-    return sources[idx]();
+    // vidapi.qzz.io — single source, reliable inside iframe, autoplay
+    const params = new URLSearchParams({
+      primaryColor: 'ff453a',
+      secondaryColor: '0a0a0a',
+      iconColor: 'FFFFFF',
+      icons: 'vid',
+      title: 'true',
+      poster: 'true',
+      autoplay: 'true',
+    });
+    if (startAt && startAt > 5) params.set('startAt', String(Math.floor(startAt)));
+    if (type === 'tv') {
+      params.set('nextbutton', 'true');
+      return `https://vidapi.qzz.io/tv/${id}/${season}/${episode}?${params.toString()}`;
+    }
+    return `https://vidapi.qzz.io/movie/${id}?${params.toString()}`;
   };
-
-  const SOURCE_LABELS = ['سيرفر 1', 'سيرفر 2', 'سيرفر 3'];
 
   return (
     <div ref={containerRef} className="w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl animate-fade-in text-right">
@@ -336,10 +309,10 @@ export default function VideoPlayer({
             />
           ) : (
             <iframe
-              key={`player-${sourceIdx}-${id}-${episode}`}
+              key={`player-${id}-${episode}`}
               src={isPausedByHost ? 'about:blank' : getEmbedUrl()}
               allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-              {...(sourceIdx === 2 ? {} : { sandbox: 'allow-scripts allow-same-origin allow-presentation allow-forms' })}
+              sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
               referrerPolicy="no-referrer"
               allowFullScreen
               className="w-full h-full border-0 relative z-0"
@@ -376,33 +349,6 @@ export default function VideoPlayer({
 </div>
 </div>
           )}</div>
-
-         {/* Source switcher — all three support iframe embedding */}
-        {playMode ==='movie' && (
-          <div className="px-4 py-3 glass-strong border-t border-white/8 flex items-center justify-between gap-3 flex-wrap">
-            <span className="text-[11px] text-gray-400 font-bold">
-              الفيلم لا يعمل؟ بدّل السيرفر
-            </span>
-            <div className="flex flex-wrap gap-2" dir="rtl">
-              {SOURCE_LABELS.map((label, i) => (
-                <button
-                  key={i}
-                  onClick={() => {
-                    setSourceIdx(i);
-                    setIsLoading(true);
-                  }}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
-                    sourceIdx === i
-                      ? 'bg-white text-black'
-                      : 'bg-white/8 text-white hover:bg-white/15'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
          {/* Browser sandbox notification details */}
         {playMode ==='movie' && (

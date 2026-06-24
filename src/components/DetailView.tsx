@@ -10,7 +10,7 @@ import { fetchDetailedTitle, getPosterUrl, getBackdropUrl } from '../lib/tmdb';
 import VideoPlayer from './VideoPlayer';
 import MovieRow from './MovieRow';
 import { useWatchTogether } from '../lib/useWatchTogether';
-import { fetchSeasonEpisodes, EpisodeInfo, getStillUrl, getProfileUrl } from '../lib/tmdb';
+import { fetchSeasonEpisodes, EpisodeInfo, getStillUrl, getProfileUrl, getTitleLogoUrl } from '../lib/tmdb';
 import { auth, addToFirestoreWatchlist, removeFromFirestoreWatchlist } from '../lib/firebase';
 
 interface DetailViewProps {
@@ -397,6 +397,7 @@ export default function DetailView({
   }
 
   const title = data.title || (data as any).name ||'غير معروف';
+  const titleLogo = getTitleLogoUrl(data);
   const year = (data.release_date || data.first_air_date ||'').slice(0, 4);
   const runtime = data.runtime || (data.episode_run_time && data.episode_run_time[0]) || 0;
   const genres = data.genres ? data.genres.map((g) => g.name) : [];
@@ -559,9 +560,18 @@ export default function DetailView({
           {/* Text Information pane (Right side in standard RTL layouts) */}
           <div className="order-2 md:order-2 flex flex-col items-start text-right min-w-0 pr-0 md:pr-4 w-full">
             
-            <h1 className="font-display text-3xl sm:text-4xl md:text-6xl font-black text-gradient-noir mb-2 sm:mb-3 tracking-tight leading-[1.05] select-all drop-shadow-2xl">
-              {title}
+            {titleLogo ? (
+              <img
+                src={titleLogo}
+                alt={title}
+                referrerPolicy="no-referrer"
+                className="max-h-20 sm:max-h-28 md:max-h-36 max-w-[280px] sm:max-w-[420px] object-contain object-right mb-3 sm:mb-4 drop-shadow-2xl select-none"
+              />
+            ) : (
+              <h1 className="font-display text-3xl sm:text-4xl md:text-6xl font-black text-gradient-noir mb-2 sm:mb-3 tracking-tight leading-[1.05] select-all drop-shadow-2xl">
+                {title}
 </h1>
+            )}
 
             {/* Tagline */}
             {data.tagline && (
@@ -981,7 +991,7 @@ export default function DetailView({
                                 <p className="text-white/65 text-[11px] leading-relaxed line-clamp-3 mb-2.5">{ep.overview}</p>
                               ) : <div className="mb-2.5" />}
 
-                              {/* Footer: runtime + more */}
+                              {/* Footer: runtime */}
                               <div className="flex items-center justify-between">
                                 {ep.runtime ? (
                                   <span className="flex items-center gap-1.5 text-xs font-bold text-white">
@@ -989,7 +999,6 @@ export default function DetailView({
                                     {ep.runtime}د
                                   </span>
                                 ) : <span />}
-                                <span className="text-white/50 text-lg leading-none font-black tracking-widest">···</span>
                               </div>
                             </div>
                           </div>
