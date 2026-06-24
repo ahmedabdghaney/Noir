@@ -66,11 +66,6 @@ const contentVariants = {
   }
 };
 
-function getHighRes(url: string | undefined) {
-  if (!url) return '';
-  return url.replace('/w1280', '/original').replace('/w500', '/original');
-}
-
 export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(1);
@@ -135,6 +130,11 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
 
   const activeLogo = activeItem ? logoCache[`${activeItem.type}-${activeItem.id}`] : null;
 
+  const getHighRes = (url: string | undefined) => {
+    if (!url) return '';
+    return url.replace('/w1280', '/original').replace('/w500', '/original');
+  };
+
   const handlePrev = () => {
     setDirection(-1);
     setCurrentIndex((prev) => (prev - 1 + activePool.length) % activePool.length);
@@ -155,53 +155,9 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
 
   return (
     <div className="relative h-[68vh] sm:h-[88vh] min-h-[500px] sm:min-h-[680px] max-h-[920px] w-full overflow-hidden mb-10 sm:mb-14 flex items-end group select-none">
-
-      {/* ══════════════════════════════════════
-          SIDE PEEK — Apple TV+ Style
-          ══════════════════════════════════════ */}
-
-      {/* Right Peek — previous movie (RTL) */}
-      <div className="absolute top-0 bottom-0 right-0 w-[14%] sm:w-[12%] md:w-[10%] z-[1] overflow-hidden pointer-events-none">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`pr-${currentIndex}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute inset-0 bg-cover bg-center"
-            style={{
-              backgroundImage: `url(${getHighRes(prevItem?.backdrop || prevItem?.poster)})`,
-              transform: 'scaleX(2.5)',
-              transformOrigin: 'right center',
-            }}
-          />
-        </AnimatePresence>
-      </div>
-
-      {/* Left Peek — next movie (RTL) */}
-      <div className="absolute top-0 bottom-0 left-0 w-[14%] sm:w-[12%] md:w-[10%] z-[1] overflow-hidden pointer-events-none">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`nl-${currentIndex}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute inset-0 bg-cover bg-center"
-            style={{
-              backgroundImage: `url(${getHighRes(nextItem?.backdrop || nextItem?.poster)})`,
-              transform: 'scaleX(2.5)',
-              transformOrigin: 'left center',
-            }}
-          />
-        </AnimatePresence>
-      </div>
-
-      {/* ══════════════════════════════════════
-          MAIN BACKDROP
-          ══════════════════════════════════════ */}
-      <div className="absolute inset-0 overflow-hidden z-[2]">
+      
+      {/* Background with custom container */}
+      <div className="absolute inset-0 overflow-hidden">
         <AnimatePresence initial={false} custom={direction}>
           <motion.div
             key={currentIndex}
@@ -212,26 +168,51 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
             exit="exit"
             className="absolute inset-0 bg-cover bg-center"
             style={{
-              backgroundImage: `url(${getHighRes(activeItem.backdrop || activeItem.poster)})`,
+              backgroundImage: `url(${(activeItem.backdrop || activeItem.poster || '').replace('/w1280', '/original').replace('/w500', '/original')})`,
             }}
           />
         </AnimatePresence>
+        
+        {/* Shadow overlays - Clean gradient masks */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/55 to-transparent z-[5] pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0a0a0a] to-transparent z-[5] pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/65 via-transparent to-[#0a0a0a]/25 z-[5] pointer-events-none" />
       </div>
 
-      {/* ══════════════════════════════════════
-          GRADIENT OVERLAYS
-          ══════════════════════════════════════ */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/55 to-transparent z-[5] pointer-events-none" />
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0a0a0a] to-transparent z-[5] pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/65 via-transparent to-[#0a0a0a]/25 z-[5] pointer-events-none" />
+      {/* ═══ Side Peek — Apple TV+ Style ═══ */}
+      {activePool.length > 1 && (
+        <>
+          {/* Right side — previous movie (RTL) */}
+          <div
+            className="absolute top-0 bottom-0 right-0 w-[10%] md:w-[8%] bg-cover bg-center overflow-hidden pointer-events-none z-[3] transition-opacity duration-700"
+            style={{
+              backgroundImage: `url(${getHighRes(prevItem?.backdrop || prevItem?.poster)})`,
+              backgroundPosition: 'center',
+              transform: 'scaleX(3)',
+              transformOrigin: 'right center',
+              opacity: 0.35,
+              filter: 'brightness(0.5)',
+            }}
+          />
+          {/* Left side — next movie (RTL) */}
+          <div
+            className="absolute top-0 bottom-0 left-0 w-[10%] md:w-[8%] bg-cover bg-center overflow-hidden pointer-events-none z-[3] transition-opacity duration-700"
+            style={{
+              backgroundImage: `url(${getHighRes(nextItem?.backdrop || nextItem?.poster)})`,
+              backgroundPosition: 'center',
+              transform: 'scaleX(3)',
+              transformOrigin: 'left center',
+              opacity: 0.35,
+              filter: 'brightness(0.5)',
+            }}
+          />
+          {/* Shadow dividers */}
+          <div className="absolute top-0 bottom-0 right-[8%] md:right-[8%] w-24 bg-gradient-to-l from-[#0a0a0a] to-transparent pointer-events-none z-[4]" />
+          <div className="absolute top-0 bottom-0 left-[8%] md:left-[8%] w-24 bg-gradient-to-r from-[#0a0a0a] to-transparent pointer-events-none z-[4]" />
+        </>
+      )}
 
-      {/* Shadow dividers to separate peek from main */}
-      <div className="absolute top-0 bottom-0 right-[10%] sm:right-[12%] md:right-[10%] w-16 sm:w-24 md:w-32 bg-gradient-to-l from-black/80 to-transparent z-[6] pointer-events-none" />
-      <div className="absolute top-0 bottom-0 left-[10%] sm:left-[12%] md:left-[10%] w-16 sm:w-20 md:w-24 bg-gradient-to-r from-black/60 to-transparent z-[6] pointer-events-none" />
-
-      {/* ══════════════════════════════════════
-          CONTENT
-          ══════════════════════════════════════ */}
+      {/* Hero Slide Contents - Animated concurrently */}
       <div className="absolute inset-x-0 bottom-0 z-10 w-full px-4 sm:px-12 pb-6 sm:pb-20 md:pb-24 pointer-events-none">
         <div className="max-w-xl text-right md:text-right pointer-events-auto">
           <AnimatePresence initial={false} mode="wait">
@@ -249,7 +230,7 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
                 <span>الأكثر رواجاً هذا الأسبوع</span>
               </div>
 
-              {/* Title */}
+              {/* Title (logo if available, else text) */}
               {activeLogo ? (
                 <img
                   src={activeLogo}
@@ -286,7 +267,7 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
                 {activeItem.overview}
               </p>
 
-              {/* Actions */}
+              {/* Call to Actions */}
               <div className="flex flex-wrap gap-2.5 sm:gap-3">
                 <button
                   onClick={() => onPlayClick(activeItem)}
@@ -308,9 +289,7 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
         </div>
       </div>
 
-      {/* ══════════════════════════════════════
-          ARROWS
-          ══════════════════════════════════════ */}
+      {/* Manual Sliding Arrows */}
       <div className="absolute inset-y-0 left-0 right-0 z-20 flex justify-between items-center px-4 md:px-8 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-none">
         <button
           onClick={handlePrev}
@@ -328,9 +307,7 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
         </button>
       </div>
 
-      {/* ══════════════════════════════════════
-          DOTS
-          ══════════════════════════════════════ */}
+      {/* Slider Indicator Dots in Center */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
         {activePool.map((_, i) => (
           <button
