@@ -8,7 +8,7 @@ import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, 
 import LogoIcon from './components/LogoIcon';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { auth, loginWithGoogle, logoutUser, signInWithEmail, signUpWithEmail, resetPassword, checkSignInMethods, translateAuthError, fetchFirestoreWatchlist, db, sendVerification, removeFromFirestoreWatchlist, addToFirestoreWatchlist } from './lib/firebase';
+import { auth, loginWithGoogle, logoutUser, signInWithEmail, signUpWithEmail, resetPassword, checkSignInMethods, translateAuthError, fetchFirestoreWatchlist, db, sendVerification, removeFromFirestoreWatchlist } from './lib/firebase';
 import { MovieOrShow } from './types';
 import {
   initializeGenres,
@@ -725,27 +725,6 @@ export default function App() {
     }
   };
 
-  const isInWatchlist = (item: MovieOrShow) =>
-    watchlist.some((w) => w.id === item.id && w.type === item.type);
-
-  const toggleWatchlistItem = (item: MovieOrShow) => {
-    if (isInWatchlist(item)) {
-      removeFromWatchlist(item);
-    } else {
-      const next = [item, ...watchlist];
-      setWatchlist(next);
-      localStorage.setItem('noir_watchlist', JSON.stringify(next));
-      const curUser = auth.currentUser;
-      if (curUser) {
-        addToFirestoreWatchlist(curUser.uid, {
-          id: item.id, type: item.type, title: item.title,
-          poster: item.poster, backdrop: item.backdrop, rating: item.rating,
-          year: item.year, genres: item.genres,
-        } as any).catch((e) => console.error('Failed to add to cloud watchlist:', e));
-      }
-    }
-  };
-
   const handleQuickSelectTitle = (type: 'movie' | 'tv', id: number) => {
     window.location.hash =`#${type}/${id}`;
   };
@@ -1136,9 +1115,6 @@ export default function App() {
               trendingItems={trendingWeek}
               onPlayClick={(item) => handleTitleClick(item)}
               onInfoClick={(item) => handleTitleClick(item)}
-              onTrailerClick={(item) => handleTitleClick(item)}
-              isSaved={isInWatchlist}
-              onToggleSave={toggleWatchlistItem}
             />
 
             {/* Custom Horizontal Cinema Rows */}
