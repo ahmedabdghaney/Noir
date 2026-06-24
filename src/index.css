@@ -252,13 +252,13 @@ button, a {
 
 /* === Apple-TV motion polish === */
 
-/* Detail page entrance: gentle fade + scale up */
+/* Detail page entrance: gentle scale up (no opacity to avoid hidden-content risk) */
 @keyframes detail-enter {
-  from { opacity: 0; transform: scale(0.985) translateY(8px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from { transform: scale(0.99) translateY(6px); }
+  to { transform: scale(1) translateY(0); }
 }
 .detail-enter {
-  animation: detail-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: detail-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* Slow ken-burns zoom for hero/backdrop imagery */

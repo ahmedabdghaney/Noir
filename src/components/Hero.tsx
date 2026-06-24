@@ -69,6 +69,7 @@ const contentVariants = {
 export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(1);
+  const [logoCache, setLogoCache] = useState<Record<string, string | null>>({});
   const rotationTimer = useRef<NodeJS.Timeout | null>(null);
 
   const activePool = trendingItems.slice(0, 20);
@@ -90,6 +91,24 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
     };
   }, [activePool.length]);
 
+  // Lazy-load TMDB title logos for the active hero item (cache by type-id)
+  const activeItemForLogo = activePool[currentIndex];
+  useEffect(() => {
+    if (!activeItemForLogo || !activeItemForLogo.id || !activeItemForLogo.type) return;
+    const key = `${activeItemForLogo.type}-${activeItemForLogo.id}`;
+    if (key in logoCache) return;
+    let cancelled = false;
+    fetchDetailedTitle(activeItemForLogo.type, activeItemForLogo.id)
+      .then((d) => {
+        if (!cancelled) setLogoCache((c) => ({ ...c, [key]: getTitleLogoUrl(d) }));
+      })
+      .catch(() => {
+        if (!cancelled) setLogoCache((c) => ({ ...c, [key]: null }));
+      });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeItemForLogo?.id, activeItemForLogo?.type]);
+
   if (!activePool.length) {
     // Skeletons
     return (
@@ -108,23 +127,6 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
   }
 
   const activeItem = activePool[currentIndex];
-
-  // Lazy-load TMDB title logos for hero items (cache by type-id)
-  const [logoCache, setLogoCache] = useState<Record<string, string | null>>({});
-  useEffect(() => {
-    if (!activeItem) return;
-    const key = `${activeItem.type}-${activeItem.id}`;
-    if (key in logoCache) return;
-    let cancelled = false;
-    fetchDetailedTitle(activeItem.type, activeItem.id)
-      .then((d) => {
-        if (!cancelled) setLogoCache((c) => ({ ...c, [key]: getTitleLogoUrl(d) }));
-      })
-      .catch(() => {
-        if (!cancelled) setLogoCache((c) => ({ ...c, [key]: null }));
-      });
-    return () => { cancelled = true; };
-  }, [activeItem]);
 
   const activeLogo = activeItem ? logoCache[`${activeItem.type}-${activeItem.id}`] : null;
 
