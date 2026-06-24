@@ -538,12 +538,12 @@ export default function DetailView({
     : [];
 
   return (
-    <div className="w-full text-right">
+    <div className="w-full text-right detail-enter">
       
       {/* Immersive backdrop background section */}
       <div className="relative w-full h-[35vh] md:h-[45vh] overflow-hidden select-none mb-4">
         <div
-          className="absolute inset-0 bg-cover bg-center"
+          className="absolute inset-0 bg-cover bg-center ken-burns"
           style={{
             backgroundImage: `url(${getBackdropUrl(data.backdrop_path) || getPosterUrl(data.poster_path) ||''})`,
           }}
@@ -573,12 +573,7 @@ export default function DetailView({
 </h1>
             )}
 
-            {/* Tagline */}
-            {data.tagline && (
-              <p className="text-red-400/90 text-xs sm:text-sm md:text-base font-semibold italic mb-3 sm:mb-4 leading-normal">
-"{data.tagline}"
-</p>
-            )}
+
 
             {/* Row Meta Metrics */}
             <div className="flex flex-wrap items-center gap-2 sm:gap-3.5 text-[11px] sm:text-xs md:text-sm text-gray-300 font-semibold mb-3 sm:mb-4 leading-none">
