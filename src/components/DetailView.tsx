@@ -167,7 +167,7 @@ export default function DetailView({
     if (!id) return;
     let cancelled = false;
     setStreamingSources([]);
-    fetchStreamingSources(type, id, 'US')
+    fetchStreamingSources(type, id)
       .then((src) => {
         if (!cancelled) setStreamingSources(dedupeSources(src));
       })

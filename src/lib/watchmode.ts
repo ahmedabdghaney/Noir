@@ -21,22 +21,36 @@ const sourcesCache = new Map<string, StreamingSource[]>();
 
 /**
  * Fetch streaming sources for a title by its TMDB id.
- * Uses Watchmode's TMDB-format lookup: movie-{id} or tv-{id}.
+ * Step 1: resolve TMDB id -> Watchmode id via /search/
+ * Step 2: fetch /title/{wmId}/sources/
  */
 export async function fetchStreamingSources(
   type: 'movie' | 'tv',
   tmdbId: number,
-  regions: string = 'US'
+  regions: string = ''
 ): Promise<StreamingSource[]> {
-  const cacheKey = `${type}-${tmdbId}-${regions}`;
+  const cacheKey = `${type}-${tmdbId}-${regions || 'all'}`;
   if (sourcesCache.has(cacheKey)) return sourcesCache.get(cacheKey)!;
 
   try {
-    const wmId = `${type}-${tmdbId}`;
-    const url = `${WM_BASE}/title/${wmId}/sources/?apiKey=${WATCHMODE_KEY}&regions=${regions}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Watchmode ${res.status}`);
-    const data = await res.json();
+    // Step 1: resolve to Watchmode ID
+    const searchField = type === 'movie' ? 'tmdb_movie_id' : 'tmdb_tv_id';
+    const searchUrl = `${WM_BASE}/search/?apiKey=${WATCHMODE_KEY}&search_field=${searchField}&search_value=${tmdbId}`;
+    const searchRes = await fetch(searchUrl);
+    if (!searchRes.ok) throw new Error(`Watchmode search ${searchRes.status}`);
+    const searchData = await searchRes.json();
+    const wmId = searchData?.title_results?.[0]?.id;
+    if (!wmId) {
+      sourcesCache.set(cacheKey, []);
+      return [];
+    }
+
+    // Step 2: fetch sources
+    const regionParam = regions ? `&regions=${regions}` : '';
+    const srcUrl = `${WM_BASE}/title/${wmId}/sources/?apiKey=${WATCHMODE_KEY}${regionParam}`;
+    const srcRes = await fetch(srcUrl);
+    if (!srcRes.ok) throw new Error(`Watchmode sources ${srcRes.status}`);
+    const data = await srcRes.json();
     const list: StreamingSource[] = Array.isArray(data) ? data : [];
     sourcesCache.set(cacheKey, list);
     return list;

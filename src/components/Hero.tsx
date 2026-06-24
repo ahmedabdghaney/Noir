@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useRef } from 'react';
-import { Play, Info, Flame, ChevronRight, ChevronLeft, Star } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Play, Plus, Check, ChevronRight, ChevronLeft, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MovieOrShow } from '../types';
 import { fetchDetailedTitle, getTitleLogoUrl } from '../lib/tmdb';
@@ -13,272 +13,230 @@ interface HeroProps {
   trendingItems: MovieOrShow[];
   onPlayClick: (item: MovieOrShow) => void;
   onInfoClick: (item: MovieOrShow) => void;
+  onTrailerClick?: (item: MovieOrShow) => void;
+  onShareClick?: (item: MovieOrShow) => void;
+  isSaved?: (item: MovieOrShow) => boolean;
+  onToggleSave?: (item: MovieOrShow) => void;
 }
 
-const slideVariants = {
-  enter: (direction: number) => ({
-    x: direction > 0 ? '100%' : '-100%',
-    scale: 1.04,
-    opacity: 0,
-  }),
-  center: {
-    x: 0,
-    opacity: 1,
-    scale: 1.14, // Beautiful continuous Ken Burns style slow zoom
-    transition: {
-      x: { duration: 1.4, ease: [0.16, 1, 0.3, 1] }, // Entering is slow
-      opacity: { duration: 1.1, ease: 'easeOut' },
-      scale: { duration: 9, ease: 'linear' }, // Ken Burns slow zoom
-    }
-  },
-  exit: (direction: number) => ({
-    x: direction > 0 ? '-100%' : '100%',
-    opacity: 0,
-    scale: 1.18,
-    transition: {
-      x: { duration: 0.42, ease: [0.3, 0, 0.7, 0] }, // Exiting is fast
-      opacity: { duration: 0.35, ease: 'easeIn' },
-      scale: { duration: 0.42, ease: 'easeIn' }
-    }
-  })
-};
-
-const contentVariants = {
-  enter: {
-    y: 25,
-    opacity: 0,
-  },
-  center: {
-    y: 0,
-    opacity: 1,
-    transition: {
-      y: { duration: 1.3, ease: [0.16, 1, 0.3, 1] }, // Entering of next card content is slow
-      opacity: { duration: 1.0, ease: 'easeOut' },
-    }
-  },
-  exit: {
-    y: -20,
-    opacity: 0,
-    transition: {
-      y: { duration: 0.35, ease: 'easeInOut' }, // Exit is fast
-      opacity: { duration: 0.3, ease: 'easeIn' },
-    }
-  }
-};
-
-export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroProps) {
+export default function Hero({
+  trendingItems,
+  onPlayClick,
+  onInfoClick,
+  onTrailerClick,
+  onShareClick,
+  isSaved,
+  onToggleSave,
+}: HeroProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [logoCache, setLogoCache] = useState<Record<string, string | null>>({});
-  const rotationTimer = useRef<NodeJS.Timeout | null>(null);
 
-  const activePool = trendingItems.slice(0, 20);
+  const activePool = trendingItems.slice(0, 12);
 
-  const startTimer = () => {
-    if (rotationTimer.current) clearInterval(rotationTimer.current);
-    if (activePool.length > 1) {
-      rotationTimer.current = setInterval(() => {
-        setDirection(1);
-        setCurrentIndex((prev) => (prev + 1) % activePool.length);
-      }, 7500);
-    }
-  };
-
+  // Auto-rotate
   useEffect(() => {
-    startTimer();
-    return () => {
-      if (rotationTimer.current) clearInterval(rotationTimer.current);
-    };
+    if (activePool.length <= 1) return;
+    const timer = setInterval(() => {
+      setDirection(1);
+      setCurrentIndex((prev) => (prev + 1) % activePool.length);
+    }, 8000);
+    return () => clearInterval(timer);
   }, [activePool.length]);
 
-  // Lazy-load TMDB title logos for the active hero item (cache by type-id)
-  const activeItemForLogo = activePool[currentIndex];
+  // Lazy-load logos for visible items
+  const activeItem = activePool[currentIndex];
   useEffect(() => {
-    if (!activeItemForLogo || !activeItemForLogo.id || !activeItemForLogo.type) return;
-    const key = `${activeItemForLogo.type}-${activeItemForLogo.id}`;
+    if (!activeItem || !activeItem.id || !activeItem.type) return;
+    const key = `${activeItem.type}-${activeItem.id}`;
     if (key in logoCache) return;
     let cancelled = false;
-    fetchDetailedTitle(activeItemForLogo.type, activeItemForLogo.id)
-      .then((d) => {
-        if (!cancelled) setLogoCache((c) => ({ ...c, [key]: getTitleLogoUrl(d) }));
-      })
-      .catch(() => {
-        if (!cancelled) setLogoCache((c) => ({ ...c, [key]: null }));
-      });
+    fetchDetailedTitle(activeItem.type, activeItem.id)
+      .then((d) => { if (!cancelled) setLogoCache((c) => ({ ...c, [key]: getTitleLogoUrl(d) })); })
+      .catch(() => { if (!cancelled) setLogoCache((c) => ({ ...c, [key]: null })); });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeItemForLogo?.id, activeItemForLogo?.type]);
+  }, [activeItem?.id, activeItem?.type]);
 
   if (!activePool.length) {
-    // Skeletons
     return (
-      <div className="w-full h-[65vh] min-h-[500px] bg-stone-900 animate-pulse relative flex items-end p-8 md:p-16">
-        <div className="max-w-xl space-y-4">
-          <div className="w-24 h-6 bg-stone-800 rounded"></div>
-          <div className="w-72 h-12 bg-stone-800 rounded"></div>
-          <div className="w-full h-20 bg-stone-800 rounded"></div>
-          <div className="flex gap-3">
-            <div className="w-28 h-10 bg-stone-800 rounded-full"></div>
-            <div className="w-28 h-10 bg-stone-800 rounded-full"></div>
-          </div>
-        </div>
+      <div className="relative h-[78vh] min-h-[560px] w-full mb-10 flex items-center justify-center">
+        <div className="w-[300px] h-[450px] rounded-3xl bg-stone-900 animate-pulse" />
       </div>
     );
   }
 
-  const activeItem = activePool[currentIndex];
-
-  const activeLogo = activeItem ? logoCache[`${activeItem.type}-${activeItem.id}`] : null;
-
-  const handlePrev = () => {
-    setDirection(-1);
-    setCurrentIndex((prev) => (prev - 1 + activePool.length) % activePool.length);
-    startTimer();
+  const goTo = (dir: number) => {
+    setDirection(dir);
+    setCurrentIndex((prev) => (prev + dir + activePool.length) % activePool.length);
   };
 
-  const handleNext = () => {
-    setDirection(1);
-    setCurrentIndex((prev) => (prev + 1) % activePool.length);
-    startTimer();
-  };
+  const prevIndex = (currentIndex - 1 + activePool.length) % activePool.length;
+  const nextIndex = (currentIndex + 1) % activePool.length;
+  const prevItem = activePool[prevIndex];
+  const nextItem = activePool[nextIndex];
+  const activeLogo = logoCache[`${activeItem.type}-${activeItem.id}`];
+  const saved = isSaved ? isSaved(activeItem) : false;
 
-  const handleDotSelect = (index: number) => {
-    setDirection(index > currentIndex ? 1 : -1);
-    setCurrentIndex(index);
-    startTimer();
-  };
+  const poster = (it: MovieOrShow) => it.poster || it.backdrop || '';
 
   return (
-    <div className="relative h-[68vh] sm:h-[88vh] min-h-[500px] sm:min-h-[680px] max-h-[920px] w-full overflow-hidden mb-10 sm:mb-14 flex items-end group select-none">
-      
-      {/* Background with custom container */}
-      <div className="absolute inset-0 overflow-hidden">
-        <AnimatePresence initial={false} custom={direction}>
+    <div className="relative w-full mb-12 sm:mb-16 pt-6 sm:pt-10 select-none overflow-hidden">
+      {/* Ambient blurred backdrop from active poster */}
+      <div className="absolute inset-0 -z-0 overflow-hidden">
+        <AnimatePresence mode="wait">
           <motion.div
-            key={currentIndex}
-            custom={direction}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            className="absolute inset-0 bg-cover bg-center"
-            style={{
-              backgroundImage: `url(${(activeItem.backdrop || activeItem.poster || '').replace('/w1280', '/original').replace('/w500', '/original')})`,
-            }}
+            key={`bg-${activeItem.type}-${activeItem.id}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.4 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8 }}
+            className="absolute inset-0 bg-cover bg-center blur-3xl scale-125"
+            style={{ backgroundImage: `url(${(activeItem.backdrop || poster(activeItem)).replace('/w500', '/w780')})` }}
           />
         </AnimatePresence>
-        
-        {/* Shadow overlays - Clean gradient masks */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/55 to-transparent z-[5] pointer-events-none" />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0a0a0a] to-transparent z-[5] pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/65 via-transparent to-[#0a0a0a]/25 z-[5] pointer-events-none" />
+        <div className="absolute inset-0 bg-[#0b0b0d]/70" />
       </div>
 
-      {/* Hero Slide Contents - Animated concurrently */}
-      <div className="absolute inset-x-0 bottom-0 z-10 w-full px-4 sm:px-12 pb-6 sm:pb-20 md:pb-24 pointer-events-none">
-        <div className="max-w-xl text-right md:text-right pointer-events-auto">
-          <AnimatePresence initial={false} mode="wait">
-            <motion.div
-              key={currentIndex}
-              variants={contentVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              className="flex flex-col text-right"
-            >
-              {/* Trending Badge */}
-              <div className="inline-flex items-center gap-1.5 bg-red-500/10 border border-red-500/30 text-red-400 px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold mb-3 sm:mb-4 self-start">
-                <Flame className="w-3 sm:w-3.5 h-3 sm:h-3.5 fill-red-400" />
-                <span>الأكثر رواجاً هذا الأسبوع</span>
-              </div>
+      <div className="relative z-10 flex items-center justify-center gap-3 sm:gap-6 px-2 sm:px-6">
+        {/* Side card (right / previous in RTL) */}
+        <button
+          onClick={() => goTo(-1)}
+          className="hidden md:block flex-none w-[110px] lg:w-[150px] aspect-[2/3] rounded-2xl overflow-hidden border border-white/8 opacity-40 hover:opacity-70 transition-all cursor-pointer shadow-xl"
+          aria-label="السابق"
+        >
+          <img src={poster(prevItem)} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+        </button>
 
-              {/* Title (logo if available, else text) */}
-              {activeLogo ? (
+        {/* Center card */}
+        <div className="flex-none w-[300px] sm:w-[340px] lg:w-[380px]">
+          <AnimatePresence mode="wait" custom={direction}>
+            <motion.div
+              key={`card-${activeItem.type}-${activeItem.id}`}
+              custom={direction}
+              initial={{ opacity: 0, scale: 0.94, x: direction > 0 ? 60 : -60 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              exit={{ opacity: 0, scale: 0.94, x: direction > 0 ? -60 : 60 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="relative rounded-3xl overflow-hidden border border-white/12 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)] ring-1 ring-white/10"
+            >
+              {/* Poster */}
+              <div className="relative aspect-[2/3]">
                 <img
-                  src={activeLogo}
+                  src={poster(activeItem)}
                   alt={activeItem.title}
                   referrerPolicy="no-referrer"
-                  className="max-h-24 sm:max-h-36 md:max-h-44 max-w-[300px] sm:max-w-[480px] object-contain object-right mb-2 sm:mb-4 drop-shadow-2xl select-none"
+                  className="w-full h-full object-cover"
                 />
-              ) : (
-                <h1 className="font-display text-3xl sm:text-5xl md:text-7xl font-black tracking-tight mb-2 sm:mb-4 text-gradient-noir line-clamp-2 leading-[1.05] drop-shadow-2xl">
-                  {activeItem.title}
-                </h1>
-              )}
+                {/* Bottom blur + gradient so details are readable */}
+                <div className="absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black/97 via-black/70 to-transparent backdrop-blur-[3px] [mask-image:linear-gradient(to_top,black_65%,transparent)]" />
 
-              {/* Metadata */}
-              <div className="flex items-center gap-3.5 text-xs text-gray-300 font-medium mb-3 sm:mb-4 justify-start">
-                <span className="flex items-center gap-1 text-[#f5c518] font-bold">
-                  <Star className="w-3.5 h-3.5 fill-current" />
-                  {activeItem.rating > 0 ? activeItem.rating.toFixed(1) : 'جديد'}
-                </span>
-                <span className="w-1 h-1 bg-gray-500 rounded-full" />
-                <span>{activeItem.year || 'غير معروف'}</span>
-                {activeItem.genres.length > 0 && (
-                  <>
-                    <span className="w-1 h-1 bg-gray-500 rounded-full" />
-                    <span className="text-gray-400 bg-white/5 px-2 py-0.5 rounded border border-white/5 text-[10px] sm:text-xs font-bold">
-                      {activeItem.genres.slice(0, 3).join(' · ')}
+                {/* Details overlaid on bottom */}
+                <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6 flex flex-col items-center text-center">
+                  {/* Logo or title */}
+                  {activeLogo ? (
+                    <img src={activeLogo} alt={activeItem.title} referrerPolicy="no-referrer" className="max-h-16 sm:max-h-20 max-w-[80%] object-contain mb-3 drop-shadow-2xl" />
+                  ) : (
+                    <h1 className="font-display text-2xl sm:text-3xl font-black text-white mb-3 leading-tight line-clamp-2 drop-shadow-2xl">{activeItem.title}</h1>
+                  )}
+
+                  {/* Meta: rating + year + genre */}
+                  <div className="flex items-center justify-center gap-3 text-xs text-gray-200 font-semibold mb-2.5">
+                    <span className="flex items-center gap-1 text-[#f5c518]">
+                      <Star className="w-3.5 h-3.5 fill-current" />
+                      {activeItem.rating > 0 ? activeItem.rating.toFixed(1) : 'جديد'}
                     </span>
-                  </>
-                )}
-              </div>
+                    <span>{activeItem.year || ''}</span>
+                    {activeItem.genres.length > 0 && (
+                      <span className="text-gray-300">{activeItem.genres.slice(0, 2).join(' · ')}</span>
+                    )}
+                  </div>
 
-              {/* Overview */}
-              <p className="hidden sm:block text-gray-300 text-xs sm:text-sm md:text-base leading-relaxed mb-6 line-clamp-2 max-w-lg">
-                {activeItem.overview}
-              </p>
+                  {/* Overview */}
+                  {activeItem.overview && (
+                    <p className="text-gray-300 text-[11px] sm:text-xs leading-relaxed line-clamp-2 mb-4 max-w-[90%]">
+                      {activeItem.overview}
+                    </p>
+                  )}
 
-              {/* Call to Actions */}
-              <div className="flex flex-wrap gap-2.5 sm:gap-3">
-                <button
-                  onClick={() => onPlayClick(activeItem)}
-                  className="flex items-center gap-2 bg-white text-black hover:bg-white/90 font-bold px-6 sm:px-8 py-2.5 sm:py-3.5 rounded-2xl transition-all hover:scale-[1.03] active:scale-[0.98] cursor-pointer text-sm shadow-xl shadow-black/30"
-                >
-                  <Play className="w-4 h-4 fill-current text-black" />
-                  <span>شاهد الآن</span>
-                </button>
-                <button
-                  onClick={() => onInfoClick(activeItem)}
-                  className="glass flex items-center gap-2 hover:bg-white/15 text-white font-bold px-6 sm:px-8 py-2.5 sm:py-3.5 rounded-2xl transition-all hover:scale-[1.03] cursor-pointer text-sm"
-                >
-                  <Info className="w-4 h-4" />
-                  <span>التفاصيل</span>
-                </button>
+                  {/* Actions: Play (white) + trailer + save + share */}
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => onPlayClick(activeItem)}
+                      className="flex items-center gap-2 bg-white text-black hover:bg-white/90 font-bold px-6 py-2.5 rounded-full transition-all hover:scale-[1.04] active:scale-95 cursor-pointer text-sm shadow-lg"
+                    >
+                      <Play className="w-4 h-4 fill-black text-black" />
+                      <span>Play</span>
+                    </button>
+
+                    {onTrailerClick && (
+                      <button
+                        onClick={() => onTrailerClick(activeItem)}
+                        className="w-10 h-10 rounded-full glass flex items-center justify-center text-white hover:bg-white/15 transition-all cursor-pointer"
+                        title="الإعلان"
+                      >
+                        <svg viewBox="0 0 28 20" className="w-5 h-[14px]" xmlns="http://www.w3.org/2000/svg">
+                          <rect width="28" height="20" rx="5" fill="#FF0000" />
+                          <path d="M11 6 L19 10 L11 14 Z" fill="white" />
+                        </svg>
+                      </button>
+                    )}
+
+                    {onToggleSave && (
+                      <button
+                        onClick={() => onToggleSave(activeItem)}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer ${saved ? 'bg-white text-black' : 'glass text-white hover:bg-white/15'}`}
+                        title={saved ? 'محفوظ في قائمتي' : 'إضافة لقائمتي'}
+                      >
+                        {saved ? <Check className="w-5 h-5 text-black" strokeWidth={3} /> : <Plus className="w-5 h-5" />}
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => onInfoClick(activeItem)}
+                      className="w-10 h-10 rounded-full glass flex items-center justify-center text-white hover:bg-white/15 transition-all cursor-pointer"
+                      title="التفاصيل"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth="2">
+                        <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+                        <line x1="8.6" y1="13.5" x2="15.4" y2="17.5" /><line x1="15.4" y1="6.5" x2="8.6" y2="10.5" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
               </div>
             </motion.div>
           </AnimatePresence>
         </div>
-      </div>
 
-      {/* Manual Sliding Arrows */}
-      <div className="absolute inset-y-0 left-0 right-0 z-20 flex justify-between items-center px-4 md:px-8 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-none">
+        {/* Side card (left / next in RTL) */}
         <button
-          onClick={handlePrev}
-          className="w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-transform hover:scale-105"
-          aria-label="الشريحة السابقة"
+          onClick={() => goTo(1)}
+          className="hidden md:block flex-none w-[110px] lg:w-[150px] aspect-[2/3] rounded-2xl overflow-hidden border border-white/8 opacity-40 hover:opacity-70 transition-all cursor-pointer shadow-xl"
+          aria-label="التالي"
         >
-          <ChevronRight className="w-6 h-6" /> {/* RTL flip makes right go previous */}
-        </button>
-        <button
-          onClick={handleNext}
-          className="w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-transform hover:scale-105"
-          aria-label="الشريحة التالية"
-        >
-          <ChevronLeft className="w-6 h-6" />
+          <img src={poster(nextItem)} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
         </button>
       </div>
 
-      {/* Slider Indicator Dots in Center */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+      {/* Mobile nav arrows */}
+      <div className="md:hidden relative z-10 flex justify-center gap-4 mt-5">
+        <button onClick={() => goTo(-1)} className="w-10 h-10 rounded-full glass flex items-center justify-center text-white cursor-pointer" aria-label="السابق">
+          <ChevronRight className="w-5 h-5" />
+        </button>
+        <button onClick={() => goTo(1)} className="w-10 h-10 rounded-full glass flex items-center justify-center text-white cursor-pointer" aria-label="التالي">
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Dots */}
+      <div className="relative z-10 flex justify-center gap-2 mt-6">
         {activePool.map((_, i) => (
           <button
             key={i}
-            onClick={() => handleDotSelect(i)}
-            className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-              i === currentIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/30 hover:bg-white/50'
-            }`}
-            aria-label={`الذهاب للشريحة ${i + 1}`}
+            onClick={() => { setDirection(i > currentIndex ? 1 : -1); setCurrentIndex(i); }}
+            className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${i === currentIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/30 hover:bg-white/50'}`}
+            aria-label={`شريحة ${i + 1}`}
           />
         ))}
       </div>
