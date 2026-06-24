@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Dot, Star, Clock, Calendar, Globe, Languages, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle, ChevronsUpDown } from 'lucide-react';
+import { Play, Dot, Star, Clock, Calendar, Globe, Languages, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DetailedInfo, MovieOrShow, CastMember } from '../types';
 import { fetchDetailedTitle, getPosterUrl, getBackdropUrl } from '../lib/tmdb';
 import VideoPlayer from './VideoPlayer';
@@ -156,6 +156,13 @@ export default function DetailView({
 
   // Late joiner: if the host is already mid-movie, auto-open the player at the host's time
   const didAutoOpenForHostTimeRef = useRef(false);
+  const episodesRowRef = useRef<HTMLDivElement>(null);
+
+  const scrollEpisodes = (dir: 'left' | 'right') => {
+    if (!episodesRowRef.current) return;
+    const amount = 420;
+    episodesRowRef.current.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' });
+  };
   useEffect(() => {
     if (!wtConnected || wtIsHost) return;
     if (didAutoOpenForHostTimeRef.current) return;
@@ -303,7 +310,7 @@ export default function DetailView({
           const itemToSave: MovieOrShow = {
             id: id,
             type: type,
-            title: data.title,
+            title: data.title || (data as any).name || 'بدون عنوان',
             overview: data.overview || '',
             poster: data.poster_path ? getPosterUrl(data.poster_path) : null,
             backdrop: data.backdrop_path ? getBackdropUrl(data.backdrop_path) : null,
@@ -916,7 +923,24 @@ export default function DetailView({
                     ))}
                   </div>
                 ) : (
-                  <div className="flex gap-4 overflow-x-auto no-scrollbar pb-3 -mx-1 px-1" dir="rtl">
+                  <div className="relative group/eprow">
+                    {/* Nav arrows */}
+                    <button
+                      onClick={() => scrollEpisodes('right')}
+                      className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/eprow:opacity-100 transition-all hover:scale-105 cursor-pointer -mr-2"
+                      aria-label="السابق"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => scrollEpisodes('left')}
+                      className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/eprow:opacity-100 transition-all hover:scale-105 cursor-pointer -ml-2"
+                      aria-label="التالي"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+
+                    <div ref={episodesRowRef} className="flex gap-4 overflow-x-auto no-scrollbar pb-3 -mx-1 px-1 scroll-smooth" dir="rtl">
                     {(episodes.length > 0
                       ? episodes
                       : Array.from({ length: episodesCount }).map((_, i) => ({
@@ -989,6 +1013,7 @@ export default function DetailView({
                         </button>
                       );
                     })}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1084,7 +1109,7 @@ export default function DetailView({
         <div className="py-12 text-right px-6 md:px-12">
           <button
             onClick={onBackClick}
-            className="inline-flex items-center gap-2 glass hover:bg-white/15 text-white text-xs sm:text-sm font-bold px-5 py-3 rounded-full transition-all hover:scale-[1.03] cursor-pointer"
+            className="inline-flex items-center gap-2 text-red-500 hover:text-red-400 text-sm font-bold transition-colors cursor-pointer"
           >
             <ArrowRight className="w-4 h-4" />
             <span>العودة للرئيسية</span>
