@@ -339,7 +339,15 @@ export default function VideoPlayer({
               key={`player-${sourceIdx}-${id}-${episode}`}
               src={isPausedByHost ? 'about:blank' : getEmbedUrl()}
               allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-              sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
+               <iframe
+                 key={`player-${sourceIdx}-${id}-${episode}`}
+                 src={isPausedByHost ? 'about:blank' : getEmbedUrl()}
+                 allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                 referrerPolicy="no-referrer"
+                 allowFullScreen
+                 className="w-full h-full border-0 relative z-0"
+                 onLoad={() => setIsLoading(false)}
+               />
               referrerPolicy="no-referrer"
               allowFullScreen
               className="w-full h-full border-0 relative z-0"
