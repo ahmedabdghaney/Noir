@@ -1450,35 +1450,47 @@ export default function App() {
                           key={`${item.type}-${item.id}`}
                           onClick={() => handleTitleClick(item)}
                           style={{ animationDelay: `${idx * 40}ms` }}
-                          className="card-transition group cursor-pointer rounded-2xl p-2.5 pb-3.5 hover:bg-stone-200/50 dark:hover:bg-stone-900/60 hover:shadow-lg transition-all duration-300 select-none active:scale-[0.98]"
+                          className="group/card card-transition cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
                         >
-                          <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-white/5 shadow-md">
+                          {/* Poster Artwork container */}
+                          <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
                             {item.poster || item.backdrop ? (
                               <img
                                 src={item.poster || item.backdrop || undefined}
                                 alt={item.title}
                                 loading="lazy"
-                                className="w-full h-full object-cover select-none"
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover select-none transition-transform duration-500"
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-stone-950 text-stone-600 text-center text-xs p-2 font-bold break-all line-clamp-2 leading-tight">
-                                {item.title}
-</div>
+                              <div className="w-full h-full flex flex-col items-center justify-center p-3 text-stone-600 bg-stone-950">
+                                <span className="text-[10px] sm:text-xs font-semibold text-center leading-normal break-all line-clamp-2">
+                                  {item.title}
+                                </span>
+                              </div>
                             )}
+
+                            {/* Subtle gradient at bottom of poster for depth */}
+                            <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+                            {/* Rating stamp */}
                             {item.rating > 0 && (
-                              <div className="absolute bottom-2 right-2 bg-black/85 backdrop-blur-md text-[#f5c518] text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 border border-white/5">
+                              <div className="absolute bottom-2 right-2 glass text-[#f5c518] text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5">
                                 <span>★</span>
                                 <span>{item.rating.toFixed(1)}</span>
 </div>
                             )}
 </div>
-                          
-                          <div className="mt-2.5 px-0.5 flex flex-col text-right">
+
+                          {/* Meta details */}
+                          <div className="mt-2.5 px-1 text-right flex flex-col">
                             <span className="text-white font-bold text-xs sm:text-sm line-clamp-1 leading-tight transition-colors">
                               {item.title}
 </span>
-                            <span className="text-stone-500 font-semibold text-[10px] sm:text-xs mt-1.5">
-                              {item.year ||'—'}
+                            <span className="text-stone-500 font-semibold text-[10px] sm:text-xs mt-1 flex items-center gap-1 justify-start">
+                              <span>{item.year ||'—'}</span>
+                              <span className="w-1 h-1 bg-stone-800 rounded-full" />
+                              <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
 </span>
 </div>
 </div>

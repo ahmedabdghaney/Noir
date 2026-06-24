@@ -52,7 +52,6 @@ export default function VideoPlayer({
   onNextEpisode,
 }: VideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
-  const [sourceIdx, setSourceIdx] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Watch progression state
@@ -155,7 +154,6 @@ export default function VideoPlayer({
       containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     setIsLoading(true);
-    setSourceIdx(0);
     // Reload progress percent for shift
     const saved = Number(localStorage.getItem(`noir_progress_${type}_${id}`)) || 0;
     setProgress(saved);
@@ -168,51 +166,28 @@ export default function VideoPlayer({
       return `https://www.youtube-nocookie.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&origin=${origin}`;
     }
 
-    // Three providers, ordered by coverage/quality. User can switch if one lacks a title.
-    // 1) vidsrc.cc — newest, widest library, documented PLAYER_EVENT for resume support
-    const buildVidsrcCC = () => {
-      if (type === 'tv') {
-        return `https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}?autoPlay=true&autoNext=true`;
-      }
-      const sa = startAt && startAt > 5 ? `&startAt=${Math.floor(startAt)}` : '';
-      return `https://vidsrc.cc/v2/embed/movie/${id}?autoPlay=true${sa}`;
-    };
+    // vidapi.qzz.io — single source, plays inside iframe reliably. Autoplay enabled.
+    const params = new URLSearchParams({
+      primaryColor: 'ff453a',
+      secondaryColor: '0a0a0a',
+      iconColor: 'FFFFFF',
+      icons: 'vid',
+      title: 'true',
+      poster: 'true',
+      autoplay: 'true',
+    });
 
-    // 2) vsembed.ru (new domain) — fast, Arabic default subs
-    const buildVsembed = () => {
-      const p = new URLSearchParams({ autoplay: '1', ds_lang: 'ar' });
-      if (type === 'tv') {
-        p.set('autonext', '1');
-        return `https://vsembed.ru/embed/tv?tmdb=${id}&season=${season}&episode=${episode}&${p.toString()}`;
-      }
-      return `https://vsembed.ru/embed/movie?tmdb=${id}&${p.toString()}`;
-    };
+    if (startAt && startAt > 5) {
+      params.set('startAt', String(Math.floor(startAt)));
+    }
 
-    // 3) vidapi.qzz.io — fallback
-    const buildVidApi = () => {
-      const p = new URLSearchParams({
-        primaryColor: 'ff453a',
-        secondaryColor: '0a0a0a',
-        iconColor: 'FFFFFF',
-        icons: 'vid',
-        title: 'true',
-        poster: 'true',
-        autoplay: 'true',
-      });
-      if (startAt && startAt > 5) p.set('startAt', String(Math.floor(startAt)));
-      if (type === 'tv') {
-        p.set('nextbutton', 'true');
-        return `https://vidapi.qzz.io/tv/${id}/${season}/${episode}?${p.toString()}`;
-      }
-      return `https://vidapi.qzz.io/movie/${id}?${p.toString()}`;
-    };
+    if (type === 'tv') {
+      params.set('nextbutton', 'true');
+      return `https://vidapi.qzz.io/tv/${id}/${season}/${episode}?${params.toString()}`;
+    }
 
-    const sources = [buildVidsrcCC, buildVsembed, buildVidApi];
-    const idx = Math.min(sourceIdx, sources.length - 1);
-    return sources[idx]();
+    return `https://vidapi.qzz.io/movie/${id}?${params.toString()}`;
   };
-
-  const SOURCE_LABELS = ['سيرفر 1', 'سيرفر 2', 'سيرفر 3'];
 
   return (
     <div ref={containerRef} className="w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl animate-fade-in text-right">
@@ -339,7 +314,7 @@ export default function VideoPlayer({
             />
           ) : (
             <iframe
-              key={`player-${sourceIdx}-${id}-${episode}`}
+              key={`player-${id}-${episode}`}
               src={isPausedByHost ? 'about:blank' : getEmbedUrl()}
               allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
               sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
@@ -379,33 +354,6 @@ export default function VideoPlayer({
 </div>
 </div>
           )}</div>
-
-         {/* Source switcher — vsembed (fast) + vidapi fallback */}
-        {playMode ==='movie' && (
-          <div className="px-4 py-3 glass-strong border-t border-white/8 flex items-center justify-between gap-3 flex-wrap">
-            <span className="text-[11px] text-gray-400 font-bold">
-              الفيلم لا يعمل؟ بدّل السيرفر
-            </span>
-            <div className="flex flex-wrap gap-2" dir="rtl">
-              {SOURCE_LABELS.map((label, i) => (
-                <button
-                  key={i}
-                  onClick={() => {
-                    setSourceIdx(i);
-                    setIsLoading(true);
-                  }}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
-                    sourceIdx === i
-                      ? 'bg-white text-black'
-                      : 'bg-white/8 text-white hover:bg-white/15'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
          {/* Browser sandbox notification details */}
         {playMode ==='movie' && (
