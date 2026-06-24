@@ -7,13 +7,14 @@ import { useState, useEffect } from 'react';
 import { Play, Plus, Check, ChevronRight, ChevronLeft, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MovieOrShow } from '../types';
-import { fetchDetailedTitle, getTitleLogoUrl, getOriginalBackdropUrl } from '../lib/tmdb';
+import { fetchDetailedTitle, getTitleLogoUrl } from '../lib/tmdb';
 
 interface HeroProps {
   trendingItems: MovieOrShow[];
   onPlayClick: (item: MovieOrShow) => void;
   onInfoClick: (item: MovieOrShow) => void;
   onTrailerClick?: (item: MovieOrShow) => void;
+  onShareClick?: (item: MovieOrShow) => void;
   isSaved?: (item: MovieOrShow) => boolean;
   onToggleSave?: (item: MovieOrShow) => void;
 }
@@ -23,6 +24,7 @@ export default function Hero({
   onPlayClick,
   onInfoClick,
   onTrailerClick,
+  onShareClick,
   isSaved,
   onToggleSave,
 }: HeroProps) {
@@ -32,6 +34,7 @@ export default function Hero({
 
   const activePool = trendingItems.slice(0, 12);
 
+  // Auto-rotate
   useEffect(() => {
     if (activePool.length <= 1) return;
     const timer = setInterval(() => {
@@ -41,6 +44,7 @@ export default function Hero({
     return () => clearInterval(timer);
   }, [activePool.length]);
 
+  // Lazy-load logos for visible items
   const activeItem = activePool[currentIndex];
   useEffect(() => {
     if (!activeItem || !activeItem.id || !activeItem.type) return;
@@ -56,8 +60,8 @@ export default function Hero({
 
   if (!activePool.length) {
     return (
-      <div className="relative w-full mb-12 px-6 md:px-12 pt-6">
-        <div className="w-full aspect-[16/9] sm:aspect-[2.4/1] rounded-3xl bg-stone-900 animate-pulse" />
+      <div className="relative h-[78vh] min-h-[560px] w-full mb-10 flex items-center justify-center">
+        <div className="w-[300px] h-[450px] rounded-3xl bg-stone-900 animate-pulse" />
       </div>
     );
   }
@@ -74,145 +78,154 @@ export default function Hero({
   const activeLogo = logoCache[`${activeItem.type}-${activeItem.id}`];
   const saved = isSaved ? isSaved(activeItem) : false;
 
-  const wideImg = (it: MovieOrShow) =>
-    getOriginalBackdropUrl((it as any).backdrop_path) ||
-    (it.backdrop || it.poster || '').replace('/w500', '/original').replace('/w1280', '/original');
+  const poster = (it: MovieOrShow) => it.poster || it.backdrop || '';
 
   return (
-    <div className="relative w-full mb-12 sm:mb-16 pt-4 sm:pt-8 select-none overflow-hidden">
-      <div className="relative flex items-stretch justify-center gap-3 sm:gap-4 px-2 sm:px-4">
-        {/* Side peek card (right / previous in RTL) */}
+    <div className="relative w-full mb-12 sm:mb-16 pt-6 sm:pt-10 select-none overflow-hidden">
+      {/* Ambient blurred backdrop from active poster */}
+      <div className="absolute inset-0 -z-0 overflow-hidden">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`bg-${activeItem.type}-${activeItem.id}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.4 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8 }}
+            className="absolute inset-0 bg-cover bg-center blur-3xl scale-125"
+            style={{ backgroundImage: `url(${(activeItem.backdrop || poster(activeItem)).replace('/w500', '/w780')})` }}
+          />
+        </AnimatePresence>
+        <div className="absolute inset-0 bg-[#0b0b0d]/70" />
+      </div>
+
+      <div className="relative z-10 flex items-center justify-center gap-3 sm:gap-6 px-2 sm:px-6">
+        {/* Side card (right / previous in RTL) */}
         <button
           onClick={() => goTo(-1)}
-          className="hidden lg:block flex-none w-[12%] rounded-3xl overflow-hidden opacity-45 hover:opacity-75 transition-opacity cursor-pointer aspect-[2.3/1]"
+          className="hidden md:block flex-none w-[110px] lg:w-[150px] aspect-[2/3] rounded-2xl overflow-hidden border border-white/8 opacity-40 hover:opacity-70 transition-all cursor-pointer shadow-xl"
           aria-label="السابق"
         >
-          <img src={wideImg(prevItem)} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" style={{ objectPosition: 'left center' }} />
+          <img src={poster(prevItem)} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
         </button>
 
-        {/* Center wide card */}
-        <div className="flex-1 max-w-[1500px] px-2 sm:px-0">
+        {/* Center card */}
+        <div className="flex-none w-[300px] sm:w-[340px] lg:w-[380px]">
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
               key={`card-${activeItem.type}-${activeItem.id}`}
               custom={direction}
-              initial={{ opacity: 0, scale: 0.97, x: direction > 0 ? 40 : -40 }}
+              initial={{ opacity: 0, scale: 0.94, x: direction > 0 ? 60 : -60 }}
               animate={{ opacity: 1, scale: 1, x: 0 }}
-              exit={{ opacity: 0, scale: 0.97, x: direction > 0 ? -40 : 40 }}
+              exit={{ opacity: 0, scale: 0.94, x: direction > 0 ? -60 : 60 }}
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
               className="relative rounded-3xl overflow-hidden border border-white/12 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)] ring-1 ring-white/10"
             >
-              {/* Wide backdrop */}
-              <div className="relative aspect-[16/11] sm:aspect-[16/8] lg:aspect-[2/1]">
+              {/* Poster */}
+              <div className="relative aspect-[2/3]">
                 <img
-                  src={wideImg(activeItem)}
+                  src={poster(activeItem)}
                   alt={activeItem.title}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover"
                 />
-                {/* Gradient + blur so right-side details stay readable */}
-                <div className="absolute inset-0 bg-gradient-to-l from-black/95 via-black/40 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 to-transparent" />
+                {/* Bottom blur + gradient so details are readable */}
+                <div className="absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black/97 via-black/70 to-transparent backdrop-blur-[3px] [mask-image:linear-gradient(to_top,black_65%,transparent)]" />
 
-                {/* Details — right aligned */}
-                <div className="absolute inset-0 flex flex-col items-end justify-end sm:justify-center text-right p-6 sm:p-10 md:p-16">
-                  <div className="w-full sm:max-w-[55%] flex flex-col items-end">
-                    {/* Logo or title */}
-                    {activeLogo ? (
-                      <img src={activeLogo} alt={activeItem.title} referrerPolicy="no-referrer" className="max-h-16 sm:max-h-24 md:max-h-28 max-w-full object-contain object-right mb-3 sm:mb-4 drop-shadow-2xl" />
-                    ) : (
-                      <h1 className="font-display text-3xl sm:text-5xl font-black text-white mb-3 leading-tight line-clamp-2 drop-shadow-2xl">{activeItem.title}</h1>
-                    )}
+                {/* Details overlaid on bottom */}
+                <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6 flex flex-col items-center text-center">
+                  {/* Logo or title */}
+                  {activeLogo ? (
+                    <img src={activeLogo} alt={activeItem.title} referrerPolicy="no-referrer" className="max-h-16 sm:max-h-20 max-w-[80%] object-contain mb-3 drop-shadow-2xl" />
+                  ) : (
+                    <h1 className="font-display text-2xl sm:text-3xl font-black text-white mb-3 leading-tight line-clamp-2 drop-shadow-2xl">{activeItem.title}</h1>
+                  )}
 
-                    {/* Meta */}
-                    <div className="flex items-center justify-end gap-2 sm:gap-3 text-[11px] sm:text-xs text-gray-200 font-semibold mb-2 flex-wrap">
-                      <span className="text-stone-300">{activeItem.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
-                      <span>{activeItem.year || ''}</span>
-                      <span className="flex items-center gap-1 text-[#f5c518]">
-                        {activeItem.rating > 0 ? activeItem.rating.toFixed(1) : 'جديد'}
-                        <Star className="w-3 h-3 fill-current" />
-                      </span>
-                    </div>
-
-                    {/* Genre chips */}
+                  {/* Meta: rating + year + genre */}
+                  <div className="flex items-center justify-center gap-3 text-xs text-gray-200 font-semibold mb-2.5">
+                    <span className="flex items-center gap-1 text-[#f5c518]">
+                      <Star className="w-3.5 h-3.5 fill-current" />
+                      {activeItem.rating > 0 ? activeItem.rating.toFixed(1) : 'جديد'}
+                    </span>
+                    <span>{activeItem.year || ''}</span>
                     {activeItem.genres.length > 0 && (
-                      <div className="flex items-center justify-end gap-1.5 mb-3 flex-wrap">
-                        {activeItem.genres.slice(0, 3).map((g, i) => (
-                          <span key={i} className="text-[9px] sm:text-[10px] font-semibold text-stone-200 glass px-2 py-0.5 rounded-md">{g}</span>
-                        ))}
-                      </div>
+                      <span className="text-gray-300">{activeItem.genres.slice(0, 2).join(' · ')}</span>
                     )}
+                  </div>
 
-                    {/* Overview */}
-                    {activeItem.overview && (
-                      <p className="hidden sm:block text-gray-300 text-[11px] sm:text-xs leading-relaxed line-clamp-2 mb-5 max-w-md">
-                        {activeItem.overview}
-                      </p>
-                    )}
+                  {/* Overview */}
+                  {activeItem.overview && (
+                    <p className="text-gray-300 text-[11px] sm:text-xs leading-relaxed line-clamp-2 mb-4 max-w-[90%]">
+                      {activeItem.overview}
+                    </p>
+                  )}
 
-                    {/* Actions */}
-                    <div className="flex items-center justify-end gap-2.5">
-                      {onTrailerClick && (
-                        <button
-                          onClick={() => onTrailerClick(activeItem)}
-                          className="w-11 h-11 rounded-full glass flex items-center justify-center text-white hover:bg-white/15 transition-all cursor-pointer"
-                          title="الإعلان"
-                        >
-                          <svg viewBox="0 0 28 20" className="w-5 h-[14px]" xmlns="http://www.w3.org/2000/svg">
-                            <rect width="28" height="20" rx="5" fill="#FF0000" />
-                            <path d="M11 6 L19 10 L11 14 Z" fill="white" />
-                          </svg>
-                        </button>
-                      )}
+                  {/* Actions: Play (white) + trailer + save + share */}
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => onPlayClick(activeItem)}
+                      className="flex items-center gap-2 bg-white text-black hover:bg-white/90 font-bold px-6 py-2.5 rounded-full transition-all hover:scale-[1.04] active:scale-95 cursor-pointer text-sm shadow-lg"
+                    >
+                      <Play className="w-4 h-4 fill-black text-black" />
+                      <span>Play</span>
+                    </button>
 
-                      {onToggleSave && (
-                        <button
-                          onClick={() => onToggleSave(activeItem)}
-                          className={`w-11 h-11 rounded-full flex items-center justify-center transition-all cursor-pointer ${saved ? 'bg-white text-black' : 'glass text-white hover:bg-white/15'}`}
-                          title={saved ? 'محفوظ في قائمتي' : 'إضافة لقائمتي'}
-                        >
-                          {saved ? <Check className="w-5 h-5 text-black" strokeWidth={3} /> : <Plus className="w-5 h-5" />}
-                        </button>
-                      )}
-
+                    {onTrailerClick && (
                       <button
-                        onClick={() => onPlayClick(activeItem)}
-                        className="flex items-center gap-2 bg-white text-black hover:bg-white/90 font-bold px-7 py-2.5 sm:py-3 rounded-full transition-all hover:scale-[1.04] active:scale-95 cursor-pointer text-sm shadow-lg"
+                        onClick={() => onTrailerClick(activeItem)}
+                        className="w-10 h-10 rounded-full glass flex items-center justify-center text-white hover:bg-white/15 transition-all cursor-pointer"
+                        title="الإعلان"
                       >
-                        <Play className="w-4 h-4 fill-black text-black" />
-                        <span>Play</span>
+                        <svg viewBox="0 0 28 20" className="w-5 h-[14px]" xmlns="http://www.w3.org/2000/svg">
+                          <rect width="28" height="20" rx="5" fill="#FF0000" />
+                          <path d="M11 6 L19 10 L11 14 Z" fill="white" />
+                        </svg>
                       </button>
-                    </div>
+                    )}
+
+                    {onToggleSave && (
+                      <button
+                        onClick={() => onToggleSave(activeItem)}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer ${saved ? 'bg-white text-black' : 'glass text-white hover:bg-white/15'}`}
+                        title={saved ? 'محفوظ في قائمتي' : 'إضافة لقائمتي'}
+                      >
+                        {saved ? <Check className="w-5 h-5 text-black" strokeWidth={3} /> : <Plus className="w-5 h-5" />}
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => onInfoClick(activeItem)}
+                      className="w-10 h-10 rounded-full glass flex items-center justify-center text-white hover:bg-white/15 transition-all cursor-pointer"
+                      title="التفاصيل"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth="2">
+                        <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+                        <line x1="8.6" y1="13.5" x2="15.4" y2="17.5" /><line x1="15.4" y1="6.5" x2="8.6" y2="10.5" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
-
-                {/* In-card nav arrows */}
-                <button
-                  onClick={() => goTo(-1)}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-black flex items-center justify-center cursor-pointer transition-all hover:scale-105 shadow-lg"
-                  aria-label="السابق"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => goTo(1)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-black flex items-center justify-center cursor-pointer transition-all hover:scale-105 shadow-lg"
-                  aria-label="التالي"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
               </div>
             </motion.div>
           </AnimatePresence>
         </div>
 
-        {/* Side peek card (left / next in RTL) */}
+        {/* Side card (left / next in RTL) */}
         <button
           onClick={() => goTo(1)}
-          className="hidden lg:block flex-none w-[12%] rounded-3xl overflow-hidden opacity-45 hover:opacity-75 transition-opacity cursor-pointer aspect-[2.3/1]"
+          className="hidden md:block flex-none w-[110px] lg:w-[150px] aspect-[2/3] rounded-2xl overflow-hidden border border-white/8 opacity-40 hover:opacity-70 transition-all cursor-pointer shadow-xl"
           aria-label="التالي"
         >
-          <img src={wideImg(nextItem)} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" style={{ objectPosition: 'right center' }} />
+          <img src={poster(nextItem)} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+        </button>
+      </div>
+
+      {/* Mobile nav arrows */}
+      <div className="md:hidden relative z-10 flex justify-center gap-4 mt-5">
+        <button onClick={() => goTo(-1)} className="w-10 h-10 rounded-full glass flex items-center justify-center text-white cursor-pointer" aria-label="السابق">
+          <ChevronRight className="w-5 h-5" />
+        </button>
+        <button onClick={() => goTo(1)} className="w-10 h-10 rounded-full glass flex items-center justify-center text-white cursor-pointer" aria-label="التالي">
+          <ChevronLeft className="w-5 h-5" />
         </button>
       </div>
 
