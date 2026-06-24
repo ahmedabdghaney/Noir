@@ -946,7 +946,7 @@ export default function DetailView({
                           className="group/ep flex-none w-[300px] sm:w-[380px] text-right snap-start"
                         >
                           {/* Card with image + overlaid text */}
-                          <div className="relative aspect-video rounded-3xl overflow-hidden bg-stone-900 border border-white/8 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.7)]">
+                          <div className="relative h-[280px] sm:h-[320px] rounded-3xl overflow-hidden bg-stone-900 border border-white/8 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.7)]">
                             {still ? (
                               <img
                                 src={still}
@@ -962,7 +962,7 @@ export default function DetailView({
                             )}
 
                             {/* Bottom blur + gradient so overlaid text stays readable */}
-                            <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/95 via-black/55 to-transparent backdrop-blur-[2px] [mask-image:linear-gradient(to_top,black_55%,transparent)]" />
+                            <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/95 via-black/65 to-transparent backdrop-blur-[2px] [mask-image:linear-gradient(to_top,black_60%,transparent)]" />
 
                             {/* Hover play icon */}
                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/ep:opacity-100 transition-opacity">
@@ -978,7 +978,7 @@ export default function DetailView({
                               </span>
                               <h4 className="text-white font-bold text-base leading-tight line-clamp-1 mb-1">{ep.name}</h4>
                               {ep.overview ? (
-                                <p className="text-white/70 text-xs leading-relaxed line-clamp-2 mb-2.5">{ep.overview}</p>
+                                <p className="text-white/65 text-[11px] leading-relaxed line-clamp-3 mb-2.5">{ep.overview}</p>
                               ) : <div className="mb-2.5" />}
 
                               {/* Footer: runtime + more */}
