@@ -24,11 +24,11 @@ const slideVariants = {
   center: {
     x: 0,
     opacity: 1,
-    scale: 1.14,
+    scale: 1.14, // Beautiful continuous Ken Burns style slow zoom
     transition: {
-      x: { duration: 1.4, ease: [0.16, 1, 0.3, 1] },
+      x: { duration: 1.4, ease: [0.16, 1, 0.3, 1] }, // Entering is slow
       opacity: { duration: 1.1, ease: 'easeOut' },
-      scale: { duration: 9, ease: 'linear' },
+      scale: { duration: 9, ease: 'linear' }, // Ken Burns slow zoom
     }
   },
   exit: (direction: number) => ({
@@ -36,7 +36,7 @@ const slideVariants = {
     opacity: 0,
     scale: 1.18,
     transition: {
-      x: { duration: 0.42, ease: [0.3, 0, 0.7, 0] },
+      x: { duration: 0.42, ease: [0.3, 0, 0.7, 0] }, // Exiting is fast
       opacity: { duration: 0.35, ease: 'easeIn' },
       scale: { duration: 0.42, ease: 'easeIn' }
     }
@@ -52,7 +52,7 @@ const contentVariants = {
     y: 0,
     opacity: 1,
     transition: {
-      y: { duration: 1.3, ease: [0.16, 1, 0.3, 1] },
+      y: { duration: 1.3, ease: [0.16, 1, 0.3, 1] }, // Entering of next card content is slow
       opacity: { duration: 1.0, ease: 'easeOut' },
     }
   },
@@ -60,7 +60,7 @@ const contentVariants = {
     y: -20,
     opacity: 0,
     transition: {
-      y: { duration: 0.35, ease: 'easeInOut' },
+      y: { duration: 0.35, ease: 'easeInOut' }, // Exit is fast
       opacity: { duration: 0.3, ease: 'easeIn' },
     }
   }
@@ -91,6 +91,7 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
     };
   }, [activePool.length]);
 
+  // Lazy-load TMDB title logos for the active hero item (cache by type-id)
   const activeItemForLogo = activePool[currentIndex];
   useEffect(() => {
     if (!activeItemForLogo || !activeItemForLogo.id || !activeItemForLogo.type) return;
@@ -109,6 +110,7 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
   }, [activeItemForLogo?.id, activeItemForLogo?.type]);
 
   if (!activePool.length) {
+    // Skeletons
     return (
       <div className="w-full h-[65vh] min-h-[500px] bg-stone-900 animate-pulse relative flex items-end p-8 md:p-16">
         <div className="max-w-xl space-y-4">
@@ -125,15 +127,8 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
   }
 
   const activeItem = activePool[currentIndex];
-  const prevItem = activePool[(currentIndex - 1 + activePool.length) % activePool.length];
-  const nextItem = activePool[(currentIndex + 1) % activePool.length];
 
   const activeLogo = activeItem ? logoCache[`${activeItem.type}-${activeItem.id}`] : null;
-
-  const getHighRes = (url: string | undefined) => {
-    if (!url) return '';
-    return url.replace('/w1280', '/original').replace('/w500', '/original');
-  };
 
   const handlePrev = () => {
     setDirection(-1);
@@ -178,39 +173,6 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0a0a0a] to-transparent z-[5] pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/65 via-transparent to-[#0a0a0a]/25 z-[5] pointer-events-none" />
       </div>
-
-      {/* ═══ Side Peek — Apple TV+ Style ═══ */}
-      {activePool.length > 1 && (
-        <>
-          {/* Right side — previous movie (RTL) */}
-          <div
-            className="absolute top-0 bottom-0 right-0 w-[10%] md:w-[8%] bg-cover bg-center overflow-hidden pointer-events-none z-[3] transition-opacity duration-700"
-            style={{
-              backgroundImage: `url(${getHighRes(prevItem?.backdrop || prevItem?.poster)})`,
-              backgroundPosition: 'center',
-              transform: 'scaleX(3)',
-              transformOrigin: 'right center',
-              opacity: 0.35,
-              filter: 'brightness(0.5)',
-            }}
-          />
-          {/* Left side — next movie (RTL) */}
-          <div
-            className="absolute top-0 bottom-0 left-0 w-[10%] md:w-[8%] bg-cover bg-center overflow-hidden pointer-events-none z-[3] transition-opacity duration-700"
-            style={{
-              backgroundImage: `url(${getHighRes(nextItem?.backdrop || nextItem?.poster)})`,
-              backgroundPosition: 'center',
-              transform: 'scaleX(3)',
-              transformOrigin: 'left center',
-              opacity: 0.35,
-              filter: 'brightness(0.5)',
-            }}
-          />
-          {/* Shadow dividers */}
-          <div className="absolute top-0 bottom-0 right-[8%] md:right-[8%] w-24 bg-gradient-to-l from-[#0a0a0a] to-transparent pointer-events-none z-[4]" />
-          <div className="absolute top-0 bottom-0 left-[8%] md:left-[8%] w-24 bg-gradient-to-r from-[#0a0a0a] to-transparent pointer-events-none z-[4]" />
-        </>
-      )}
 
       {/* Hero Slide Contents - Animated concurrently */}
       <div className="absolute inset-x-0 bottom-0 z-10 w-full px-4 sm:px-12 pb-6 sm:pb-20 md:pb-24 pointer-events-none">
@@ -296,7 +258,7 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
           className="w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-transform hover:scale-105"
           aria-label="الشريحة السابقة"
         >
-          <ChevronRight className="w-6 h-6" />
+          <ChevronRight className="w-6 h-6" /> {/* RTL flip makes right go previous */}
         </button>
         <button
           onClick={handleNext}
