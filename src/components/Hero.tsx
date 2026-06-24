@@ -3,282 +3,258 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useRef } from 'react';
-import { Play, Info, Flame, ChevronRight, ChevronLeft, Star } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Play, Plus, Check, ChevronRight, ChevronLeft, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MovieOrShow } from '../types';
-import { fetchDetailedTitle, getTitleLogoUrl } from '../lib/tmdb';
+import { fetchDetailedTitle, getTitleLogoUrl, getOriginalBackdropUrl } from '../lib/tmdb';
 
 interface HeroProps {
   trendingItems: MovieOrShow[];
   onPlayClick: (item: MovieOrShow) => void;
   onInfoClick: (item: MovieOrShow) => void;
+  onTrailerClick?: (item: MovieOrShow) => void;
+  isSaved?: (item: MovieOrShow) => boolean;
+  onToggleSave?: (item: MovieOrShow) => void;
 }
 
-const slideVariants = {
-  enter: (direction: number) => ({
-    x: direction > 0 ? '100%' : '-100%',
-    scale: 1.04,
-    opacity: 0,
-  }),
-  center: {
-    x: 0,
-    opacity: 1,
-    scale: 1.14, // Beautiful continuous Ken Burns style slow zoom
-    transition: {
-      x: { duration: 1.4, ease: [0.16, 1, 0.3, 1] }, // Entering is slow
-      opacity: { duration: 1.1, ease: 'easeOut' },
-      scale: { duration: 9, ease: 'linear' }, // Ken Burns slow zoom
-    }
-  },
-  exit: (direction: number) => ({
-    x: direction > 0 ? '-100%' : '100%',
-    opacity: 0,
-    scale: 1.18,
-    transition: {
-      x: { duration: 0.42, ease: [0.3, 0, 0.7, 0] }, // Exiting is fast
-      opacity: { duration: 0.35, ease: 'easeIn' },
-      scale: { duration: 0.42, ease: 'easeIn' }
-    }
-  })
-};
-
-const contentVariants = {
-  enter: {
-    y: 25,
-    opacity: 0,
-  },
-  center: {
-    y: 0,
-    opacity: 1,
-    transition: {
-      y: { duration: 1.3, ease: [0.16, 1, 0.3, 1] }, // Entering of next card content is slow
-      opacity: { duration: 1.0, ease: 'easeOut' },
-    }
-  },
-  exit: {
-    y: -20,
-    opacity: 0,
-    transition: {
-      y: { duration: 0.35, ease: 'easeInOut' }, // Exit is fast
-      opacity: { duration: 0.3, ease: 'easeIn' },
-    }
-  }
-};
-
-export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroProps) {
+export default function Hero({
+  trendingItems,
+  onPlayClick,
+  onInfoClick,
+  onTrailerClick,
+  isSaved,
+  onToggleSave,
+}: HeroProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [logoCache, setLogoCache] = useState<Record<string, string | null>>({});
-  const rotationTimer = useRef<NodeJS.Timeout | null>(null);
 
-  const activePool = trendingItems.slice(0, 20);
+  const activePool = trendingItems.slice(0, 12);
 
-  const startTimer = () => {
-    if (rotationTimer.current) clearInterval(rotationTimer.current);
-    if (activePool.length > 1) {
-      rotationTimer.current = setInterval(() => {
-        setDirection(1);
-        setCurrentIndex((prev) => (prev + 1) % activePool.length);
-      }, 7500);
-    }
-  };
-
+  // Auto-rotate
   useEffect(() => {
-    startTimer();
-    return () => {
-      if (rotationTimer.current) clearInterval(rotationTimer.current);
-    };
+    if (activePool.length <= 1) return;
+    const timer = setInterval(() => {
+      setDirection(1);
+      setCurrentIndex((prev) => (prev + 1) % activePool.length);
+    }, 8000);
+    return () => clearInterval(timer);
   }, [activePool.length]);
 
-  // Lazy-load TMDB title logos for the active hero item (cache by type-id)
-  const activeItemForLogo = activePool[currentIndex];
+  // Lazy-load logo for active item
+  const activeItem = activePool[currentIndex];
   useEffect(() => {
-    if (!activeItemForLogo || !activeItemForLogo.id || !activeItemForLogo.type) return;
-    const key = `${activeItemForLogo.type}-${activeItemForLogo.id}`;
+    if (!activeItem || !activeItem.id || !activeItem.type) return;
+    const key = `${activeItem.type}-${activeItem.id}`;
     if (key in logoCache) return;
     let cancelled = false;
-    fetchDetailedTitle(activeItemForLogo.type, activeItemForLogo.id)
-      .then((d) => {
-        if (!cancelled) setLogoCache((c) => ({ ...c, [key]: getTitleLogoUrl(d) }));
-      })
-      .catch(() => {
-        if (!cancelled) setLogoCache((c) => ({ ...c, [key]: null }));
-      });
+    fetchDetailedTitle(activeItem.type, activeItem.id)
+      .then((d) => { if (!cancelled) setLogoCache((c) => ({ ...c, [key]: getTitleLogoUrl(d) })); })
+      .catch(() => { if (!cancelled) setLogoCache((c) => ({ ...c, [key]: null })); });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeItemForLogo?.id, activeItemForLogo?.type]);
+  }, [activeItem?.id, activeItem?.type]);
 
   if (!activePool.length) {
-    // Skeletons
     return (
-      <div className="w-full h-[65vh] min-h-[500px] bg-stone-900 animate-pulse relative flex items-end p-8 md:p-16">
-        <div className="max-w-xl space-y-4">
-          <div className="w-24 h-6 bg-stone-800 rounded"></div>
-          <div className="w-72 h-12 bg-stone-800 rounded"></div>
-          <div className="w-full h-20 bg-stone-800 rounded"></div>
-          <div className="flex gap-3">
-            <div className="w-28 h-10 bg-stone-800 rounded-full"></div>
-            <div className="w-28 h-10 bg-stone-800 rounded-full"></div>
-          </div>
-        </div>
+      <div className="relative w-full mb-12 px-4 sm:px-8 pt-6">
+        <div className="w-full aspect-[16/10] sm:aspect-[2.2/1] rounded-[28px] bg-stone-900 animate-pulse" />
       </div>
     );
   }
 
-  const activeItem = activePool[currentIndex];
-
-  const activeLogo = activeItem ? logoCache[`${activeItem.type}-${activeItem.id}`] : null;
-
-  const handlePrev = () => {
-    setDirection(-1);
-    setCurrentIndex((prev) => (prev - 1 + activePool.length) % activePool.length);
-    startTimer();
+  const goTo = (dir: number) => {
+    setDirection(dir);
+    setCurrentIndex((prev) => (prev + dir + activePool.length) % activePool.length);
   };
 
-  const handleNext = () => {
-    setDirection(1);
-    setCurrentIndex((prev) => (prev + 1) % activePool.length);
-    startTimer();
+  const prevIndex = (currentIndex - 1 + activePool.length) % activePool.length;
+  const nextIndex = (currentIndex + 1) % activePool.length;
+  const prevItem = activePool[prevIndex];
+  const nextItem = activePool[nextIndex];
+  const activeLogo = logoCache[`${activeItem.type}-${activeItem.id}`];
+  const saved = isSaved ? isSaved(activeItem) : false;
+
+  const wideImg = (it: MovieOrShow) =>
+    getOriginalBackdropUrl((it as any).backdrop_path) ||
+    (it.backdrop || it.poster || '').replace('/w1280', '/original').replace('/w500', '/original');
+
+  // Smooth slide+fade for the whole card content
+  const cardVariants = {
+    enter: (dir: number) => ({ opacity: 0, x: dir > 0 ? 80 : -80, scale: 0.98 }),
+    center: { opacity: 1, x: 0, scale: 1 },
+    exit: (dir: number) => ({ opacity: 0, x: dir > 0 ? -80 : 80, scale: 0.98 }),
   };
 
-  const handleDotSelect = (index: number) => {
-    setDirection(index > currentIndex ? 1 : -1);
-    setCurrentIndex(index);
-    startTimer();
+  // Stagger children (logo, meta, chips, overview, buttons) for a smooth Apple feel
+  const contentContainer = {
+    hidden: {},
+    show: { transition: { staggerChildren: 0.07, delayChildren: 0.12 } },
+  };
+  const contentItem = {
+    hidden: { opacity: 0, y: 16 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
   };
 
   return (
-    <div className="relative h-[68vh] sm:h-[88vh] min-h-[500px] sm:min-h-[680px] max-h-[920px] w-full overflow-hidden mb-10 sm:mb-14 flex items-end group select-none">
-      
-      {/* Background with custom container */}
-      <div className="absolute inset-0 overflow-hidden">
-        <AnimatePresence initial={false} custom={direction}>
-          <motion.div
-            key={currentIndex}
-            custom={direction}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            className="absolute inset-0 bg-cover bg-center"
-            style={{
-              backgroundImage: `url(${(activeItem.backdrop || activeItem.poster || '').replace('/w1280', '/original').replace('/w500', '/original')})`,
-            }}
-          />
-        </AnimatePresence>
-        
-        {/* Shadow overlays - Clean gradient masks */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/55 to-transparent z-[5] pointer-events-none" />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0a0a0a] to-transparent z-[5] pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/65 via-transparent to-[#0a0a0a]/25 z-[5] pointer-events-none" />
-      </div>
+    <div dir="rtl" className="relative w-full mb-12 sm:mb-16 pt-4 sm:pt-8 select-none overflow-hidden">
+      <div className="relative flex items-stretch justify-center gap-3 sm:gap-4 px-2 sm:px-4">
+        {/* Side peek — next (left in RTL) */}
+        <button
+          onClick={() => goTo(1)}
+          className="hidden lg:block flex-none w-[11%] rounded-[24px] overflow-hidden opacity-40 hover:opacity-70 transition-opacity cursor-pointer aspect-[2.15/1]"
+          aria-label="التالي"
+        >
+          <img src={wideImg(nextItem)} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" style={{ objectPosition: 'right center' }} />
+        </button>
 
-      {/* Hero Slide Contents - Animated concurrently */}
-      <div className="absolute inset-x-0 bottom-0 z-10 w-full px-4 sm:px-12 pb-6 sm:pb-20 md:pb-24 pointer-events-none">
-        <div className="max-w-xl text-right md:text-right pointer-events-auto">
-          <AnimatePresence initial={false} mode="wait">
+        {/* Center wide card */}
+        <div className="flex-1 max-w-[1500px]">
+          <AnimatePresence mode="wait" custom={direction}>
             <motion.div
-              key={currentIndex}
-              variants={contentVariants}
+              key={`card-${activeItem.type}-${activeItem.id}`}
+              custom={direction}
+              variants={cardVariants}
               initial="enter"
               animate="center"
               exit="exit"
-              className="flex flex-col text-right"
+              transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+              className="relative rounded-[28px] overflow-hidden border border-white/12 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)] ring-1 ring-white/10"
             >
-              {/* Trending Badge */}
-              <div className="inline-flex items-center gap-1.5 bg-red-500/10 border border-red-500/30 text-red-400 px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold mb-3 sm:mb-4 self-start">
-                <Flame className="w-3 sm:w-3.5 h-3 sm:h-3.5 fill-red-400" />
-                <span>الأكثر رواجاً هذا الأسبوع</span>
-              </div>
-
-              {/* Title (logo if available, else text) */}
-              {activeLogo ? (
-                <img
-                  src={activeLogo}
+              <div className="relative aspect-[16/10] sm:aspect-[16/7] lg:aspect-[2.15/1]">
+                {/* Backdrop with subtle ken-burns */}
+                <motion.img
+                  key={`img-${activeItem.id}`}
+                  src={wideImg(activeItem)}
                   alt={activeItem.title}
                   referrerPolicy="no-referrer"
-                  className="max-h-24 sm:max-h-36 md:max-h-44 max-w-[300px] sm:max-w-[480px] object-contain object-right mb-2 sm:mb-4 drop-shadow-2xl select-none"
+                  initial={{ scale: 1.08 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 8, ease: 'easeOut' }}
+                  className="w-full h-full object-cover"
                 />
-              ) : (
-                <h1 className="font-display text-3xl sm:text-5xl md:text-7xl font-black tracking-tight mb-2 sm:mb-4 text-gradient-noir line-clamp-2 leading-[1.05] drop-shadow-2xl">
-                  {activeItem.title}
-                </h1>
-              )}
 
-              {/* Metadata */}
-              <div className="flex items-center gap-3.5 text-xs text-gray-300 font-medium mb-3 sm:mb-4 justify-start">
-                <span className="flex items-center gap-1 text-[#f5c518] font-bold">
-                  <Star className="w-3.5 h-3.5 fill-current" />
-                  {activeItem.rating > 0 ? activeItem.rating.toFixed(1) : 'جديد'}
-                </span>
-                <span className="w-1 h-1 bg-gray-500 rounded-full" />
-                <span>{activeItem.year || 'غير معروف'}</span>
-                {activeItem.genres.length > 0 && (
-                  <>
-                    <span className="w-1 h-1 bg-gray-500 rounded-full" />
-                    <span className="text-gray-400 bg-white/5 px-2 py-0.5 rounded border border-white/5 text-[10px] sm:text-xs font-bold">
-                      {activeItem.genres.slice(0, 3).join(' · ')}
-                    </span>
-                  </>
-                )}
-              </div>
+                {/* Gradients — darken right side for readability (RTL) */}
+                <div className="absolute inset-0 bg-gradient-to-l from-black/95 via-black/45 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent" />
 
-              {/* Overview */}
-              <p className="hidden sm:block text-gray-300 text-xs sm:text-sm md:text-base leading-relaxed mb-6 line-clamp-2 max-w-lg">
-                {activeItem.overview}
-              </p>
-
-              {/* Call to Actions */}
-              <div className="flex flex-wrap gap-2.5 sm:gap-3">
-                <button
-                  onClick={() => onPlayClick(activeItem)}
-                  className="flex items-center gap-2 bg-white text-black hover:bg-white/90 font-bold px-6 sm:px-8 py-2.5 sm:py-3.5 rounded-2xl transition-all hover:scale-[1.03] active:scale-[0.98] cursor-pointer text-sm shadow-xl shadow-black/30"
+                {/* Details — pinned to the right, all RTL */}
+                <motion.div
+                  key={`content-${activeItem.id}`}
+                  variants={contentContainer}
+                  initial="hidden"
+                  animate="show"
+                  className="absolute inset-y-0 right-0 w-full sm:w-[55%] md:w-[50%] flex flex-col items-end justify-center text-right p-6 sm:p-9 md:p-12"
                 >
-                  <Play className="w-4 h-4 fill-current text-black" />
-                  <span>شاهد الآن</span>
+                  {/* Logo or title */}
+                  <motion.div variants={contentItem} className="flex justify-end w-full mb-3">
+                    {activeLogo ? (
+                      <img src={activeLogo} alt={activeItem.title} referrerPolicy="no-referrer" className="max-h-14 sm:max-h-20 md:max-h-24 max-w-[90%] object-contain object-right drop-shadow-2xl" />
+                    ) : (
+                      <h1 className="font-display text-3xl sm:text-5xl font-black text-white leading-tight line-clamp-2 drop-shadow-2xl">{activeItem.title}</h1>
+                    )}
+                  </motion.div>
+
+                  {/* Meta row */}
+                  <motion.div variants={contentItem} className="flex items-center justify-end gap-2.5 text-[11px] sm:text-xs text-gray-200 font-semibold mb-2.5">
+                    <span className="text-stone-300">{activeItem.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
+                    <span className="text-stone-400">{activeItem.year || ''}</span>
+                    <span className="flex items-center gap-1 text-[#f5c518]">
+                      {activeItem.rating > 0 ? activeItem.rating.toFixed(1) : 'جديد'}
+                      <Star className="w-3 h-3 fill-current" />
+                    </span>
+                  </motion.div>
+
+                  {/* Genre chips */}
+                  {activeItem.genres.length > 0 && (
+                    <motion.div variants={contentItem} className="flex items-center justify-end gap-1.5 mb-3">
+                      {activeItem.genres.slice(0, 3).map((g, i) => (
+                        <span key={i} className="text-[9px] sm:text-[10px] font-semibold text-stone-200 glass px-2.5 py-1 rounded-lg">{g}</span>
+                      ))}
+                    </motion.div>
+                  )}
+
+                  {/* Overview */}
+                  {activeItem.overview && (
+                    <motion.p variants={contentItem} className="hidden sm:block text-gray-300 text-[11px] sm:text-xs leading-relaxed line-clamp-3 mb-5 max-w-md">
+                      {activeItem.overview}
+                    </motion.p>
+                  )}
+
+                  {/* Actions — RTL: Play is rightmost */}
+                  <motion.div variants={contentItem} className="flex items-center justify-end gap-2.5 flex-row-reverse">
+                    <button
+                      onClick={() => onPlayClick(activeItem)}
+                      className="flex items-center gap-2 bg-white text-black hover:bg-white/90 font-bold px-7 py-2.5 sm:py-3 rounded-full transition-all hover:scale-[1.04] active:scale-95 cursor-pointer text-sm shadow-lg"
+                    >
+                      <Play className="w-4 h-4 fill-black text-black" />
+                      <span>Play</span>
+                    </button>
+
+                    {onToggleSave && (
+                      <button
+                        onClick={() => onToggleSave(activeItem)}
+                        className={`w-11 h-11 rounded-full flex items-center justify-center transition-all cursor-pointer ${saved ? 'bg-white text-black' : 'glass text-white hover:bg-white/15'}`}
+                        title={saved ? 'محفوظ في قائمتي' : 'إضافة لقائمتي'}
+                      >
+                        {saved ? <Check className="w-5 h-5 text-black" strokeWidth={3} /> : <Plus className="w-5 h-5" />}
+                      </button>
+                    )}
+
+                    {onTrailerClick && (
+                      <button
+                        onClick={() => onTrailerClick(activeItem)}
+                        className="w-11 h-11 rounded-full glass flex items-center justify-center text-white hover:bg-white/15 transition-all cursor-pointer"
+                        title="الإعلان"
+                      >
+                        <svg viewBox="0 0 28 20" className="w-5 h-[14px]" xmlns="http://www.w3.org/2000/svg">
+                          <rect width="28" height="20" rx="5" fill="#FF0000" />
+                          <path d="M11 6 L19 10 L11 14 Z" fill="white" />
+                        </svg>
+                      </button>
+                    )}
+                  </motion.div>
+                </motion.div>
+
+                {/* In-card nav arrows */}
+                <button
+                  onClick={() => goTo(-1)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-black flex items-center justify-center cursor-pointer transition-all hover:scale-110 shadow-lg z-20"
+                  aria-label="السابق"
+                >
+                  <ChevronRight className="w-5 h-5" />
                 </button>
                 <button
-                  onClick={() => onInfoClick(activeItem)}
-                  className="glass flex items-center gap-2 hover:bg-white/15 text-white font-bold px-6 sm:px-8 py-2.5 sm:py-3.5 rounded-2xl transition-all hover:scale-[1.03] cursor-pointer text-sm"
+                  onClick={() => goTo(1)}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-black flex items-center justify-center cursor-pointer transition-all hover:scale-110 shadow-lg z-20"
+                  aria-label="التالي"
                 >
-                  <Info className="w-4 h-4" />
-                  <span>التفاصيل</span>
+                  <ChevronLeft className="w-5 h-5" />
                 </button>
               </div>
             </motion.div>
           </AnimatePresence>
         </div>
-      </div>
 
-      {/* Manual Sliding Arrows */}
-      <div className="absolute inset-y-0 left-0 right-0 z-20 flex justify-between items-center px-4 md:px-8 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-none">
+        {/* Side peek — previous (right in RTL) */}
         <button
-          onClick={handlePrev}
-          className="w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-transform hover:scale-105"
-          aria-label="الشريحة السابقة"
+          onClick={() => goTo(-1)}
+          className="hidden lg:block flex-none w-[11%] rounded-[24px] overflow-hidden opacity-40 hover:opacity-70 transition-opacity cursor-pointer aspect-[2.15/1]"
+          aria-label="السابق"
         >
-          <ChevronRight className="w-6 h-6" /> {/* RTL flip makes right go previous */}
-        </button>
-        <button
-          onClick={handleNext}
-          className="w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-transform hover:scale-105"
-          aria-label="الشريحة التالية"
-        >
-          <ChevronLeft className="w-6 h-6" />
+          <img src={wideImg(prevItem)} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" style={{ objectPosition: 'left center' }} />
         </button>
       </div>
 
-      {/* Slider Indicator Dots in Center */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+      {/* Dots */}
+      <div className="relative z-10 flex justify-center gap-2 mt-6">
         {activePool.map((_, i) => (
           <button
             key={i}
-            onClick={() => handleDotSelect(i)}
-            className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-              i === currentIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/30 hover:bg-white/50'
-            }`}
-            aria-label={`الذهاب للشريحة ${i + 1}`}
+            onClick={() => { setDirection(i > currentIndex ? 1 : -1); setCurrentIndex(i); }}
+            className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${i === currentIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/30 hover:bg-white/50'}`}
+            aria-label={`شريحة ${i + 1}`}
           />
         ))}
       </div>
