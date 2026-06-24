@@ -188,25 +188,8 @@ export default function VideoPlayer({
     <div ref={containerRef} className="w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl animate-fade-in text-right">
       <div className="player-shell bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl relative">
         
-        {/* Player Header Control Bar */}
-        <div className="flex items-center justify-between gap-4 px-4 py-3 glass-strong border-b border-white/8 selection:bg-transparent">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <span
-              className={`flex items-center gap-1.5 text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${
-                playMode ==='trailer' ?'bg-white/10 text-white' :'bg-red-500/90 text-white'
-              }`}
-            >
-              <span className="relative flex w-1.5 h-1.5">
-                <span className="animate-ping absolute inline-flex w-full h-full rounded-full bg-white opacity-60"></span>
-                <span className="relative inline-flex rounded-full w-1.5 h-1.5 bg-white"></span>
-              </span>
-              {playMode ==='trailer' ?'إعلان' :'مباشر'}
-</span>
-            <h4 className="text-white font-semibold text-xs md:text-sm truncate select-all">
-              {title} {type ==='tv' && playMode ==='movie' &&`(الموسم ${season} · الحلقة ${episode})`}
-</h4>
-</div>
-
+        {/* Player Header Control Bar — action buttons only */}
+        <div className="flex items-center justify-end gap-4 px-4 py-3 glass-strong border-b border-white/8 selection:bg-transparent">
           <div className="flex items-center gap-1.5 shrink-0 relative">
             {/* Play Mode Switcher (if trailer exists) */}
             {playMode ==='movie' && youtubeKey && (
@@ -350,13 +333,6 @@ export default function VideoPlayer({
 </div>
           )}</div>
 
-         {/* Browser sandbox notification details */}
-        {playMode ==='movie' && (
-          <div className="px-4 py-3 bg-stone-950/80 border-t border-white/5 flex items-center gap-2 text-[11px] text-gray-500 select-all justify-center">
-            <ShieldAlert className="w-3.5 h-3.5 text-stone-600 shrink-0" />
-            <span>نظام التشغيل خارجي. إذا لم تظهر الترجمة تلقائياً، قم بتفعيلها من قائمة الإعدادات (CC) للمشغل المدمج.</span>
-</div>
-        )}
 </div>
 </div>
   );

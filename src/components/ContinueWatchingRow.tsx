@@ -75,7 +75,7 @@ export default function ContinueWatchingRow({ title, items, onItemClick, onRemov
                         e.stopPropagation();
                         onRemove(item);
                       }}
-                      className="absolute top-2.5 left-2.5 w-8 h-8 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-0 group-hover/cw:opacity-100 transition-all hover:bg-white/20"
+                      className="absolute top-2.5 left-2.5 w-8 h-8 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-0 group-hover/cw:opacity-100 transition-all hover:bg-white/20 cursor-pointer"
                       title="إزالة من المتابعة"
                     >
                       <X className="w-4 h-4" />
@@ -84,7 +84,7 @@ export default function ContinueWatchingRow({ title, items, onItemClick, onRemov
 
                   {/* Title overlaid bottom */}
                   <div className="absolute inset-x-0 bottom-0 p-3.5">
-                    <h3 className="text-white font-bold text-sm leading-tight line-clamp-1 mb-2">{item.title}</h3>
+                    <h3 className="text-white font-bold text-sm leading-tight line-clamp-1 mb-2">{item.title || (item as any).name || 'بدون عنوان'}</h3>
                     {/* Progress bar */}
                     <div className="h-1 w-full bg-white/20 rounded-full overflow-hidden">
                       <div

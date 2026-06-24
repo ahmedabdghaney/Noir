@@ -575,39 +575,28 @@ export default function DetailView({
 
 
 
-            {/* Row Meta Metrics */}
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3.5 text-[11px] sm:text-xs md:text-sm text-gray-300 font-semibold mb-3 sm:mb-4 leading-none">
-              <span className="flex items-center gap-1 text-[#f5c518]">
-                <Star className="w-3.5 h-3.5 fill-current" />
-                {data.vote_average ? data.vote_average.toFixed(1) :'غ/م'} / 10
+            {/* Row Meta Metrics — clean Apple TV style */}
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs sm:text-sm text-gray-300 font-semibold mb-3 sm:mb-4 leading-none">
+              <span className="flex items-center gap-1.5 text-[#f5c518]">
+                <Star className="w-4 h-4 fill-current" />
+                {data.vote_average ? data.vote_average.toFixed(1) :'غ/م'}
 </span>
-              <span className="text-stone-700 select-none">•</span>
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-stone-400" />
-                {year ||'—'}
-</span>
-              <span className="text-stone-700 select-none">•</span>
+              <span className="text-stone-300">{year ||'—'}</span>
               {runtime > 0 && (
-                <>
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-stone-400" />
-                    {runtime} دقيقة
-</span>
-                  <span className="text-stone-700 select-none">•</span>
-</>
+                <span className="text-stone-300">{runtime} دقيقة</span>
               )}
-              <span className="text-gray-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/5 uppercase text-[9px] sm:text-xs">
-                {type ==='movie' ?'فيلم سينمائي' :'مسلسل تلفزيوني'}
+              <span className="glass text-stone-200 px-2.5 py-1 rounded-full text-[10px] sm:text-xs">
+                {type ==='movie' ?'فيلم' :'مسلسل'}
 </span>
 </div>
 
             {/* Genre Tags List */}
             {genres.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-3 sm:mb-4">
+              <div className="flex flex-wrap gap-2 mb-3 sm:mb-4">
                 {genres.map((g, idx) => (
                   <span
                     key={idx}
-                    className="text-[10px] sm:text-xs font-semibold text-gray-300 bg-stone-900 border border-white/5 py-0.5 sm:py-1 px-2.5 sm:px-3 rounded-full"
+                    className="text-[10px] sm:text-xs font-semibold text-stone-300 glass py-1 px-3 rounded-full"
                   >
                     {g}
 </span>
@@ -948,7 +937,7 @@ export default function DetailView({
                             setSelectedEpisode(ep.episode_number);
                             handlePlayClick('movie');
                           }}
-                          className="group/ep flex-none w-[300px] sm:w-[380px] text-right snap-start"
+                          className="group/ep flex-none w-[300px] sm:w-[380px] text-right snap-start cursor-pointer"
                         >
                           {/* Card with image + overlaid text */}
                           <div className="relative h-[280px] sm:h-[320px] rounded-3xl overflow-hidden bg-stone-900 border border-white/8 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.7)]">
@@ -1092,13 +1081,13 @@ export default function DetailView({
         )}
 
         {/* Explicit back route */}
-        <div className="py-12 text-center">
+        <div className="py-12 text-right px-6 md:px-12">
           <button
             onClick={onBackClick}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-gray-400 hover:text-white transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 glass hover:bg-white/15 text-white text-xs sm:text-sm font-bold px-5 py-3 rounded-full transition-all hover:scale-[1.03] cursor-pointer"
           >
-            <ArrowRight className="w-4 h-4 ml-1" />
-            <span>العودة لشاشة التصفّح الرئيسية</span>
+            <ArrowRight className="w-4 h-4" />
+            <span>العودة للرئيسية</span>
 </button>
 </div>
 

@@ -707,7 +707,10 @@ export default function App() {
   };
 
   const handleTitleClick = (item: MovieOrShow) => {
-    window.location.hash =`#${item.type}/${item.id}`;
+    // Brief delay lets the card press animation play before navigating
+    setTimeout(() => {
+      window.location.hash =`#${item.type}/${item.id}`;
+    }, 150);
   };
 
   const handleQuickSelectTitle = (type: 'movie' | 'tv', id: number) => {

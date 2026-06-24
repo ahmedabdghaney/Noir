@@ -113,7 +113,7 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: Search
       onClick={(e) => e.target === e.currentTarget && onClose()}
       className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[500] pt-24 md:pt-32 px-4 selection:bg-red-500/30 overflow-y-auto"
     >
-      <div className="max-w-2xl mx-auto bg-stone-900/95 border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-pop-in">
+      <div className="max-w-2xl mx-auto glass-strong border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-pop-in">
         
         {/* Input area */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-white/5">

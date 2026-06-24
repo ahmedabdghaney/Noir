@@ -129,7 +129,7 @@ export default function Header({
           <div className="flex justify-center">
             <button
               onClick={openSearchOverlay}
-              className="flex items-center gap-2 bg-stone-900/60 border border-white/5 hover:border-white/15 px-3 py-1.5 rounded-full transition-all text-gray-400 hover:text-white text-xs cursor-pointer group w-full max-w-[280px]"
+              className="glass flex items-center gap-2 hover:bg-white/10 px-3.5 py-2 rounded-full transition-all text-gray-300 hover:text-white text-xs cursor-pointer group w-full max-w-[300px]"
             >
               <Search className="w-3.5 h-3.5 text-gray-400 group-hover:text-white transition-colors shrink-0" />
               <span className="truncate text-[10px] sm:text-xs">ابحث عن عروض وأفلام...</span>
