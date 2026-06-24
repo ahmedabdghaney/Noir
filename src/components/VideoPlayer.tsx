@@ -186,7 +186,7 @@ export default function VideoPlayer({
 
   return (
     <div ref={containerRef} className="w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl animate-fade-in text-right">
-      <div className="player-shell bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl relative">
+      <div className="player-shell bg-black rounded-3xl overflow-hidden border border-white/15 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9),0_0_0_1px_rgba(255,255,255,0.05)] ring-1 ring-white/10 relative">
 
         {/* Video Stage Frame */}
         <div className="relative aspect-video w-full bg-black">

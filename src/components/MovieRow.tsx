@@ -146,7 +146,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
                 className="group/card card-transition flex-none w-[125px] sm:w-[185px] md:w-[225px] lg:w-[255px] snap-start cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
               >
                 {/* Poster Artwork container */}
-                <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+                <div className={`relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)] ${progress >= 90 ? 'ring-2 ring-red-500 border border-red-500' : 'border border-white/8'}`}>
                   {item.poster || item.backdrop ? (
                     <img
                       src={item.poster || item.backdrop || undefined}

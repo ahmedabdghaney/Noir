@@ -280,9 +280,12 @@ export default function App() {
         return;
       }
       const list: MovieOrShow[] = JSON.parse(listStr);
-      // Drop any legacy/broken entries whose type isn't a valid 'movie' or 'tv'
+      // Drop broken entries: invalid type, or missing title/name (legacy items saved before title fix)
       const validList = list.filter(
-        (item) => (item.type === 'movie' || item.type === 'tv') && item.id,
+        (item) =>
+          (item.type === 'movie' || item.type === 'tv') &&
+          item.id &&
+          ((item.title && item.title.trim() && item.title !== 'بدون عنوان') || (item as any).name),
       );
       // If we removed broken entries, persist the cleaned list back
       if (validList.length !== list.length) {

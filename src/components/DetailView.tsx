@@ -157,11 +157,24 @@ export default function DetailView({
   // Late joiner: if the host is already mid-movie, auto-open the player at the host's time
   const didAutoOpenForHostTimeRef = useRef(false);
   const episodesRowRef = useRef<HTMLDivElement>(null);
+  const [epShowLeft, setEpShowLeft] = useState(false);
+  const [epShowRight, setEpShowRight] = useState(false);
+
+  const checkEpScroll = () => {
+    if (episodesRowRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = episodesRowRef.current;
+      const absScroll = Math.abs(scrollLeft);
+      setEpShowRight(absScroll > 10);
+      setEpShowLeft(absScroll + clientWidth < scrollWidth - 10);
+    }
+  };
 
   const scrollEpisodes = (dir: 'left' | 'right') => {
     if (!episodesRowRef.current) return;
-    const amount = 420;
+    const { clientWidth } = episodesRowRef.current;
+    const amount = clientWidth * 0.75;
     episodesRowRef.current.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' });
+    setTimeout(checkEpScroll, 350);
   };
   useEffect(() => {
     if (!wtConnected || wtIsHost) return;
@@ -201,6 +214,15 @@ export default function DetailView({
       cancelled = true;
     };
   }, [type, id, selectedSeason]);
+
+  useEffect(() => {
+    const t = setTimeout(checkEpScroll, 100);
+    window.addEventListener('resize', checkEpScroll);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('resize', checkEpScroll);
+    };
+  }, [episodes, loadingEpisodes]);
 
   // When the panel opens without a room code, create one (this client becomes host on the server)
   useEffect(() => {
@@ -924,23 +946,27 @@ export default function DetailView({
                   </div>
                 ) : (
                   <div className="relative group/eprow">
-                    {/* Nav arrows */}
-                    <button
-                      onClick={() => scrollEpisodes('right')}
-                      className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/eprow:opacity-100 transition-all hover:scale-105 cursor-pointer -mr-2"
-                      aria-label="السابق"
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => scrollEpisodes('left')}
-                      className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/eprow:opacity-100 transition-all hover:scale-105 cursor-pointer -ml-2"
-                      aria-label="التالي"
-                    >
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
+                    {/* Nav arrows (conditional) */}
+                    {epShowRight && (
+                      <button
+                        onClick={() => scrollEpisodes('right')}
+                        className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/eprow:opacity-100 transition-all hover:scale-105 cursor-pointer -mr-2"
+                        aria-label="السابق"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    )}
+                    {epShowLeft && (
+                      <button
+                        onClick={() => scrollEpisodes('left')}
+                        className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/eprow:opacity-100 transition-all hover:scale-105 cursor-pointer -ml-2"
+                        aria-label="التالي"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                    )}
 
-                    <div ref={episodesRowRef} className="flex gap-4 overflow-x-auto no-scrollbar pb-3 -mx-1 px-1 scroll-smooth" dir="rtl">
+                    <div ref={episodesRowRef} onScroll={checkEpScroll} className="flex gap-4 overflow-x-auto no-scrollbar pb-3 -mx-1 px-1 scroll-smooth" dir="rtl">
                     {(episodes.length > 0
                       ? episodes
                       : Array.from({ length: episodesCount }).map((_, i) => ({
@@ -1106,10 +1132,10 @@ export default function DetailView({
         )}
 
         {/* Explicit back route */}
-        <div className="py-12 text-right px-6 md:px-12">
+        <div className="py-12 text-center">
           <button
             onClick={onBackClick}
-            className="inline-flex items-center gap-2 text-red-500 hover:text-red-400 text-sm font-bold transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white text-sm font-bold px-6 py-3 rounded-full transition-all hover:scale-[1.03] cursor-pointer"
           >
             <ArrowRight className="w-4 h-4" />
             <span>العودة للرئيسية</span>
