@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Youtube, Play, Loader, ShieldAlert, Pause, Lock } from 'lucide-react';
+import { Play, Loader, ShieldAlert, Pause, Lock } from 'lucide-react';
 
 interface VideoPlayerProps {
   type: 'movie' | 'tv';
@@ -52,6 +52,7 @@ export default function VideoPlayer({
   onNextEpisode,
 }: VideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
+  const [sourceIdx, setSourceIdx] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Watch progression state
@@ -87,7 +88,7 @@ export default function VideoPlayer({
     return () => clearInterval(timer);
   }, [type, id, playMode, progressKey]);
 
-  // Listen for vidapi.qzz.io postMessage progress events
+  // Listen for player postMessage progress events
   // (sent from the iframe whenever playback advances or the user seeks)
   const lastWatchedRef = useRef<number>(0);
   const lastWatchedAtRef = useRef<number>(0);
@@ -103,11 +104,19 @@ export default function VideoPlayer({
       if (!d || typeof d !== 'object') return;
 
       let watched: number | null = null;
-      // vidapi MEDIA_DATA payload
+      // MEDIA_DATA payload
       if (d.type === 'MEDIA_DATA' && d.data?.progress?.watched != null) {
         watched = Number(d.data.progress.watched);
       } else if (d.type === 'PLAYER_EVENT' && d.data?.player_progress != null) {
         watched = Number(d.data.player_progress);
+      } else if (d.type === 'PLAYER_EVENT' && d.data?.currentTime != null) {
+        // vidsrc / vsembed player event payload
+        watched = Number(d.data.currentTime);
+      } else if (d.event === 'time' && d.currentTime != null) {
+        // generic { event:'time', currentTime } payload
+        watched = Number(d.currentTime);
+      } else if (typeof d.currentTime === 'number') {
+        watched = d.currentTime;
       }
       if (watched == null || Number.isNaN(watched) || watched < 0) return;
 
@@ -146,6 +155,7 @@ export default function VideoPlayer({
       containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     setIsLoading(true);
+    setSourceIdx(0);
     // Reload progress percent for shift
     const saved = Number(localStorage.getItem(`noir_progress_${type}_${id}`)) || 0;
     setProgress(saved);
@@ -154,44 +164,70 @@ export default function VideoPlayer({
   // Compute VIT API provider url
   const getEmbedUrl = () => {
     if (playMode ==='trailer' && youtubeKey) {
-      return`https://www.youtube.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1`;
+      const origin = typeof window !== 'undefined' ? encodeURIComponent(window.location.origin) : '';
+      return `https://www.youtube-nocookie.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&origin=${origin}`;
     }
 
-    const params = new URLSearchParams({
-      primaryColor: 'ff453a', // Nice bright red matching Noir brand color system
-      secondaryColor: '0a0a0a',
-      iconColor: 'FFFFFF',
-      icons: 'vid',
-      title: 'true',
-      poster: 'true',
-      autoplay: 'true',
-    });
+    // Three iframe-friendly providers. vidapi default; 2embed + vidlink as fallbacks.
+    // 1) vidapi.qzz.io — reliable inside iframe, autoplay, brand colors
+    const buildVidApi = () => {
+      const p = new URLSearchParams({
+        primaryColor: 'ff453a',
+        secondaryColor: '0a0a0a',
+        iconColor: 'FFFFFF',
+        icons: 'vid',
+        title: 'true',
+        poster: 'true',
+        autoplay: 'true',
+      });
+      if (startAt && startAt > 5) p.set('startAt', String(Math.floor(startAt)));
+      if (type === 'tv') {
+        p.set('nextbutton', 'true');
+        return `https://vidapi.qzz.io/tv/${id}/${season}/${episode}?${p.toString()}`;
+      }
+      return `https://vidapi.qzz.io/movie/${id}?${p.toString()}`;
+    };
 
-    if (startAt && startAt > 5) {
-      params.set('startAt', String(Math.floor(startAt)));
-    }
+    // 2) 2embed.online
+    const build2Embed = () => {
+      if (type === 'tv') {
+        return `https://www.2embed.online/embed/tv/${id}/${season}/${episode}`;
+      }
+      return `https://www.2embed.online/embed/movie/${id}`;
+    };
 
-    if (type ==='tv') {
-      params.set('nextbutton','true');
-      return`https://vidapi.qzz.io/tv/${id}/${season}/${episode}?${params.toString()}`;
-    }
+    // 3) vidlink.pro
+    const buildVidlink = () => {
+      if (type === 'tv') {
+        return `https://vidlink.pro/tv/${id}/${season}/${episode}?autoplay=true`;
+      }
+      return `https://vidlink.pro/movie/${id}?autoplay=true`;
+    };
 
-    return`https://vidapi.qzz.io/movie/${id}?${params.toString()}`;
+    const sources = [buildVidApi, build2Embed, buildVidlink];
+    const idx = Math.min(sourceIdx, sources.length - 1);
+    return sources[idx]();
   };
+
+  const SOURCE_LABELS = ['سيرفر 1', 'سيرفر 2', 'سيرفر 3'];
 
   return (
     <div ref={containerRef} className="w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl animate-fade-in text-right">
       <div className="player-shell bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl relative">
         
         {/* Player Header Control Bar */}
-        <div className="flex items-center justify-between gap-4 px-4 py-3 bg-gradient-to-b from-neutral-900 via-[#0a0a0a] to-[#0a0a0a] border-b border-white/5 selection:bg-transparent">
+        <div className="flex items-center justify-between gap-4 px-4 py-3 glass-strong border-b border-white/8 selection:bg-transparent">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <span
-              className={`text-[10px] md:text-xs font-bold px-2 py-0.5 rounded-md shrink-0 uppercase tracking-wider ${
-                playMode ==='trailer' ?'bg-[#ff0033] text-white' :'bg-red-500 text-white'
+              className={`flex items-center gap-1.5 text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${
+                playMode ==='trailer' ?'bg-white/10 text-white' :'bg-red-500/90 text-white'
               }`}
             >
-              {playMode ==='trailer' ?'إعلان ترويجي' :'المشغل الرئيسي'}
+              <span className="relative flex w-1.5 h-1.5">
+                <span className="animate-ping absolute inline-flex w-full h-full rounded-full bg-white opacity-60"></span>
+                <span className="relative inline-flex rounded-full w-1.5 h-1.5 bg-white"></span>
+              </span>
+              {playMode ==='trailer' ?'إعلان' :'مباشر'}
 </span>
             <h4 className="text-white font-semibold text-xs md:text-sm truncate select-all">
               {title} {type ==='tv' && playMode ==='movie' &&`(الموسم ${season} · الحلقة ${episode})`}
@@ -203,30 +239,50 @@ export default function VideoPlayer({
             {playMode ==='movie' && youtubeKey && (
               <button
                 onClick={() => onSwitchMode('trailer')}
-                className="flex items-center gap-1 bg-white/5 hover:bg-white/10 text-white border border-white/5 text-xs font-medium px-3 py-1.5 rounded-full cursor-pointer transition-colors"
+                className="flex items-center gap-1.5 bg-white/8 hover:bg-white/15 text-white text-xs font-semibold px-3.5 py-2 rounded-full cursor-pointer transition-colors"
                 title="عرض الإعلان الرسمي"
               >
-                <Youtube className="w-4 h-4 text-red-500" />
-                <span className="hidden sm:inline">الإعلان الرسمي</span>
+                <svg viewBox="0 0 28 20" className="w-5 h-[15px] shrink-0" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="28" height="20" rx="5" fill="#FF0000" />
+                  <path d="M11 6 L19 10 L11 14 Z" fill="white" />
+                </svg>
+                <span className="hidden sm:inline">الإعلان</span>
 </button>
             )}
 
             {playMode ==='trailer' && (
-              <button
-                onClick={() => onSwitchMode('movie')}
-                className="flex items-center gap-1 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold px-3 py-1.5 rounded-full cursor-pointer transition-colors"
-                title="الرجوع للفيلم أو المسلسل"
-              >
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>شاهد الآن</span>
-</button>
+              <>
+                {youtubeKey && (
+                  <a
+                    href={`https://www.youtube.com/watch?v=${youtubeKey}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1.5 bg-white/8 hover:bg-white/15 text-white text-xs font-semibold px-3.5 py-2 rounded-full cursor-pointer transition-colors"
+                    title="فتح الإعلان على يوتيوب إذا لم يعمل هنا"
+                  >
+                    <svg viewBox="0 0 28 20" className="w-5 h-[14px] shrink-0" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="28" height="20" rx="5" fill="#FF0000" />
+                      <path d="M11 6 L19 10 L11 14 Z" fill="white" />
+                    </svg>
+                    <span className="hidden sm:inline">يوتيوب</span>
+                  </a>
+                )}
+                <button
+                  onClick={() => onSwitchMode('movie')}
+                  className="flex items-center gap-1.5 bg-white text-black hover:bg-white/90 text-xs font-bold px-3.5 py-2 rounded-full cursor-pointer transition-colors"
+                  title="الرجوع للفيلم أو المسلسل"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <span>شاهد الآن</span>
+                </button>
+              </>
             )}
 
             {/* Next Episode Button */}
             {type ==='tv' && playMode ==='movie' && onNextEpisode && episode < episodesCount && (
               <button
                 onClick={onNextEpisode}
-                className="flex items-center gap-1 bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full cursor-pointer transition-colors"
+                className="flex items-center gap-1.5 bg-white/8 hover:bg-white/15 text-white text-xs font-bold px-3.5 py-2 rounded-full cursor-pointer transition-colors"
                 title="تشغيل الحلقة التالية للمسلسل"
               >
                 <span>الحلقة التالية ⟵</span>
@@ -265,18 +321,31 @@ export default function VideoPlayer({
           {isLoading && !isPausedByHost && (
             <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-10 gap-3">
               <Loader className="w-8 h-8 text-red-500 animate-spin" />
-              <span className="text-xs text-neutral-400 select-none">جاري تحميل مسار المشغّل ومزامنة الترجمة...</span>
+              <span className="text-xs text-stone-400 select-none">جاري تحميل مسار المشغّل ومزامنة الترجمة...</span>
 </div>
           )}
 
-          <iframe
-            src={isPausedByHost ? 'about:blank' : getEmbedUrl()}
-            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-            referrerPolicy="no-referrer"
-            allowFullScreen
-            className="w-full h-full border-0 relative z-0"
-            onLoad={() => setIsLoading(false)}
-          />
+          {playMode === 'trailer' ? (
+            <iframe
+              src={getEmbedUrl()}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+              className="w-full h-full border-0 relative z-0"
+              onLoad={() => setIsLoading(false)}
+            />
+          ) : (
+            <iframe
+              key={`player-${sourceIdx}-${id}-${episode}`}
+              src={isPausedByHost ? 'about:blank' : getEmbedUrl()}
+              allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+              sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
+              referrerPolicy="no-referrer"
+              allowFullScreen
+              className="w-full h-full border-0 relative z-0"
+              onLoad={() => setIsLoading(false)}
+            />
+          )}
 
           {/* Host-paused overlay (covers iframe completely) */}
           {isPausedByHost && playMode === 'movie' && (
@@ -308,10 +377,37 @@ export default function VideoPlayer({
 </div>
           )}</div>
 
+         {/* Source switcher — all three support iframe embedding */}
+        {playMode ==='movie' && (
+          <div className="px-4 py-3 glass-strong border-t border-white/8 flex items-center justify-between gap-3 flex-wrap">
+            <span className="text-[11px] text-gray-400 font-bold">
+              الفيلم لا يعمل؟ بدّل السيرفر
+            </span>
+            <div className="flex flex-wrap gap-2" dir="rtl">
+              {SOURCE_LABELS.map((label, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    setSourceIdx(i);
+                    setIsLoading(true);
+                  }}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
+                    sourceIdx === i
+                      ? 'bg-white text-black'
+                      : 'bg-white/8 text-white hover:bg-white/15'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
          {/* Browser sandbox notification details */}
         {playMode ==='movie' && (
-          <div className="px-4 py-3 bg-neutral-950/80 border-t border-white/5 flex items-center gap-2 text-[11px] text-gray-500 select-all justify-center">
-            <ShieldAlert className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
+          <div className="px-4 py-3 bg-stone-950/80 border-t border-white/5 flex items-center gap-2 text-[11px] text-gray-500 select-all justify-center">
+            <ShieldAlert className="w-3.5 h-3.5 text-stone-600 shrink-0" />
             <span>نظام التشغيل خارجي. إذا لم تظهر الترجمة تلقائياً، قم بتفعيلها من قائمة الإعدادات (CC) للمشغل المدمج.</span>
 </div>
         )}
