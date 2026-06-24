@@ -8,7 +8,7 @@ import { Search, Menu, X } from 'lucide-react';
 import LogoIcon from './LogoIcon';
 
 interface HeaderProps {
-  activeView: 'home' | 'search' | 'detail' | 'watchlist';
+  activeView: 'home' | 'search' | 'detail' | 'watchlist' | 'live';
   searchMode: 'movie' | 'tv';
   setSearchMode: (mode: 'movie' | 'tv') => void;
   goHome: () => void;
@@ -17,6 +17,7 @@ interface HeaderProps {
   onLogout: () => void;
   onOpenProfile: () => void;
   onViewWatchlist: () => void;
+  onViewLive: () => void;
 }
 
 export default function Header({
@@ -29,6 +30,7 @@ export default function Header({
   onLogout,
   onOpenProfile,
   onViewWatchlist,
+  onViewLive,
 }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -69,8 +71,8 @@ export default function Header({
       <nav
         className={`fixed top-0 left-0 right-0 z-[200] h-14 flex items-center transition-all duration-300 ${
           isScrolled
-            ?'backdrop-blur-2xl bg-[#0b0b0d]/70 border-b border-white/8 saturate-150'
-            :'backdrop-blur-xl bg-gradient-to-b from-black/50 to-transparent border-b border-transparent'
+            ?'backdrop-blur-md bg-black/85 border-b border-white/8'
+            :'backdrop-blur-sm bg-black/60 border-b border-transparent'
         }`}
       >
         <div className="w-full px-4 md:px-12 grid grid-cols-3 items-center">
@@ -109,11 +111,19 @@ export default function Header({
               <button
                 onClick={() => setSearchMode('tv')}
                 className={`text-xs md:text-sm font-semibold transition-colors hover:text-white cursor-pointer select-none ${
-                    activeView ==='search' && searchMode ==='tv' ?'text-white' :'text-gray-400'
+                    activeView === 'search' && searchMode === 'tv' ? 'text-white' : 'text-gray-400'
                 }`}
               >
                 المسلسلات
-</button>
+              </button>
+              <button
+                onClick={onViewLive}
+                className={`text-xs md:text-sm font-semibold transition-colors hover:text-white cursor-pointer select-none ${
+                    activeView === 'live' ? 'text-white font-bold' : 'text-gray-400'
+                }`}
+              >
+                البث المباشر 🔴
+              </button>
 </div>
 </div>
 
@@ -121,7 +131,7 @@ export default function Header({
           <div className="flex justify-center">
             <button
               onClick={openSearchOverlay}
-              className="flex items-center gap-2 bg-stone-900/60 border border-white/5 hover:border-white/15 px-3 py-1.5 rounded-full transition-all text-gray-400 hover:text-white text-xs cursor-pointer group w-full max-w-[280px]"
+              className="flex items-center gap-2 bg-neutral-900/60 border border-white/5 hover:border-white/15 px-3 py-1.5 rounded-full transition-all text-gray-400 hover:text-white text-xs cursor-pointer group w-full max-w-[280px]"
             >
               <Search className="w-3.5 h-3.5 text-gray-400 group-hover:text-white transition-colors shrink-0" />
               <span className="truncate text-[10px] sm:text-xs">ابحث عن عروض وأفلام...</span>
@@ -134,7 +144,7 @@ export default function Header({
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                  className="w-8 h-8 rounded-full border border-white/10 hover:border-white/20 hover:scale-105 active:scale-95 transition-all overflow-hidden flex items-center justify-center bg-stone-900 cursor-pointer select-none"
+                  className="w-8 h-8 rounded-full border border-white/10 hover:border-white/20 hover:scale-105 active:scale-95 transition-all overflow-hidden flex items-center justify-center bg-neutral-900 cursor-pointer select-none"
                   title="خيارات الحساب"
                 >
                   {user.photoURL ? (
@@ -152,7 +162,7 @@ export default function Header({
 </button>
 
                 {isProfileDropdownOpen && (
-                  <div className="absolute left-0 mt-2.5 w-48 bg-stone-950 border border-white/5 rounded-2xl shadow-2xl py-2 z-[250] text-right animate-pop-in">
+                  <div className="absolute left-0 mt-2.5 w-48 bg-neutral-950 border border-white/5 rounded-2xl shadow-2xl py-2 z-[250] text-right animate-pop-in">
                     <div className="px-4 py-2 border-b border-white/5">
                       <p className="text-[9px] text-gray-500 font-bold mb-0.5">تسجيل الدخول كـ</p>
                       <p className="text-xs text-white font-bold truncate leading-tight">{user.name}</p>
@@ -256,7 +266,18 @@ export default function Header({
               }`}
             >
               قائمتي 
-</button>
+            </button>
+            <button
+              onClick={() => {
+                onViewLive();
+                setIsMobileMenuOpen(false);
+              }}
+              className={`flex items-center text-right text-lg font-medium py-3 px-4 rounded-xl transition-colors ${
+                activeView === 'live' ? 'bg-white/10 text-white font-semibold' : 'text-gray-300 hover:bg-white/5'
+              }`}
+            >
+              البث المباشر 🔴
+            </button>
 </div>
 </div>
       )}

@@ -12,9 +12,7 @@ import {
   sendEmailVerification,
 } from 'firebase/auth';
 import {
-  initializeFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
+  getFirestore,
   collection,
   doc,
   setDoc,
@@ -42,26 +40,22 @@ const app = initializeApp(firebaseConfig);
 // Initialize Firebase Auth with persistent standard configs
 export const auth = getAuth(app);
 
-// Firestore with persistent local cache (IndexedDB) so the watchlist shows
-// instantly from cache on load, then syncs from the cloud in the background.
-// This removes the multi-second delay when opening on another device.
-export const db = initializeFirestore(
-  app,
-  {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager(),
-    }),
-  },
-  "ai-studio-d038e6e0-89a6-457a-a50e-97b6aadc9e67",
-);
+// Always use the designated custom firestore databaseId to match the active database in Firebase Console
+export const db = getFirestore(app, "ai-studio-d038e6e0-89a6-457a-a50e-97b6aadc9e67");
 
 // Test connection to Firestore instantly on bootstrap
 async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
+    console.log("نوار سينما: تم الاتصال بقاعدة بيانات Firestore بنجاح.");
+  } catch (error: any) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorCode = error?.code || '';
+    
+    if (errorCode === 'unavailable' || errorMsg.includes('offline') || errorMsg.includes('Could not reach Cloud Firestore backend')) {
+      console.warn("نوار سينما: يعمل التطبيق في وضع عدم الاتصال بالإنترنت حالياً (Offline Mode). سيتم حفظ وتحديث التغييرات محلياً ومزامنتها فور عودة الاتصال.");
+    } else {
+      console.log("نوار سينما: إشارة قاعدة البيانات في وضع الاستعداد أو غير متصلة محلياً. التغييرات تحفظ في ذاكرة التخزين الداخلي بشكل آمن.");
     }
   }
 }

@@ -13,10 +13,9 @@ interface MovieRowProps {
   items: MovieOrShow[];
   onItemClick: (item: MovieOrShow) => void;
   viewAllHash?: string;
-  flush?: boolean;
 }
 
-export default function MovieRow({ title, subtitle, items, onItemClick, viewAllHash, flush = false }: MovieRowProps) {
+export default function MovieRow({ title, subtitle, items, onItemClick, viewAllHash }: MovieRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
@@ -61,17 +60,17 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
   if (!items.length) {
     // Skeletons
     return (
-      <div className={`mb-14 flex flex-col gap-4 ${flush ? "" : "px-6 md:px-12"}`}>
+      <div className="mb-10 px-6 md:px-12 flex flex-col gap-4">
         <div className="space-y-1">
-          <div className="w-48 h-6 bg-stone-800 rounded animate-pulse" />
-          <div className="w-32 h-4 bg-stone-800 rounded animate-pulse" />
+          <div className="w-48 h-6 bg-neutral-800 rounded animate-pulse" />
+          <div className="w-32 h-4 bg-neutral-800 rounded animate-pulse" />
         </div>
         <div className="flex gap-4 overflow-hidden">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex-none w-[160px] sm:w-[220px] aspect-[16/9] bg-stone-950 border border-white/5 rounded-2xl p-2 flex flex-col justify-end gap-3 animate-pulse">
-              <div className="w-full h-full bg-stone-900 rounded-xl shimmer-bg" />
-              <div className="w-24 h-4 bg-stone-900 rounded" />
-              <div className="w-12 h-3 bg-stone-900 rounded" />
+            <div key={i} className="flex-none w-[160px] sm:w-[220px] aspect-[16/9] bg-neutral-950 border border-white/5 rounded-2xl p-2 flex flex-col justify-end gap-3 animate-pulse">
+              <div className="w-full h-full bg-neutral-900 rounded-xl shimmer-bg" />
+              <div className="w-24 h-4 bg-neutral-900 rounded" />
+              <div className="w-12 h-3 bg-neutral-900 rounded" />
             </div>
           ))}
         </div>
@@ -80,24 +79,15 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
   }
 
   return (
-    <div className="mb-16 md:mb-20 relative group/row flex flex-col">
+    <div className="mb-10 relative group/row flex flex-col">
       {/* Category Header */}
-      <div className={`mb-4 md:mb-5 flex flex-col text-right ${flush ? "" : "px-6 md:px-12"}`}>
+      <div className="px-6 md:px-12 mb-3 flex flex-col text-right">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex flex-col text-right">
-            {viewAllHash ? (
-              <a
-                href={viewAllHash}
-                className="group/title font-display text-xl md:text-2xl font-black tracking-tight text-white flex items-center gap-1.5 hover:text-white/80 transition-colors cursor-pointer"
-              >
-                <span>{title}</span>
-                <ChevronLeft className="w-5 h-5 text-stone-500 group-hover/title:text-white group-hover/title:-translate-x-0.5 transition-all" />
-              </a>
-            ) : (
-              <h2 className="font-display text-xl md:text-2xl font-black tracking-tight text-white flex items-center">
-                <span>{title}</span>
-              </h2>
-            )}
+            <h2 className="text-lg md:text-xl font-bold tracking-tight text-white flex items-center">
+              <span>{title}</span>
+            </h2>
+            {subtitle && <p className="text-neutral-500 font-medium text-[11px] md:text-xs mt-0.5">{subtitle}</p>}
           </div>
           {viewAllHash && (
             <a
@@ -112,12 +102,12 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
       </div>
 
       {/* Row Shell with Overlay Arrows */}
-      <div className={`relative ${flush ? "" : "px-6 md:px-12"}`}>
+      <div className="relative px-6 md:px-12">
          {/* Navigation Arrows for desktop hover */}
         {showRightArrow && (
           <button
             onClick={() => handleScroll('right')}
-            className="absolute right-8 top-[41%] z-45 w-10 h-10 rounded-full bg-black/80 hover:bg-stone-900 border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-all shadow-xl hover:scale-110 hidden md:flex"
+            className="absolute right-8 top-[41%] z-45 w-10 h-10 rounded-full bg-black/80 hover:bg-neutral-900 border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-all shadow-xl hover:scale-110 hidden md:flex"
             aria-label="قناة سابقة"
           >
             <ChevronRight className="w-5 h-5" />
@@ -127,7 +117,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
         {showLeftArrow && (
           <button
             onClick={() => handleScroll('left')}
-            className="absolute left-8 top-[41%] z-45 w-10 h-10 rounded-full bg-black/80 hover:bg-stone-900 border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-all shadow-xl hover:scale-110 hidden md:flex"
+            className="absolute left-8 top-[41%] z-45 w-10 h-10 rounded-full bg-black/80 hover:bg-neutral-900 border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-all shadow-xl hover:scale-110 hidden md:flex"
             aria-label="قناة لاحقة"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -138,8 +128,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
         <div
           ref={rowRef}
           onScroll={checkScroll}
-          dir="rtl"
-          className="flex flex-row gap-4 md:gap-6 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none snap-x snap-mandatory"
+          className="flex gap-4 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none snap-x snap-mandatory"
         >
           {items.map((item, idx) => {
             const hasScore = item.rating > 0;
@@ -152,40 +141,36 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
                 key={`${item.type}-${item.id}`}
                 onClick={() => onItemClick(item)}
                 style={{ animationDelay: `${idx * 45}ms` }}
-                className="group/card card-transition flex-none w-[125px] sm:w-[185px] md:w-[225px] lg:w-[255px] snap-start cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
+                className="card-transition flex-none w-[125px] sm:w-[155px] md:w-[175px] snap-start cursor-pointer transition-all duration-350 hover:bg-neutral-200/50 dark:hover:bg-neutral-900/60 hover:shadow-lg rounded-2xl p-2 pb-3.5 border border-transparent select-none active:scale-[0.98]"
               >
                 {/* Poster Artwork container */}
-                <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+                <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-neutral-900 border border-white/5 shadow-md">
                   {item.poster || item.backdrop ? (
                     <img
                       src={item.poster || item.backdrop || undefined}
                       alt={item.title}
                       loading="lazy"
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover select-none transition-transform duration-500"
+                      className="w-full h-full object-cover select-none"
                     />
                   ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center p-3 text-stone-600 bg-stone-950">
+                    <div className="w-full h-full flex flex-col items-center justify-center p-3 text-neutral-600 bg-neutral-950">
                       <span className="text-[10px] sm:text-xs font-semibold text-center leading-normal break-all line-clamp-2">
                         {item.title}
                       </span>
                     </div>
                   )}
-
-                  {/* Subtle gradient at bottom of poster for depth */}
-                  <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 pointer-events-none" />
-
-                  {/* Rating stamp */}
+                  {/* Rating stamp directly overlaying backdrop if useful */}
                   {hasScore && (
-                    <div className="absolute bottom-2 right-2 glass text-[#f5c518] text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5">
+                    <div className="absolute bottom-2 right-2 bg-black/85 backdrop-blur-md text-[#f5c518] text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 border border-white/5">
                       <Star className="w-2.5 h-2.5 fill-current" />
                       <span>{item.rating.toFixed(1)}</span>
                     </div>
                   )}
 
-                  {/* Watch progression indicator */}
+                  {/* Watch progression indicator red bar */}
                   {progress > 0 && (
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40">
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-neutral-800">
                       <div 
                         className="h-full bg-red-600 transition-all duration-300" 
                         style={{ width: `${progress}%` }}
@@ -199,9 +184,9 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
                   <span className="text-white font-bold text-xs sm:text-sm line-clamp-1 leading-tight transition-colors">
                     {item.title}
                   </span>
-                  <span className="text-stone-500 font-semibold text-[10px] sm:text-xs mt-1 flex items-center gap-1 justify-start">
+                  <span className="text-neutral-500 font-semibold text-[10px] sm:text-xs mt-1 flex items-center gap-1 justify-start">
                     <span>{item.year || '—'}</span>
-                    <span className="w-1 h-1 bg-stone-800 rounded-full" />
+                    <span className="w-1 h-1 bg-neutral-800 rounded-full" />
                     <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
                   </span>
                 </div>
