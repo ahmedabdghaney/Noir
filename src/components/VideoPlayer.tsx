@@ -2,9 +2,25 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-
 import { useState, useEffect, useRef } from 'react';
 import { Play, Loader, ShieldAlert, Pause, Lock } from 'lucide-react';
+
+// 1. استدعاء مكتبات Firebase
+import { initializeApp } from 'firebase/app';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
+
+// 2. إعدادات Firebase مالتك (حط مكانها معلومات مشروعك)
+const firebaseConfig = {
+  apiKey: "حط_هنا_الـ_API_Key",
+  authDomain: "your-project.firebaseapp.com",
+  projectId: "your-project-id",
+  storageBucket: "your-project.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abcdef"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 interface VideoPlayerProps {
   type: 'movie' | 'tv';
@@ -53,27 +69,26 @@ export default function VideoPlayer({
 }: VideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // 3. State لحفظ رابط الفيديو اللي نجيبه من Firebase
+  const [customMp4, setCustomMp4] = useState<string | undefined>(undefined);
 
   // Watch progression state
-  const progressKey =`noir_progress_${type}_${id}`;
+  const progressKey = `noir_progress_${type}_${id}`;
   const [progress, setProgress] = useState<number>(() => {
     return Number(localStorage.getItem(progressKey)) || 0;
   });
 
   // Automated progress updates while actively watching
   useEffect(() => {
-    if (playMode !=='movie') return;
-
-    // Immediately record that user started watching
+    if (playMode !== 'movie') return;
     const savedOnStart = Number(localStorage.getItem(progressKey)) || 0;
     let currentVal = savedOnStart === 0 ? 8 : savedOnStart;
-
     if (savedOnStart === 0) {
       setProgress(8);
-      localStorage.setItem(progressKey,'8');
+      localStorage.setItem(progressKey, '8');
       window.dispatchEvent(new Event('progress_updated'));
     }
-
     const timer = setInterval(() => {
       const currentSaved = Number(localStorage.getItem(progressKey)) || 0;
       if (currentSaved < 96) {
@@ -82,60 +97,45 @@ export default function VideoPlayer({
         localStorage.setItem(progressKey, String(newVal));
         window.dispatchEvent(new Event('progress_updated'));
       }
-    }, 10000); // Increments progress by 1% every 10 seconds of active playback
-
+    }, 10000);
     return () => clearInterval(timer);
   }, [type, id, playMode, progressKey]);
 
   // Listen for player postMessage progress events
-  // (sent from the iframe whenever playback advances or the user seeks)
   const lastWatchedRef = useRef<number>(0);
   const lastWatchedAtRef = useRef<number>(0);
   useEffect(() => {
     if (playMode !== 'movie') return;
-
-    // Reset baseline whenever the loaded segment changes (id/season/episode/startAt)
     lastWatchedRef.current = 0;
     lastWatchedAtRef.current = 0;
-
     const handler = (event: MessageEvent) => {
       const d: any = event?.data;
       if (!d || typeof d !== 'object') return;
-
       let watched: number | null = null;
-      // MEDIA_DATA payload
       if (d.type === 'MEDIA_DATA' && d.data?.progress?.watched != null) {
         watched = Number(d.data.progress.watched);
       } else if (d.type === 'PLAYER_EVENT' && d.data?.player_progress != null) {
         watched = Number(d.data.player_progress);
       } else if (d.type === 'PLAYER_EVENT' && d.data?.currentTime != null) {
-        // vidsrc / vsembed player event payload
         watched = Number(d.data.currentTime);
       } else if (d.event === 'time' && d.currentTime != null) {
-        // generic { event:'time', currentTime } payload
         watched = Number(d.currentTime);
       } else if (typeof d.currentTime === 'number') {
         watched = d.currentTime;
       }
       if (watched == null || Number.isNaN(watched) || watched < 0) return;
-
       const now = Date.now();
       const prev = lastWatchedRef.current;
       const prevAt = lastWatchedAtRef.current;
       lastWatchedRef.current = watched;
       lastWatchedAtRef.current = now;
-
-      // First sample after (re)mount — just record a baseline
       if (prev === 0 || prevAt === 0) {
         onTimeUpdate?.(watched);
         return;
       }
-
-      const elapsed = (now - prevAt) / 1000;        // real seconds passed
-      const actualDelta = watched - prev;           // playback seconds moved
+      const elapsed = (now - prevAt) / 1000;
+      const actualDelta = watched - prev;
       const drift = actualDelta - elapsed;
-
-      // Forward jump (drift > ~5s) or backward jump (delta < -3s) = user scrubbed
       const isSeek = drift > 5 || actualDelta < -3;
       if (isSeek) {
         onSeek?.(watched);
@@ -143,7 +143,6 @@ export default function VideoPlayer({
         onTimeUpdate?.(watched);
       }
     };
-
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
   }, [playMode, type, id, season, episode, startAt, onTimeUpdate, onSeek]);
@@ -154,43 +153,52 @@ export default function VideoPlayer({
       containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     setIsLoading(true);
-    // Reload progress percent for shift
     const saved = Number(localStorage.getItem(`noir_progress_${type}_${id}`)) || 0;
     setProgress(saved);
   }, [type, id, season, episode, playMode]);
 
-  // Compute VIT API provider url
-  // Custom DIRECT MP4 files (self-hosted / licensed content you own).
-  // Map a TMDB id to a direct .mp4 URL. These play in a native <video> element
-  // (not an iframe). Movie: 'movie_ID', TV: 'tv_ID_SEASON_EPISODE'.
-  const CUSTOM_MP4: Record<string, string> = {
-    'movie_1315772': 'https://d269k7J205s3hx.cloudfront.net/IMG_1944.mp4',
-  };
+  // 4. دالة جلب الرابط من Firebase بدلاً من الكود الثابت
+  useEffect(() => {
+    if (playMode !== 'movie') return;
 
-  const mp4Key = type === 'tv' ? `tv_${id}_${season}_${episode}` : `movie_${id}`;
-  const customMp4 = playMode === 'movie' ? CUSTOM_MP4[mp4Key] : undefined;
+    const fetchVideoUrl = async () => {
+      setIsLoading(true);
+      try {
+        // نسوي نفس المفتاح اللي كنت تسويه (movie_ID أو tv_ID_SEASON_EPISODE)
+        const mp4Key = type === 'tv' ? `tv_${id}_${season}_${episode}` : `movie_${id}`;
+        
+        // نطلب الرابط من مجموعة movies بناءً على المفتاح
+        const docRef = doc(db, "movies", mp4Key);
+        const docSnap = await getDoc(docRef);
 
-  // Custom embed overrides: map a TMDB id to your own embed URL.
-  // If a movie/episode has a custom link here, it is used instead of vidapi.
-  // Movie example:  movie_123456: 'https://your-embed-host.com/embed/abc'
-  // TV example:     'tv_1399_1_2': 'https://your-embed-host.com/embed/xyz'  (id_season_episode)
-  const CUSTOM_EMBEDS: Record<string, string> = {
-    // 'movie_872585': 'https://your-embed-host.com/e/XXXXXX',
-  };
+        if (docSnap.exists()) {
+          setCustomMp4(docSnap.data().url);
+        } else {
+          setCustomMp4(undefined); // ماكو فلم بالقاعدة، يرجع لـ vidapi
+        }
+      } catch (error) {
+        console.error("Error fetching video URL:", error);
+        setCustomMp4(undefined);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchVideoUrl();
+  }, [type, id, season, episode, playMode]);
+
+  // Custom embed overrides
+  const CUSTOM_EMBEDS: Record<string, string> = {};
 
   const getEmbedUrl = () => {
-    if (playMode ==='trailer' && youtubeKey) {
+    if (playMode === 'trailer' && youtubeKey) {
       const origin = typeof window !== 'undefined' ? encodeURIComponent(window.location.origin) : '';
       return `https://www.youtube-nocookie.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&origin=${origin}`;
     }
-
-    // 1) Check for a custom embed override for this exact title/episode
     const customKey = type === 'tv' ? `tv_${id}_${season}_${episode}` : `movie_${id}`;
     if (CUSTOM_EMBEDS[customKey]) {
       return CUSTOM_EMBEDS[customKey];
     }
-
-    // 2) Default: vidapi.qzz.io — single source, reliable inside iframe, autoplay
     const params = new URLSearchParams({
       primaryColor: 'ff453a',
       secondaryColor: '0a0a0a',
@@ -211,16 +219,13 @@ export default function VideoPlayer({
   return (
     <div ref={containerRef} className="w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl animate-fade-in text-right">
       <div className="player-shell bg-black rounded-3xl overflow-hidden border border-white/15 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9),0_0_0_1px_rgba(255,255,255,0.05)] ring-1 ring-white/10 relative">
-
-        {/* Video Stage Frame */}
         <div className="relative aspect-video w-full bg-black">
           {isLoading && !isPausedByHost && (
             <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-10 gap-3">
               <Loader className="w-8 h-8 text-red-500 animate-spin" />
               <span className="text-xs text-stone-400 select-none">جاري تحميل مسار المشغّل ومزامنة الترجمة...</span>
-</div>
+            </div>
           )}
-
           {playMode === 'trailer' ? (
             <iframe
               src={getEmbedUrl()}
@@ -254,38 +259,37 @@ export default function VideoPlayer({
               onLoad={() => setIsLoading(false)}
             />
           )}
-
-          {/* Host-paused overlay (covers iframe completely) */}
+          
           {isPausedByHost && playMode === 'movie' && (
             <div className="absolute inset-0 z-20 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center gap-4 select-none">
               <div className="w-16 h-16 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center">
                 <Pause className="w-7 h-7 text-amber-400 fill-amber-400" />
-</div>
+              </div>
               <div className="text-center px-6">
                 <h3 className="text-white text-base md:text-lg font-bold mb-1">
                   أوقف المنظم التشغيل
-</h3>
+                </h3>
                 {hostPauseByName && (
                   <p className="text-gray-400 text-xs md:text-sm">
                     بانتظار <span className="text-amber-400 font-semibold">{hostPauseByName}</span> ليستأنف العرض
-</p>
+                  </p>
                 )}
                 {isLiveHost && (
                   <p className="text-gray-500 text-[11px] mt-3">
                     اضغط زر الاستئناف بالأعلى لإكمال المشاهدة (ينعاد الفلم من البداية)
-</p>
+                  </p>
                 )}
                 {!isLiveHost && isLiveSession && (
                   <p className="text-gray-500 text-[11px] mt-3 flex items-center justify-center gap-1.5">
                     <Lock className="w-3 h-3" />
                     التحكم بالتشغيل بيد المنظم فقط
-</p>
+                  </p>
                 )}
-</div>
-</div>
-          )}</div>
-
-</div>
-</div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
