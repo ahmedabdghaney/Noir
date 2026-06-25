@@ -1002,6 +1002,14 @@ export default function DetailView({
                                 referrerPolicy="no-referrer"
                                 className="w-full h-full object-cover transition-transform duration-500 group-hover/ep:scale-105"
                               />
+                            ) : (getBackdropUrl(data.backdrop_path) || getPosterUrl(data.poster_path)) ? (
+                              <img
+                                src={getBackdropUrl(data.backdrop_path) || getPosterUrl(data.poster_path) || undefined}
+                                alt={ep.name}
+                                loading="lazy"
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover opacity-50 transition-transform duration-500 group-hover/ep:scale-105"
+                              />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-stone-700">
                                 <Play className="w-8 h-8" />
