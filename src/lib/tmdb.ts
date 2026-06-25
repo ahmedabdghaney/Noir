@@ -57,17 +57,13 @@ export function normalizeItem(item: any, customType?: 'movie' | 'tv'): MovieOrSh
   const ids: number[] = item.genre_ids || (item.genres ? item.genres.map((g: any) => g.id) : []);
   
   let itemTitle = 'غير معروف';
+  // Option: Arabic content shows Arabic, foreign content keeps its ORIGINAL name.
+  // original_title/original_name is Arabic for Arabic films and the native name
+  // (e.g. English) for foreign films — exactly what we want for both cases.
   if (!isTV) {
-    // Movies always in English/Original title
     itemTitle = item.original_title || item.title || 'غير معروف';
   } else {
-    // TV Series: Arabic shows remain Arabic, foreign shows can keep their original script or translation
-    const isArabicSeries = item.original_language === 'ar' || (item.origin_country && item.origin_country.includes('AR'));
-    if (isArabicSeries) {
-      itemTitle = item.name || item.original_name || 'غير معروف';
-    } else {
-      itemTitle = item.original_name || item.name || 'غير معروف';
-    }
+    itemTitle = item.original_name || item.name || 'غير معروف';
   }
 
   // Force English name for Obsession movie specifically
