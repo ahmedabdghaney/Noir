@@ -150,10 +150,10 @@ export default function CategoryPage({ category, onItemClick, onBack, showAllMod
       {/* Full-width colored header */}
       <div className="relative w-full" style={{ backgroundColor: category.overlay.replace(/0\.\d+\)/, '1)') }}>
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
-        <div className="relative w-full px-4 sm:px-8 lg:px-12 pt-8 pb-10 sm:pt-10 sm:pb-14">
-          <button onClick={onBack} className="flex items-center gap-2 text-white/90 hover:text-white text-sm font-semibold mb-5 cursor-pointer transition-colors mr-auto">
-            <span>الرئيسية</span>
+        <div dir="rtl" className="relative w-full px-6 md:px-12 pt-8 pb-10 sm:pt-10 sm:pb-14">
+          <button onClick={onBack} className="flex items-center gap-2 text-white/90 hover:text-white text-sm font-semibold mb-5 cursor-pointer transition-colors">
             <ArrowRight className="w-4 h-4" />
+            <span>الرئيسية</span>
           </button>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white drop-shadow-lg text-right">
             {category.title}{showAllMode ? ' — الكل' : ''}
@@ -161,10 +161,15 @@ export default function CategoryPage({ category, onItemClick, onBack, showAllMod
         </div>
       </div>
 
-      <div className="w-full px-4 sm:px-8 lg:px-12 py-8 sm:py-10">
+      <div className="w-full py-8 sm:py-10">
         {!showAllMode && (
           <>
-            {/* Subsection rows */}
+            {/* Main section: the category itself (e.g. "رعب") */}
+            <div className="mb-2">
+              <SubsectionRow sub={{ title: category.title, genreIds: String(category.primaryGenre) }} onItemClick={onItemClick} />
+            </div>
+
+            {/* Subsection rows (combinations) */}
             <div className="space-y-2 mb-10">
               {subsections.map((sub) => (
                 <div key={sub.genreIds}>
@@ -173,24 +178,25 @@ export default function CategoryPage({ category, onItemClick, onBack, showAllMod
               ))}
             </div>
 
-            {/* "All" entry button */}
-            <div className="flex items-center justify-between mb-6 border-t border-white/10 pt-8">
+            {/* "All" entry: title on the right, button on the left */}
+            <div dir="rtl" className="flex items-center justify-between mb-6 border-t border-white/10 pt-8 px-6 md:px-12">
+              <h2 className="text-xl sm:text-2xl font-bold text-white">الكل</h2>
               <button
                 onClick={() => onOpenAll && onOpenAll(category.key)}
                 className="flex items-center gap-2 glass hover:bg-white/15 text-white text-sm font-bold px-5 py-2.5 rounded-full transition-all hover:scale-[1.03] cursor-pointer"
               >
                 <span>عرض كل أفلام ومسلسلات {category.title}</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 rotate-180" />
               </button>
-              <h2 className="text-xl sm:text-2xl font-bold text-white">الكل</h2>
             </div>
           </>
         )}
 
         {showAllMode && (
-          <>
-            {/* Sort control */}
-            <div className="flex items-center justify-between mb-6">
+          <div className="px-6 md:px-12">
+            {/* Sort control: title right, sort left */}
+            <div dir="rtl" className="flex items-center justify-between mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-white">الكل</h2>
               <div className="relative">
                 <button
                   onClick={() => setSortOpen((o) => !o)}
@@ -200,7 +206,7 @@ export default function CategoryPage({ category, onItemClick, onBack, showAllMod
                   <ChevronDown className={`w-4 h-4 transition-transform ${sortOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {sortOpen && (
-                  <div className="absolute left-0 mt-2 w-44 glass-strong rounded-2xl overflow-hidden z-30 shadow-2xl py-1">
+                  <div className="absolute right-0 mt-2 w-44 glass-strong rounded-2xl overflow-hidden z-30 shadow-2xl py-1">
                     {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
                       <button
                         key={k}
@@ -213,11 +219,10 @@ export default function CategoryPage({ category, onItemClick, onBack, showAllMod
                   </div>
                 )}
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold text-white">الكل</h2>
             </div>
 
             {/* Grid */}
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1 sm:gap-2">
+            <div dir="rtl" className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1 sm:gap-2">
               {allItems.map((item) => (
                 <div key={`${item.type}-${item.id}`}>
                   <GridCard item={item} onClick={() => onItemClick(item)} />
@@ -228,7 +233,7 @@ export default function CategoryPage({ category, onItemClick, onBack, showAllMod
             <div ref={loaderRef} className="h-16 flex items-center justify-center mt-4">
               {loading && <div className="w-6 h-6 border-2 border-white/20 border-t-white/80 rounded-full animate-spin" />}
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>

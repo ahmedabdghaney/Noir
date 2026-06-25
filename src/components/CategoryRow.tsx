@@ -65,10 +65,10 @@ export default function CategoryRow({ title = 'تصفّح حسب التصنيف'
   };
 
   return (
-    <div className="relative group/row mb-2 mt-2">
-      <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-3 sm:mb-4 px-2 text-right">{title}</h2>
+    <div className="relative group/row mb-14 flex flex-col gap-4">
+      <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white px-6 md:px-12 text-right">{title}</h2>
 
-      <div className="relative">
+      <div className="relative px-6 md:px-12">
         {/* Right arrow (previous in RTL) */}
         {showRightArrow && (
           <button
