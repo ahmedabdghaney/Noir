@@ -68,15 +68,13 @@ export default function Hero({
     getOriginalBackdropUrl((it as any).backdrop_path) ||
     (it.backdrop || it.poster || '').replace('/w1280', '/original').replace('/w500', '/original');
 
-  // RTL carousel (verified math). Track is row-reverse: card 0 hugs the right.
-  // Translate the track (as % of its own width) so the active card centers.
+  // RTL carousel — verified by browser test. dir=rtl makes the flex track
+  // lay cards right-to-left (card 0 rightmost). Translate by container % so the
+  // active card centers. shift>0 moves track to bring later cards to center.
   const CARD_W = 76;       // center card width, % of container
   const GAP = 1.5;         // gap, % of container
   const step = CARD_W + GAP;
-  const N = activePool.length;
-  const trackWidthPct = N * step - GAP;                  // track width in container %
-  const shiftContainer = (currentIndex * step + CARD_W / 2) - 50; // container %
-  const trackX = (shiftContainer / trackWidthPct) * 100; // % of track width
+  const trackX = (currentIndex * step + CARD_W / 2) - 50; // container %
 
   const contentContainer = {
     hidden: {},
@@ -95,7 +93,8 @@ export default function Hero({
       {/* Sliding track */}
       <div className="relative overflow-hidden">
         <motion.div
-          className="flex flex-row-reverse items-stretch"
+          dir="rtl"
+          className="flex items-stretch"
           animate={{ x: `${trackX}%` }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           style={{ gap: `${GAP}%` }}
