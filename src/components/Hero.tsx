@@ -26,7 +26,7 @@ export default function Hero({
   isSaved,
   onToggleSave,
 }: HeroProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(1);
   const [logoCache, setLogoCache] = useState<Record<string, string | null>>({});
 
   const activePool = trendingItems.slice(0, 12);
@@ -68,14 +68,15 @@ export default function Hero({
     getOriginalBackdropUrl((it as any).backdrop_path) ||
     (it.backdrop || it.poster || '').replace('/w1280', '/original').replace('/w500', '/original');
 
-  // Layout: center card is 76% wide, side peeks show through the gap.
-  // The track shifts so the active card sits centered.
-  const CARD_W = 76;       // center card width in %
-  const GAP = 1.5;         // gap between cards in %
+  // RTL carousel (verified math). Track is row-reverse: card 0 hugs the right.
+  // Translate the track (as % of its own width) so the active card centers.
+  const CARD_W = 76;       // center card width, % of container
+  const GAP = 1.5;         // gap, % of container
   const step = CARD_W + GAP;
-  // Offset to center active card: start centered then move by index.
-  const centerOffset = (100 - CARD_W) / 2;
-  const trackX = centerOffset - currentIndex * step;
+  const N = activePool.length;
+  const trackWidthPct = N * step - GAP;                  // track width in container %
+  const shiftContainer = (currentIndex * step + CARD_W / 2) - 50; // container %
+  const trackX = (shiftContainer / trackWidthPct) * 100; // % of track width
 
   const contentContainer = {
     hidden: {},
@@ -94,7 +95,7 @@ export default function Hero({
       {/* Sliding track */}
       <div className="relative overflow-hidden">
         <motion.div
-          className="flex items-stretch"
+          className="flex flex-row-reverse items-stretch"
           animate={{ x: `${trackX}%` }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           style={{ gap: `${GAP}%` }}
