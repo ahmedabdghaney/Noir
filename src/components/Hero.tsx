@@ -96,7 +96,7 @@ export default function Hero({
           dir="rtl"
           className="flex items-stretch"
           animate={{ x: `${trackX}%` }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
           style={{ gap: `${GAP}%` }}
         >
           {activePool.map((item, i) => {
@@ -109,7 +109,7 @@ export default function Hero({
               >
                 <motion.div
                   animate={{ scale: isActive ? 1 : 0.92, opacity: isActive ? 1 : 0.45 }}
-                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
                   className="relative rounded-[28px] overflow-hidden border border-white/12 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)] ring-1 ring-white/10"
                 >
                   <div className="relative aspect-[16/10] sm:aspect-[16/7] lg:aspect-[2.15/1]">
@@ -132,7 +132,7 @@ export default function Hero({
                         initial="hidden"
                         animate="show"
                         dir="rtl"
-                        className="absolute inset-y-0 right-0 w-full sm:w-[55%] md:w-[50%] flex flex-col items-start justify-center text-right p-6 sm:p-9 md:p-12"
+                        className="absolute inset-y-0 right-0 w-full sm:w-[55%] md:w-[50%] flex flex-col items-start justify-end text-right p-6 sm:p-9 md:p-12"
                       >
                         {/* Logo or title */}
                         <motion.div variants={contentItem} className="flex justify-start w-full mb-3">
