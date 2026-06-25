@@ -212,20 +212,20 @@ export default function Hero({
           })}
         </motion.div>
 
-        {/* Nav arrows — hidden on mobile (use swipe/dots instead) */}
+        {/* Nav arrows */}
         <button
           onClick={() => goTo(-1)}
-          className="hidden sm:flex absolute right-[14%] top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-black items-center justify-center cursor-pointer transition-all hover:scale-110 shadow-lg z-30"
+          className="flex absolute right-2 sm:right-[14%] top-1/2 -translate-y-1/2 w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-white/90 hover:bg-white text-black items-center justify-center cursor-pointer transition-all hover:scale-110 shadow-lg z-30"
           aria-label="السابق"
         >
-          <ChevronRight className="w-5 h-5" />
+          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
         <button
           onClick={() => goTo(1)}
-          className="hidden sm:flex absolute left-[14%] top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-black items-center justify-center cursor-pointer transition-all hover:scale-110 shadow-lg z-30"
+          className="flex absolute left-2 sm:left-[14%] top-1/2 -translate-y-1/2 w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-white/90 hover:bg-white text-black items-center justify-center cursor-pointer transition-all hover:scale-110 shadow-lg z-30"
           aria-label="التالي"
         >
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
       </div>
 

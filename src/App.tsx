@@ -25,12 +25,14 @@ import {
 import Header from './components/Header';
 import Hero from './components/Hero';
 import MovieRow from './components/MovieRow';
+import CategoryRow from './components/CategoryRow';
+import CategoryPage from './components/CategoryPage';
+import { getCategoryByKey } from './lib/categories';
 import ContinueWatchingRow from './components/ContinueWatchingRow';
 import DetailView from './components/DetailView';
 import SearchOverlay from './components/SearchOverlay';
 import ShareModal from './components/ShareModal';
 import MobileNav from './components/MobileNav';
-import Footer from './components/Footer';
 
 // Static Configuration Constants
 const COUNTRIES = [
@@ -76,7 +78,8 @@ const YEARS = (() => {
 
 export default function App() {
   // Navigation & View State
-  const [activeView, setActiveView] = useState<'home' | 'search' | 'detail' | 'watchlist'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'search' | 'detail' | 'watchlist' | 'category'>('home');
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState<string | null>(null);
   const [searchMode, setSearchMode] = useState<'movie' | 'tv'>('movie');
   const [selectedTitle, setSelectedTitle] = useState<{ type: 'movie' | 'tv'; id: number } | null>(null);
   const [joinRoomCode, setJoinRoomCode] = useState<string>('');
@@ -534,6 +537,15 @@ export default function App() {
         } else {
           setActiveView('home');
           setSelectedTitle(null);
+        }
+      } else if (hash.startsWith('#category/')) {
+        const key = hash.replace('#category/', '');
+        if (getCategoryByKey(key)) {
+          setSelectedCategoryKey(key);
+          setActiveView('category');
+          setSelectedTitle(null);
+        } else {
+          window.location.hash = '#home';
         }
       } else {
         const movieMatch = hash.match(/^#movie\/(\d+)$/);
@@ -1179,6 +1191,9 @@ export default function App() {
                 onItemClick={handleTitleClick}
               />
 
+              <CategoryRow onSelect={(key) => { window.location.hash = `#category/${key}`; }} />
+
+
               <MovieRow
                 title="جديد دور السينما"
                 items={nowPlaying}
@@ -1757,10 +1772,18 @@ export default function App() {
             />
 </div>
         )}
+
+        {activeView ==='category' && selectedCategoryKey && getCategoryByKey(selectedCategoryKey) && (
+          <CategoryPage
+            category={getCategoryByKey(selectedCategoryKey)!}
+            onItemClick={handleTitleClick}
+            onBack={navigateToHome}
+          />
+        )}
 </main>
 
       {/* Global Minimalist Footer and disclaimer notes */}
-      <Footer goHome={navigateToHome} setSearchMode={handleSetSearchMode} />
+      
 
       {/* iOS/Android style bottom navigation bar on touchscreens */}
       <MobileNav
