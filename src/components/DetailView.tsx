@@ -10,7 +10,7 @@ import { fetchDetailedTitle, getPosterUrl, getBackdropUrl, getOriginalBackdropUr
 import VideoPlayer from './VideoPlayer';
 import MovieRow from './MovieRow';
 import { useWatchTogether } from '../lib/useWatchTogether';
-import { fetchSeasonEpisodes, EpisodeInfo, getStillUrl, getProfileUrl, getTitleLogoUrl, fetchWatchProviders, WatchProvider } from '../lib/tmdb';
+import { fetchSeasonEpisodes, EpisodeInfo, getStillUrl, getProfileUrl, getTitleLogoUrl } from '../lib/tmdb';
 import { auth, addToFirestoreWatchlist, removeFromFirestoreWatchlist } from '../lib/firebase';
 
 interface DetailViewProps {
@@ -57,7 +57,6 @@ export default function DetailView({
 
   // TV Episode States
   const [selectedSeason, setSelectedSeason] = useState(1);
-  const [streamingSources, setStreamingSources] = useState<WatchProvider[]>([]);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
   const [episodesCount, setEpisodesCount] = useState(1);
   const [episodes, setEpisodes] = useState<EpisodeInfo[]>([]);
@@ -136,17 +135,6 @@ export default function DetailView({
 
   useEffect(() => {
     loadSavedProgress();
-  }, [type, id]);
-
-  // Fetch "available on" official streaming providers (with logos) from TMDB
-  useEffect(() => {
-    if (!id) return;
-    let cancelled = false;
-    setStreamingSources([]);
-    fetchWatchProviders(type, id)
-      .then((src) => { if (!cancelled) setStreamingSources(src); })
-      .catch(() => { if (!cancelled) setStreamingSources([]); });
-    return () => { cancelled = true; };
   }, [type, id]);
 
   const handleStartFromBeginning = () => {
@@ -630,24 +618,7 @@ export default function DetailView({
                 {type ==='movie' ?'فيلم' :'مسلسل'}
 </span>
 
-              {/* Platform logos — small, natural colors, inline */}
-              {streamingSources.length > 0 && (
-                <span className="flex items-center gap-2">
-                  {streamingSources.map((s) => (
-                    <a
-                      key={s.key}
-                      href={s.link}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="h-6 sm:h-7 rounded-md overflow-hidden hover:scale-110 transition-transform cursor-pointer shadow-sm"
-                      title={s.name}
-                    >
-                      <img src={s.logo} alt={s.name} referrerPolicy="no-referrer" className="h-full w-auto object-contain" />
-                    </a>
-                  ))}
-</span>
-              )}
+
 </div>
 
             {/* Genre Tags List */}
@@ -789,7 +760,7 @@ export default function DetailView({
                 </div>
                 <button
                   onClick={handleCopyRoomLink}
-                  className="flex items-center gap-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-full transition-all cursor-pointer shadow-md"
+                  className="flex items-center gap-1 bg-white hover:bg-white/90 text-black font-bold text-xs px-3.5 py-1.5 rounded-full transition-all cursor-pointer shadow-md"
                 >
                   <Copy className="w-3 h-3" />
                   <span>{wtCopied ?'تم النسخ!' :'نسخ الرابط'}</span>
@@ -840,7 +811,7 @@ export default function DetailView({
                   />
                   <button
                     type="submit"
-                    className="p-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl transition-colors cursor-pointer"
+                    className="p-2.5 bg-white hover:bg-white/90 text-black rounded-xl transition-colors cursor-pointer"
                   >
                     <Send className="w-4 h-4" />
 </button>
@@ -1167,7 +1138,7 @@ export default function DetailView({
         <div className="py-12 text-center">
           <button
             onClick={onBackClick}
-            className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white text-sm font-bold px-6 py-3 rounded-full transition-all hover:scale-[1.03] cursor-pointer"
+            className="inline-flex items-center gap-2 bg-white hover:bg-white/90 text-black text-sm font-bold px-6 py-3 rounded-full transition-all hover:scale-[1.03] cursor-pointer"
           >
             <ArrowRight className="w-4 h-4" />
             <span>العودة للرئيسية</span>

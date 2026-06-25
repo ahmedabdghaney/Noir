@@ -1083,7 +1083,7 @@ export default function App() {
         {/* Toast notifications on the login screen */}
         {toastMessage && (
           <div className="fixed bottom-6 left-0 right-0 z-[600] flex justify-center pointer-events-none px-4">
-            <div className="pointer-events-auto bg-[#111113] border border-red-550/25 text-white text-xs font-semibold rounded-2xl py-3 px-5 shadow-2xl flex items-center gap-2.5 select-none animate-slide-up [direction:rtl]">
+            <div className="pointer-events-auto glass-strong text-white text-xs font-semibold rounded-2xl py-3 px-5 shadow-2xl flex items-center gap-2.5 select-none animate-slide-up [direction:rtl]">
               <LogoIcon className="w-4 h-4 text-red-500 shrink-0" />
               <span>{toastMessage}</span>
             </div>
@@ -1325,7 +1325,7 @@ export default function App() {
 </p>
                   <button
                     onClick={navigateToHome}
-                    className="mt-6 bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-6 py-3 rounded-full cursor-pointer transition-all hover:scale-105"
+                    className="mt-6 bg-white hover:bg-white/90 text-black text-xs font-bold px-6 py-3 rounded-full cursor-pointer transition-all hover:scale-105"
                   >
                     الذهاب للرئيسية وتصفّح العروض 
 </button>
@@ -1361,7 +1361,7 @@ export default function App() {
                               e.stopPropagation();
                               removeFromWatchlist(item);
                             }}
-                            className="absolute top-2 left-2 z-10 w-8 h-8 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-0 group-hover/card:opacity-100 transition-all hover:bg-white/20 cursor-pointer"
+                            className="absolute top-2 left-2 z-10 w-8 h-8 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-all hover:bg-white/20 cursor-pointer"
                             title="إزالة من قائمتي"
                           >
                             <X className="w-4 h-4" />
@@ -1953,7 +1953,7 @@ service cloud.firestore {
                     setIsProfileModalOpen(false);
                     handleLogout();
                   }}
-                  className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl transition-all cursor-pointer text-xs"
+                  className="w-full bg-white hover:bg-white/90 text-black font-bold py-3 rounded-xl transition-all cursor-pointer text-xs"
                 >
                   ربط تسجيل الدخول بجوجل 
 </button>
@@ -1976,7 +1976,7 @@ service cloud.firestore {
       {/* Floating Success Indicator Toast notifications */}
       {toastMessage && (
         <div className="fixed bottom-20 md:bottom-6 left-0 right-0 z-[600] flex justify-center pointer-events-none px-4">
-          <div className="pointer-events-auto bg-[#111113]/95 backdrop-blur-md border border-red-500/30 text-white text-xs font-semibold rounded-full py-3 px-6 shadow-2xl flex items-center gap-2.5 select-none animate-slide-up [direction:rtl]">
+          <div className="pointer-events-auto glass-strong text-white text-xs font-semibold rounded-full py-3 px-6 shadow-2xl flex items-center gap-2.5 select-none animate-slide-up [direction:rtl]">
             <LogoIcon className="w-4 h-4 text-red-500 shrink-0" />
             <span>{toastMessage}</span>
           </div>

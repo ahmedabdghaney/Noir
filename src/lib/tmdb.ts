@@ -50,58 +50,6 @@ export const getBackdropUrl = (path: string | null) => path ? `${IMG_BASE}/w1280
 export const getOriginalBackdropUrl = (path: string | null) => path ? `${IMG_BASE}/original${path}` : null;
 export const getProfileUrl = (path: string | null) => path ? `${IMG_BASE}/w185${path}` : null;
 export const getStillUrl = (path: string | null) => path ? `${IMG_BASE}/w780${path}` : null;
-export const getProviderLogoUrl = (path: string | null) => path ? `${IMG_BASE}/original${path}` : null;
-
-// Allowed streaming platforms (only these are shown). Matched by TMDB provider name.
-export interface WatchProvider {
-  key: string;
-  name: string;
-  logo: string;
-  link: string;
-}
-
-const ALLOWED_PROVIDERS: { key: string; match: (n: string) => boolean }[] = [
-  { key: 'netflix', match: (n) => /netflix/i.test(n) },
-  { key: 'prime', match: (n) => /amazon prime|prime video/i.test(n) },
-  { key: 'apple', match: (n) => /apple tv/i.test(n) },
-  { key: 'osn', match: (n) => /osn/i.test(n) },
-  { key: 'shahid', match: (n) => /shahid/i.test(n) },
-];
-
-// Fetch official streaming providers (with logos) for a title from TMDB.
-// Aggregates across all regions, filters to allowed platforms, dedupes.
-export async function fetchWatchProviders(type: 'movie' | 'tv', id: number): Promise<WatchProvider[]> {
-  try {
-    const data = await tmdbFetch(`/${type}/${id}/watch/providers`);
-    const results = data?.results || {};
-    const seen = new Set<string>();
-    const out: WatchProvider[] = [];
-    // Prefer Arab-region links first, then US/UK for completeness
-    const regionOrder = ['AE', 'SA', 'IQ', 'US', 'GB', 'CA'];
-    const regions = [...regionOrder, ...Object.keys(results).filter((r) => !regionOrder.includes(r))];
-    for (const region of regions) {
-      const r = results[region];
-      if (!r) continue;
-      const providers = [...(r.flatrate || []), ...(r.free || []), ...(r.ads || [])];
-      for (const p of providers) {
-        const allowed = ALLOWED_PROVIDERS.find((a) => a.match(p.provider_name));
-        if (allowed && !seen.has(allowed.key)) {
-          seen.add(allowed.key);
-          out.push({
-            key: allowed.key,
-            name: p.provider_name,
-            logo: getProviderLogoUrl(p.logo_path) || '',
-            link: r.link || '',
-          });
-        }
-      }
-    }
-    return out;
-  } catch (err) {
-    console.error('fetchWatchProviders error:', err);
-    return [];
-  }
-}
 
 // Normalize utility
 export function normalizeItem(item: any, customType?: 'movie' | 'tv'): MovieOrShow {

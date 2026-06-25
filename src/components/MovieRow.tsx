@@ -162,7 +162,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
                         e.preventDefault();
                         onRemove(item);
                       }}
-                      className="absolute top-2 left-2 z-10 w-8 h-8 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-0 group-hover/card:opacity-100 transition-all hover:bg-white/20 cursor-pointer"
+                      className="absolute top-2 left-2 z-10 w-8 h-8 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-all hover:bg-white/20 cursor-pointer"
                       title="إزالة من قائمتي"
                     >
                       <X className="w-4 h-4" />

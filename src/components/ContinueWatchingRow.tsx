@@ -120,7 +120,7 @@ export default function ContinueWatchingRow({ title, items, onItemClick, onRemov
                         e.stopPropagation();
                         onRemove(item);
                       }}
-                      className="absolute top-2.5 left-2.5 w-8 h-8 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-0 group-hover/cw:opacity-100 transition-all hover:bg-white/20 cursor-pointer"
+                      className="absolute top-2.5 left-2.5 w-8 h-8 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-100 md:opacity-0 md:group-hover/cw:opacity-100 transition-all hover:bg-white/20 cursor-pointer z-10"
                       title="إزالة من المتابعة"
                     >
                       <X className="w-4 h-4" />

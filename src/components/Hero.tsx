@@ -170,22 +170,22 @@ export default function Hero({
                         )}
 
                         {/* Actions — Play rightmost */}
-                        <motion.div variants={contentItem} className="flex items-center justify-start gap-2.5">
+                        <motion.div variants={contentItem} className="flex items-center justify-start gap-2 flex-wrap">
                           <button
                             onClick={() => onPlayClick(item)}
-                            className="flex items-center gap-2 bg-white text-black hover:bg-white/90 font-bold px-7 py-2.5 sm:py-3 rounded-full transition-all hover:scale-[1.04] active:scale-95 cursor-pointer text-sm shadow-lg"
+                            className="flex items-center gap-1.5 sm:gap-2 bg-white text-black hover:bg-white/90 font-bold px-4 sm:px-7 py-2 sm:py-3 rounded-full transition-all hover:scale-[1.04] active:scale-95 cursor-pointer text-xs sm:text-sm shadow-lg"
                           >
-                            <Play className="w-4 h-4 fill-black text-black" />
+                            <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-black text-black" />
                             <span>تشغيل</span>
                           </button>
 
                           {onTrailerClick && (
                             <button
                               onClick={() => onTrailerClick(item)}
-                              className="flex items-center gap-2 glass text-white hover:bg-white/15 font-bold px-5 py-2.5 sm:py-3 rounded-full transition-all hover:scale-[1.04] active:scale-95 cursor-pointer text-sm"
+                              className="flex items-center gap-1.5 sm:gap-2 glass text-white hover:bg-white/15 font-bold px-3 sm:px-5 py-2 sm:py-3 rounded-full transition-all hover:scale-[1.04] active:scale-95 cursor-pointer text-xs sm:text-sm"
                               title="الإعلان الرسمي"
                             >
-                              <svg viewBox="0 0 28 20" className="w-5 h-[14px] shrink-0" xmlns="http://www.w3.org/2000/svg">
+                              <svg viewBox="0 0 28 20" className="w-4 h-[11px] sm:w-5 sm:h-[14px] shrink-0" xmlns="http://www.w3.org/2000/svg">
                                 <rect width="28" height="20" rx="5" fill="#FF0000" />
                                 <path d="M11 6 L19 10 L11 14 Z" fill="white" />
                               </svg>
@@ -196,10 +196,10 @@ export default function Hero({
                           {onToggleSave && (
                             <button
                               onClick={() => onToggleSave(item)}
-                              className={`w-11 h-11 rounded-full flex items-center justify-center transition-all cursor-pointer ${saved ? 'bg-white text-black' : 'glass text-white hover:bg-white/15'}`}
+                              className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all cursor-pointer ${saved ? 'bg-white text-black' : 'glass text-white hover:bg-white/15'}`}
                               title={saved ? 'محفوظ في قائمتي' : 'إضافة لقائمتي'}
                             >
-                              {saved ? <Check className="w-5 h-5 text-black" strokeWidth={3} /> : <Plus className="w-5 h-5" />}
+                              {saved ? <Check className="w-4 h-4 sm:w-5 sm:h-5 text-black" strokeWidth={3} /> : <Plus className="w-4 h-4 sm:w-5 sm:h-5" />}
                             </button>
                           )}
                         </motion.div>
@@ -212,17 +212,17 @@ export default function Hero({
           })}
         </motion.div>
 
-        {/* Nav arrows */}
+        {/* Nav arrows — hidden on mobile (use swipe/dots instead) */}
         <button
           onClick={() => goTo(-1)}
-          className="absolute right-[14%] top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-black flex items-center justify-center cursor-pointer transition-all hover:scale-110 shadow-lg z-30"
+          className="hidden sm:flex absolute right-[14%] top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-black items-center justify-center cursor-pointer transition-all hover:scale-110 shadow-lg z-30"
           aria-label="السابق"
         >
           <ChevronRight className="w-5 h-5" />
         </button>
         <button
           onClick={() => goTo(1)}
-          className="absolute left-[14%] top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-black flex items-center justify-center cursor-pointer transition-all hover:scale-110 shadow-lg z-30"
+          className="hidden sm:flex absolute left-[14%] top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-black items-center justify-center cursor-pointer transition-all hover:scale-110 shadow-lg z-30"
           aria-label="التالي"
         >
           <ChevronLeft className="w-5 h-5" />
