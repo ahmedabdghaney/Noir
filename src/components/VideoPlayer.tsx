@@ -237,6 +237,7 @@ export default function VideoPlayer({
               controls
               autoPlay
               playsInline
+              preload="metadata"
               className="w-full h-full bg-black relative z-0"
               onLoadedData={() => setIsLoading(false)}
               onCanPlay={() => setIsLoading(false)}
