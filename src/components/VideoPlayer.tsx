@@ -164,7 +164,7 @@ export default function VideoPlayer({
   // Map a TMDB id to a direct .mp4 URL. These play in a native <video> element
   // (not an iframe). Movie: 'movie_ID', TV: 'tv_ID_SEASON_EPISODE'.
   const CUSTOM_MP4: Record<string, string> = {
-    'movie_1315772': 'https://d269k7J205s3hx.cloudfront.net/IMG_2046%202.MOV',
+    'movie_1315772': 'https://d269k7J205s3hx.cloudfront.net/IMG_1944.mp4',
   };
 
   const mp4Key = type === 'tv' ? `tv_${id}_${season}_${episode}` : `movie_${id}`;
