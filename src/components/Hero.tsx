@@ -132,10 +132,11 @@ export default function Hero({
                         variants={contentContainer}
                         initial="hidden"
                         animate="show"
-                        className="absolute inset-y-0 right-0 w-full sm:w-[55%] md:w-[50%] flex flex-col items-end justify-center text-right p-6 sm:p-9 md:p-12"
+                        dir="rtl"
+                        className="absolute inset-y-0 right-0 w-full sm:w-[55%] md:w-[50%] flex flex-col items-start justify-center text-right p-6 sm:p-9 md:p-12"
                       >
                         {/* Logo or title */}
-                        <motion.div variants={contentItem} className="flex justify-end w-full mb-3">
+                        <motion.div variants={contentItem} className="flex justify-start w-full mb-3">
                           {activeLogo ? (
                             <img src={activeLogo} alt={item.title} referrerPolicy="no-referrer" className="max-h-14 sm:max-h-20 md:max-h-24 max-w-[90%] object-contain object-right drop-shadow-2xl" />
                           ) : (
@@ -144,7 +145,7 @@ export default function Hero({
                         </motion.div>
 
                         {/* Meta */}
-                        <motion.div variants={contentItem} className="flex items-center justify-end gap-2.5 text-[11px] sm:text-xs text-gray-200 font-semibold mb-2.5">
+                        <motion.div variants={contentItem} className="flex items-center justify-start gap-2.5 text-[11px] sm:text-xs text-gray-200 font-semibold mb-2.5">
                           <span className="text-stone-300">{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
                           <span className="text-stone-400">{item.year || ''}</span>
                           <span className="flex items-center gap-1 text-[#f5c518]">
@@ -155,7 +156,7 @@ export default function Hero({
 
                         {/* Genre chips */}
                         {item.genres.length > 0 && (
-                          <motion.div variants={contentItem} className="flex items-center justify-end gap-1.5 mb-3">
+                          <motion.div variants={contentItem} className="flex items-center justify-start gap-1.5 mb-3">
                             {item.genres.slice(0, 3).map((g, idx) => (
                               <span key={idx} className="text-[9px] sm:text-[10px] font-semibold text-stone-200 glass px-2.5 py-1 rounded-lg">{g}</span>
                             ))}
@@ -170,7 +171,7 @@ export default function Hero({
                         )}
 
                         {/* Actions — Play rightmost */}
-                        <motion.div variants={contentItem} className="flex items-center justify-end gap-2.5">
+                        <motion.div variants={contentItem} className="flex items-center justify-start gap-2.5">
                           <button
                             onClick={() => onPlayClick(item)}
                             className="flex items-center gap-2 bg-white text-black hover:bg-white/90 font-bold px-7 py-2.5 sm:py-3 rounded-full transition-all hover:scale-[1.04] active:scale-95 cursor-pointer text-sm shadow-lg"
