@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.5
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, Star, X } from 'lucide-react';
 import LogoIcon from './components/LogoIcon';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -27,6 +27,7 @@ import Hero from './components/Hero';
 import MovieRow from './components/MovieRow';
 import CategoryRow from './components/CategoryRow';
 import CategoryPage from './components/CategoryPage';
+import PullToRefresh from './components/PullToRefresh';
 import { getCategoryByKey } from './lib/categories';
 import ContinueWatchingRow from './components/ContinueWatchingRow';
 import DetailView from './components/DetailView';
@@ -271,6 +272,20 @@ export default function App() {
   const [popularTV, setPopularTV] = useState<MovieOrShow[]>([]);
   const [popularMovies, setPopularMovies] = useState<MovieOrShow[]>([]);
   const [isHomeLoading, setIsHomeLoading] = useState(true);
+
+  // Reusable home feed reload (used on mount + pull-to-refresh)
+  const refreshHome = useCallback(async () => {
+    try {
+      await Promise.all([
+        fetchTrendingWeek().then(setTrendingWeek),
+        fetchNowPlaying().then(setNowPlaying),
+        fetchPopularTV().then(setPopularTV),
+        fetchPopularMovies().then(setPopularMovies),
+      ]);
+    } catch (e) {
+      console.error('refreshHome failed:', e);
+    }
+  }, []);
 
   // Continue Watching List State
   const [continueWatching, setContinueWatching] = useState<MovieOrShow[]>([]);
@@ -1146,6 +1161,7 @@ export default function App() {
       {/* Main Orchestration Views Switcher */}
       <main className="flex-grow pt-14 selection:bg-red-500/30">
         {activeView ==='home' && (
+          <PullToRefresh onRefresh={refreshHome}>
           <div className="animate-fade-in">
             {/* Display Hero slider */}
             <Hero
@@ -1217,6 +1233,7 @@ export default function App() {
               />
 </div>
 </div>
+          </PullToRefresh>
         )}
 
         {/* Dedicated Watchlist View */}
