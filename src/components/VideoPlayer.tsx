@@ -11,12 +11,12 @@ import { getFirestore, doc, getDoc } from 'firebase/firestore';
 
 // 2. إعدادات Firebase مالتك (حط مكانها معلومات مشروعك)
 const firebaseConfig = {
-  apiKey: "حط_هنا_الـ_API_Key",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef"
+  apiKey: "AIzaSyDtZ_Vrp_Ub4Vti7cz3ydxnvoq_DKvQfXg",
+  authDomain: "noir-movies-6c382.firebaseapp.com",
+  projectId: "noir-movies-6c382",
+  storageBucket: "noir-movies-6c382.firebasestorage.app",
+  messagingSenderId: "817031792391",
+  appId: "1:817031792391:web:78098d827d4f0c3482e7a2"
 };
 
 const app = initializeApp(firebaseConfig);
