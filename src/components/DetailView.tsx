@@ -10,8 +10,7 @@ import { fetchDetailedTitle, getPosterUrl, getBackdropUrl, getOriginalBackdropUr
 import VideoPlayer from './VideoPlayer';
 import MovieRow from './MovieRow';
 import { useWatchTogether } from '../lib/useWatchTogether';
-import { fetchSeasonEpisodes, EpisodeInfo, getStillUrl, getProfileUrl, getTitleLogoUrl } from '../lib/tmdb';
-import { fetchStreamingSources, dedupeSources, sourceTypeLabel, StreamingSource } from '../lib/watchmode';
+import { fetchSeasonEpisodes, EpisodeInfo, getStillUrl, getProfileUrl, getTitleLogoUrl, fetchWatchProviders, WatchProvider } from '../lib/tmdb';
 import { auth, addToFirestoreWatchlist, removeFromFirestoreWatchlist } from '../lib/firebase';
 
 interface DetailViewProps {
@@ -58,7 +57,7 @@ export default function DetailView({
 
   // TV Episode States
   const [selectedSeason, setSelectedSeason] = useState(1);
-  const [streamingSources, setStreamingSources] = useState<StreamingSource[]>([]);
+  const [streamingSources, setStreamingSources] = useState<WatchProvider[]>([]);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
   const [episodesCount, setEpisodesCount] = useState(1);
   const [episodes, setEpisodes] = useState<EpisodeInfo[]>([]);
@@ -139,13 +138,13 @@ export default function DetailView({
     loadSavedProgress();
   }, [type, id]);
 
-  // Fetch "available on" streaming sources from Watchmode
+  // Fetch "available on" official streaming providers (with logos) from TMDB
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
     setStreamingSources([]);
-    fetchStreamingSources(type, id)
-      .then((src) => { if (!cancelled) setStreamingSources(dedupeSources(src)); })
+    fetchWatchProviders(type, id)
+      .then((src) => { if (!cancelled) setStreamingSources(src); })
       .catch(() => { if (!cancelled) setStreamingSources([]); });
     return () => { cancelled = true; };
   }, [type, id]);
@@ -653,23 +652,22 @@ export default function DetailView({
 </p>
 </div>
 
-            {/* Available on (Watchmode) */}
+            {/* Available on (TMDB) — logos only */}
             {streamingSources.length > 0 && (
               <div className="mb-5 sm:mb-6">
                 <h3 className="text-xs font-bold text-stone-400 mb-2.5">متوفر للمشاهدة الرسمية على</h3>
-                <div className="flex flex-wrap gap-2">
-                  {streamingSources.slice(0, 10).map((s) => (
+                <div className="flex flex-wrap gap-2.5">
+                  {streamingSources.map((s) => (
                     <a
-                      key={`${s.source_id}-${s.type}`}
-                      href={s.web_url}
+                      key={s.key}
+                      href={s.link}
                       target="_blank"
                       rel="noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="glass hover:bg-white/15 flex items-center gap-2 px-3 py-2 rounded-xl transition-all hover:scale-[1.03] cursor-pointer"
-                      title={`${s.name} — ${sourceTypeLabel(s.type)}`}
+                      className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 hover:border-white/30 hover:scale-[1.06] transition-all cursor-pointer shadow-lg bg-stone-900"
+                      title={s.name}
                     >
-                      <span className="text-xs font-bold text-white">{s.name}</span>
-                      <span className="text-[9px] text-stone-400 font-semibold">{sourceTypeLabel(s.type)}</span>
+                      <img src={s.logo} alt={s.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                     </a>
                   ))}
                 </div>
