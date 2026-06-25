@@ -6,7 +6,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowRight, Star, ChevronDown } from 'lucide-react';
 import { MovieOrShow } from '../types';
-import { Category, SubSection } from '../lib/categories';
+import { Category, buildSubsections, SubSection } from '../lib/categories';
 import { discoverTitles } from '../lib/tmdb';
 import MovieRow from './MovieRow';
 
@@ -14,6 +14,8 @@ interface CategoryPageProps {
   category: Category;
   onItemClick: (item: MovieOrShow) => void;
   onBack: () => void;
+  showAllMode?: boolean;             // when true, render only the full "All" grid page
+  onOpenAll?: (key: string) => void; // open the dedicated All page
 }
 
 type SortKey = 'popularity' | 'rating' | 'year' | 'az';
@@ -25,11 +27,9 @@ const SORT_LABELS: Record<SortKey, string> = {
   az: 'أبجدياً',
 };
 
-// One subsection row: fetches its own titles (movies, fallback covered by genre combo)
 function SubsectionRow(props: { sub: SubSection; onItemClick: (i: MovieOrShow) => void }) {
   const { sub, onItemClick } = props;
   const [items, setItems] = useState<MovieOrShow[]>([]);
-
   useEffect(() => {
     let cancelled = false;
     Promise.all([
@@ -38,16 +38,13 @@ function SubsectionRow(props: { sub: SubSection; onItemClick: (i: MovieOrShow) =
     ])
       .then(([mv, tv]) => {
         if (cancelled) return;
-        // interleave movies + tv, dedupe by id
         const merged = [...mv.results, ...tv.results];
         const seen = new Set<string>();
-        const unique = merged.filter((x) => {
+        setItems(merged.filter((x) => {
           const k = `${x.type}-${x.id}`;
           if (seen.has(k)) return false;
-          seen.add(k);
-          return true;
-        });
-        setItems(unique);
+          seen.add(k); return true;
+        }));
       })
       .catch(() => { if (!cancelled) setItems([]); });
     return () => { cancelled = true; };
@@ -57,7 +54,37 @@ function SubsectionRow(props: { sub: SubSection; onItemClick: (i: MovieOrShow) =
   return <MovieRow title={sub.title} items={items} onItemClick={onItemClick} />;
 }
 
-export default function CategoryPage({ category, onItemClick, onBack }: CategoryPageProps) {
+// Poster grid card matching the home cards style
+function GridCard({ item, onClick }: { item: MovieOrShow; onClick: () => void }) {
+  const hasScore = item.rating > 0;
+  return (
+    <div
+      onClick={onClick}
+      className="group/card card-transition cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
+    >
+      <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+        {item.poster ? (
+          <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-stone-600 text-xs">بدون صورة</div>
+        )}
+        {hasScore && (
+          <div className="absolute top-2 right-2 glass flex items-center gap-1 px-2 py-0.5 rounded-full">
+            <Star className="w-3 h-3 fill-[#f5c518] text-[#f5c518]" />
+            <span className="text-[10px] font-bold text-white">{item.rating.toFixed(1)}</span>
+          </div>
+        )}
+        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 pointer-events-none" />
+      </div>
+      <div className="px-1 pt-2 text-right">
+        <h3 className="text-white text-xs sm:text-sm font-semibold line-clamp-1">{item.title}</h3>
+        <p className="text-stone-500 text-[10px] sm:text-xs mt-0.5">{item.type === 'movie' ? 'فيلم' : 'مسلسل'} · {item.year || '—'}</p>
+      </div>
+    </div>
+  );
+}
+
+export default function CategoryPage({ category, onItemClick, onBack, showAllMode = false, onOpenAll }: CategoryPageProps) {
   const [allItems, setAllItems] = useState<MovieOrShow[]>([]);
   const [sortBy, setSortBy] = useState<SortKey>('popularity');
   const [page, setPage] = useState(1);
@@ -65,8 +92,8 @@ export default function CategoryPage({ category, onItemClick, onBack }: Category
   const [loading, setLoading] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const loaderRef = useRef<HTMLDivElement>(null);
+  const subsections = buildSubsections(category);
 
-  // Fetch "All" grid (primary genre), reset on sort change
   const loadAll = useCallback(async (pg: number, sort: SortKey, replace: boolean) => {
     setLoading(true);
     try {
@@ -94,15 +121,17 @@ export default function CategoryPage({ category, onItemClick, onBack }: Category
     }
   }, [category.primaryGenre]);
 
-  // On category or sort change -> reset to page 1
+  // Load All grid only in showAllMode; reset + scroll to top on sort change
   useEffect(() => {
+    if (!showAllMode) return;
     setPage(1);
     loadAll(1, sortBy, true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [category.key, sortBy, loadAll]);
+  }, [category.key, sortBy, loadAll, showAllMode]);
 
-  // Infinite scroll for the All grid
+  // Infinite scroll (only in showAllMode)
   useEffect(() => {
+    if (!showAllMode) return;
     const el = loaderRef.current;
     if (!el) return;
     const obs = new IntersectionObserver((entries) => {
@@ -111,98 +140,96 @@ export default function CategoryPage({ category, onItemClick, onBack }: Category
         setPage(next);
         loadAll(next, sortBy, false);
       }
-    }, { rootMargin: '400px' });
+    }, { rootMargin: '600px' });
     obs.observe(el);
     return () => obs.disconnect();
-  }, [page, totalPages, loading, sortBy, loadAll]);
+  }, [page, totalPages, loading, sortBy, loadAll, showAllMode]);
 
   return (
-    <div className="min-h-screen animate-fade-in">
-      {/* Header band with category color */}
-      <div className={`relative bg-gradient-to-br ${category.gradient}`}>
-        <div className="absolute inset-0 bg-black/30" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-10 sm:pt-10 sm:pb-14">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-white/90 hover:text-white text-sm font-semibold mb-5 cursor-pointer transition-colors"
-          >
-            <ArrowRight className="w-4 h-4" />
+    <div className="min-h-screen animate-fade-in w-full">
+      {/* Full-width colored header */}
+      <div className="relative w-full" style={{ backgroundColor: category.overlay.replace(/0\.\d+\)/, '1)') }}>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
+        <div className="relative w-full px-4 sm:px-8 lg:px-12 pt-8 pb-10 sm:pt-10 sm:pb-14">
+          <button onClick={onBack} className="flex items-center gap-2 text-white/90 hover:text-white text-sm font-semibold mb-5 cursor-pointer transition-colors mr-auto">
             <span>الرئيسية</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white drop-shadow-lg text-right">{category.title}</h1>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white drop-shadow-lg text-right">
+            {category.title}{showAllMode ? ' — الكل' : ''}
+          </h1>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-        {/* Subsection rows */}
-        <div className="space-y-2 mb-12">
-          {category.subsections.map((sub) => (
-            <div key={sub.genreIds}>
-              <SubsectionRow sub={sub} onItemClick={onItemClick} />
+      <div className="w-full px-4 sm:px-8 lg:px-12 py-8 sm:py-10">
+        {!showAllMode && (
+          <>
+            {/* Subsection rows */}
+            <div className="space-y-2 mb-10">
+              {subsections.map((sub) => (
+                <div key={sub.genreIds}>
+                  <SubsectionRow sub={sub} onItemClick={onItemClick} />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* All section with sorting */}
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-xl sm:text-2xl font-bold text-white">الكل</h2>
-          <div className="relative">
-            <button
-              onClick={() => setSortOpen((o) => !o)}
-              className="flex items-center gap-2 glass hover:bg-white/15 text-white text-xs sm:text-sm font-semibold px-4 py-2 rounded-full transition-all cursor-pointer"
-            >
-              <span>{SORT_LABELS[sortBy]}</span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${sortOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {sortOpen && (
-              <div className="absolute left-0 mt-2 w-44 glass-strong rounded-2xl overflow-hidden z-30 shadow-2xl py-1">
-                {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
-                  <button
-                    key={k}
-                    onClick={() => { setSortBy(k); setSortOpen(false); }}
-                    className={`w-full text-right px-4 py-2.5 text-xs sm:text-sm transition-colors cursor-pointer ${sortBy === k ? 'text-white bg-white/10 font-bold' : 'text-stone-300 hover:bg-white/5'}`}
-                  >
-                    {SORT_LABELS[k]}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+            {/* "All" entry button */}
+            <div className="flex items-center justify-between mb-6 border-t border-white/10 pt-8">
+              <button
+                onClick={() => onOpenAll && onOpenAll(category.key)}
+                className="flex items-center gap-2 glass hover:bg-white/15 text-white text-sm font-bold px-5 py-2.5 rounded-full transition-all hover:scale-[1.03] cursor-pointer"
+              >
+                <span>عرض كل أفلام ومسلسلات {category.title}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+              <h2 className="text-xl sm:text-2xl font-bold text-white">الكل</h2>
+            </div>
+          </>
+        )}
 
-        {/* All grid */}
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4">
-          {allItems.map((item) => (
-            <button
-              key={`${item.type}-${item.id}`}
-              onClick={() => onItemClick(item)}
-              className="group/card relative rounded-xl overflow-hidden bg-stone-900 hover:scale-[1.04] transition-all cursor-pointer text-right"
-            >
-              <div className="aspect-[2/3] w-full overflow-hidden">
-                {item.poster ? (
-                  <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-stone-600 text-xs">بدون صورة</div>
+        {showAllMode && (
+          <>
+            {/* Sort control */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="relative">
+                <button
+                  onClick={() => setSortOpen((o) => !o)}
+                  className="flex items-center gap-2 glass hover:bg-white/15 text-white text-xs sm:text-sm font-semibold px-4 py-2 rounded-full transition-all cursor-pointer"
+                >
+                  <span>{SORT_LABELS[sortBy]}</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${sortOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {sortOpen && (
+                  <div className="absolute left-0 mt-2 w-44 glass-strong rounded-2xl overflow-hidden z-30 shadow-2xl py-1">
+                    {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
+                      <button
+                        key={k}
+                        onClick={() => { setSortBy(k); setSortOpen(false); }}
+                        className={`w-full text-right px-4 py-2.5 text-xs sm:text-sm transition-colors cursor-pointer ${sortBy === k ? 'text-white bg-white/10 font-bold' : 'text-stone-300 hover:bg-white/5'}`}
+                      >
+                        {SORT_LABELS[k]}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
-              {item.rating > 0 && (
-                <div className="absolute top-2 right-2 glass flex items-center gap-1 px-2 py-0.5 rounded-full">
-                  <span className="text-[10px] font-bold text-[#f5c518]">{item.rating.toFixed(1)}</span>
-                  <Star className="w-2.5 h-2.5 fill-[#f5c518] text-[#f5c518]" />
-                </div>
-              )}
-              <div className="p-2">
-                <h3 className="text-white text-[11px] sm:text-xs font-semibold line-clamp-1">{item.title}</h3>
-                <p className="text-stone-500 text-[9px] sm:text-[10px] mt-0.5">{item.type === 'movie' ? 'فيلم' : 'مسلسل'} · {item.year || '—'}</p>
-              </div>
-            </button>
-          ))}
-        </div>
+              <h2 className="text-xl sm:text-2xl font-bold text-white">الكل</h2>
+            </div>
 
-        {/* Loader sentinel */}
-        <div ref={loaderRef} className="h-16 flex items-center justify-center mt-4">
-          {loading && <div className="w-6 h-6 border-2 border-white/20 border-t-white/80 rounded-full animate-spin" />}
-        </div>
+            {/* Grid */}
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1 sm:gap-2">
+              {allItems.map((item) => (
+                <div key={`${item.type}-${item.id}`}>
+                  <GridCard item={item} onClick={() => onItemClick(item)} />
+                </div>
+              ))}
+            </div>
+
+            <div ref={loaderRef} className="h-16 flex items-center justify-center mt-4">
+              {loading && <div className="w-6 h-6 border-2 border-white/20 border-t-white/80 rounded-full animate-spin" />}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

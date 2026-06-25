@@ -6,6 +6,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { CATEGORIES } from '../lib/categories';
+import { discoverTitles } from '../lib/tmdb';
 
 interface CategoryRowProps {
   title?: string;
@@ -14,75 +15,112 @@ interface CategoryRowProps {
 
 export default function CategoryRow({ title = 'تصفّح حسب التصنيف', onSelect }: CategoryRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
-  const [showLeft, setShowLeft] = useState(false);
-  const [showRight, setShowRight] = useState(false);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+  const [images, setImages] = useState<Record<string, string>>({});
+
+  // Fetch a representative poster (most popular title) for each category
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const entries = await Promise.all(
+        CATEGORIES.map(async (cat) => {
+          try {
+            const res = await discoverTitles('movie', { genreIds: String(cat.primaryGenre), sortBy: 'popularity', page: 1 });
+            const withPoster = res.results.find((r) => r.poster);
+            return [cat.key, withPoster?.poster || ''] as [string, string];
+          } catch {
+            return [cat.key, ''] as [string, string];
+          }
+        })
+      );
+      if (!cancelled) {
+        const map: Record<string, string> = {};
+        entries.forEach(([k, v]) => { if (v) map[k] = v; });
+        setImages(map);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const checkScroll = () => {
     if (!rowRef.current) return;
     const { scrollLeft, scrollWidth, clientWidth } = rowRef.current;
     const abs = Math.abs(scrollLeft);
-    setShowRight(abs > 10);
-    setShowLeft(abs + clientWidth < scrollWidth - 10);
+    setShowRightArrow(abs > 10);
+    setShowLeftArrow(abs + clientWidth < scrollWidth - 10);
   };
 
   useEffect(() => {
     checkScroll();
     window.addEventListener('resize', checkScroll);
     return () => window.removeEventListener('resize', checkScroll);
-  }, []);
+  }, [images]);
 
-  const scroll = (dir: 'left' | 'right') => {
+  const handleScroll = (direction: 'left' | 'right') => {
     if (!rowRef.current) return;
     const amount = rowRef.current.clientWidth * 0.75;
-    rowRef.current.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' });
+    rowRef.current.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
     setTimeout(checkScroll, 350);
   };
 
   return (
-    <div className="relative group/row mb-8 sm:mb-10">
-      <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-3 sm:mb-4 px-1">{title}</h2>
+    <div className="relative group/row mb-2 mt-2">
+      <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-3 sm:mb-4 px-2 text-right">{title}</h2>
 
-      {/* Right arrow (prev in RTL) */}
-      {showRight && (
-        <button
-          onClick={() => scroll('right')}
-          className="hidden md:flex absolute right-0 top-1/2 mt-4 -translate-y-1/2 z-20 w-10 h-10 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/row:opacity-100 transition-all hover:scale-105 cursor-pointer"
-          aria-label="السابق"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
-      )}
-      {showLeft && (
-        <button
-          onClick={() => scroll('left')}
-          className="hidden md:flex absolute left-0 top-1/2 mt-4 -translate-y-1/2 z-20 w-10 h-10 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/row:opacity-100 transition-all hover:scale-105 cursor-pointer"
-          aria-label="التالي"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-      )}
-
-      <div
-        ref={rowRef}
-        onScroll={checkScroll}
-        className="flex gap-3 sm:gap-4 overflow-x-auto no-scrollbar pb-2"
-        style={{ scrollbarWidth: 'none' }}
-      >
-        {CATEGORIES.map((cat) => (
+      <div className="relative">
+        {/* Right arrow (previous in RTL) */}
+        {showRightArrow && (
           <button
-            key={cat.key}
-            onClick={() => onSelect(cat.key)}
-            className={`relative flex-none w-40 sm:w-48 md:w-56 aspect-[3/4] rounded-2xl overflow-hidden bg-gradient-to-br ${cat.gradient} shadow-lg hover:scale-[1.03] active:scale-[0.98] transition-all cursor-pointer group/cat`}
+            onClick={() => handleScroll('right')}
+            className="absolute right-8 top-[42%] z-40 w-10 h-10 rounded-full bg-black/80 hover:bg-stone-900 border border-white/5 text-white items-center justify-center cursor-pointer transition-all shadow-xl hover:scale-110 hidden md:flex"
+            aria-label="السابق"
           >
-            {/* subtle texture overlay */}
-            <div className="absolute inset-0 bg-black/10 group-hover/cat:bg-black/0 transition-colors" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-            {/* title bottom-right */}
-            <div className="absolute inset-x-0 bottom-0 p-4 text-right">
-              <span className="text-white font-black text-lg sm:text-xl md:text-2xl drop-shadow-lg leading-tight">{cat.title}</span>
-            </div>
+            <ChevronRight className="w-5 h-5" />
           </button>
-        ))}
+        )}
+        {showLeftArrow && (
+          <button
+            onClick={() => handleScroll('left')}
+            className="absolute left-8 top-[42%] z-40 w-10 h-10 rounded-full bg-black/80 hover:bg-stone-900 border border-white/5 text-white items-center justify-center cursor-pointer transition-all shadow-xl hover:scale-110 hidden md:flex"
+            aria-label="التالي"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+        )}
+
+        <div
+          ref={rowRef}
+          onScroll={checkScroll}
+          dir="rtl"
+          className="flex flex-row gap-4 md:gap-6 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none"
+        >
+          {CATEGORIES.map((cat) => (
+            <div
+              key={cat.key}
+              onClick={() => onSelect(cat.key)}
+              className="group/cat flex-none w-[125px] sm:w-[185px] md:w-[225px] lg:w-[255px] cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
+            >
+              <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+                {images[cat.key] && (
+                  <img
+                    src={images[cat.key]}
+                    alt={cat.title}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover/cat:scale-105"
+                  />
+                )}
+                {/* Color overlay (genre identity) */}
+                <div className="absolute inset-0" style={{ backgroundColor: cat.overlay }} />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                {/* Title */}
+                <div className="absolute inset-x-0 bottom-0 p-3 flex items-end justify-center">
+                  <span className="text-white font-black text-base sm:text-xl md:text-2xl drop-shadow-lg text-center leading-tight">{cat.title}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

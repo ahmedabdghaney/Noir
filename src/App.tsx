@@ -80,6 +80,7 @@ export default function App() {
   // Navigation & View State
   const [activeView, setActiveView] = useState<'home' | 'search' | 'detail' | 'watchlist' | 'category'>('home');
   const [selectedCategoryKey, setSelectedCategoryKey] = useState<string | null>(null);
+  const [categoryAllMode, setCategoryAllMode] = useState(false);
   const [searchMode, setSearchMode] = useState<'movie' | 'tv'>('movie');
   const [selectedTitle, setSelectedTitle] = useState<{ type: 'movie' | 'tv'; id: number } | null>(null);
   const [joinRoomCode, setJoinRoomCode] = useState<string>('');
@@ -539,9 +540,12 @@ export default function App() {
           setSelectedTitle(null);
         }
       } else if (hash.startsWith('#category/')) {
-        const key = hash.replace('#category/', '');
+        const rest = hash.replace('#category/', '');
+        const isAll = rest.endsWith('/all');
+        const key = isAll ? rest.replace('/all', '') : rest;
         if (getCategoryByKey(key)) {
           setSelectedCategoryKey(key);
+          setCategoryAllMode(isAll);
           setActiveView('category');
           setSelectedTitle(null);
         } else {
@@ -1778,6 +1782,8 @@ export default function App() {
             category={getCategoryByKey(selectedCategoryKey)!}
             onItemClick={handleTitleClick}
             onBack={navigateToHome}
+            showAllMode={categoryAllMode}
+            onOpenAll={(key) => { window.location.hash = `#category/${key}/all`; }}
           />
         )}
 </main>
