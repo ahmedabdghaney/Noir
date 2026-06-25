@@ -629,6 +629,25 @@ export default function DetailView({
               <span className="glass text-stone-200 px-2.5 py-1 rounded-full text-[10px] sm:text-xs">
                 {type ==='movie' ?'فيلم' :'مسلسل'}
 </span>
+
+              {/* Platform logos — small, natural colors, inline */}
+              {streamingSources.length > 0 && (
+                <span className="flex items-center gap-2">
+                  {streamingSources.map((s) => (
+                    <a
+                      key={s.key}
+                      href={s.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-6 sm:h-7 rounded-md overflow-hidden hover:scale-110 transition-transform cursor-pointer shadow-sm"
+                      title={s.name}
+                    >
+                      <img src={s.logo} alt={s.name} referrerPolicy="no-referrer" className="h-full w-auto object-contain" />
+                    </a>
+                  ))}
+</span>
+              )}
 </div>
 
             {/* Genre Tags List */}
@@ -652,27 +671,6 @@ export default function DetailView({
 </p>
 </div>
 
-            {/* Available on (TMDB) — logos only */}
-            {streamingSources.length > 0 && (
-              <div className="mb-5 sm:mb-6">
-                <h3 className="text-xs font-bold text-stone-400 mb-2.5">متوفر للمشاهدة الرسمية على</h3>
-                <div className="flex flex-wrap gap-2.5">
-                  {streamingSources.map((s) => (
-                    <a
-                      key={s.key}
-                      href={s.link}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 hover:border-white/30 hover:scale-[1.06] transition-all cursor-pointer shadow-lg bg-stone-900"
-                      title={s.name}
-                    >
-                      <img src={s.logo} alt={s.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
 
 
             {/* Action buttons: Resume/Play -> Start over -> Trailer -> Save(+) -> Share */}
