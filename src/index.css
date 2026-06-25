@@ -7,16 +7,20 @@
 }
 
 body {
-  background-color: #0b0b0d;
+  background-color: #08080a;
   color: #ffffff;
   overflow-x: hidden;
   font-family: "IBM Plex Sans Arabic", "Inter", sans-serif;
   direction: rtl;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  letter-spacing: -0.01em;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Clean, quiet depth — a single soft vertical gradient, Apple-TV style.
-   No grain, no heavy color washes; calm and premium. */
+   Deeper near-black base with a subtle cool top glow. */
 body::before {
   content: "";
   position: fixed;
@@ -24,8 +28,8 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(140% 70% at 50% 0%, rgba(40, 42, 52, 0.55), transparent 60%),
-    linear-gradient(180deg, #0d0d10 0%, #0b0b0d 40%, #090909 100%);
+    radial-gradient(120% 60% at 50% 0%, rgba(44, 46, 58, 0.45), transparent 55%),
+    linear-gradient(180deg, #0a0a0c 0%, #08080a 45%, #060607 100%);
 }
 
 #root {
@@ -36,21 +40,34 @@ body::before {
 /* Display headings */
 .font-display {
   font-family: var(--font-display);
-  letter-spacing: -0.025em;
+  letter-spacing: -0.03em;
 }
 
-/* Glass surface — the signature Apple-TV material */
+/* Glass surface — the signature Apple-TV material.
+   Softer, more translucent, very subtle hairline border. */
 .glass {
-  background: rgba(28, 28, 32, 0.55);
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(30, 30, 34, 0.5);
+  backdrop-filter: blur(28px) saturate(170%);
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 .glass-strong {
-  background: rgba(20, 20, 24, 0.78);
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(18, 18, 22, 0.72);
+  backdrop-filter: blur(48px) saturate(190%);
+  -webkit-backdrop-filter: blur(48px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+/* Subtle hover-able glass for interactive chips/buttons */
+.glass-hover {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.glass-hover:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 /* Day Mode / Light Mode styling overrides */
@@ -150,6 +167,12 @@ body::before {
 .card-transition {
   opacity: 0;
   animation: slideInLeftToRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s ease;
+}
+.card-transition:hover {
+  transform: translateY(-6px) scale(1.035);
+  box-shadow: 0 22px 48px -16px rgba(0, 0, 0, 0.8);
+  z-index: 5;
 }
 
 /* Custom styled arrow backgrounds for dropdowns to keep symmetry and distance */
@@ -216,15 +239,6 @@ body::before {
 /* === Apple-TV style enhancements === */
 
 /* Card hover: smooth lift with soft wide shadow, no loud glow */
-.card-transition {
-  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s ease;
-}
-.card-transition:hover {
-  transform: translateY(-8px) scale(1.03);
-  box-shadow: 0 24px 50px -16px rgba(0, 0, 0, 0.75);
-  z-index: 5;
-}
-
 /* Elegant gradient text */
 .text-gradient-noir {
   background: linear-gradient(180deg, #ffffff 0%, #c8c8cf 100%);
