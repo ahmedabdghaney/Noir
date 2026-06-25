@@ -82,9 +82,9 @@ export default function Hero({
 
   // Smooth slide+fade for the whole card content
   const cardVariants = {
-    enter: (dir: number) => ({ opacity: 0, x: dir > 0 ? 80 : -80, scale: 0.98 }),
-    center: { opacity: 1, x: 0, scale: 1 },
-    exit: (dir: number) => ({ opacity: 0, x: dir > 0 ? -80 : 80, scale: 0.98 }),
+    enter: (dir: number) => ({ opacity: 0, x: dir > 0 ? '60%' : '-60%' }),
+    center: { opacity: 1, x: '0%' },
+    exit: (dir: number) => ({ opacity: 0, x: dir > 0 ? '-60%' : '60%' }),
   };
 
   // Stagger children (logo, meta, chips, overview, buttons) for a smooth Apple feel
@@ -110,7 +110,7 @@ export default function Hero({
         </button>
 
         {/* Center wide card */}
-        <div className="flex-1 max-w-[1500px]">
+        <div className="flex-1 max-w-[1500px] overflow-hidden rounded-[28px]">
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
               key={`card-${activeItem.type}-${activeItem.id}`}
@@ -145,6 +145,7 @@ export default function Hero({
                   variants={contentContainer}
                   initial="hidden"
                   animate="show"
+                  dir="rtl"
                   className="absolute inset-y-0 right-0 w-full sm:w-[55%] md:w-[50%] flex flex-col items-end justify-center text-right p-6 sm:p-9 md:p-12"
                 >
                   {/* Logo or title */}
@@ -182,8 +183,8 @@ export default function Hero({
                     </motion.p>
                   )}
 
-                  {/* Actions — RTL: Play is rightmost */}
-                  <motion.div variants={contentItem} className="flex items-center justify-end gap-2.5 flex-row-reverse">
+                  {/* Actions — RTL: Play is rightmost (first child in RTL) */}
+                  <motion.div variants={contentItem} className="flex items-center justify-end gap-2.5">
                     <button
                       onClick={() => onPlayClick(activeItem)}
                       className="flex items-center gap-2 bg-white text-black hover:bg-white/90 font-bold px-7 py-2.5 sm:py-3 rounded-full transition-all hover:scale-[1.04] active:scale-95 cursor-pointer text-sm shadow-lg"
