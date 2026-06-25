@@ -164,7 +164,7 @@ export default function VideoPlayer({
   // Map a TMDB id to a direct .mp4 URL. These play in a native <video> element
   // (not an iframe). Movie: 'movie_ID', TV: 'tv_ID_SEASON_EPISODE'.
     // استيراد ملف الأفلام
-    import videoLinks from './videos.json';
+    import videoLinks from './videos';
 
     // استخدام الملف بدل الكود الثابت
     const CUSTOM_MP4: Record<string, string> = videoLinks;
