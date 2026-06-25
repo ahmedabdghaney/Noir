@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Play, Loader, ShieldAlert, Pause, Lock } from 'lucide-react';
+import { videoLinks } from './videos'; // تم نقل الاستيراد إلى هنا بأعلى الملف
 
 interface VideoPlayerProps {
   type: 'movie' | 'tv';
@@ -55,14 +56,14 @@ export default function VideoPlayer({
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Watch progression state
-  const progressKey =`noir_progress_${type}_${id}`;
+  const progressKey = `noir_progress_${type}_${id}`;
   const [progress, setProgress] = useState<number>(() => {
     return Number(localStorage.getItem(progressKey)) || 0;
   });
 
   // Automated progress updates while actively watching
   useEffect(() => {
-    if (playMode !=='movie') return;
+    if (playMode !== 'movie') return;
 
     // Immediately record that user started watching
     const savedOnStart = Number(localStorage.getItem(progressKey)) || 0;
@@ -70,7 +71,7 @@ export default function VideoPlayer({
 
     if (savedOnStart === 0) {
       setProgress(8);
-      localStorage.setItem(progressKey,'8');
+      localStorage.setItem(progressKey, '8');
       window.dispatchEvent(new Event('progress_updated'));
     }
 
@@ -163,11 +164,9 @@ export default function VideoPlayer({
   // Custom DIRECT MP4 files (self-hosted / licensed content you own).
   // Map a TMDB id to a direct .mp4 URL. These play in a native <video> element
   // (not an iframe). Movie: 'movie_ID', TV: 'tv_ID_SEASON_EPISODE'.
-    // استيراد ملف الأفلام
-    import videoLinks from './videos';
-
-    // استخدام الملف بدل الكود الثابت
-    const CUSTOM_MP4: Record<string, string> = videoLinks;
+  
+  // استخدام الملف بدل الكود الثابت
+  const CUSTOM_MP4: Record<string, string> = videoLinks;
 
   const mp4Key = type === 'tv' ? `tv_${id}_${season}_${episode}` : `movie_${id}`;
   const customMp4 = playMode === 'movie' ? CUSTOM_MP4[mp4Key] : undefined;
@@ -181,7 +180,7 @@ export default function VideoPlayer({
   };
 
   const getEmbedUrl = () => {
-    if (playMode ==='trailer' && youtubeKey) {
+    if (playMode === 'trailer' && youtubeKey) {
       const origin = typeof window !== 'undefined' ? encodeURIComponent(window.location.origin) : '';
       return `https://www.youtube-nocookie.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&origin=${origin}`;
     }
@@ -220,7 +219,7 @@ export default function VideoPlayer({
             <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-10 gap-3">
               <Loader className="w-8 h-8 text-red-500 animate-spin" />
               <span className="text-xs text-stone-400 select-none">جاري تحميل مسار المشغّل ومزامنة الترجمة...</span>
-</div>
+            </div>
           )}
 
           {playMode === 'trailer' ? (
@@ -261,32 +260,33 @@ export default function VideoPlayer({
             <div className="absolute inset-0 z-20 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center gap-4 select-none">
               <div className="w-16 h-16 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center">
                 <Pause className="w-7 h-7 text-amber-400 fill-amber-400" />
-</div>
+              </div>
               <div className="text-center px-6">
                 <h3 className="text-white text-base md:text-lg font-bold mb-1">
                   أوقف المنظم التشغيل
-</h3>
+                </h3>
                 {hostPauseByName && (
                   <p className="text-gray-400 text-xs md:text-sm">
                     بانتظار <span className="text-amber-400 font-semibold">{hostPauseByName}</span> ليستأنف العرض
-</p>
+                  </p>
                 )}
                 {isLiveHost && (
                   <p className="text-gray-500 text-[11px] mt-3">
                     اضغط زر الاستئناف بالأعلى لإكمال المشاهدة (ينعاد الفلم من البداية)
-</p>
+                  </p>
                 )}
                 {!isLiveHost && isLiveSession && (
                   <p className="text-gray-500 text-[11px] mt-3 flex items-center justify-center gap-1.5">
                     <Lock className="w-3 h-3" />
                     التحكم بالتشغيل بيد المنظم فقط
-</p>
+                  </p>
                 )}
-</div>
-</div>
-          )}</div>
+              </div>
+            </div>
+          )}
+        </div>
 
-</div>
-</div>
+      </div>
+    </div>
   );
 }
