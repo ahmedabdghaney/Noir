@@ -54,6 +54,7 @@ export default function VideoPlayer({
   const [isLoading, setIsLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
   
   // متغيرات المشغل المخصص
   const [customMp4Failed, setCustomMp4Failed] = useState(false);
@@ -168,12 +169,13 @@ export default function VideoPlayer({
     }
   };
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const seekTime = (Number(e.target.value) / 100) * duration;
-    if (videoRef.current) {
-      videoRef.current.currentTime = seekTime;
-      setCurrentTime(seekTime);
-    }
+  const handleSeekClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!videoRef.current || !duration || !progressRef.current) return;
+    const rect = progressRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const seekTime = (clickX / rect.width) * duration;
+    videoRef.current.currentTime = seekTime;
+    setCurrentTime(seekTime);
   };
 
   const skipTime = (seconds: number) => {
@@ -200,6 +202,7 @@ export default function VideoPlayer({
   };
 
   const formatTime = (time: number) => {
+    if (isNaN(time)) return "0:00";
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
@@ -266,76 +269,80 @@ export default function VideoPlayer({
                 autoPlay
                 playsInline
                 className="w-full h-full bg-black relative z-0"
-                onLoadedData={() => { setIsLoading(false); setDuration(videoRef.current?.duration || 0); }}
+                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+                onLoadedData={() => setIsLoading(false)}
                 onCanPlay={() => setIsLoading(false)}
                 onError={() => setCustomMp4Failed(true)}
                 onTimeUpdate={handleTimeUpdate}
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
                 onClick={togglePlay}
-              >
-                {/* ملف الترجمة يضاف هنا مستقبلاً بهذا الشكل: <track kind="subtitles" srcLang="ar" src="رابط_الترجمة.vtt" /> */}
-              </video>
+              />
 
               {/* زر التشغيل الكبير بالمنتصف */}
               {!isPlaying && !isLoading && (
                 <button
                   onClick={togglePlay}
-                  className="absolute inset-0 flex items-center justify-center z-10 group/bg"
+                  className="absolute inset-0 flex items-center justify-center z-10 group/bg w-full h-full"
                 >
-                  <div className="bg-red-600/90 group-hover/bg:bg-red-600 transition-all p-6 rounded-full shadow-2xl">
-                    <Play className="w-12 h-12 text-white fill-white ml-1" />
+                  <div className="bg-red-600/80 group-hover/bg:bg-red-600 group-hover/bg:scale-110 transition-all duration-300 p-8 rounded-full shadow-2xl backdrop-blur-sm">
+                    <Play className="w-10 h-10 text-white fill-white ml-1" />
                   </div>
                 </button>
               )}
 
               {/* أزرار التحكم بالأسفل */}
-              <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-4 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+              <div dir="ltr" className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/80 to-transparent p-4 pt-10 transition-opacity duration-500 ease-in-out ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                 
-                {/* شريط التقدم */}
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={duration ? (currentTime / duration) * 100 : 0}
-                  onChange={handleSeek}
-                  className="w-full h-2 mb-3 cursor-pointer appearance-none rounded-full bg-gray-600 accent-red-600"
-                  style={{
-                    background: `linear-gradient(to right, #ff453a ${duration ? (currentTime / duration) * 100 : 0}%, #4b5563 ${duration ? (currentTime / duration) * 100 : 0}%)`
-                  }}
-                />
+                {/* شريط التقدم المخصص (Progress Bar) */}
+                <div
+                  ref={progressRef}
+                  onClick={handleSeekClick}
+                  className="group relative w-full h-1.5 bg-white/20 rounded-full cursor-pointer mb-4 hover:h-2.5 transition-all duration-300"
+                >
+                  <div
+                    className="absolute h-full bg-red-600 rounded-full"
+                    style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+                  ></div>
+                  <div
+                    className="absolute h-3.5 w-3.5 bg-red-600 rounded-full top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-md"
+                    style={{ left: `calc(${duration ? (currentTime / duration) * 100 : 0}% - 7px)` }}
+                  ></div>
+                </div>
 
                 <div className="flex items-center justify-between text-white">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-5">
                     {/* زر التشغيل بالأسفل */}
-                    <button onClick={togglePlay} className="hover:text-red-500 transition-colors">
-                      {isPlaying ? <Pause className="w-8 h-8 fill-white" /> : <Play className="w-8 h-8 fill-white" />}
+                    <button onClick={togglePlay} className="hover:text-red-500 transition-colors duration-200">
+                      {isPlaying ? <Pause className="w-7 h-7 fill-white" /> : <Play className="w-7 h-7 fill-white" />}
                     </button>
                     
                     {/* التخطي للخلف */}
-                    <button onClick={() => skipTime(-10)} className="hover:text-red-500 transition-colors">
-                      <RotateCcw className="w-7 h-7" />
+                    <button onClick={() => skipTime(-10)} className="hover:text-red-500 transition-colors duration-200">
+                      <RotateCcw className="w-6 h-6" />
                     </button>
 
                     {/* التخطي للأمام */}
-                    <button onClick={() => skipTime(10)} className="hover:text-red-500 transition-colors">
-                      <RotateCw className="w-7 h-7" />
+                    <button onClick={() => skipTime(10)} className="hover:text-red-500 transition-colors duration-200">
+                      <RotateCw className="w-6 h-6" />
                     </button>
 
                     {/* الصوت */}
-                    <button onClick={toggleMute} className="hover:text-red-500 transition-colors">
-                      {isMuted ? <VolumeX className="w-8 h-8" /> : <Volume2 className="w-8 h-8" />}
-                    </button>
+                    <div className="flex items-center gap-2 group/vol">
+                      <button onClick={toggleMute} className="hover:text-red-500 transition-colors duration-200">
+                        {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                      </button>
+                    </div>
 
                     {/* الوقت */}
-                    <span className="text-sm font-medium select-none">
+                    <span className="text-sm font-medium select-none text-gray-300">
                       {formatTime(currentTime)} / {formatTime(duration)}
                     </span>
                   </div>
 
                   {/* تكبير الشاشة */}
-                  <button onClick={toggleFullscreen} className="hover:text-red-500 transition-colors">
-                    <Maximize className="w-8 h-8" />
+                  <button onClick={toggleFullscreen} className="hover:text-red-500 transition-colors duration-200">
+                    <Maximize className="w-6 h-6" />
                   </button>
                 </div>
               </div>
