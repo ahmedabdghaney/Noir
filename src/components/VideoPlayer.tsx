@@ -160,13 +160,38 @@ export default function VideoPlayer({
   }, [type, id, season, episode, playMode]);
 
   // Compute VIT API provider url
+  // Custom DIRECT MP4 files (self-hosted / licensed content you own).
+  // Map a TMDB id to a direct .mp4 URL. These play in a native <video> element
+  // (not an iframe). Movie: 'movie_ID', TV: 'tv_ID_SEASON_EPISODE'.
+  const CUSTOM_MP4: Record<string, string> = {
+    'movie_872585': 'https://cloud02.albox.co/episodes/dc7cb280-576a-4648-aab1-6f108dbf53c2.mp4
+',
+  };
+
+  const mp4Key = type === 'tv' ? `tv_${id}_${season}_${episode}` : `movie_${id}`;
+  const customMp4 = playMode === 'movie' ? CUSTOM_MP4[mp4Key] : undefined;
+
+  // Custom embed overrides: map a TMDB id to your own embed URL.
+  // If a movie/episode has a custom link here, it is used instead of vidapi.
+  // Movie example:  movie_123456: 'https://your-embed-host.com/embed/abc'
+  // TV example:     'tv_1399_1_2': 'https://your-embed-host.com/embed/xyz'  (id_season_episode)
+  const CUSTOM_EMBEDS: Record<string, string> = {
+    // 'movie_872585': 'https://your-embed-host.com/e/XXXXXX',
+  };
+
   const getEmbedUrl = () => {
     if (playMode ==='trailer' && youtubeKey) {
       const origin = typeof window !== 'undefined' ? encodeURIComponent(window.location.origin) : '';
       return `https://www.youtube-nocookie.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&origin=${origin}`;
     }
 
-    // vidapi.qzz.io — single source, reliable inside iframe, autoplay
+    // 1) Check for a custom embed override for this exact title/episode
+    const customKey = type === 'tv' ? `tv_${id}_${season}_${episode}` : `movie_${id}`;
+    if (CUSTOM_EMBEDS[customKey]) {
+      return CUSTOM_EMBEDS[customKey];
+    }
+
+    // 2) Default: vidapi.qzz.io — single source, reliable inside iframe, autoplay
     const params = new URLSearchParams({
       primaryColor: 'ff453a',
       secondaryColor: '0a0a0a',
@@ -205,6 +230,17 @@ export default function VideoPlayer({
               allowFullScreen
               className="w-full h-full border-0 relative z-0"
               onLoad={() => setIsLoading(false)}
+            />
+          ) : customMp4 ? (
+            <video
+              key={`mp4-${id}-${episode}`}
+              src={customMp4}
+              controls
+              autoPlay
+              playsInline
+              className="w-full h-full bg-black relative z-0"
+              onLoadedData={() => setIsLoading(false)}
+              onCanPlay={() => setIsLoading(false)}
             />
           ) : (
             <iframe
