@@ -98,15 +98,28 @@ export default function Hero({
   };
 
   return (
-    <div dir="rtl" className="relative w-full mb-12 sm:mb-16 pt-4 sm:pt-8 select-none overflow-hidden">
+    <div className="relative w-full mb-12 sm:mb-16 pt-4 sm:pt-8 select-none overflow-hidden">
       <div className="relative flex items-stretch justify-center gap-3 sm:gap-4 px-2 sm:px-4">
         {/* Side peek — next (left in RTL) */}
         <button
           onClick={() => goTo(1)}
-          className="hidden lg:block flex-none w-[11%] rounded-[24px] overflow-hidden opacity-40 hover:opacity-70 transition-opacity cursor-pointer aspect-[2.15/1]"
+          className="hidden lg:block flex-none w-[11%] rounded-[24px] overflow-hidden opacity-40 hover:opacity-70 transition-opacity cursor-pointer aspect-[2.15/1] relative"
           aria-label="التالي"
         >
-          <img src={wideImg(nextItem)} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" style={{ objectPosition: 'right center' }} />
+          <AnimatePresence mode="wait">
+            <motion.img
+              key={`next-${nextItem.type}-${nextItem.id}`}
+              src={wideImg(nextItem)}
+              alt=""
+              referrerPolicy="no-referrer"
+              initial={{ opacity: 0, scale: 1.05 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ objectPosition: 'right center' }}
+            />
+          </AnimatePresence>
         </button>
 
         {/* Center wide card */}
@@ -145,7 +158,6 @@ export default function Hero({
                   variants={contentContainer}
                   initial="hidden"
                   animate="show"
-                  dir="rtl"
                   className="absolute inset-y-0 right-0 w-full sm:w-[55%] md:w-[50%] flex flex-col items-end justify-center text-right p-6 sm:p-9 md:p-12"
                 >
                   {/* Logo or title */}
@@ -241,10 +253,23 @@ export default function Hero({
         {/* Side peek — previous (right in RTL) */}
         <button
           onClick={() => goTo(-1)}
-          className="hidden lg:block flex-none w-[11%] rounded-[24px] overflow-hidden opacity-40 hover:opacity-70 transition-opacity cursor-pointer aspect-[2.15/1]"
+          className="hidden lg:block flex-none w-[11%] rounded-[24px] overflow-hidden opacity-40 hover:opacity-70 transition-opacity cursor-pointer aspect-[2.15/1] relative"
           aria-label="السابق"
         >
-          <img src={wideImg(prevItem)} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" style={{ objectPosition: 'left center' }} />
+          <AnimatePresence mode="wait">
+            <motion.img
+              key={`prev-${prevItem.type}-${prevItem.id}`}
+              src={wideImg(prevItem)}
+              alt=""
+              referrerPolicy="no-referrer"
+              initial={{ opacity: 0, scale: 1.05 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ objectPosition: 'left center' }}
+            />
+          </AnimatePresence>
         </button>
       </div>
 
