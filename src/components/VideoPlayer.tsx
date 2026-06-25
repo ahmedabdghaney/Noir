@@ -5,7 +5,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Play, Loader, ShieldAlert, Pause, Lock } from 'lucide-react';
-import { videoLinks } from './videos'; // السطر هذا مكانه الصحيح بأعلى الملف
 
 interface VideoPlayerProps {
   type: 'movie' | 'tv';
@@ -54,6 +53,9 @@ export default function VideoPlayer({
 }: VideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // متغير يحفظ هل الفلم المباشر فشل أم لا (عشان نرجع لـ vidapi)
+  const [customMp4Failed, setCustomMp4Failed] = useState(false);
 
   const progressKey = `noir_progress_${type}_${id}`;
   const [progress, setProgress] = useState<number>(() => {
@@ -130,14 +132,17 @@ export default function VideoPlayer({
       containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     setIsLoading(true);
+    setCustomMp4Failed(false); // تصفير حالة الفشل كل ما يفتح فلم جديد
     const saved = Number(localStorage.getItem(`noir_progress_${type}_${id}`)) || 0;
     setProgress(saved);
   }, [type, id, season, episode, playMode]);
 
-  // هنا نربط الملف الخارجي بالكود
-  const CUSTOM_MP4: Record<string, string> = videoLinks;
+  // رابط AWS CloudFront مالك (تقدر تغيره مستقبلاً من هنا فقط)
+  const CDN_BASE_URL = "https://d269k7J205s3hx.cloudfront.net/";
+  
+  // نبني الرابط تلقائياً بناءً على رقم الفيلم
   const mp4Key = type === 'tv' ? `tv_${id}_${season}_${episode}` : `movie_${id}`;
-  const customMp4 = playMode === 'movie' ? CUSTOM_MP4[mp4Key] : undefined;
+  const customMp4 = playMode === 'movie' ? `${CDN_BASE_URL}${mp4Key}.mp4` : undefined;
 
   const CUSTOM_EMBEDS: Record<string, string> = {};
 
@@ -186,7 +191,7 @@ export default function VideoPlayer({
               className="w-full h-full border-0 relative z-0"
               onLoad={() => setIsLoading(false)}
             />
-          ) : customMp4 ? (
+          ) : (customMp4 && !customMp4Failed) ? (
             <video
               key={`mp4-${id}-${episode}`}
               src={customMp4}
@@ -196,6 +201,7 @@ export default function VideoPlayer({
               className="w-full h-full bg-black relative z-0"
               onLoadedData={() => setIsLoading(false)}
               onCanPlay={() => setIsLoading(false)}
+              onError={() => setCustomMp4Failed(true)} // إذا الفلم مو موجود بـ AWS، يرجع لـ Vidapi
             />
           ) : (
             <iframe
