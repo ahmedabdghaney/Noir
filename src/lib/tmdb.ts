@@ -77,7 +77,7 @@ export function normalizeItem(item: any, customType?: 'movie' | 'tv'): MovieOrSh
     id: item.id,
     type: isTV ? 'tv' : 'movie',
     title: itemTitle,
-    overview: item.overview || 'لا يوجد وصف متاح حالياً لهذا العنوان.',
+    overview: item.overview || '',
     poster: getPosterUrl(item.poster_path),
     backdrop: getBackdropUrl(item.backdrop_path),
     rating: item.vote_average || 0,
@@ -137,11 +137,23 @@ export async function fetchPopularMovies(): Promise<MovieOrShow[]> {
 
 // Detailed queries
 export async function fetchDetailedTitle(type: 'movie' | 'tv', id: number): Promise<DetailedInfo> {
-  return await tmdbFetch(`/${type}/${id}`, {
-    append_to_response: 'videos,credits,similar,images',
-    include_image_language: 'en,null',
-    language: 'en-US',
-  });
+  // Fetch Arabic first (for overview), then English as fallback for missing fields.
+  const [ar, en] = await Promise.all([
+    tmdbFetch(`/${type}/${id}`, {
+      append_to_response: 'videos,credits,similar,images',
+      include_image_language: 'en,null',
+      language: 'ar',
+    }),
+    tmdbFetch(`/${type}/${id}`, {
+      append_to_response: 'videos,credits,similar,images',
+      include_image_language: 'en,null',
+      language: 'en-US',
+    }),
+  ]);
+  // Use Arabic overview if present, else English. Keep English as the base
+  // (complete data) and only take the Arabic overview when it exists.
+  const overview = (ar.overview && ar.overview.trim()) ? ar.overview : (en.overview || '');
+  return { ...en, overview };
 }
 
 // Picks the best title logo (prefers English, falls back to any) from TMDB images
@@ -165,18 +177,28 @@ export interface EpisodeInfo {
 
 export async function fetchSeasonEpisodes(tvId: number, seasonNumber: number): Promise<EpisodeInfo[]> {
   try {
-    const res = await tmdbFetch(`/tv/${tvId}/season/${seasonNumber}`, {
-      language: 'en-US',
+    const [ar, en] = await Promise.all([
+      tmdbFetch(`/tv/${tvId}/season/${seasonNumber}`, { language: 'ar' }),
+      tmdbFetch(`/tv/${tvId}/season/${seasonNumber}`, { language: 'en-US' }),
+    ]);
+    const enEps: any[] = en.episodes || [];
+    const arEps: any[] = ar.episodes || [];
+    const enByNum = new Map<number, any>(enEps.map((e) => [e.episode_number, e]));
+    // Base on Arabic list (falls back to English when Arabic season is empty)
+    const baseList = arEps.length ? arEps : enEps;
+    return baseList.map((e: any) => {
+      const enE = enByNum.get(e.episode_number) || {};
+      const overview = (e.overview && e.overview.trim()) ? e.overview : (enE.overview || '');
+      return {
+        episode_number: e.episode_number,
+        name: e.name || enE.name || `الحلقة ${e.episode_number}`,
+        overview,
+        still_path: e.still_path || enE.still_path || null,
+        runtime: e.runtime || enE.runtime || null,
+        air_date: e.air_date || enE.air_date || null,
+        vote_average: e.vote_average || enE.vote_average || 0,
+      };
     });
-    return (res.episodes || []).map((e: any) => ({
-      episode_number: e.episode_number,
-      name: e.name || `الحلقة ${e.episode_number}`,
-      overview: e.overview || '',
-      still_path: e.still_path || null,
-      runtime: e.runtime || null,
-      air_date: e.air_date || null,
-      vote_average: e.vote_average || 0,
-    }));
   } catch (err) {
     console.error('fetchSeasonEpisodes error:', err);
     return [];

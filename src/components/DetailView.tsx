@@ -638,7 +638,7 @@ export default function DetailView({
             {/* Synopsis placed right below Details bar and tags */}
             <div className="mb-4 sm:mb-6 max-w-2xl text-right leading-relaxed select-text">
               <p className="text-gray-350 text-xs sm:text-sm md:text-base font-medium leading-relaxed">
-                {data.overview ||'لا يوجد وصف متاح بنسق اللغة العربية لهذا العنوان حالياً.'}
+                {data.overview ||'لا يوجد وصف.'}
 </p>
 </div>
 
@@ -993,7 +993,7 @@ export default function DetailView({
                           className="group/ep flex-none w-[300px] sm:w-[380px] text-right snap-start cursor-pointer"
                         >
                           {/* Card with image + overlaid text */}
-                          <div className={`relative h-[280px] sm:h-[320px] rounded-3xl overflow-hidden bg-stone-900 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.7)] ${selectedEpisode === ep.episode_number ? 'ring-2 ring-red-500/80' : 'border border-white/8'}`}>
+                          <div className={`relative h-[280px] sm:h-[320px] rounded-3xl overflow-hidden bg-stone-900 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.7)] ${selectedEpisode === ep.episode_number ? 'ring-2 ring-inset ring-red-500/90' : 'border border-white/8'}`}>
                             {still ? (
                               <img
                                 src={still}
@@ -1026,7 +1026,7 @@ export default function DetailView({
                               <h4 className="text-white font-bold text-base leading-tight line-clamp-1 mb-1">{ep.name}</h4>
                               {ep.overview ? (
                                 <p className="text-white/65 text-[11px] leading-relaxed line-clamp-3 mb-2.5">{ep.overview}</p>
-                              ) : <div className="mb-2.5" />}
+                              ) : <p className="text-white/35 text-[11px] leading-relaxed mb-2.5">لا يوجد وصف.</p>}
 
                               {/* Footer: runtime */}
                               <div className="flex items-center justify-between">
