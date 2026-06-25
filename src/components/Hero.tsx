@@ -176,8 +176,22 @@ export default function Hero({
                             className="flex items-center gap-2 bg-white text-black hover:bg-white/90 font-bold px-7 py-2.5 sm:py-3 rounded-full transition-all hover:scale-[1.04] active:scale-95 cursor-pointer text-sm shadow-lg"
                           >
                             <Play className="w-4 h-4 fill-black text-black" />
-                            <span>Play</span>
+                            <span>تشغيل</span>
                           </button>
+
+                          {onTrailerClick && (
+                            <button
+                              onClick={() => onTrailerClick(item)}
+                              className="flex items-center gap-2 glass text-white hover:bg-white/15 font-bold px-5 py-2.5 sm:py-3 rounded-full transition-all hover:scale-[1.04] active:scale-95 cursor-pointer text-sm"
+                              title="الإعلان الرسمي"
+                            >
+                              <svg viewBox="0 0 28 20" className="w-5 h-[14px] shrink-0" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="28" height="20" rx="5" fill="#FF0000" />
+                                <path d="M11 6 L19 10 L11 14 Z" fill="white" />
+                              </svg>
+                              <span>الإعلان الرسمي</span>
+                            </button>
+                          )}
 
                           {onToggleSave && (
                             <button
@@ -186,19 +200,6 @@ export default function Hero({
                               title={saved ? 'محفوظ في قائمتي' : 'إضافة لقائمتي'}
                             >
                               {saved ? <Check className="w-5 h-5 text-black" strokeWidth={3} /> : <Plus className="w-5 h-5" />}
-                            </button>
-                          )}
-
-                          {onTrailerClick && (
-                            <button
-                              onClick={() => onTrailerClick(item)}
-                              className="w-11 h-11 rounded-full glass flex items-center justify-center text-white hover:bg-white/15 transition-all cursor-pointer"
-                              title="الإعلان"
-                            >
-                              <svg viewBox="0 0 28 20" className="w-5 h-[14px]" xmlns="http://www.w3.org/2000/svg">
-                                <rect width="28" height="20" rx="5" fill="#FF0000" />
-                                <path d="M11 6 L19 10 L11 14 Z" fill="white" />
-                              </svg>
                             </button>
                           )}
                         </motion.div>

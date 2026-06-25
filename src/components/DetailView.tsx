@@ -679,9 +679,9 @@ export default function DetailView({
                 <>
                   <button
                     onClick={() => handlePlayClick('movie')}
-                    className="flex items-center gap-1.5 sm:gap-2 bg-red-600 hover:bg-red-500 text-white font-bold px-4 sm:px-8 py-2 md:py-3 rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shadow-lg text-xs sm:text-sm"
+                    className="flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-white/90 text-black font-bold px-4 sm:px-8 py-2 md:py-3 rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shadow-lg text-xs sm:text-sm"
                   >
-                    <Play className="w-3.5 h-3.5 fill-current text-white" />
+                    <Play className="w-3.5 h-3.5 fill-black text-black" />
                     <span>إكمال المشاهدة ({savedProgressPercent}%)</span>
 </button>
 
@@ -696,9 +696,9 @@ export default function DetailView({
               ) : (
                 <button
                   onClick={() => handlePlayClick('movie')}
-                  className="flex items-center gap-1.5 sm:gap-2 bg-red-600 hover:bg-red-500 text-white font-bold px-4 sm:px-8 py-2 md:py-3 rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shadow-lg text-xs sm:text-sm"
+                  className="flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-white/90 text-black font-bold px-4 sm:px-8 py-2 md:py-3 rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shadow-lg text-xs sm:text-sm"
                 >
-                  <Play className="w-3.5 h-3.5 fill-current text-white" />
+                  <Play className="w-3.5 h-3.5 fill-black text-black" />
                   <span>المشاهدة الآن</span>
 </button>
               )}
@@ -719,13 +719,13 @@ export default function DetailView({
               <button
                 onClick={handleToggleSave}
                 title={isSaved ? 'محفوظ في قائمتي' : 'حفظ في قائمتي'}
-                className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all cursor-pointer border shrink-0 hover:scale-105 active:scale-95 ${
+                className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 hover:scale-105 active:scale-95 ${
                   isSaved 
-                    ?'bg-emerald-500 border-emerald-400 text-white' 
+                    ?'bg-white text-black' 
                     :'glass text-white hover:bg-white/15'
                 }`}
               >
-                {isSaved ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                {isSaved ? <Check className="w-5 h-5 text-black" strokeWidth={3} /> : <Plus className="w-5 h-5" />}
 </button>
 
               <button
