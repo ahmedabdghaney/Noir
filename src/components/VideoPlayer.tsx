@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Play, Loader, ShieldAlert, Pause, Lock } from 'lucide-react';
+import { Play, Loader, ShieldAlert, Pause, Lock, Volume2, VolumeX, Maximize, RotateCcw, RotateCw } from 'lucide-react';
 
 interface VideoPlayerProps {
   type: 'movie' | 'tv';
@@ -53,9 +53,16 @@ export default function VideoPlayer({
 }: VideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   
-  // متغير يحفظ هل الفلم المباشر فشل أم لا (عشان نرجع لـ vidapi)
+  // متغيرات المشغل المخصص
   const [customMp4Failed, setCustomMp4Failed] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
+  const [showControls, setShowControls] = useState(true);
 
   const progressKey = `noir_progress_${type}_${id}`;
   const [progress, setProgress] = useState<number>(() => {
@@ -132,17 +139,71 @@ export default function VideoPlayer({
       containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     setIsLoading(true);
-    setCustomMp4Failed(false); // تصفير حالة الفشل كل ما يفتح فلم جديد
+    setCustomMp4Failed(false);
     const saved = Number(localStorage.getItem(`noir_progress_${type}_${id}`)) || 0;
     setProgress(saved);
   }, [type, id, season, episode, playMode]);
 
-  // رابط AWS CloudFront مالك (تقدر تغيره مستقبلاً من هنا فقط)
+  // دوال المشغل المخصص
   const CDN_BASE_URL = "https://d269k7J205s3hx.cloudfront.net/";
-  
-  // نبني الرابط تلقائياً بناءً على رقم الفيلم
   const mp4Key = type === 'tv' ? `tv_${id}_${season}_${episode}` : `movie_${id}`;
   const customMp4 = playMode === 'movie' ? `${CDN_BASE_URL}${mp4Key}.mp4` : undefined;
+
+  const togglePlay = () => {
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play();
+        setIsPlaying(true);
+      } else {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (videoRef.current) {
+      setCurrentTime(videoRef.current.currentTime);
+      onTimeUpdate?.(videoRef.current.currentTime);
+    }
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const seekTime = (Number(e.target.value) / 100) * duration;
+    if (videoRef.current) {
+      videoRef.current.currentTime = seekTime;
+      setCurrentTime(seekTime);
+    }
+  };
+
+  const skipTime = (seconds: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime += seconds;
+    }
+  };
+
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !videoRef.current.muted;
+      setIsMuted(videoRef.current.muted);
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (containerRef.current) {
+      if (!document.fullscreenElement) {
+        containerRef.current.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+  };
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  };
 
   const CUSTOM_EMBEDS: Record<string, string> = {};
 
@@ -174,14 +235,19 @@ export default function VideoPlayer({
 
   return (
     <div ref={containerRef} className="w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl animate-fade-in text-right">
-      <div className="player-shell bg-black rounded-3xl overflow-hidden border border-white/15 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9),0_0_0_1px_rgba(255,255,255,0.05)] ring-1 ring-white/10 relative">
+      <div
+        className="player-shell bg-black rounded-3xl overflow-hidden border border-white/15 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9),0_0_0_1px_rgba(255,255,255,0.05)] ring-1 ring-white/10 relative"
+        onMouseMove={() => setShowControls(true)}
+        onMouseLeave={() => isPlaying && setShowControls(false)}
+      >
         <div className="relative aspect-video w-full bg-black">
           {isLoading && !isPausedByHost && (
-            <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-10 gap-3">
-              <Loader className="w-8 h-8 text-red-500 animate-spin" />
+            <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-30 gap-3">
+              <Loader className="w-10 h-10 text-red-500 animate-spin" />
               <span className="text-xs text-stone-400 select-none">جاري تحميل مسار المشغّل ومزامنة الترجمة...</span>
             </div>
           )}
+          
           {playMode === 'trailer' ? (
             <iframe
               src={getEmbedUrl()}
@@ -192,17 +258,88 @@ export default function VideoPlayer({
               onLoad={() => setIsLoading(false)}
             />
           ) : (customMp4 && !customMp4Failed) ? (
-            <video
-              key={`mp4-${id}-${episode}`}
-              src={customMp4}
-              controls
-              autoPlay
-              playsInline
-              className="w-full h-full bg-black relative z-0"
-              onLoadedData={() => setIsLoading(false)}
-              onCanPlay={() => setIsLoading(false)}
-              onError={() => setCustomMp4Failed(true)} // إذا الفلم مو موجود بـ AWS، يرجع لـ Vidapi
-            />
+            <>
+              <video
+                ref={videoRef}
+                key={`mp4-${id}-${episode}`}
+                src={customMp4}
+                autoPlay
+                playsInline
+                className="w-full h-full bg-black relative z-0"
+                onLoadedData={() => { setIsLoading(false); setDuration(videoRef.current?.duration || 0); }}
+                onCanPlay={() => setIsLoading(false)}
+                onError={() => setCustomMp4Failed(true)}
+                onTimeUpdate={handleTimeUpdate}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onClick={togglePlay}
+              >
+                {/* ملف الترجمة يضاف هنا مستقبلاً بهذا الشكل: <track kind="subtitles" srcLang="ar" src="رابط_الترجمة.vtt" /> */}
+              </video>
+
+              {/* زر التشغيل الكبير بالمنتصف */}
+              {!isPlaying && !isLoading && (
+                <button
+                  onClick={togglePlay}
+                  className="absolute inset-0 flex items-center justify-center z-10 group/bg"
+                >
+                  <div className="bg-red-600/90 group-hover/bg:bg-red-600 transition-all p-6 rounded-full shadow-2xl">
+                    <Play className="w-12 h-12 text-white fill-white ml-1" />
+                  </div>
+                </button>
+              )}
+
+              {/* أزرار التحكم بالأسفل */}
+              <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-4 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+                
+                {/* شريط التقدم */}
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={duration ? (currentTime / duration) * 100 : 0}
+                  onChange={handleSeek}
+                  className="w-full h-2 mb-3 cursor-pointer appearance-none rounded-full bg-gray-600 accent-red-600"
+                  style={{
+                    background: `linear-gradient(to right, #ff453a ${duration ? (currentTime / duration) * 100 : 0}%, #4b5563 ${duration ? (currentTime / duration) * 100 : 0}%)`
+                  }}
+                />
+
+                <div className="flex items-center justify-between text-white">
+                  <div className="flex items-center gap-4">
+                    {/* زر التشغيل بالأسفل */}
+                    <button onClick={togglePlay} className="hover:text-red-500 transition-colors">
+                      {isPlaying ? <Pause className="w-8 h-8 fill-white" /> : <Play className="w-8 h-8 fill-white" />}
+                    </button>
+                    
+                    {/* التخطي للخلف */}
+                    <button onClick={() => skipTime(-10)} className="hover:text-red-500 transition-colors">
+                      <RotateCcw className="w-7 h-7" />
+                    </button>
+
+                    {/* التخطي للأمام */}
+                    <button onClick={() => skipTime(10)} className="hover:text-red-500 transition-colors">
+                      <RotateCw className="w-7 h-7" />
+                    </button>
+
+                    {/* الصوت */}
+                    <button onClick={toggleMute} className="hover:text-red-500 transition-colors">
+                      {isMuted ? <VolumeX className="w-8 h-8" /> : <Volume2 className="w-8 h-8" />}
+                    </button>
+
+                    {/* الوقت */}
+                    <span className="text-sm font-medium select-none">
+                      {formatTime(currentTime)} / {formatTime(duration)}
+                    </span>
+                  </div>
+
+                  {/* تكبير الشاشة */}
+                  <button onClick={toggleFullscreen} className="hover:text-red-500 transition-colors">
+                    <Maximize className="w-8 h-8" />
+                  </button>
+                </div>
+              </div>
+            </>
           ) : (
             <iframe
               key={`player-${id}-${episode}`}
@@ -215,6 +352,7 @@ export default function VideoPlayer({
               onLoad={() => setIsLoading(false)}
             />
           )}
+
           {isPausedByHost && playMode === 'movie' && (
             <div className="absolute inset-0 z-20 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center gap-4 select-none">
               <div className="w-16 h-16 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center">
