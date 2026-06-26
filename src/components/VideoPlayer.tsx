@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Play, Loader, ShieldAlert, Pause, Lock } from 'lucide-react';
+import { videoLinks } from './videos'; // تم إضافة الاستيراد لقراءة روابط جوجل درايف
 
 interface VideoPlayerProps {
   type: 'movie' | 'tv';
@@ -137,12 +138,9 @@ export default function VideoPlayer({
     setProgress(saved);
   }, [type, id, season, episode, playMode]);
 
-  // رابط AWS CloudFront مالك (تقدر تغيره مستقبلاً من هنا فقط)
-  const CDN_BASE_URL = "https://d269k7J205s3hx.cloudfront.net/";
-  
-  // نبني الرابط تلقائياً بناءً على رقم الفيلم
+  // قراءة الرابط من ملف videos.ts (اللي راح يجيب الفلم من جوجل درايف عبر الـ Proxy)
   const mp4Key = type === 'tv' ? `tv_${id}_${season}_${episode}` : `movie_${id}`;
-  const customMp4 = playMode === 'movie' ? `${CDN_BASE_URL}${mp4Key}.mp4` : undefined;
+  const customMp4 = playMode === 'movie' ? videoLinks[mp4Key] : undefined;
 
   const CUSTOM_EMBEDS: Record<string, string> = {};
 
@@ -201,7 +199,7 @@ export default function VideoPlayer({
               className="w-full h-full bg-black relative z-0"
               onLoadedData={() => setIsLoading(false)}
               onCanPlay={() => setIsLoading(false)}
-              onError={() => setCustomMp4Failed(true)} // إذا الفلم مو موجود بـ AWS، يرجع لـ Vidapi
+              onError={() => setCustomMp4Failed(true)} // إذا الفلم مو موجود بـ AWS أو جوجل درايف، يرجع لـ Vidapi
             />
           ) : (
             <iframe
