@@ -5,7 +5,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Play, Loader, ShieldAlert, Pause, Lock } from 'lucide-react';
-import { videoLinks } from './videos'; // تم إضافة الاستيراد لقراءة روابط جوجل درايف
 
 interface VideoPlayerProps {
   type: 'movie' | 'tv';
@@ -138,9 +137,12 @@ export default function VideoPlayer({
     setProgress(saved);
   }, [type, id, season, episode, playMode]);
 
-  // قراءة الرابط من ملف videos.ts (اللي راح يجيب الفلم من جوجل درايف عبر الـ Proxy)
+  // رابط AWS CloudFront مالك (تقدر تغيره مستقبلاً من هنا فقط)
+  const CDN_BASE_URL = "https://d269k7J205s3hx.cloudfront.net/";
+  
+  // نبني الرابط تلقائياً بناءً على رقم الفيلم
   const mp4Key = type === 'tv' ? `tv_${id}_${season}_${episode}` : `movie_${id}`;
-  const customMp4 = playMode === 'movie' ? videoLinks[mp4Key] : undefined;
+  const customMp4 = playMode === 'movie' ? `${CDN_BASE_URL}${mp4Key}.mp4` : undefined;
 
   const CUSTOM_EMBEDS: Record<string, string> = {};
 
@@ -189,56 +191,4 @@ export default function VideoPlayer({
               className="w-full h-full border-0 relative z-0"
               onLoad={() => setIsLoading(false)}
             />
-          ) : (customMp4 && !customMp4Failed) ? (
-            <video
-              key={`mp4-${id}-${episode}`}
-              src={customMp4}
-              controls
-              autoPlay
-              playsInline
-              className="w-full h-full bg-black relative z-0"
-              onLoadedData={() => setIsLoading(false)}
-              onCanPlay={() => setIsLoading(false)}
-              onError={() => setCustomMp4Failed(true)} // إذا الفلم مو موجود بـ AWS أو جوجل درايف، يرجع لـ Vidapi
-            />
-          ) : (
-            <iframe
-              key={`player-${id}-${episode}`}
-              src={isPausedByHost ? 'about:blank' : getEmbedUrl()}
-              allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-              sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
-              referrerPolicy="no-referrer"
-              allowFullScreen
-              className="w-full h-full border-0 relative z-0"
-              onLoad={() => setIsLoading(false)}
-            />
-          )}
-          {isPausedByHost && playMode === 'movie' && (
-            <div className="absolute inset-0 z-20 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center gap-4 select-none">
-              <div className="w-16 h-16 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center">
-                <Pause className="w-7 h-7 text-amber-400 fill-amber-400" />
-              </div>
-              <div className="text-center px-6">
-                <h3 className="text-white text-base md:text-lg font-bold mb-1">أوقف المنظم التشغيل</h3>
-                {hostPauseByName && (
-                  <p className="text-gray-400 text-xs md:text-sm">
-                    بانتظار <span className="text-amber-400 font-semibold">{hostPauseByName}</span> ليستأنف العرض
-                  </p>
-                )}
-                {isLiveHost && (
-                  <p className="text-gray-500 text-[11px] mt-3">اضغط زر الاستئناف بالأعلى لإكمال المشاهدة (ينعاد الفلم من البداية)</p>
-                )}
-                {!isLiveHost && isLiveSession && (
-                  <p className="text-gray-500 text-[11px] mt-3 flex items-center justify-center gap-1.5">
-                    <Lock className="w-3 h-3" />
-                    التحكم بالتشغيل بيد المنظم فقط
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+          ) : (customMp4 && !
