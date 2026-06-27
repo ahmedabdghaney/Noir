@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Play, Loader, ShieldAlert, Pause, Lock } from 'lucide-react';
+import { Play, Loader, ShieldAlert, Pause, Lock, Plus, Minus } from 'lucide-react';
 
 interface VideoPlayerProps {
   type: 'movie' | 'tv';
@@ -53,6 +53,8 @@ export default function VideoPlayer({
 }: VideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [subOffset, setSubOffset] = useState(0); // متغير تأخير الترجمة
   
   const [customMp4Failed, setCustomMp4Failed] = useState(false);
 
@@ -132,6 +134,7 @@ export default function VideoPlayer({
     }
     setIsLoading(true);
     setCustomMp4Failed(false);
+    setSubOffset(0); // تصفير التأخير كل ما يفتح فلم جديد
     const saved = Number(localStorage.getItem(`noir_progress_${type}_${id}`)) || 0;
     setProgress(saved);
   }, [type, id, season, episode, playMode]);
@@ -139,6 +142,21 @@ export default function VideoPlayer({
   const CDN_BASE_URL = "https://d269k7J205s3hx.cloudfront.net/";
   const mp4Key = type === 'tv' ? `tv_${id}_${season}_${episode}` : `movie_${id}`;
   const customMp4 = playMode === 'movie' ? `${CDN_BASE_URL}${mp4Key}.mp4` : undefined;
+
+  // دالة تأخير/تقديم الترجمة
+  const adjustSubs = (seconds: number) => {
+    const video = videoRef.current;
+    if (!video || !video.textTracks || video.textTracks.length === 0) return;
+    const track = video.textTracks[0];
+    if (track.cues) {
+      for (let i = 0; i < track.cues.length; i++) {
+        const cue = track.cues[i];
+        cue.startTime += seconds;
+        cue.endTime += seconds;
+      }
+    }
+    setSubOffset(prev => prev + seconds);
+  };
 
   const CUSTOM_EMBEDS: Record<string, string> = {};
 
@@ -171,6 +189,22 @@ export default function VideoPlayer({
   return (
     <div ref={containerRef} className="w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl animate-fade-in text-right">
       <div className="player-shell bg-black rounded-3xl overflow-hidden border border-white/15 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9),0_0_0_1px_rgba(255,255,255,0.05)] ring-1 ring-white/10 relative">
+        
+        {/* شريط أزرار التحكم بالترجمة */}
+        {customMp4 && !customMp4Failed && playMode === 'movie' && (
+          <div className="absolute top-3 right-3 z-30 flex items-center gap-2 bg-black/60 backdrop-blur-md p-2 rounded-full border border-white/10">
+            <button onClick={() => adjustSubs(-1)} className="text-white hover:text-red-500 transition-colors p-1 rounded-full hover:bg-white/10">
+              <Minus className="w-4 h-4" />
+            </button>
+            <span className="text-xs text-white/80 select-none w-12 text-center">
+              {subOffset > 0 ? `+${subOffset}s` : `${subOffset}s`}
+            </span>
+            <button onClick={() => adjustSubs(1)} className="text-white hover:text-red-500 transition-colors p-1 rounded-full hover:bg-white/10">
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         <div className="relative aspect-video w-full bg-black">
           {isLoading && !isPausedByHost && (
             <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-10 gap-3">
@@ -189,6 +223,7 @@ export default function VideoPlayer({
             />
           ) : (customMp4 && !customMp4Failed) ? (
             <video
+              ref={videoRef}
               key={`mp4-${id}-${episode}`}
               controls
               autoPlay
@@ -198,9 +233,7 @@ export default function VideoPlayer({
               onCanPlay={() => setIsLoading(false)}
               onError={() => setCustomMp4Failed(true)}
             >
-              {/* الفيديو من أمازون */}
               <source src={customMp4} type="video/mp4" />
-              {/* الترجمة العربية من أمازون */}
               <track
                 kind="subtitles"
                 srcLang="ar"
