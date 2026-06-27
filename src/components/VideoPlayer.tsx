@@ -190,7 +190,6 @@ export default function VideoPlayer({
           ) : (customMp4 && !customMp4Failed) ? (
             <video
               key={`mp4-${id}-${episode}`}
-              src={customMp4}
               controls
               autoPlay
               playsInline
@@ -198,7 +197,18 @@ export default function VideoPlayer({
               onLoadedData={() => setIsLoading(false)}
               onCanPlay={() => setIsLoading(false)}
               onError={() => setCustomMp4Failed(true)}
-            />
+            >
+              {/* الفيديو من أمازون */}
+              <source src={customMp4} type="video/mp4" />
+              {/* الترجمة العربية من أمازون */}
+              <track
+                kind="subtitles"
+                srcLang="ar"
+                label="العربية"
+                src={`${CDN_BASE_URL}${mp4Key}.vtt`}
+                default
+              />
+            </video>
           ) : (
             <iframe
               key={`player-${id}-${episode}`}
