@@ -8,7 +8,7 @@ import {
   Loader, Pause, Play, Lock,
   SkipBack, SkipForward,
   Subtitles, Settings, Maximize2, Minimize2,
-  Plus, Minus, ChevronDown, Volume2, VolumeX
+  Plus, Minus, ChevronDown, Volume2, VolumeX, Volume1
 } from 'lucide-react';
 
 interface VideoPlayerProps {
@@ -57,24 +57,27 @@ export default function VideoPlayer({
   onClose, onSwitchMode, onNextEpisode,
 }: VideoPlayerProps) {
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const videoRef     = useRef<HTMLVideoElement>(null);
-  const progressRef  = useRef<HTMLDivElement>(null);
-  const hideTimer    = useRef<ReturnType<typeof setTimeout>>();
+  const containerRef  = useRef<HTMLDivElement>(null);
+  const videoRef      = useRef<HTMLVideoElement>(null);
+  const progressRef   = useRef<HTMLDivElement>(null);
+  const hideTimer     = useRef<ReturnType<typeof setTimeout>>();
+  const dblClickTimer = useRef<ReturnType<typeof setTimeout>>();
 
-  const [isLoading,        setIsLoading]        = useState(true);
-  const [customMp4Failed,  setCustomMp4Failed]  = useState(false);
-  const [isPlaying,        setIsPlaying]        = useState(false);
-  const [currentTime,      setCurrentTime]      = useState(0);
-  const [duration,         setDuration]         = useState(0);
-  const [isMuted,          setIsMuted]          = useState(false);
-  const [subOffset,        setSubOffset]        = useState(0);
-  const [subEnabled,       setSubEnabled]       = useState(true);
-  const [speed,            setSpeed]            = useState(1);
-  const [showSettings,     setShowSettings]     = useState(false);
-  const [showSpeedMenu,    setShowSpeedMenu]    = useState(false);
-  const [isFullscreen,     setIsFullscreen]     = useState(false);
-  const [controlsVisible,  setControlsVisible]  = useState(true);
+  const [isLoading,       setIsLoading]       = useState(true);
+  const [customMp4Failed, setCustomMp4Failed] = useState(false);
+  const [isPlaying,       setIsPlaying]       = useState(false);
+  const [currentTime,     setCurrentTime]     = useState(0);
+  const [duration,        setDuration]        = useState(0);
+  const [volume,          setVolume]          = useState(1);
+  const [isMuted,         setIsMuted]         = useState(false);
+  const [showVolume,      setShowVolume]      = useState(false);
+  const [subOffset,       setSubOffset]       = useState(0);
+  const [subEnabled,      setSubEnabled]      = useState(true);
+  const [speed,           setSpeed]           = useState(1);
+  const [showSettings,    setShowSettings]    = useState(false);
+  const [showSpeedMenu,   setShowSpeedMenu]   = useState(false);
+  const [isFullscreen,    setIsFullscreen]    = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(true);
 
   const progressKey = `noir_progress_${type}_${id}`;
 
@@ -127,7 +130,7 @@ export default function VideoPlayer({
     containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setIsLoading(true); setCustomMp4Failed(false);
     setSubOffset(0); setSubEnabled(true); setSpeed(1);
-    setShowSettings(false); setShowSpeedMenu(false);
+    setShowSettings(false); setShowSpeedMenu(false); setShowVolume(false);
     setIsPlaying(false); setCurrentTime(0); setDuration(0);
   }, [type, id, season, episode, playMode]);
 
@@ -138,11 +141,13 @@ export default function VideoPlayer({
     return () => document.removeEventListener('fullscreenchange', h);
   }, []);
 
-  /* ── auto-hide controls ── */
-  const showControls = useCallback(() => {
+  /* ── auto-hide controls after 3s ── */
+  const resetHideTimer = useCallback(() => {
     setControlsVisible(true);
     clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => setControlsVisible(false), 3000);
+    hideTimer.current = setTimeout(() => {
+      if (videoRef.current && !videoRef.current.paused) setControlsVisible(false);
+    }, 3000);
   }, []);
 
   /* ── helpers ── */
@@ -176,11 +181,28 @@ export default function VideoPlayer({
     v.paused ? v.play() : v.pause();
   };
 
+  const changeVolume = (val: number) => {
+    const v = videoRef.current;
+    if (!v) return;
+    const clamped = Math.max(0, Math.min(1, val));
+    v.volume = clamped;
+    v.muted  = clamped === 0;
+    setVolume(clamped);
+    setIsMuted(clamped === 0);
+  };
+
   const toggleMute = () => {
     const v = videoRef.current;
     if (!v) return;
-    v.muted = !v.muted;
-    setIsMuted(v.muted);
+    if (v.muted || v.volume === 0) {
+      v.muted  = false;
+      v.volume = volume > 0 ? volume : 0.8;
+      setIsMuted(false);
+      setVolume(v.volume);
+    } else {
+      v.muted = true;
+      setIsMuted(true);
+    }
   };
 
   const seekBy = (s: number) => { if (videoRef.current) videoRef.current.currentTime += s; };
@@ -191,12 +213,27 @@ export default function VideoPlayer({
       : document.exitFullscreen();
   };
 
+  /* ── double click = toggle fullscreen ── */
+  const handleVideoClick = (e: React.MouseEvent) => {
+    if (!isNative) return;
+    e.stopPropagation();
+    clearTimeout(dblClickTimer.current);
+    if ((e as any).detail === 2) {
+      // double click
+      toggleFullscreen();
+    } else {
+      dblClickTimer.current = setTimeout(() => {
+        togglePlay();
+        resetHideTimer();
+      }, 200);
+    }
+  };
+
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = progressRef.current?.getBoundingClientRect();
     if (!rect || !videoRef.current || !duration) return;
-    // ✅ LTR: الضغط على اليسار = بداية، اليمين = نهاية
     const ratio = (e.clientX - rect.left) / rect.width;
-    videoRef.current.currentTime = ratio * duration;
+    videoRef.current.currentTime = Math.max(0, Math.min(1, ratio)) * duration;
   };
 
   /* ── URLs ── */
@@ -214,19 +251,19 @@ export default function VideoPlayer({
     return `https://vidapi.qzz.io/movie/${id}?${params}`;
   };
 
-  const isNative   = playMode === 'movie' && customMp4 && !customMp4Failed;
+  const isNative    = playMode === 'movie' && customMp4 && !customMp4Failed;
   const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  const VolumeIcon = isMuted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
 
   /* ══════════════════════════════════════ render ══ */
   return (
     <div ref={containerRef} className="w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl">
-      {/* ✅ المشغل نفسه LTR دايماً */}
       <div
         className="relative bg-black rounded-2xl overflow-hidden border border-white/10 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.95)]"
         dir="ltr"
-        onMouseMove={showControls}
-        onMouseLeave={() => isPlaying && setControlsVisible(false)}
-        onClick={() => { if (isNative) { togglePlay(); showControls(); } }}
+        onMouseMove={resetHideTimer}
+        onMouseLeave={() => { if (videoRef.current && !videoRef.current.paused) setControlsVisible(false); }}
       >
         <div className="relative aspect-video w-full bg-black">
 
@@ -248,15 +285,21 @@ export default function VideoPlayer({
               ref={videoRef}
               key={`mp4-${id}-${episode}`}
               autoPlay playsInline
-              className="w-full h-full bg-black cursor-none"
+              className={`w-full h-full bg-black ${controlsVisible ? 'cursor-default' : 'cursor-none'}`}
+              onClick={handleVideoClick}
               onLoadedData={() => { setIsLoading(false); setDuration(videoRef.current?.duration || 0); }}
               onCanPlay={() => setIsLoading(false)}
               onError={() => setCustomMp4Failed(true)}
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
+              onPlay={() => { setIsPlaying(true); resetHideTimer(); }}
+              onPause={() => { setIsPlaying(false); setControlsVisible(true); clearTimeout(hideTimer.current); }}
               onTimeUpdate={() => setCurrentTime(videoRef.current?.currentTime || 0)}
               onDurationChange={() => setDuration(videoRef.current?.duration || 0)}
-              onVolumeChange={() => setIsMuted(videoRef.current?.muted || false)}
+              onVolumeChange={() => {
+                const v = videoRef.current;
+                if (!v) return;
+                setIsMuted(v.muted);
+                setVolume(v.volume);
+              }}
             >
               <source src={customMp4} type="video/mp4" />
               <track kind="subtitles" srcLang="ar" label="العربية" src={vttSrc} default />
@@ -282,7 +325,7 @@ export default function VideoPlayer({
             </div>
           )}
 
-          {/* ══ controls overlay (native only) ══ */}
+          {/* ══ custom controls ══ */}
           {isNative && (
             <div
               className={`absolute inset-x-0 bottom-0 z-30 transition-opacity duration-300 ${controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
@@ -292,14 +335,14 @@ export default function VideoPlayer({
 
               <div className="relative px-4 pb-4 pt-8 flex flex-col gap-2">
 
-                {/* ── progress bar ── LTR: يسار=بداية، يمين=نهاية */}
+                {/* progress bar */}
                 <div ref={progressRef} className="w-full h-1.5 bg-white/20 rounded-full cursor-pointer group/bar relative" onClick={handleProgressClick}>
                   <div className="h-full bg-red-500 rounded-full relative" style={{ width: `${progressPct}%` }}>
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 rounded-full bg-white shadow-md opacity-0 group-hover/bar:opacity-100 transition-opacity" />
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-md opacity-0 group-hover/bar:opacity-100 transition-opacity" />
                   </div>
                 </div>
 
-                {/* ── bottom row ── */}
+                {/* bottom row */}
                 <div className="flex items-center gap-2">
 
                   {/* play/pause */}
@@ -311,12 +354,28 @@ export default function VideoPlayer({
                   <Btn onClick={() => seekBy(-10)} label="-10s"><SkipBack className="w-4 h-4" /></Btn>
                   <Btn onClick={() => seekBy(10)}  label="+10s"><SkipForward className="w-4 h-4" /></Btn>
 
-                  {/* mute */}
-                  <Btn onClick={toggleMute} label={isMuted ? 'Unmute' : 'Mute'}>
-                    {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                  </Btn>
+                  {/* volume with slider */}
+                  <div className="relative flex items-center gap-1"
+                    onMouseEnter={() => setShowVolume(true)}
+                    onMouseLeave={() => setShowVolume(false)}
+                  >
+                    <Btn onClick={toggleMute} label={isMuted ? 'Unmute' : 'Mute'}>
+                      <VolumeIcon className="w-4 h-4" />
+                    </Btn>
+                    {/* volume slider */}
+                    <div className={`transition-all duration-200 overflow-hidden ${showVolume ? 'w-20 opacity-100' : 'w-0 opacity-0'}`}>
+                      <input
+                        type="range"
+                        min={0} max={1} step={0.02}
+                        value={isMuted ? 0 : volume}
+                        onChange={e => changeVolume(Number(e.target.value))}
+                        className="w-full h-1 accent-red-500 cursor-pointer"
+                        style={{ accentColor: '#ef4444' }}
+                      />
+                    </div>
+                  </div>
 
-                  {/* time — LTR format */}
+                  {/* time */}
                   <span className="text-white/60 text-xs tabular-nums select-none">
                     {formatTime(currentTime)} / {formatTime(duration)}
                   </span>
@@ -324,7 +383,7 @@ export default function VideoPlayer({
                   <div className="flex-1" />
 
                   {/* subtitle toggle */}
-                  <Btn onClick={toggleSubs} label={subEnabled ? 'Hide subtitles' : 'Show subtitles'} active={subEnabled}>
+                  <Btn onClick={toggleSubs} label={subEnabled ? 'Hide subs' : 'Show subs'} active={subEnabled}>
                     <Subtitles className="w-4 h-4" />
                   </Btn>
 
@@ -345,7 +404,7 @@ export default function VideoPlayer({
                       <Settings className="w-4 h-4" />
                     </Btn>
                     {showSettings && (
-                      <div className="absolute right-0 bottom-full mb-2 bg-[#1c1c1e] border border-white/10 rounded-xl shadow-2xl w-44 overflow-hidden z-50" dir="ltr">
+                      <div className="absolute right-0 bottom-full mb-2 bg-[#1c1c1e] border border-white/10 rounded-xl shadow-2xl w-44 overflow-hidden z-50">
                         <div className="px-3 py-2 text-[10px] text-white/30 uppercase tracking-widest border-b border-white/10">Settings</div>
                         <button onClick={() => setShowSpeedMenu(p => !p)} className="w-full flex items-center justify-between px-3 py-2.5 text-sm text-white hover:bg-white/5 transition-colors">
                           <span>Speed</span>
