@@ -82,6 +82,7 @@ export default function VideoPlayer({
   const [showSettings,    setShowSettings]    = useState(false);
   const [showSpeedMenu,   setShowSpeedMenu]   = useState(false);
   const [isFullscreen,    setIsFullscreen]    = useState(false);
+  const [iosNativeFs,     setIosNativeFs]     = useState(false); // iPhone native video fullscreen
 
   const [controlsVisible, setControlsVisible] = useState(true);
 
@@ -390,6 +391,8 @@ export default function VideoPlayer({
     if (!v || !isNative) return;
     const track = v.textTracks?.[0];
     if (!track) return;
+    // وقت iPhone native fullscreen نخلي iOS يدير الـ track (showing) — ما نلمسه
+    if (iosNativeFs) return;
     // hidden = الأحداث تشتغل بس بدون رسم المتصفح الأصلي
     // metadata kind: hidden = نقرأ الـ cues بدون عرض native, disabled = نوقف الـ events
     track.mode = subEnabled ? 'hidden' : 'disabled';
@@ -408,7 +411,7 @@ export default function VideoPlayer({
     track.addEventListener('cuechange', onCueChange);
     onCueChange();
     return () => track.removeEventListener('cuechange', onCueChange);
-  }, [isNative, subEnabled, customMp4]);
+  }, [isNative, subEnabled, customMp4, iosNativeFs]);
 
   const changeSpeed = (s: number) => {
     if (videoRef.current) videoRef.current.playbackRate = s;
@@ -485,8 +488,17 @@ export default function VideoPlayer({
 
     // ── الدخول ──
     // iPhone — لازم fullscreen على عنصر <video> نفسه (الوحيد المدعوم)
-    // ملاحظة: هنا تختفي الترجمة المخصّصة وتشتغل كنترولات iOS الأصلية
+    // نحوّل الـ track لـ showing عشان iOS يعرض الترجمة بكنترولاته (الـ offset مطبّق أصلاً على الـ cues)
     if (isIPhone && vid?.webkitEnterFullscreen) {
+      if (subEnabled && vid.textTracks?.[0]) vid.textTracks[0].mode = 'showing';
+      setIosNativeFs(true);
+      const onEnd = () => {
+        setIosNativeFs(false);
+        // رجّع الـ track لـ hidden عشان يرجع الـ overlay المخصّص
+        if (vid.textTracks?.[0]) vid.textTracks[0].mode = subEnabled ? 'hidden' : 'disabled';
+        vid.removeEventListener('webkitendfullscreen', onEnd);
+      };
+      vid.addEventListener('webkitendfullscreen', onEnd);
       vid.webkitEnterFullscreen();
       // ما نضبط isFullscreen — iOS يدير العرض بنفسه
       return;
@@ -585,7 +597,9 @@ export default function VideoPlayer({
 
   /* ══════════════════════════════════════ render ══ */
 
-  const hideCueStyle = `video::cue { color: transparent !important; text-shadow: none !important; background: transparent !important; }`;
+  // نخفي native cue بس لما يكون الـ overlay المخصّص شغال
+  // وقت iPhone fullscreen نخلي iOS يعرض الترجمة الأصلية
+  const hideCueStyle = iosNativeFs ? '' : `video::cue { color: transparent !important; text-shadow: none !important; background: transparent !important; }`;
 
   const sliderStyle = `
     @keyframes noir-flash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
