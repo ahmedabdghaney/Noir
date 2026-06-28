@@ -90,6 +90,12 @@ export default function VideoPlayer({
   const [isScrubbing, setIsScrubbing] = useState(false);
   // فلاش السيك (مثل اليوتيوب لما تدبل تاب)
   const [seekFlash, setSeekFlash] = useState<{ dir: 'fwd' | 'back'; amount: number } | null>(null);
+  // مؤشر الوقف/التشغيل بالوسط
+  const [playPulse, setPlayPulse] = useState<{ kind: 'play' | 'pause'; key: number } | null>(null);
+  // الضغط المستمر بالكيبورد للسيك (تبقى الأيقونة ظاهرة)
+  const [seekHold, setSeekHold] = useState<'fwd' | 'back' | null>(null);
+  // تسريع 2x مؤقت بالضغط المستمر على Space
+  const [speedBoost, setSpeedBoost] = useState(false);
 
   const progressKey = `noir_progress_${type}_${id}`;
 
@@ -162,6 +168,21 @@ export default function VideoPlayer({
     if (saved && saved >= 50 && saved <= 250) setSubSize(saved);
   }, []);
 
+  /* ── close settings on click outside the whole player ── */
+  useEffect(() => {
+    if (!showSettings) return;
+    const onDocClick = (e: MouseEvent) => {
+      const container = containerRef.current;
+      if (container && !container.contains(e.target as Node)) {
+        setShowSettings(false);
+        setShowSpeedMenu(false);
+      }
+    };
+    // نأخّر التسجيل tick عشان ما يُغلق فوراً من نفس النقرة اللي فتحته
+    const t = setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
+    return () => { clearTimeout(t); document.removeEventListener('mousedown', onDocClick); };
+  }, [showSettings]);
+
   const changeSubSize = (delta: number) => {
     setSubSize(prev => {
       const next = Math.max(50, Math.min(250, prev + delta));
@@ -170,9 +191,20 @@ export default function VideoPlayer({
     });
   };
 
-  /* ── fullscreen event ── */
+  /* ── fullscreen event (native only) ── */
   useEffect(() => {
-    const h = () => setIsFullscreen(!!(document.fullscreenElement || (document as any).webkitFullscreenElement));
+    const h = () => {
+      const nativeFs = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
+      // نحدّث فقط لما يكون في عنصر native fullscreen أو لما نخرج من native
+      // (CSS fullscreen على iOS يُدار يدوياً ولا يطلق هذا الحدث)
+      if (nativeFs) setIsFullscreen(true);
+      else if (document.fullscreenElement === null) {
+        // خرجنا من native — بس ما نلمس CSS fullscreen
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        if (!isIOS) setIsFullscreen(false);
+      }
+    };
     document.addEventListener('fullscreenchange', h);
     document.addEventListener('webkitfullscreenchange', h);
     return () => {
@@ -181,47 +213,124 @@ export default function VideoPlayer({
     };
   }, []);
 
-  /* ── keyboard controls ── */
+  /* ── keyboard controls (مع دعم الضغط المستمر) ── */
+  const spaceHeldRef = useRef(false);       // Space مضغوط حالياً؟
+  const spaceHoldTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const wasPlayingRef = useRef(false);      // كان شغّال قبل بدء الـ 2x؟
+  const speedBoostActiveRef = useRef(false);
+  const seekKeyHeldRef = useRef(false);
+
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (!videoRef.current) return;
+    const v = () => videoRef.current;
+
+    const startBoost = () => {
+      const vid = v();
+      if (!vid || speedBoostActiveRef.current) return;
+      speedBoostActiveRef.current = true;
+      wasPlayingRef.current = !vid.paused;
+      // لو واقف — نشغّله. وبكل الحالات نخلي السرعة 2x
+      if (vid.paused) vid.play();
+      vid.playbackRate = 2;
+      setSpeedBoost(true);
+    };
+    const endBoost = () => {
+      const vid = v();
+      if (!speedBoostActiveRef.current) return;
+      speedBoostActiveRef.current = false;
+      setSpeedBoost(false);
+      if (vid) {
+        vid.playbackRate = speed; // نرجّع السرعة المختارة
+        // لو كان واقف قبل الضغط — نرجّعه واقف
+        if (!wasPlayingRef.current) vid.pause();
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const vid = v();
+      if (!vid) return;
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
       switch (e.code) {
-        case 'Space':
+        case 'Space': {
+          e.preventDefault();
+          if (e.repeat) {
+            // ضغط مستمر — فعّل الـ 2x بعد ~250ms من بداية الضغط
+            if (!spaceHoldTimerRef.current && !speedBoostActiveRef.current) {
+              startBoost();
+            }
+            break;
+          }
+          // أول ضغطة — نأجّل القرار: لو انضغط طويل = boost، لو قصير = play/pause
+          spaceHeldRef.current = true;
+          spaceHoldTimerRef.current = setTimeout(() => {
+            startBoost();
+          }, 250);
+          break;
+        }
         case 'KeyK':
           e.preventDefault(); togglePlay(); break;
         case 'ArrowRight':
-          e.preventDefault(); seekBy(5); break;
+          e.preventDefault(); seekBy(5); setSeekHold('fwd'); seekKeyHeldRef.current = true; break;
         case 'ArrowLeft':
-          e.preventDefault(); seekBy(-5); break;
+          e.preventDefault(); seekBy(-5); setSeekHold('back'); seekKeyHeldRef.current = true; break;
         case 'KeyL':
-          e.preventDefault(); seekBy(10); break;
+          e.preventDefault(); seekBy(10); setSeekHold('fwd'); seekKeyHeldRef.current = true; break;
         case 'KeyJ':
-          e.preventDefault(); seekBy(-10); break;
+          e.preventDefault(); seekBy(-10); setSeekHold('back'); seekKeyHeldRef.current = true; break;
         case 'KeyF':
           e.preventDefault(); toggleFullscreen(); break;
         case 'KeyM':
           e.preventDefault(); toggleMute(); break;
         case 'ArrowUp':
-          e.preventDefault(); changeVolume((videoRef.current.volume) + 0.1); break;
+          e.preventDefault(); changeVolume(vid.volume + 0.1); break;
         case 'ArrowDown':
-          e.preventDefault(); changeVolume((videoRef.current.volume) - 0.1); break;
+          e.preventDefault(); changeVolume(vid.volume - 0.1); break;
         default:
           if (e.code.startsWith('Digit')) {
             const n = Number(e.code.replace('Digit', ''));
             if (!isNaN(n) && duration) {
               e.preventDefault();
-              videoRef.current.currentTime = (n / 10) * duration;
+              vid.currentTime = (n / 10) * duration;
             }
           }
       }
       resetHideTimer();
     };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        clearTimeout(spaceHoldTimerRef.current);
+        spaceHoldTimerRef.current = undefined;
+        if (speedBoostActiveRef.current) {
+          // كان boost — نوقفه
+          endBoost();
+        } else if (spaceHeldRef.current) {
+          // كانت ضغطة قصيرة — play/pause عادي
+          togglePlay();
+        }
+        spaceHeldRef.current = false;
+      }
+
+      if (['ArrowRight', 'ArrowLeft', 'KeyL', 'KeyJ'].includes(e.code)) {
+        seekKeyHeldRef.current = false;
+        // نخفي أيقونة السيك بعد ما يشيل إيده بقليل
+        setTimeout(() => { if (!seekKeyHeldRef.current) setSeekHold(null); }, 400);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [duration]);
+  }, [duration, speed]);
 
   /* ── auto-hide controls after 3s ── */
   const resetHideTimer = useCallback(() => {
@@ -312,11 +421,19 @@ export default function VideoPlayer({
     setSpeed(s); setShowSpeedMenu(false); setShowSettings(false);
   };
 
+  const playPulseTimer = useRef<ReturnType<typeof setTimeout>>();
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
-    if (v.paused) v.play();
-    else v.pause();
+    clearTimeout(playPulseTimer.current);
+    if (v.paused) {
+      v.play();
+      setPlayPulse({ kind: 'play', key: Date.now() });
+    } else {
+      v.pause();
+      setPlayPulse({ kind: 'pause', key: Date.now() });
+    }
+    playPulseTimer.current = setTimeout(() => setPlayPulse(null), 750);
   };
 
   const changeVolume = (val: number) => {
@@ -348,36 +465,49 @@ export default function VideoPlayer({
     videoRef.current.currentTime = Math.max(0, Math.min(duration || Infinity, videoRef.current.currentTime + s));
     setSeekFlash({ dir: s > 0 ? 'fwd' : 'back', amount: Math.abs(s) });
     clearTimeout(seekFlashTimer.current);
-    seekFlashTimer.current = setTimeout(() => setSeekFlash(null), 500);
+    seekFlashTimer.current = setTimeout(() => setSeekFlash(null), 1200);
   };
 
   const toggleFullscreen = () => {
     const el = containerRef.current as any;
 
-    // لو CSS fullscreen شغال (iOS) — نطلع منه
-    if (isFullscreen && !document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+    // كشف iOS (iPhone/iPad) — fullscreen API غير موثوق عليها، نستخدم CSS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    // ── الخروج ──
+    // CSS fullscreen شغال؟
+    if (isFullscreen) {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      } else if ((document as any).webkitFullscreenElement && (document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      }
       setIsFullscreen(false);
       return;
     }
 
-    // لو native fullscreen شغال — نطلع منه
-    if (document.fullscreenElement || (document as any).webkitFullscreenElement) {
-      document.exitFullscreen?.() || (document as any).webkitExitFullscreen?.();
+    // ── الدخول ──
+    if (isIOS) {
+      // iOS — CSS fullscreen (يحافظ على كل عناصر التحكم والترجمة)
+      setIsFullscreen(true);
+      // نحاول نقفل الاتجاه أفقي لو متاح
+      try { (screen.orientation as any)?.lock?.('landscape').catch(() => {}); } catch (_) {}
       return;
     }
 
-    // نجرب native fullscreen
+    // باقي الأجهزة — native fullscreen
     if (el?.requestFullscreen) {
-      el.requestFullscreen().catch(() => setIsFullscreen(true));
+      el.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => setIsFullscreen(true));
     } else if (el?.webkitRequestFullscreen) {
       el.webkitRequestFullscreen();
-    } else {
-      // iOS Safari — CSS fullscreen
       setIsFullscreen(true);
+    } else {
+      setIsFullscreen(true); // fallback CSS
     }
   };
 
-  /* ── tap: center=play/pause, sides=seek (double) ── */
+  /* ── tap: ضغطة = play/pause، ضغطتين على الجوانب = seek، الوسط = fullscreen ── */
   const handleVideoClick = (e: React.MouseEvent) => {
     if (!isNative) return;
     e.stopPropagation();
@@ -386,20 +516,18 @@ export default function VideoPlayer({
     const zone = x < rect.width * 0.3 ? 'left' : x > rect.width * 0.7 ? 'right' : 'center';
 
     if ((e as any).detail === 2) {
+      // ضغطتين — ألغِ فعل الضغطة الواحدة المعلّق
       clearTimeout(dblClickTimer.current);
       if (zone === 'left') seekBy(-10);
       else if (zone === 'right') seekBy(10);
       else toggleFullscreen();
     } else {
+      // ضغطة واحدة — وقف/تشغيل (بتأخير بسيط عشان نميّزها عن الدبل)
       clearTimeout(dblClickTimer.current);
       dblClickTimer.current = setTimeout(() => {
-        if (controlsVisible && isPlaying) {
-          setControlsVisible(false);
-        } else {
-          togglePlay();
-          resetHideTimer();
-        }
-      }, 220);
+        togglePlay();
+        resetHideTimer();
+      }, 200);
     }
   };
 
@@ -461,7 +589,9 @@ export default function VideoPlayer({
 
   const sliderStyle = `
     @keyframes noir-flash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
-    .noir-flash { animation: noir-flash 0.5s ease-out forwards; }
+    .noir-flash { animation: noir-flash 1.2s ease-out forwards; }
+    @keyframes noir-pulse { 0% { opacity: 0; transform: scale(0.7); } 15% { opacity: 1; transform: scale(1.05); } 40% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1); } }
+    .noir-pulse { animation: noir-pulse 0.7s ease-out forwards; }
   `;
 
   return (
@@ -572,16 +702,38 @@ export default function VideoPlayer({
             </div>
           )}
 
-          {/* ══ seek flash (±10) ══ */}
-          {isNative && seekFlash && (
-            <div className={`absolute inset-y-0 z-20 flex items-center pointer-events-none ${seekFlash.dir === 'fwd' ? 'right-0 pr-12 justify-end' : 'left-0 pl-12 justify-start'}`} style={{ width: '40%' }}>
-              <div className="noir-flash flex flex-col items-center gap-1 text-white">
+          {/* ══ seek flash + seekHold persistent ══ */}
+          {isNative && (seekFlash || seekHold) && (
+            <div className={`absolute inset-y-0 z-20 flex items-center pointer-events-none
+              ${(seekFlash?.dir || seekHold) === 'fwd' ? 'right-0 pr-12 justify-end' : 'left-0 pl-12 justify-start'}`}
+              style={{ width: '40%' }}>
+              <div className={`flex flex-col items-center gap-1 text-white transition-opacity duration-150 ${seekHold ? 'opacity-100' : 'noir-flash'}`}>
                 <div className="w-14 h-14 rounded-full bg-black/45 backdrop-blur-xl border border-white/15 flex items-center justify-center">
-                  {seekFlash.dir === 'fwd'
+                  {(seekFlash?.dir || seekHold) === 'fwd'
                     ? <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 5v14l8-7zM4 5v14l8-7z" fill="currentColor" /></svg>
                     : <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5v14l-8-7zM20 5v14l-8-7z" fill="currentColor" /></svg>}
                 </div>
-                <span className="text-xs font-semibold">{seekFlash.amount} ثانية</span>
+                <span className="text-xs font-semibold">{seekFlash?.amount ?? (seekHold === 'fwd' ? 5 : 5)} ثانية</span>
+              </div>
+            </div>
+          )}
+
+          {/* ══ center play/pause pulse ══ */}
+          {isNative && playPulse && (
+            <div key={playPulse.key} className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none noir-pulse">
+              <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-xl border border-white/15 flex items-center justify-center">
+                {playPulse.kind === 'pause'
+                  ? <svg viewBox="0 0 24 24" fill="white" className="w-9 h-9"><rect x="5" y="4" width="4" height="16" rx="1.5"/><rect x="15" y="4" width="4" height="16" rx="1.5"/></svg>
+                  : <svg viewBox="0 0 24 24" fill="white" className="w-9 h-9" style={{ marginLeft: 3 }}><path d="M6 4l14 8-14 8V4z"/></svg>}
+              </div>
+            </div>
+          )}
+
+          {/* ══ 2x speed boost pill ══ */}
+          {isNative && speedBoost && (
+            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+              <div className="px-4 py-1.5 rounded-full bg-black/50 backdrop-blur-xl border border-white/20 text-white text-sm font-semibold tracking-wide">
+                ⚡ أسرع بمرتين
               </div>
             </div>
           )}
@@ -723,7 +875,7 @@ export default function VideoPlayer({
                     </Btn>
                     {showSettings && (
                       <>
-                        <div className="fixed inset-0 z-40" onClick={() => { setShowSettings(false); setShowSpeedMenu(false); }} />
+                        <div className="fixed inset-0 z-40" onClick={() => { setShowSettings(false); setShowSpeedMenu(false); }} onTouchStart={() => { setShowSettings(false); setShowSpeedMenu(false); }} />
                       <div className="absolute right-0 bottom-full mb-3 bg-black/70 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-2xl w-48 overflow-hidden z-50">
                         <div className="px-3.5 py-2.5 text-[10px] text-white/40 uppercase tracking-widest border-b border-white/10">الإعدادات</div>
                         <button onClick={() => setShowSpeedMenu(p => !p)} className="w-full flex items-center justify-between px-3.5 py-3 text-sm text-white hover:bg-white/10 transition-colors">
