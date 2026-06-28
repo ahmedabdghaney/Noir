@@ -353,16 +353,27 @@ export default function VideoPlayer({
 
   const toggleFullscreen = () => {
     const el = containerRef.current as any;
-    if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
-      // نجرب requestFullscreen أول — لو ما اشتغلت (iOS) نستخدم CSS fullscreen
-      const req = el?.requestFullscreen?.() ?? el?.webkitRequestFullscreen?.();
-      if (!req) {
-        // iOS Safari: ما تدعم requestFullscreen على div — نكبّر بـ CSS
-        setIsFullscreen(true);
-      }
-    } else {
-      (document.exitFullscreen?.() || (document as any).webkitExitFullscreen?.());
+
+    // لو CSS fullscreen شغال (iOS) — نطلع منه
+    if (isFullscreen && !document.fullscreenElement && !(document as any).webkitFullscreenElement) {
       setIsFullscreen(false);
+      return;
+    }
+
+    // لو native fullscreen شغال — نطلع منه
+    if (document.fullscreenElement || (document as any).webkitFullscreenElement) {
+      document.exitFullscreen?.() || (document as any).webkitExitFullscreen?.();
+      return;
+    }
+
+    // نجرب native fullscreen
+    if (el?.requestFullscreen) {
+      el.requestFullscreen().catch(() => setIsFullscreen(true));
+    } else if (el?.webkitRequestFullscreen) {
+      el.webkitRequestFullscreen();
+    } else {
+      // iOS Safari — CSS fullscreen
+      setIsFullscreen(true);
     }
   };
 
