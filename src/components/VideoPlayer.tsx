@@ -76,6 +76,8 @@ export default function VideoPlayer({
   const [showVolume,      setShowVolume]      = useState(false);
   const [subOffset,       setSubOffset]       = useState(0);
   const [subEnabled,      setSubEnabled]      = useState(true);
+  const [subSize,         setSubSize]         = useState(100); // نسبة حجم الترجمة %
+  const [cueText,         setCueText]         = useState('');  // نص الترجمة الحالي
   const [speed,           setSpeed]           = useState(1);
   const [showSettings,    setShowSettings]    = useState(false);
   const [showSpeedMenu,   setShowSpeedMenu]   = useState(false);
@@ -89,6 +91,12 @@ export default function VideoPlayer({
   const [seekFlash, setSeekFlash] = useState<{ dir: 'fwd' | 'back'; amount: number } | null>(null);
 
   const progressKey = `noir_progress_${type}_${id}`;
+
+  /* ── URLs + native flag (معرّفة مبكراً عشان الـ effects تستخدمها) ── */
+  const mp4Key    = type === 'tv' ? `tv_${id}_${season}_${episode}` : `movie_${id}`;
+  const customMp4 = playMode === 'movie' ? `${CDN_BASE_URL}${mp4Key}.mp4` : undefined;
+  const vttSrc    = `${CDN_BASE_URL}${mp4Key}.vtt`;
+  const isNative  = playMode === 'movie' && customMp4 && !customMp4Failed;
 
   /* ── progress tracker ── */
   useEffect(() => {
@@ -146,6 +154,20 @@ export default function VideoPlayer({
     setIsPlaying(false); setCurrentTime(0); setDuration(0); setBuffered(0);
     return () => clearTimeout(timer);
   }, [type, id, season, episode, playMode]);
+
+  /* ── load saved subtitle size ── */
+  useEffect(() => {
+    const saved = Number(localStorage.getItem('noir_sub_size'));
+    if (saved && saved >= 50 && saved <= 250) setSubSize(saved);
+  }, []);
+
+  const changeSubSize = (delta: number) => {
+    setSubSize(prev => {
+      const next = Math.max(50, Math.min(250, prev + delta));
+      localStorage.setItem('noir_sub_size', String(next));
+      return next;
+    });
+  };
 
   /* ── fullscreen event ── */
   useEffect(() => {
@@ -247,9 +269,36 @@ export default function VideoPlayer({
     const v = videoRef.current;
     if (!v?.textTracks?.length) return;
     const next = !subEnabled;
-    v.textTracks[0].mode = next ? 'showing' : 'hidden';
+    // نخلي الـ track دايماً hidden (نرسم بأنفسنا) — التحكم بالعرض عبر subEnabled
+    v.textTracks[0].mode = next ? 'hidden' : 'disabled';
+    if (!next) setCueText('');
     setSubEnabled(next);
   };
+
+  /* ── custom subtitle rendering: اقرأ الـ cue الحالي وارسمه بنفسنا ── */
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !isNative) return;
+    const track = v.textTracks?.[0];
+    if (!track) return;
+    // hidden = الأحداث تشتغل بس بدون رسم المتصفح الأصلي
+    track.mode = subEnabled ? 'hidden' : 'disabled';
+
+    const onCueChange = () => {
+      if (!subEnabled) { setCueText(''); return; }
+      const active = track.activeCues;
+      if (active && active.length > 0) {
+        const txt = Array.from(active).map((c: any) => c.text).join('\n');
+        setCueText(txt);
+      } else {
+        setCueText('');
+      }
+    };
+
+    track.addEventListener('cuechange', onCueChange);
+    onCueChange();
+    return () => track.removeEventListener('cuechange', onCueChange);
+  }, [isNative, subEnabled, customMp4]);
 
   const changeSpeed = (s: number) => {
     if (videoRef.current) videoRef.current.playbackRate = s;
@@ -366,10 +415,6 @@ export default function VideoPlayer({
   };
 
   /* ── URLs ── */
-  const mp4Key    = type === 'tv' ? `tv_${id}_${season}_${episode}` : `movie_${id}`;
-  const customMp4 = playMode === 'movie' ? `${CDN_BASE_URL}${mp4Key}.mp4` : undefined;
-  const vttSrc    = `${CDN_BASE_URL}${mp4Key}.vtt`;
-
   const getEmbedUrl = () => {
     if (playMode === 'trailer' && youtubeKey) {
       return `https://www.youtube-nocookie.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&origin=${encodeURIComponent(window.location.origin)}`;
@@ -380,7 +425,6 @@ export default function VideoPlayer({
     return `https://vidapi.qzz.io/movie/${id}?${params}`;
   };
 
-  const isNative    = playMode === 'movie' && customMp4 && !customMp4Failed;
   const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
   const bufferedPct = duration > 0 ? (buffered / duration) * 100 : 0;
   const hasNextEp   = type === 'tv' && !!onNextEpisode && (episodesCount === 0 || episode < episodesCount);
@@ -392,15 +436,6 @@ export default function VideoPlayer({
   const sliderStyle = `
     @keyframes noir-flash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
     .noir-flash { animation: noir-flash 0.5s ease-out forwards; }
-    video::cue {
-      background: rgba(0,0,0,0.55);
-      color: #fff;
-      font-size: 0.95em;
-      line-height: 1.35;
-      text-shadow: 0 1px 3px rgba(0,0,0,0.9);
-      border-radius: 6px;
-      padding: 0.1em 0.4em;
-    }
   `;
 
   return (
@@ -461,6 +496,34 @@ export default function VideoPlayer({
             <iframe key={`player-${id}-${episode}`} src={isPausedByHost ? 'about:blank' : getEmbedUrl()} allow="autoplay; encrypted-media; fullscreen; picture-in-picture" sandbox="allow-scripts allow-same-origin allow-presentation allow-forms" referrerPolicy="no-referrer" allowFullScreen className="w-full h-full border-0" onLoad={() => setIsLoading(false)} />
           )}
 
+          {/* ══ custom subtitle overlay (تحكم كامل بالحجم) ══ */}
+          {isNative && subEnabled && cueText && (
+            <div
+              className={`absolute inset-x-0 z-20 flex justify-center pointer-events-none transition-all duration-300 ${controlsVisible ? 'bottom-24' : 'bottom-8'}`}
+              dir="rtl"
+            >
+              <div
+                className="max-w-[90%] text-center leading-snug"
+                style={{
+                  fontSize: `calc(${subSize / 100} * (1rem + 0.9vw))`,
+                  color: '#fff',
+                  textShadow: '0 2px 6px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.9)',
+                }}
+              >
+                {cueText.split('\n').map((line, i) => (
+                  <div key={i}>
+                    <span
+                      className="inline-block rounded-md px-2 py-0.5"
+                      style={{ background: 'rgba(0,0,0,0.5)', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}
+                    >
+                      {line}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* ══ top gradient + title bar (native) ══ */}
           {isNative && (
             <div className={`absolute inset-x-0 top-0 z-30 transition-opacity duration-300 ${controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
@@ -494,16 +557,6 @@ export default function VideoPlayer({
                 <span className="text-xs font-semibold">{seekFlash.amount} ثانية</span>
               </div>
             </div>
-          )}
-
-          {/* center big play button when paused (idle) */}
-          {isNative && !isPlaying && !isLoading && !isPausedByHost && (
-            <button onClick={(e) => { e.stopPropagation(); togglePlay(); }}
-              className="absolute inset-0 z-20 flex items-center justify-center group/big">
-              <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-xl border border-white/15 flex items-center justify-center transition-transform group-hover/big:scale-110">
-                <Play className="w-9 h-9 text-white fill-white ml-1" />
-              </div>
-            </button>
           )}
 
           {/* host paused overlay */}
@@ -662,6 +715,19 @@ export default function VideoPlayer({
                             ))}
                           </div>
                         )}
+                        {/* حجم الترجمة */}
+                        <div className="border-t border-white/10 px-3.5 py-3 flex items-center justify-between">
+                          <span className="text-sm text-white">حجم الترجمة</span>
+                          <div className="flex items-center gap-1.5">
+                            <button onClick={() => changeSubSize(-10)} className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="تصغير">
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="text-xs text-red-400 font-semibold w-10 text-center tabular-nums select-none">{subSize}%</span>
+                            <button onClick={() => changeSubSize(10)} className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="تكبير">
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
                       </div>
                       </>
                     )}
