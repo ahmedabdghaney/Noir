@@ -76,7 +76,7 @@ export default function VideoPlayer({
   const [showVolume,      setShowVolume]      = useState(false);
   const [subOffset,       setSubOffset]       = useState(0);
   const [subEnabled,      setSubEnabled]      = useState(true);
-  const [subSize,         setSubSize]         = useState(100); // نسبة حجم الترجمة %
+  const [subSize,         setSubSize]         = useState(50); // نسبة حجم الترجمة %
   const [cueText,         setCueText]         = useState('');  // نص الترجمة الحالي
   const [speed,           setSpeed]           = useState(1);
   const [showSettings,    setShowSettings]    = useState(false);
@@ -171,9 +171,21 @@ export default function VideoPlayer({
 
   /* ── fullscreen event ── */
   useEffect(() => {
-    const h = () => setIsFullscreen(!!document.fullscreenElement);
+    const h = () => setIsFullscreen(!!(document.fullscreenElement || (document as any).webkitFullscreenElement));
     document.addEventListener('fullscreenchange', h);
-    return () => document.removeEventListener('fullscreenchange', h);
+    document.addEventListener('webkitfullscreenchange', h);
+    // iOS: استمع لحدث webkitbeginfullscreen على الـ video
+    const v = videoRef.current as any;
+    const onEnter = () => setIsFullscreen(true);
+    const onExit  = () => setIsFullscreen(false);
+    v?.addEventListener('webkitbeginfullscreen', onEnter);
+    v?.addEventListener('webkitendfullscreen',   onExit);
+    return () => {
+      document.removeEventListener('fullscreenchange', h);
+      document.removeEventListener('webkitfullscreenchange', h);
+      v?.removeEventListener('webkitbeginfullscreen', onEnter);
+      v?.removeEventListener('webkitendfullscreen',   onExit);
+    };
   }, []);
 
   /* ── keyboard controls ── */
@@ -345,11 +357,19 @@ export default function VideoPlayer({
   };
 
   const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      const el = containerRef.current || document.documentElement;
-      el.requestFullscreen?.().catch(() => document.documentElement.requestFullscreen?.());
+    // iOS Safari: استخدم webkitEnterFullscreen على الـ video مباشرة
+    const v = videoRef.current as any;
+    if (v && v.webkitEnterFullscreen && !document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+      v.webkitEnterFullscreen();
+      return;
+    }
+    if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+      const el = (containerRef.current || document.documentElement) as any;
+      (el.requestFullscreen?.() || el.webkitRequestFullscreen?.())?.catch?.(() => {
+        document.documentElement.requestFullscreen?.();
+      });
     } else {
-      document.exitFullscreen();
+      (document.exitFullscreen?.() || (document as any).webkitExitFullscreen?.());
     }
   };
 
