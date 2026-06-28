@@ -325,9 +325,8 @@ export default function VideoPlayer({
 
   /* ══════════════════════════════════════ render ══ */
   return (
-    <>
-    <style>{volumeSliderStyle}</style>
     <div ref={containerRef} className={`${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen max-w-none m-0 rounded-none' : 'w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}>
+      <style>{volumeSliderStyle}</style>
       <div
         className={`relative bg-black overflow-hidden border border-white/10 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.95)] ${isFullscreen ? 'w-full h-full rounded-none' : 'rounded-2xl'}`}
         dir="ltr"
@@ -528,7 +527,6 @@ export default function VideoPlayer({
         </div>
       </div>
     </div>
-    </>
   );
 }
 
