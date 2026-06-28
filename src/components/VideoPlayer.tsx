@@ -82,7 +82,7 @@ export default function VideoPlayer({
   const [showSettings,    setShowSettings]    = useState(false);
   const [showSpeedMenu,   setShowSpeedMenu]   = useState(false);
   const [isFullscreen,    setIsFullscreen]    = useState(false);
-  const [isIosFullscreen,  setIsIosFullscreen]  = useState(false);
+
   const [controlsVisible, setControlsVisible] = useState(true);
 
   // hover preview على شريط التقدم
@@ -175,17 +175,9 @@ export default function VideoPlayer({
     const h = () => setIsFullscreen(!!(document.fullscreenElement || (document as any).webkitFullscreenElement));
     document.addEventListener('fullscreenchange', h);
     document.addEventListener('webkitfullscreenchange', h);
-    // iOS: webkitbeginfullscreen = native fullscreen (overlay ما يظهر فيه)
-    const v = videoRef.current as any;
-    const onIosEnter = () => { setIsFullscreen(true); setIsIosFullscreen(true); };
-    const onIosExit  = () => { setIsFullscreen(false); setIsIosFullscreen(false); };
-    v?.addEventListener('webkitbeginfullscreen', onIosEnter);
-    v?.addEventListener('webkitendfullscreen',   onIosExit);
     return () => {
       document.removeEventListener('fullscreenchange', h);
       document.removeEventListener('webkitfullscreenchange', h);
-      v?.removeEventListener('webkitbeginfullscreen', onIosEnter);
-      v?.removeEventListener('webkitendfullscreen',   onIosExit);
     };
   }, []);
 
@@ -360,19 +352,17 @@ export default function VideoPlayer({
   };
 
   const toggleFullscreen = () => {
-    // iOS Safari: استخدم webkitEnterFullscreen على الـ video مباشرة
-    const v = videoRef.current as any;
-    if (v && v.webkitEnterFullscreen && !document.fullscreenElement && !(document as any).webkitFullscreenElement) {
-      v.webkitEnterFullscreen();
-      return;
-    }
+    const el = containerRef.current as any;
     if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
-      const el = (containerRef.current || document.documentElement) as any;
-      (el.requestFullscreen?.() || el.webkitRequestFullscreen?.())?.catch?.(() => {
-        document.documentElement.requestFullscreen?.();
-      });
+      // نجرب requestFullscreen أول — لو ما اشتغلت (iOS) نستخدم CSS fullscreen
+      const req = el?.requestFullscreen?.() ?? el?.webkitRequestFullscreen?.();
+      if (!req) {
+        // iOS Safari: ما تدعم requestFullscreen على div — نكبّر بـ CSS
+        setIsFullscreen(true);
+      }
     } else {
       (document.exitFullscreen?.() || (document as any).webkitExitFullscreen?.());
+      setIsFullscreen(false);
     }
   };
 
@@ -511,10 +501,7 @@ export default function VideoPlayer({
               }}
             >
               <source src={customMp4} type="video/mp4" />
-              {/* iOS fullscreen: نستخدم subtitles عشان تظهر بالـ native player */}
-              {isIosFullscreen
-                ? <track kind="subtitles" srcLang="ar" label="العربية" src={vttSrc} default />
-                : <track kind="metadata"  srcLang="ar" label="العربية" src={vttSrc} />}
+              <track kind="metadata" srcLang="ar" label="العربية" src={vttSrc} />
             </video>
 
           /* fallback iframe */
