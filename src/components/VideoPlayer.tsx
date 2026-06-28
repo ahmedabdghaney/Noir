@@ -7,7 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Loader, Pause, Play, Lock,
   Subtitles, Settings, Maximize2, Minimize2,
-  Plus, Minus, ChevronDown, ChevronLeft,
+  Plus, Minus, ChevronDown,
   Volume2, VolumeX, Volume1, SkipForward,
 } from 'lucide-react';
 
@@ -87,8 +87,6 @@ export default function VideoPlayer({
   const [isScrubbing, setIsScrubbing] = useState(false);
   // فلاش السيك (مثل اليوتيوب لما تدبل تاب)
   const [seekFlash, setSeekFlash] = useState<{ dir: 'fwd' | 'back'; amount: number } | null>(null);
-  // أنيميشن زر الوسط
-  const [bigIcon, setBigIcon] = useState<'play' | 'pause' | null>(null);
 
   const progressKey = `noir_progress_${type}_${id}`;
 
@@ -261,13 +259,8 @@ export default function VideoPlayer({
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
-    if (v.paused) { v.play(); flashBigIcon('play'); }
-    else { v.pause(); flashBigIcon('pause'); }
-  };
-
-  const flashBigIcon = (icon: 'play' | 'pause') => {
-    setBigIcon(icon);
-    setTimeout(() => setBigIcon(null), 500);
+    if (v.paused) v.play();
+    else v.pause();
   };
 
   const changeVolume = (val: number) => {
@@ -397,24 +390,6 @@ export default function VideoPlayer({
   /* ══════════════════════════════════════ render ══ */
 
   const sliderStyle = `
-    .volume-slider {
-      -webkit-appearance: none; appearance: none;
-      height: 4px; background: rgba(255,255,255,0.25);
-      border-radius: 9999px; outline: none; border: none;
-    }
-    .volume-slider::-webkit-slider-thumb {
-      -webkit-appearance: none; appearance: none;
-      width: 12px; height: 12px; border-radius: 50%;
-      background: #fff; cursor: pointer; border: none;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.5);
-    }
-    .volume-slider::-moz-range-thumb {
-      width: 12px; height: 12px; border-radius: 50%;
-      background: #fff; cursor: pointer; border: none;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.5);
-    }
-    @keyframes noir-pop { 0% { transform: scale(0.6); opacity: 0; } 30% { opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
-    .noir-pop { animation: noir-pop 0.5s ease-out forwards; }
     @keyframes noir-flash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
     .noir-flash { animation: noir-flash 0.5s ease-out forwards; }
     video::cue {
@@ -432,7 +407,7 @@ export default function VideoPlayer({
     <div ref={containerRef} className={`${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen max-w-none m-0 rounded-none' : 'w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}>
       <style>{sliderStyle}</style>
       <div
-        className={`group/player relative bg-black overflow-hidden border border-white/10 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.95)] ${isFullscreen ? 'w-full h-full rounded-none' : 'rounded-2xl'}`}
+        className={`group/player relative bg-black overflow-hidden shadow-[0_24px_64px_-12px_rgba(0,0,0,0.95)] ${isFullscreen ? 'w-full h-full rounded-none border-0' : 'rounded-2xl border border-white/10'}`}
         dir="ltr"
         onMouseMove={resetHideTimer}
         onMouseLeave={() => { if (videoRef.current && !videoRef.current.paused && !showSettings) setControlsVisible(false); }}
@@ -491,10 +466,6 @@ export default function VideoPlayer({
             <div className={`absolute inset-x-0 top-0 z-30 transition-opacity duration-300 ${controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
               <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-transparent pointer-events-none h-24" />
               <div className="relative flex items-center gap-3 px-4 pt-3">
-                <button onClick={onClose} aria-label="رجوع"
-                  className="flex items-center justify-center w-9 h-9 rounded-full text-white/90 hover:text-white bg-white/5 hover:bg-white/15 backdrop-blur-md border border-white/10 transition-all shrink-0">
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
                 <div className="min-w-0 flex-1" dir="rtl">
                   <h2 className="text-white text-sm md:text-base font-semibold truncate drop-shadow">{title}</h2>
                   {type === 'tv' && (
@@ -507,17 +478,6 @@ export default function VideoPlayer({
                     التريلر
                   </button>
                 )}
-              </div>
-            </div>
-          )}
-
-          {/* ══ center big play/pause flash ══ */}
-          {isNative && bigIcon && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-              <div className="noir-pop w-20 h-20 rounded-full bg-black/45 backdrop-blur-xl border border-white/15 flex items-center justify-center">
-                {bigIcon === 'play'
-                  ? <Play className="w-9 h-9 text-white fill-white ml-1" />
-                  : <Pause className="w-9 h-9 text-white fill-white" />}
               </div>
             </div>
           )}
@@ -537,7 +497,7 @@ export default function VideoPlayer({
           )}
 
           {/* center big play button when paused (idle) */}
-          {isNative && !isPlaying && !isLoading && !bigIcon && !isPausedByHost && (
+          {isNative && !isPlaying && !isLoading && !isPausedByHost && (
             <button onClick={(e) => { e.stopPropagation(); togglePlay(); }}
               className="absolute inset-0 z-20 flex items-center justify-center group/big">
               <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-xl border border-white/15 flex items-center justify-center transition-transform group-hover/big:scale-110">
@@ -624,15 +584,32 @@ export default function VideoPlayer({
                     <Btn onClick={toggleMute} label={isMuted ? 'Unmute' : 'Mute'}>
                       <VolumeIcon className="w-5 h-5" />
                     </Btn>
-                    <div className={`flex items-center transition-all duration-200 overflow-hidden ${showVolume ? 'w-20 ml-1 opacity-100' : 'w-0 opacity-0'}`}>
-                      <input
-                        type="range"
-                        min={0} max={1} step={0.02}
-                        value={isMuted ? 0 : volume}
-                        onChange={e => changeVolume(Number(e.target.value))}
-                        className="w-full cursor-pointer volume-slider"
-                        style={{ accentColor: '#ef4444' }}
-                      />
+                    <div className={`flex items-center transition-all duration-200 overflow-hidden ${showVolume ? 'w-20 ml-1.5 opacity-100' : 'w-0 opacity-0'}`}>
+                      <div
+                        className="group/vol w-full py-2 cursor-pointer relative"
+                        onClick={e => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          changeVolume((e.clientX - rect.left) / rect.width);
+                        }}
+                        onMouseDown={e => {
+                          const track = e.currentTarget;
+                          const set = (clientX: number) => {
+                            const rect = track.getBoundingClientRect();
+                            changeVolume(Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)));
+                          };
+                          set(e.clientX);
+                          const move = (ev: MouseEvent) => set(ev.clientX);
+                          const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+                          window.addEventListener('mousemove', move);
+                          window.addEventListener('mouseup', up);
+                        }}
+                      >
+                        <div className="relative w-full h-[4px] bg-white/25 rounded-full group-hover/vol:h-[5px] transition-all">
+                          <div className="absolute inset-y-0 left-0 bg-red-500 rounded-full" style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}>
+                            <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 rounded-full bg-white shadow-md opacity-0 group-hover/vol:opacity-100 transition-opacity" />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -665,6 +642,8 @@ export default function VideoPlayer({
                       <Settings className="w-5 h-5" />
                     </Btn>
                     {showSettings && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => { setShowSettings(false); setShowSpeedMenu(false); }} />
                       <div className="absolute right-0 bottom-full mb-3 bg-black/70 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-2xl w-48 overflow-hidden z-50">
                         <div className="px-3.5 py-2.5 text-[10px] text-white/40 uppercase tracking-widest border-b border-white/10">الإعدادات</div>
                         <button onClick={() => setShowSpeedMenu(p => !p)} className="w-full flex items-center justify-between px-3.5 py-3 text-sm text-white hover:bg-white/10 transition-colors">
@@ -684,6 +663,7 @@ export default function VideoPlayer({
                           </div>
                         )}
                       </div>
+                      </>
                     )}
                   </div>
 
@@ -708,7 +688,7 @@ function Btn({ onClick, label, children, active = false, small = false, big = fa
 }) {
   return (
     <button onClick={onClick} title={label} aria-label={label}
-      className={`relative flex items-center justify-center rounded-full transition-all shrink-0 active:scale-90
+      className={`relative flex items-center justify-center rounded-full transition-all shrink-0 active:scale-90 cursor-pointer
         ${small ? 'w-5 h-5' : big ? 'w-10 h-10' : 'w-9 h-9'}
         ${active ? 'text-red-400 bg-red-500/15' : 'text-white/90 hover:text-white hover:bg-white/15'}`}>
       {children}
