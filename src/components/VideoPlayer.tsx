@@ -96,47 +96,6 @@ export default function VideoPlayer({
         window.dispatchEvent(new Event('progress_updated'));
       }
     }, 10000);
-    const volumeSliderStyle = `
-    .volume-slider {
-      -webkit-appearance: none;
-      appearance: none;
-      height: 5px;
-      background: rgba(255,255,255,0.2);
-      border-radius: 9999px;
-      outline: none;
-      border: none;
-    }
-    .volume-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 13px;
-      height: 13px;
-      border-radius: 50%;
-      background: #ffffff;
-      cursor: pointer;
-      border: none;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-    }
-    .volume-slider::-moz-range-thumb {
-      width: 13px;
-      height: 13px;
-      border-radius: 50%;
-      background: #ffffff;
-      cursor: pointer;
-      border: none;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-    }
-    .volume-slider::-webkit-slider-runnable-track {
-      height: 5px;
-      border-radius: 9999px;
-      background: rgba(255,255,255,0.2);
-    }
-    .volume-slider::-moz-range-track {
-      height: 5px;
-      border-radius: 9999px;
-      background: rgba(255,255,255,0.2);
-    }
-  `;
 
   return () => clearInterval(timer);
   }, [type, id, playMode, progressKey]);
@@ -329,6 +288,49 @@ export default function VideoPlayer({
   const VolumeIcon = isMuted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
 
   /* ══════════════════════════════════════ render ══ */
+
+  const volumeSliderStyle = `
+    .volume-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 5px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 9999px;
+      outline: none;
+      border: none;
+    }
+    .volume-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #ffffff;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .volume-slider::-moz-range-thumb {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #ffffff;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .volume-slider::-webkit-slider-runnable-track {
+      height: 5px;
+      border-radius: 9999px;
+      background: rgba(255,255,255,0.2);
+    }
+    .volume-slider::-moz-range-track {
+      height: 5px;
+      border-radius: 9999px;
+      background: rgba(255,255,255,0.2);
+    }
+  `;
+
   return (
     <div ref={containerRef} className={`${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen max-w-none m-0 rounded-none' : 'w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}>
       <style>{volumeSliderStyle}</style>
