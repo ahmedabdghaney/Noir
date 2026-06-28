@@ -169,11 +169,15 @@ export default function VideoPlayer({
 
   /* ── reset ── */
   useEffect(() => {
-    containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // scrollIntoView أحياناً يتسبب في شاشة سوداء على بعض المتصفحات — نستخدم setTimeout لنضمن إن العنصر موجود أولاً
+    const timer = setTimeout(() => {
+      containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
     setIsLoading(true); setCustomMp4Failed(false);
     setSubOffset(0); setSubEnabled(true); setSpeed(1);
     setShowSettings(false); setShowSpeedMenu(false); setShowVolume(false);
     setIsPlaying(false); setCurrentTime(0); setDuration(0);
+    return () => clearTimeout(timer);
   }, [type, id, season, episode, playMode]);
 
   /* ── fullscreen event ── */
