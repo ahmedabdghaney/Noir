@@ -82,6 +82,7 @@ export default function VideoPlayer({
   const [showSettings,    setShowSettings]    = useState(false);
   const [showSpeedMenu,   setShowSpeedMenu]   = useState(false);
   const [isFullscreen,    setIsFullscreen]    = useState(false);
+  const [isIosFullscreen,  setIsIosFullscreen]  = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
 
   // hover preview على شريط التقدم
@@ -174,17 +175,17 @@ export default function VideoPlayer({
     const h = () => setIsFullscreen(!!(document.fullscreenElement || (document as any).webkitFullscreenElement));
     document.addEventListener('fullscreenchange', h);
     document.addEventListener('webkitfullscreenchange', h);
-    // iOS: استمع لحدث webkitbeginfullscreen على الـ video
+    // iOS: webkitbeginfullscreen = native fullscreen (overlay ما يظهر فيه)
     const v = videoRef.current as any;
-    const onEnter = () => setIsFullscreen(true);
-    const onExit  = () => setIsFullscreen(false);
-    v?.addEventListener('webkitbeginfullscreen', onEnter);
-    v?.addEventListener('webkitendfullscreen',   onExit);
+    const onIosEnter = () => { setIsFullscreen(true); setIsIosFullscreen(true); };
+    const onIosExit  = () => { setIsFullscreen(false); setIsIosFullscreen(false); };
+    v?.addEventListener('webkitbeginfullscreen', onIosEnter);
+    v?.addEventListener('webkitendfullscreen',   onIosExit);
     return () => {
       document.removeEventListener('fullscreenchange', h);
       document.removeEventListener('webkitfullscreenchange', h);
-      v?.removeEventListener('webkitbeginfullscreen', onEnter);
-      v?.removeEventListener('webkitendfullscreen',   onExit);
+      v?.removeEventListener('webkitbeginfullscreen', onIosEnter);
+      v?.removeEventListener('webkitendfullscreen',   onIosExit);
     };
   }, []);
 
@@ -510,7 +511,10 @@ export default function VideoPlayer({
               }}
             >
               <source src={customMp4} type="video/mp4" />
-              <track kind="metadata" srcLang="ar" label="العربية" src={vttSrc} />
+              {/* iOS fullscreen: نستخدم subtitles عشان تظهر بالـ native player */}
+              {isIosFullscreen
+                ? <track kind="subtitles" srcLang="ar" label="العربية" src={vttSrc} default />
+                : <track kind="metadata"  srcLang="ar" label="العربية" src={vttSrc} />}
             </video>
 
           /* fallback iframe */
