@@ -96,7 +96,49 @@ export default function VideoPlayer({
         window.dispatchEvent(new Event('progress_updated'));
       }
     }, 10000);
-    return () => clearInterval(timer);
+    const volumeSliderStyle = `
+    .volume-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 5px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 9999px;
+      outline: none;
+      border: none;
+    }
+    .volume-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #ffffff;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .volume-slider::-moz-range-thumb {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #ffffff;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .volume-slider::-webkit-slider-runnable-track {
+      height: 5px;
+      border-radius: 9999px;
+      background: rgba(255,255,255,0.2);
+    }
+    .volume-slider::-moz-range-track {
+      height: 5px;
+      border-radius: 9999px;
+      background: rgba(255,255,255,0.2);
+    }
+  `;
+
+  return () => clearInterval(timer);
   }, [type, id, playMode, progressKey]);
 
   /* ── postMessage ── */
@@ -140,6 +182,27 @@ export default function VideoPlayer({
     document.addEventListener('fullscreenchange', h);
     return () => document.removeEventListener('fullscreenchange', h);
   }, []);
+
+  /* ── keyboard controls ── */
+  useEffect(() => {
+    if (!isNative) return;
+    const handleKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        seekBy(10);
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        seekBy(-10);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isNative]);
 
   /* ── auto-hide controls after 3s ── */
   const resetHideTimer = useCallback(() => {
@@ -208,9 +271,13 @@ export default function VideoPlayer({
   const seekBy = (s: number) => { if (videoRef.current) videoRef.current.currentTime += s; };
 
   const toggleFullscreen = () => {
-    !document.fullscreenElement
-      ? containerRef.current?.requestFullscreen()
-      : document.exitFullscreen();
+    if (!document.fullscreenElement) {
+      // استخدم containerRef أولاً، وإذا فشل استخدم document.documentElement
+      const el = containerRef.current || document.documentElement;
+      el.requestFullscreen?.().catch(() => document.documentElement.requestFullscreen?.());
+    } else {
+      document.exitFullscreen();
+    }
   };
 
   /* ── double click = toggle fullscreen ── */
@@ -258,14 +325,16 @@ export default function VideoPlayer({
 
   /* ══════════════════════════════════════ render ══ */
   return (
-    <div ref={containerRef} className="w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl">
+    <>
+    <style>{volumeSliderStyle}</style>
+    <div ref={containerRef} className={`${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen max-w-none m-0 rounded-none' : 'w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}>
       <div
-        className="relative bg-black rounded-2xl overflow-hidden border border-white/10 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.95)]"
+        className={`relative bg-black overflow-hidden border border-white/10 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.95)] ${isFullscreen ? 'w-full h-full rounded-none' : 'rounded-2xl'}`}
         dir="ltr"
         onMouseMove={resetHideTimer}
         onMouseLeave={() => { if (videoRef.current && !videoRef.current.paused) setControlsVisible(false); }}
       >
-        <div className="relative aspect-video w-full bg-black">
+        <div className={`relative w-full bg-black ${isFullscreen ? 'h-full' : 'aspect-video'}`}>
 
           {/* loading */}
           {isLoading && !isPausedByHost && (
@@ -336,23 +405,43 @@ export default function VideoPlayer({
               <div className="relative px-4 pb-4 pt-8 flex flex-col gap-2">
 
                 {/* progress bar */}
-                <div ref={progressRef} className="w-full h-1.5 bg-white/20 rounded-full cursor-pointer group/bar relative" onClick={handleProgressClick}>
-                  <div className="h-full bg-red-500 rounded-full relative" style={{ width: `${progressPct}%` }}>
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-md opacity-0 group-hover/bar:opacity-100 transition-opacity" />
+                <div
+                  ref={progressRef}
+                  className="w-full h-[5px] bg-white/20 rounded-full cursor-pointer group/bar relative hover:h-[7px] transition-all duration-150"
+                  onClick={handleProgressClick}
+                >
+                  <div
+                    className="h-full bg-red-500 rounded-full relative transition-[width] duration-100 ease-linear"
+                    style={{ width: `${progressPct}%` }}
+                  >
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-lg opacity-0 group-hover/bar:opacity-100 transition-opacity duration-150" />
                   </div>
                 </div>
 
                 {/* bottom row */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
 
                   {/* play/pause */}
                   <Btn onClick={togglePlay} label={isPlaying ? 'Pause' : 'Play'}>
                     {isPlaying ? <Pause className="w-5 h-5 fill-white" /> : <Play className="w-5 h-5 fill-white" />}
                   </Btn>
 
-                  {/* seek */}
-                  <Btn onClick={() => seekBy(-10)} label="-10s"><SkipBack className="w-4 h-4" /></Btn>
-                  <Btn onClick={() => seekBy(10)}  label="+10s"><SkipForward className="w-4 h-4" /></Btn>
+                  {/* seek -10s */}
+                  <button onClick={() => seekBy(-10)} title="-10s" aria-label="-10s"
+                    className="relative flex items-center justify-center rounded-full transition-all shrink-0 w-7 h-7 text-white/80 hover:text-white hover:bg-white/10">
+                    <svg viewBox="0 0 24 24" fill="none" className="w-[18px] h-[18px]" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 5V2L7 6l5 4V7a6 6 0 1 1-5.93 6.79" />
+                      <text x="12" y="16.5" textAnchor="middle" fontSize="5.5" fill="currentColor" stroke="none" fontWeight="600">10</text>
+                    </svg>
+                  </button>
+                  {/* seek +10s */}
+                  <button onClick={() => seekBy(10)} title="+10s" aria-label="+10s"
+                    className="relative flex items-center justify-center rounded-full transition-all shrink-0 w-7 h-7 text-white/80 hover:text-white hover:bg-white/10">
+                    <svg viewBox="0 0 24 24" fill="none" className="w-[18px] h-[18px]" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 5V2l5 4-5 4V7a6 6 0 1 0 5.93 6.79" />
+                      <text x="12" y="16.5" textAnchor="middle" fontSize="5.5" fill="currentColor" stroke="none" fontWeight="600">10</text>
+                    </svg>
+                  </button>
 
                   {/* volume with slider */}
                   <div className="relative flex items-center gap-1"
@@ -369,14 +458,14 @@ export default function VideoPlayer({
                         min={0} max={1} step={0.02}
                         value={isMuted ? 0 : volume}
                         onChange={e => changeVolume(Number(e.target.value))}
-                        className="w-full h-1 accent-red-500 cursor-pointer"
+                        className="w-full cursor-pointer volume-slider"
                         style={{ accentColor: '#ef4444' }}
                       />
                     </div>
                   </div>
 
                   {/* time */}
-                  <span className="text-white/60 text-xs tabular-nums select-none">
+                  <span className="text-white/60 text-[11px] sm:text-xs tabular-nums select-none whitespace-nowrap">
                     {formatTime(currentTime)} / {formatTime(duration)}
                   </span>
 
@@ -439,6 +528,7 @@ export default function VideoPlayer({
         </div>
       </div>
     </div>
+    </>
   );
 }
 
