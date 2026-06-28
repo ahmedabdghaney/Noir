@@ -177,6 +177,9 @@ export default function VideoPlayer({
     }, 3000);
   }, []);
 
+  // نحفظ الـ offset في ref عشان يكون متاح في الـ event listeners
+  const subOffsetRef = useRef(0);
+
   /* ── helpers ── */
   const adjustSubs = (s: number) => {
     const v = videoRef.current;
@@ -186,8 +189,35 @@ export default function VideoPlayer({
       const c = track.cues[i] as VTTCue;
       c.startTime += s; c.endTime += s;
     }
+    subOffsetRef.current += s;
     setSubOffset(p => p + s);
   };
+
+  // لما يُحمّل track جديد (بعد seek أو reload) — نعيد تطبيق الـ offset تلقائياً
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const applyOffsetOnLoad = () => {
+      const track = v.textTracks?.[0];
+      if (!track || subOffsetRef.current === 0) return;
+      // انتظر الـ cues تُحمّل
+      const tryApply = () => {
+        if (track.cues && track.cues.length > 0) {
+          for (let i = 0; i < track.cues.length; i++) {
+            const c = track.cues[i] as VTTCue;
+            c.startTime += subOffsetRef.current;
+            c.endTime   += subOffsetRef.current;
+          }
+        } else {
+          // الـ cues لسه ما حُملت، جرب بعد شوي
+          setTimeout(tryApply, 100);
+        }
+      };
+      tryApply();
+    };
+    v.addEventListener('seeked', applyOffsetOnLoad);
+    return () => v.removeEventListener('seeked', applyOffsetOnLoad);
+  }, []);
 
   const toggleSubs = () => {
     const v = videoRef.current;
