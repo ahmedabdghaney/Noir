@@ -195,15 +195,9 @@ export default function VideoPlayer({
   useEffect(() => {
     const h = () => {
       const nativeFs = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
-      // نحدّث فقط لما يكون في عنصر native fullscreen أو لما نخرج من native
-      // (CSS fullscreen على iOS يُدار يدوياً ولا يطلق هذا الحدث)
-      if (nativeFs) setIsFullscreen(true);
-      else if (document.fullscreenElement === null) {
-        // خرجنا من native — بس ما نلمس CSS fullscreen
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        if (!isIOS) setIsFullscreen(false);
-      }
+      // مزامنة الحالة مع native fullscreen (أندرويد/آيباد/ديسكتوب)
+      // iPhone يستخدم webkitEnterFullscreen على الفيديو ولا يطلق هذا الحدث
+      setIsFullscreen(nativeFs);
     };
     document.addEventListener('fullscreenchange', h);
     document.addEventListener('webkitfullscreenchange', h);
@@ -470,40 +464,46 @@ export default function VideoPlayer({
 
   const toggleFullscreen = () => {
     const el = containerRef.current as any;
+    const vid = videoRef.current as any;
 
-    // كشف iOS (iPhone/iPad) — fullscreen API غير موثوق عليها، نستخدم CSS
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    // كشف iPhone فقط — fullscreen API على div ما تشتغل أبداً
+    const isIPhone = /iPhone|iPod/.test(navigator.userAgent);
 
     // ── الخروج ──
-    // CSS fullscreen شغال؟
     if (isFullscreen) {
       if (document.fullscreenElement && document.exitFullscreen) {
         document.exitFullscreen().catch(() => {});
       } else if ((document as any).webkitFullscreenElement && (document as any).webkitExitFullscreen) {
         (document as any).webkitExitFullscreen();
+      } else if (vid?.webkitExitFullscreen) {
+        vid.webkitExitFullscreen();
       }
+      try { (screen.orientation as any)?.unlock?.(); } catch (_) {}
       setIsFullscreen(false);
       return;
     }
 
     // ── الدخول ──
-    if (isIOS) {
-      // iOS — CSS fullscreen (يحافظ على كل عناصر التحكم والترجمة)
-      setIsFullscreen(true);
-      // نحاول نقفل الاتجاه أفقي لو متاح
-      try { (screen.orientation as any)?.lock?.('landscape').catch(() => {}); } catch (_) {}
+    // iPhone — لازم fullscreen على عنصر <video> نفسه (الوحيد المدعوم)
+    // ملاحظة: هنا تختفي الترجمة المخصّصة وتشتغل كنترولات iOS الأصلية
+    if (isIPhone && vid?.webkitEnterFullscreen) {
+      vid.webkitEnterFullscreen();
+      // ما نضبط isFullscreen — iOS يدير العرض بنفسه
       return;
     }
 
-    // باقي الأجهزة — native fullscreen
+    // باقي الأجهزة (أندرويد/آيباد/ديسكتوب) — fullscreen على الـ container
+    const enter = () => {
+      setIsFullscreen(true);
+      try { (screen.orientation as any)?.lock?.('landscape').catch(() => {}); } catch (_) {}
+    };
     if (el?.requestFullscreen) {
-      el.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => setIsFullscreen(true));
+      el.requestFullscreen().then(enter).catch(enter);
     } else if (el?.webkitRequestFullscreen) {
       el.webkitRequestFullscreen();
-      setIsFullscreen(true);
+      enter();
     } else {
-      setIsFullscreen(true); // fallback CSS
+      enter(); // fallback CSS
     }
   };
 
