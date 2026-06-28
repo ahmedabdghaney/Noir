@@ -281,7 +281,8 @@ export default function VideoPlayer({
     const v = videoRef.current;
     if (!v?.textTracks?.length) return;
     const next = !subEnabled;
-    // نخلي الـ track دايماً hidden (نرسم بأنفسنا) — التحكم بالعرض عبر subEnabled
+    // metadata track: نبقيه hidden دايماً عشان نقرأ الـ cues بأنفسنا
+    // تعطيل = disabled (ما يبعث cuechange events)
     v.textTracks[0].mode = next ? 'hidden' : 'disabled';
     if (!next) setCueText('');
     setSubEnabled(next);
@@ -294,6 +295,7 @@ export default function VideoPlayer({
     const track = v.textTracks?.[0];
     if (!track) return;
     // hidden = الأحداث تشتغل بس بدون رسم المتصفح الأصلي
+    // metadata kind: hidden = نقرأ الـ cues بدون عرض native, disabled = نوقف الـ events
     track.mode = subEnabled ? 'hidden' : 'disabled';
 
     const onCueChange = () => {
@@ -508,7 +510,7 @@ export default function VideoPlayer({
               }}
             >
               <source src={customMp4} type="video/mp4" />
-              <track kind="subtitles" srcLang="ar" label="العربية" src={vttSrc} default />
+              <track kind="metadata" srcLang="ar" label="العربية" src={vttSrc} />
             </video>
 
           /* fallback iframe */
