@@ -446,6 +446,8 @@ export default function VideoPlayer({
 
   /* ══════════════════════════════════════ render ══ */
 
+  const hideCueStyle = `video::cue { color: transparent !important; text-shadow: none !important; background: transparent !important; }`;
+
   const sliderStyle = `
     @keyframes noir-flash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
     .noir-flash { animation: noir-flash 0.5s ease-out forwards; }
@@ -454,6 +456,7 @@ export default function VideoPlayer({
   return (
     <div ref={containerRef} className={`${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen max-w-none m-0 rounded-none' : 'w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}>
       <style>{sliderStyle}</style>
+      <style>{hideCueStyle}</style>
       <div
         className={`group/player relative bg-black overflow-hidden shadow-[0_24px_64px_-12px_rgba(0,0,0,0.95)] ${isFullscreen ? 'w-full h-full rounded-none border-0' : 'rounded-2xl border border-white/10'}`}
         dir="ltr"
@@ -501,7 +504,7 @@ export default function VideoPlayer({
               }}
             >
               <source src={customMp4} type="video/mp4" />
-              <track kind="metadata" srcLang="ar" label="العربية" src={vttSrc} />
+              <track kind="subtitles" srcLang="ar" label="العربية" src={vttSrc} default />
             </video>
 
           /* fallback iframe */
