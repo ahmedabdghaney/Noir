@@ -16,6 +16,9 @@ import { auth, addToFirestoreWatchlist, removeFromFirestoreWatchlist } from '../
 interface DetailViewProps {
   type: 'movie' | 'tv';
   id: number;
+  initialSeason?: number;
+  initialEpisode?: number;
+  onEpisodeChange?: (season: number, episode: number) => void;
   onBackClick: () => void;
   onItemClick: (item: MovieOrShow) => void;
   onOpenShare: (url: string) => void;
@@ -39,6 +42,9 @@ function formatHms(seconds: number): string {
 export default function DetailView({
   type,
   id,
+  initialSeason,
+  initialEpisode,
+  onEpisodeChange,
   onBackClick,
   onItemClick,
   onOpenShare,
@@ -55,9 +61,9 @@ export default function DetailView({
   // Watchlist Save state
   const isSaved = (watchlist || []).some((item) => item.id === id && item.type === type);
 
-  // TV Episode States
-  const [selectedSeason, setSelectedSeason] = useState(1);
-  const [selectedEpisode, setSelectedEpisode] = useState(1);
+  // TV Episode States — القيمة الابتدائية من الـ URL إن وُجدت
+  const [selectedSeason, setSelectedSeason] = useState(initialSeason || 1);
+  const [selectedEpisode, setSelectedEpisode] = useState(initialEpisode || 1);
   const [episodesCount, setEpisodesCount] = useState(1);
   const [episodes, setEpisodes] = useState<EpisodeInfo[]>([]);
   const [loadingEpisodes, setLoadingEpisodes] = useState(false);
@@ -194,6 +200,13 @@ export default function DetailView({
     }
   }, [isWatchTogetherOpen]);
 
+  // كل ما يتغير الموسم/الحلقة، حدّث الـ URL عبر App
+  useEffect(() => {
+    if (type === 'tv' && onEpisodeChange) {
+      onEpisodeChange(selectedSeason, selectedEpisode);
+    }
+  }, [type, selectedSeason, selectedEpisode, onEpisodeChange]);
+
   // Fetch episode details (images, titles, overviews) for the selected season
   useEffect(() => {
     if (type !== 'tv' || !id) return;
@@ -277,11 +290,21 @@ export default function DetailView({
 
         // Initialize TV states if needed
         if (type ==='tv' && details.seasons && details.seasons.length > 0) {
-          // Filter to select first available season with season_number > 0 structure
-          const validSeason = details.seasons.find((s) => s.season_number > 0) || details.seasons[0];
-          setSelectedSeason(validSeason.season_number);
-          setEpisodesCount(validSeason.episode_count || 1);
-          setSelectedEpisode(1);
+          // إذا الـ URL حدّد موسم، استخدمه إذا كان موجوداً فعلاً؛ وإلا أول موسم صالح
+          const urlSeasonValid =
+            initialSeason &&
+            details.seasons.some((s) => s.season_number === initialSeason);
+          const targetSeason = urlSeasonValid
+            ? details.seasons.find((s) => s.season_number === initialSeason)!
+            : (details.seasons.find((s) => s.season_number > 0) || details.seasons[0]);
+          setSelectedSeason(targetSeason.season_number);
+          setEpisodesCount(targetSeason.episode_count || 1);
+          // احترم حلقة الـ URL إذا ضمن نطاق الموسم؛ وإلا الحلقة 1
+          if (urlSeasonValid && initialEpisode && initialEpisode <= (targetSeason.episode_count || 1)) {
+            setSelectedEpisode(initialEpisode);
+          } else {
+            setSelectedEpisode(1);
+          }
         }
       } catch (err) {
         if (active) setError(true);

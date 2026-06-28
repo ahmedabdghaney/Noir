@@ -84,6 +84,8 @@ export default function App() {
   const [categoryAllMode, setCategoryAllMode] = useState(false);
   const [searchMode, setSearchMode] = useState<'movie' | 'tv'>('movie');
   const [selectedTitle, setSelectedTitle] = useState<{ type: 'movie' | 'tv'; id: number } | null>(null);
+  // الموسم/الحلقة المقروءة من الـ URL (تُمرَّر لـ DetailView كقيمة ابتدائية)
+  const [selectedEpisodeRoute, setSelectedEpisodeRoute] = useState<{ season: number; episode: number } | null>(null);
   const [joinRoomCode, setJoinRoomCode] = useState<string>('');
 
   // User Profile Modal active state
@@ -568,13 +570,21 @@ export default function App() {
         }
       } else {
         const movieMatch = hash.match(/^#movie\/(\d+)$/);
-        const tvMatch = hash.match(/^#tv\/(\d+)$/);
+        // يدعم: #tv/123 أو #tv/123/s2/e5
+        const tvMatch = hash.match(/^#tv\/(\d+)(?:\/s(\d+)\/e(\d+))?$/);
 
         if (movieMatch) {
           setSelectedTitle({ type: 'movie', id: Number(movieMatch[1]) });
+          setSelectedEpisodeRoute(null);
           setActiveView('detail');
         } else if (tvMatch) {
           setSelectedTitle({ type: 'tv', id: Number(tvMatch[1]) });
+          // إذا الـ URL فيه موسم/حلقة، خزنهم لتمريرهم لـ DetailView
+          if (tvMatch[2] && tvMatch[3]) {
+            setSelectedEpisodeRoute({ season: Number(tvMatch[2]), episode: Number(tvMatch[3]) });
+          } else {
+            setSelectedEpisodeRoute(null);
+          }
           setActiveView('detail');
         } else {
           window.location.hash ='#home';
@@ -732,6 +742,19 @@ export default function App() {
     setSelectedTitle(null);
     window.location.hash ='#home';
   };
+
+  // يحدّث الـ URL بالموسم/الحلقة الحاليين بدون إعادة تحميل
+  const handleEpisodeRouteChange = useCallback((season: number, episode: number) => {
+    setSelectedTitle((cur) => {
+      if (cur && cur.type === 'tv') {
+        const newHash = `#tv/${cur.id}/s${season}/e${episode}`;
+        if (window.location.hash !== newHash) {
+          window.history.replaceState(null, '', newHash);
+        }
+      }
+      return cur;
+    });
+  }, []);
 
   const handleSetSearchMode = (mode: 'movie' | 'tv') => {
     setSearchMode(mode);
@@ -1782,6 +1805,9 @@ export default function App() {
             <DetailView
               type={selectedTitle.type}
               id={selectedTitle.id}
+              initialSeason={selectedEpisodeRoute?.season}
+              initialEpisode={selectedEpisodeRoute?.episode}
+              onEpisodeChange={handleEpisodeRouteChange}
               onBackClick={navigateToHome}
               onItemClick={handleTitleClick}
               onOpenShare={handleOpenShare}
