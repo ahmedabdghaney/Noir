@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Loader, Pause, Play, Lock,
+  SkipBack, SkipForward,
   Subtitles, Settings, Maximize2, Minimize2,
   Plus, Minus, ChevronDown, Volume2, VolumeX, Volume1
 } from 'lucide-react';
@@ -35,20 +36,6 @@ interface VideoPlayerProps {
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 const CDN_BASE_URL = 'https://d269k7J205s3hx.cloudfront.net/';
-
-// أيقونات مخصصة للتخطي 10 ثواني
-const Rewind10 = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" />
-    <text x="11.5" y="15" fontSize="8" fontWeight="bold" fill="currentColor" stroke="none">10</text>
-  </svg>
-);
-const Forward10 = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 12a9 9 0 1 1-3-6.7L21 8" /><path d="M21 3v5h-5" />
-    <text x="12.5" y="15" fontSize="8" fontWeight="bold" fill="currentColor" stroke="none">10</text>
-  </svg>
-);
 
 function formatTime(s: number) {
   if (!s || isNaN(s)) return '0:00';
@@ -83,6 +70,7 @@ export default function VideoPlayer({
   const [duration,        setDuration]        = useState(0);
   const [volume,          setVolume]          = useState(1);
   const [isMuted,         setIsMuted]         = useState(false);
+  const [showVolume,      setShowVolume]      = useState(false);
   const [subOffset,       setSubOffset]       = useState(0);
   const [subEnabled,      setSubEnabled]      = useState(true);
   const [speed,           setSpeed]           = useState(1);
@@ -108,7 +96,49 @@ export default function VideoPlayer({
         window.dispatchEvent(new Event('progress_updated'));
       }
     }, 10000);
-    return () => clearInterval(timer);
+    const volumeSliderStyle = `
+    .volume-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 5px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 9999px;
+      outline: none;
+      border: none;
+    }
+    .volume-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #ffffff;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .volume-slider::-moz-range-thumb {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #ffffff;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .volume-slider::-webkit-slider-runnable-track {
+      height: 5px;
+      border-radius: 9999px;
+      background: rgba(255,255,255,0.2);
+    }
+    .volume-slider::-moz-range-track {
+      height: 5px;
+      border-radius: 9999px;
+      background: rgba(255,255,255,0.2);
+    }
+  `;
+
+  return () => clearInterval(timer);
   }, [type, id, playMode, progressKey]);
 
   /* ── postMessage ── */
@@ -142,7 +172,7 @@ export default function VideoPlayer({
     containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setIsLoading(true); setCustomMp4Failed(false);
     setSubOffset(0); setSubEnabled(true); setSpeed(1);
-    setShowSettings(false); setShowSpeedMenu(false);
+    setShowSettings(false); setShowSpeedMenu(false); setShowVolume(false);
     setIsPlaying(false); setCurrentTime(0); setDuration(0);
   }, [type, id, season, episode, playMode]);
 
@@ -151,6 +181,37 @@ export default function VideoPlayer({
     const h = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', h);
     return () => document.removeEventListener('fullscreenchange', h);
+  }, []);
+
+  /* ── keyboard controls ── */
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      // بس اشتغل إذا في فيديو native
+      if (!videoRef.current) return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        seekBy(10);
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        seekBy(-10);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, []);
+
+  /* ── auto-hide controls after 3s ── */
+  const resetHideTimer = useCallback(() => {
+    setControlsVisible(true);
+    clearTimeout(hideTimer.current);
+    hideTimer.current = setTimeout(() => {
+      if (videoRef.current && !videoRef.current.paused) setControlsVisible(false);
+    }, 3000);
   }, []);
 
   /* ── helpers ── */
@@ -178,11 +239,11 @@ export default function VideoPlayer({
     setSpeed(s); setShowSpeedMenu(false); setShowSettings(false);
   };
 
-  const togglePlay = useCallback(() => {
+  const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
     v.paused ? v.play() : v.pause();
-  }, []);
+  };
 
   const changeVolume = (val: number) => {
     const v = videoRef.current;
@@ -194,53 +255,31 @@ export default function VideoPlayer({
     setIsMuted(clamped === 0);
   };
 
-  const toggleMute = useCallback(() => {
+  const toggleMute = () => {
     const v = videoRef.current;
     if (!v) return;
     if (v.muted || v.volume === 0) {
-      v.muted  = false; v.volume = volume > 0 ? volume : 0.8;
-      setIsMuted(false); setVolume(v.volume);
+      v.muted  = false;
+      v.volume = volume > 0 ? volume : 0.8;
+      setIsMuted(false);
+      setVolume(v.volume);
     } else {
-      v.muted = true; setIsMuted(true);
+      v.muted = true;
+      setIsMuted(true);
     }
-  }, [volume]);
+  };
 
-  const seekBy = useCallback((s: number) => {
-    if (videoRef.current) videoRef.current.currentTime += s;
-  }, []);
+  const seekBy = (s: number) => { if (videoRef.current) videoRef.current.currentTime += s; };
 
-  const toggleFullscreen = useCallback(() => {
-    !document.fullscreenElement
-      ? containerRef.current?.requestFullscreen()
-      : document.exitFullscreen();
-  }, []);
-
-  /* ── keyboard shortcuts ── */
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (!isNative) return;
-      if (e.code === 'Space' || e.code === 'ArrowRight' || e.code === 'ArrowLeft') {
-        e.preventDefault();
-      }
-      if (e.code === 'Space') togglePlay();
-      if (e.code === 'ArrowRight') seekBy(10);
-      if (e.code === 'ArrowLeft') seekBy(-10);
-      if (e.code === 'KeyF') toggleFullscreen();
-      if (e.code === 'KeyM') toggleMute();
-      resetHideTimer();
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [isNative, togglePlay, seekBy, toggleFullscreen, toggleMute]);
-
-  /* ── auto-hide controls after 3s ── */
-  const resetHideTimer = useCallback(() => {
-    setControlsVisible(true);
-    clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => {
-      if (videoRef.current && !videoRef.current.paused) setControlsVisible(false);
-    }, 3000);
-  }, []);
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      // استخدم containerRef أولاً، وإذا فشل استخدم document.documentElement
+      const el = containerRef.current || document.documentElement;
+      el.requestFullscreen?.().catch(() => document.documentElement.requestFullscreen?.());
+    } else {
+      document.exitFullscreen();
+    }
+  };
 
   /* ── double click = toggle fullscreen ── */
   const handleVideoClick = (e: React.MouseEvent) => {
@@ -248,6 +287,7 @@ export default function VideoPlayer({
     e.stopPropagation();
     clearTimeout(dblClickTimer.current);
     if ((e as any).detail === 2) {
+      // double click
       toggleFullscreen();
     } else {
       dblClickTimer.current = setTimeout(() => {
@@ -262,12 +302,6 @@ export default function VideoPlayer({
     if (!rect || !videoRef.current || !duration) return;
     const ratio = (e.clientX - rect.left) / rect.width;
     videoRef.current.currentTime = Math.max(0, Math.min(1, ratio)) * duration;
-  };
-  
-  const handleVolumeClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const ratio = (e.clientX - rect.left) / rect.width;
-    changeVolume(ratio);
   };
 
   /* ── URLs ── */
@@ -287,18 +321,20 @@ export default function VideoPlayer({
 
   const isNative    = playMode === 'movie' && customMp4 && !customMp4Failed;
   const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
-  const VolumeIcon  = isMuted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
+
+  const VolumeIcon = isMuted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
 
   /* ══════════════════════════════════════ render ══ */
   return (
-    <div ref={containerRef} className={`w-full ${isFullscreen ? 'my-0 max-w-full h-full' : 'my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}>
+    <div ref={containerRef} className={`${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen max-w-none m-0 rounded-none' : 'w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}>
+      <style>{volumeSliderStyle}</style>
       <div
-        className={`relative bg-black overflow-hidden ${isFullscreen ? 'h-full rounded-none border-0' : 'rounded-2xl border border-white/10 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.95)]'}`}
+        className={`relative bg-black overflow-hidden border border-white/10 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.95)] ${isFullscreen ? 'w-full h-full rounded-none' : 'rounded-2xl'}`}
         dir="ltr"
         onMouseMove={resetHideTimer}
         onMouseLeave={() => { if (videoRef.current && !videoRef.current.paused) setControlsVisible(false); }}
       >
-        <div className={`relative w-full ${isFullscreen ? 'h-full' : 'aspect-video'} bg-black`}>
+        <div className={`relative w-full bg-black ${isFullscreen ? 'h-full' : 'aspect-video'}`}>
 
           {/* loading */}
           {isLoading && !isPausedByHost && (
@@ -328,8 +364,10 @@ export default function VideoPlayer({
               onTimeUpdate={() => setCurrentTime(videoRef.current?.currentTime || 0)}
               onDurationChange={() => setDuration(videoRef.current?.duration || 0)}
               onVolumeChange={() => {
-                const v = videoRef.current; if (!v) return;
-                setIsMuted(v.muted); setVolume(v.volume);
+                const v = videoRef.current;
+                if (!v) return;
+                setIsMuted(v.muted);
+                setVolume(v.volume);
               }}
             >
               <source src={customMp4} type="video/mp4" />
@@ -364,94 +402,123 @@ export default function VideoPlayer({
             >
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent pointer-events-none" />
 
-              <div className="relative px-2 sm:px-4 pb-2 sm:pb-4 pt-8 flex flex-col gap-2">
+              <div className="relative px-4 pb-4 pt-8 flex flex-col gap-2">
 
                 {/* progress bar */}
-                <div ref={progressRef} className="w-full h-2 sm:h-2.5 bg-white/20 rounded-full cursor-pointer group/bar relative" onClick={handleProgressClick}>
-                  <div className="h-full bg-red-500 rounded-full relative transition-all duration-150" style={{ width: `${progressPct}%` }}>
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-white shadow-md opacity-0 group-hover/bar:opacity-100 transition-opacity"></div>
+                <div
+                  ref={progressRef}
+                  className="w-full h-[5px] bg-white/20 rounded-full cursor-pointer group/bar relative hover:h-[7px] transition-all duration-150"
+                  onClick={handleProgressClick}
+                >
+                  <div
+                    className="h-full bg-red-500 rounded-full relative transition-[width] duration-100 ease-linear"
+                    style={{ width: `${progressPct}%` }}
+                  >
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-lg opacity-0 group-hover/bar:opacity-100 transition-opacity duration-150" />
                   </div>
                 </div>
 
                 {/* bottom row */}
-                <div className="flex items-center justify-between gap-1 sm:gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
 
-                  {/* left controls */}
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <Btn onClick={togglePlay} label={isPlaying ? 'Pause' : 'Play'}>
-                      {isPlaying ? <Pause className="w-5 h-5 fill-white" /> : <Play className="w-5 h-5 fill-white" />}
+                  {/* play/pause */}
+                  <Btn onClick={togglePlay} label={isPlaying ? 'Pause' : 'Play'}>
+                    {isPlaying ? <Pause className="w-5 h-5 fill-white" /> : <Play className="w-5 h-5 fill-white" />}
+                  </Btn>
+
+                  {/* seek -10s */}
+                  <button onClick={() => seekBy(-10)} title="-10s" aria-label="-10s"
+                    className="relative flex items-center justify-center rounded-full transition-all shrink-0 w-7 h-7 text-white/80 hover:text-white hover:bg-white/10">
+                    <svg viewBox="0 0 24 24" fill="none" className="w-[18px] h-[18px]" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 5V2L7 6l5 4V7a6 6 0 1 1-5.93 6.79" />
+                      <text x="12" y="16.5" textAnchor="middle" fontSize="5.5" fill="currentColor" stroke="none" fontWeight="600">10</text>
+                    </svg>
+                  </button>
+                  {/* seek +10s */}
+                  <button onClick={() => seekBy(10)} title="+10s" aria-label="+10s"
+                    className="relative flex items-center justify-center rounded-full transition-all shrink-0 w-7 h-7 text-white/80 hover:text-white hover:bg-white/10">
+                    <svg viewBox="0 0 24 24" fill="none" className="w-[18px] h-[18px]" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 5V2l5 4-5 4V7a6 6 0 1 0 5.93 6.79" />
+                      <text x="12" y="16.5" textAnchor="middle" fontSize="5.5" fill="currentColor" stroke="none" fontWeight="600">10</text>
+                    </svg>
+                  </button>
+
+                  {/* volume with slider */}
+                  <div className="relative flex items-center gap-1"
+                    onMouseEnter={() => setShowVolume(true)}
+                    onMouseLeave={() => setShowVolume(false)}
+                  >
+                    <Btn onClick={toggleMute} label={isMuted ? 'Unmute' : 'Mute'}>
+                      <VolumeIcon className="w-4 h-4" />
                     </Btn>
-
-                    <Btn onClick={() => seekBy(-10)} label="-10s"><Rewind10 /></Btn>
-                    <Btn onClick={() => seekBy(10)}  label="+10s"><Forward10 /></Btn>
-
-                    {/* volume (hidden slider on mobile to save space) */}
-                    <div className="hidden sm:flex items-center gap-2 group/vol">
-                      <Btn onClick={toggleMute} label={isMuted ? 'Unmute' : 'Mute'}>
-                        <VolumeIcon className="w-5 h-5" />
-                      </Btn>
-                      <div className="relative w-16 h-2 bg-white/20 rounded-full cursor-pointer" onClick={handleVolumeClick}>
-                        <div className="h-full bg-red-500 rounded-full" style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}></div>
-                      </div>
+                    {/* volume slider */}
+                    <div className={`transition-all duration-200 overflow-hidden ${showVolume ? 'w-20 opacity-100' : 'w-0 opacity-0'}`}>
+                      <input
+                        type="range"
+                        min={0} max={1} step={0.02}
+                        value={isMuted ? 0 : volume}
+                        onChange={e => changeVolume(Number(e.target.value))}
+                        className="w-full cursor-pointer volume-slider"
+                        style={{ accentColor: '#ef4444' }}
+                      />
                     </div>
-
-                    {/* time */}
-                    <span className="text-white/60 text-[10px] sm:text-xs tabular-nums select-none ml-1">
-                      {formatTime(currentTime)} / {formatTime(duration)}
-                    </span>
                   </div>
 
-                  {/* right controls */}
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    {/* subs */}
-                    <Btn onClick={toggleSubs} label={subEnabled ? 'Hide subs' : 'Show subs'} active={subEnabled}>
-                      <Subtitles className="w-5 h-5" />
-                    </Btn>
+                  {/* time */}
+                  <span className="text-white/60 text-[11px] sm:text-xs tabular-nums select-none whitespace-nowrap">
+                    {formatTime(currentTime)} / {formatTime(duration)}
+                  </span>
 
-                    {/* subs offset (hidden on mobile) */}
-                    {subEnabled && (
-                      <div className="hidden sm:flex items-center gap-1 bg-white/10 rounded-full px-1.5 py-1 border border-white/10">
-                        <Btn onClick={() => adjustSubs(-1)} label="-1s" small><Minus className="w-3 h-3" /></Btn>
-                        <span className="text-[11px] text-white/60 w-9 text-center tabular-nums select-none">
-                          {subOffset >= 0 ? `+${subOffset}s` : `${subOffset}s`}
-                        </span>
-                        <Btn onClick={() => adjustSubs(1)} label="+1s" small><Plus className="w-3 h-3" /></Btn>
+                  <div className="flex-1" />
+
+                  {/* subtitle toggle */}
+                  <Btn onClick={toggleSubs} label={subEnabled ? 'Hide subs' : 'Show subs'} active={subEnabled}>
+                    <Subtitles className="w-4 h-4" />
+                  </Btn>
+
+                  {/* subtitle offset */}
+                  {subEnabled && (
+                    <div className="flex items-center gap-0.5 bg-white/10 rounded-full px-1.5 py-1 border border-white/10">
+                      <Btn onClick={() => adjustSubs(-1)} label="-1s" small><Minus className="w-3 h-3" /></Btn>
+                      <span className="text-[11px] text-white/60 w-9 text-center tabular-nums select-none">
+                        {subOffset >= 0 ? `+${subOffset}s` : `${subOffset}s`}
+                      </span>
+                      <Btn onClick={() => adjustSubs(1)} label="+1s" small><Plus className="w-3 h-3" /></Btn>
+                    </div>
+                  )}
+
+                  {/* settings */}
+                  <div className="relative">
+                    <Btn onClick={() => { setShowSettings(p => !p); setShowSpeedMenu(false); }} label="Settings">
+                      <Settings className="w-4 h-4" />
+                    </Btn>
+                    {showSettings && (
+                      <div className="absolute right-0 bottom-full mb-2 bg-[#1c1c1e] border border-white/10 rounded-xl shadow-2xl w-44 overflow-hidden z-50">
+                        <div className="px-3 py-2 text-[10px] text-white/30 uppercase tracking-widest border-b border-white/10">Settings</div>
+                        <button onClick={() => setShowSpeedMenu(p => !p)} className="w-full flex items-center justify-between px-3 py-2.5 text-sm text-white hover:bg-white/5 transition-colors">
+                          <span>Speed</span>
+                          <span className="flex items-center gap-1 text-red-400 font-semibold text-xs">
+                            {speed === 1 ? 'Normal' : `${speed}×`}
+                            <ChevronDown className="w-3 h-3" />
+                          </span>
+                        </button>
+                        {showSpeedMenu && (
+                          <div className="border-t border-white/10">
+                            {SPEEDS.map(s => (
+                              <button key={s} onClick={() => changeSpeed(s)} className={`w-full text-left px-3 py-2 text-sm transition-colors ${speed === s ? 'text-red-400 bg-red-500/10 font-semibold' : 'text-white/80 hover:bg-white/5'}`}>
+                                {s === 1 ? 'Normal (1×)' : `${s}×`}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
-
-                    {/* settings */}
-                    <div className="relative">
-                      <Btn onClick={() => { setShowSettings(p => !p); setShowSpeedMenu(false); }} label="Settings">
-                        <Settings className="w-5 h-5" />
-                      </Btn>
-                      {showSettings && (
-                        <div className="absolute right-0 bottom-full mb-2 bg-[#1c1c1e] border border-white/10 rounded-xl shadow-2xl w-44 overflow-hidden z-50">
-                          <div className="px-3 py-2 text-[10px] text-white/30 uppercase tracking-widest border-b border-white/10">Settings</div>
-                          <button onClick={() => setShowSpeedMenu(p => !p)} className="w-full flex items-center justify-between px-3 py-2.5 text-sm text-white hover:bg-white/5 transition-colors">
-                            <span>Speed</span>
-                            <span className="flex items-center gap-1 text-red-400 font-semibold text-xs">
-                              {speed === 1 ? 'Normal' : `${speed}×`}
-                              <ChevronDown className="w-3 h-3" />
-                            </span>
-                          </button>
-                          {showSpeedMenu && (
-                            <div className="border-t border-white/10">
-                              {SPEEDS.map(s => (
-                                <button key={s} onClick={() => changeSpeed(s)} className={`w-full text-left px-3 py-2 text-sm transition-colors ${speed === s ? 'text-red-400 bg-red-500/10 font-semibold' : 'text-white/80 hover:bg-white/5'}`}>
-                                  {s === 1 ? 'Normal (1×)' : `${s}×`}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* fullscreen */}
-                    <Btn onClick={toggleFullscreen} label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
-                      {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
-                    </Btn>
                   </div>
+
+                  {/* fullscreen */}
+                  <Btn onClick={toggleFullscreen} label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
+                    {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                  </Btn>
 
                 </div>
               </div>
@@ -470,7 +537,7 @@ function Btn({ onClick, label, children, active = false, small = false }: {
   return (
     <button onClick={onClick} title={label} aria-label={label}
       className={`relative flex items-center justify-center rounded-full transition-all shrink-0
-        ${small ? 'w-5 h-5' : 'w-8 h-8 sm:w-7 sm:h-7'}
+        ${small ? 'w-5 h-5' : 'w-7 h-7'}
         ${active ? 'text-red-400 bg-red-500/15' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>
       {children}
     </button>
