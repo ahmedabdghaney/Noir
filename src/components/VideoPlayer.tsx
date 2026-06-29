@@ -109,7 +109,8 @@ export default function VideoPlayer({
   const progressKey = `noir_progress_${type}_${id}`;
 
   /* ── URLs + native flag (معرّفة مبكراً عشان الـ effects تستخدمها) ── */
-  // المسلسلات: TV/{اسم}/{tmdbId}/Season {n}/{episode} — encode كل جزء مع إبقاء / فواصل
+  // المسلسلات: TV/{اسم}/{tmdbId}/Season {n}/{episode}
+  // الأفلام:   Movies/{اسم}/{tmdbId}/movie  — tmdbId يميّز الأفلام بنفس الاسم (Scream 1997 vs 2022)
   let mp4Url: string, vttUrl: string;
   if (type === 'tv') {
     const seriesFolder = sanitizeName(title);
@@ -118,8 +119,10 @@ export default function VideoPlayer({
     mp4Url = `${CDN_BASE_URL}${encodedDir}/${episode}.mp4`;
     vttUrl = `${CDN_BASE_URL}${encodedDir}/${episode}.vtt`;
   } else {
-    mp4Url = `${CDN_BASE_URL}movie_${id}.mp4`;
-    vttUrl = `${CDN_BASE_URL}movie_${id}.vtt`;
+    const movieFolder = sanitizeName(title);
+    const encodedDir = ['Movies', movieFolder].map((p) => encodeURIComponent(p)).join('/');
+    mp4Url = `${CDN_BASE_URL}${encodedDir}/movie_${id}.mp4`;
+    vttUrl = `${CDN_BASE_URL}${encodedDir}/movie_${id}.vtt`;
   }
   const customMp4 = playMode === 'movie' ? mp4Url : undefined;
   const vttSrc    = vttUrl;
