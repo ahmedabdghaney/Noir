@@ -37,6 +37,14 @@ interface VideoPlayerProps {
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 const CDN_BASE_URL = 'https://d269k7J205s3hx.cloudfront.net/';
 
+// تنظيف اسم المسلسل ليطابق مسار S3 — لازم يطابق sanitizeName ببوت المسلسلات حرفياً
+function sanitizeName(name: string): string {
+  return (name || '')
+    .replace(/[:/\\?#%"<>|]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function formatTime(s: number) {
   if (!s || isNaN(s)) return '0:00';
   const h = Math.floor(s / 3600);
@@ -101,9 +109,20 @@ export default function VideoPlayer({
   const progressKey = `noir_progress_${type}_${id}`;
 
   /* ── URLs + native flag (معرّفة مبكراً عشان الـ effects تستخدمها) ── */
-  const mp4Key    = type === 'tv' ? `tv_${id}_${season}_${episode}` : `movie_${id}`;
-  const customMp4 = playMode === 'movie' ? `${CDN_BASE_URL}${mp4Key}.mp4` : undefined;
-  const vttSrc    = `${CDN_BASE_URL}${mp4Key}.vtt`;
+  // المسلسلات: TV/{اسم}/{tmdbId}/Season {n}/{episode} — encode كل جزء مع إبقاء / فواصل
+  let mp4Url: string, vttUrl: string;
+  if (type === 'tv') {
+    const seriesFolder = sanitizeName(title);
+    const pathParts = ['TV', seriesFolder, String(id), `Season ${season}`];
+    const encodedDir = pathParts.map((p) => encodeURIComponent(p)).join('/');
+    mp4Url = `${CDN_BASE_URL}${encodedDir}/${episode}.mp4`;
+    vttUrl = `${CDN_BASE_URL}${encodedDir}/${episode}.vtt`;
+  } else {
+    mp4Url = `${CDN_BASE_URL}movie_${id}.mp4`;
+    vttUrl = `${CDN_BASE_URL}movie_${id}.vtt`;
+  }
+  const customMp4 = playMode === 'movie' ? mp4Url : undefined;
+  const vttSrc    = vttUrl;
   const isNative  = playMode === 'movie' && customMp4 && !customMp4Failed;
 
   /* ── progress tracker ── */
