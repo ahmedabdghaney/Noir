@@ -191,20 +191,7 @@ export default function VideoPlayer({
     if (saved && saved >= 50 && saved <= 250) setSubSize(saved);
   }, []);
 
-  /* ── close settings on click outside the whole player ── */
-  useEffect(() => {
-    if (!showSettings) return;
-    const onDocClick = (e: MouseEvent) => {
-      const container = containerRef.current;
-      if (container && !container.contains(e.target as Node)) {
-        setShowSettings(false);
-        setShowSpeedMenu(false);
-      }
-    };
-    // نأخّر التسجيل tick عشان ما يُغلق فوراً من نفس النقرة اللي فتحته
-    const t = setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
-    return () => { clearTimeout(t); document.removeEventListener('mousedown', onDocClick); };
-  }, [showSettings]);
+  /* ملاحظة: إغلاق الإعدادات يتم عبر الـ overlay (onPointerDown) — يشتغل ماوس ولمس */
 
   const changeSubSize = (delta: number) => {
     setSubSize(prev => {
@@ -440,6 +427,24 @@ export default function VideoPlayer({
     setSpeed(s); setShowSpeedMenu(false); setShowSettings(false);
   };
 
+  /* ── iPhone native fullscreen: ارفع الترجمة من قاع الشاشة (cue.line) ── */
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v?.textTracks?.length || !iosNativeFs) return;
+    const track = v.textTracks[0];
+    // line = رقم السطر من الأعلى (سالب = من الأسفل). -3 يرفعها فوق حافة الشاشة
+    const applyLine = () => {
+      const cues = track.cues;
+      if (!cues) return;
+      for (let i = 0; i < cues.length; i++) {
+        try { (cues[i] as any).line = -3; (cues[i] as any).snapToLines = true; } catch (_) {}
+      }
+    };
+    applyLine();
+    track.addEventListener('cuechange', applyLine);
+    return () => track.removeEventListener('cuechange', applyLine);
+  }, [iosNativeFs, subEnabled]);
+
   const playPulseTimer = useRef<ReturnType<typeof setTimeout>>();
   const togglePlay = () => {
     const v = videoRef.current;
@@ -619,9 +624,12 @@ export default function VideoPlayer({
 
   /* ══════════════════════════════════════ render ══ */
 
-  // نخفي native cue بس لما يكون الـ overlay المخصّص شغال
-  // وقت iPhone fullscreen نخلي iOS يعرض الترجمة الأصلية
-  const hideCueStyle = iosNativeFs ? '' : `video::cue { color: transparent !important; text-shadow: none !important; background: transparent !important; }`;
+  // نخفي native cue بس لما يكون الـ overlay المخصّص شغال (المشغّل العادي)
+  // وقت iPhone native fullscreen: iOS يعرض الترجمة الأصلية — نتحكم بحجمها عبر ::cue
+  // (موضعها يُتحكم بـ track.cues[].line اللي نضبطه بـ effect منفصل)
+  const hideCueStyle = iosNativeFs
+    ? `video::cue { font-size: calc(${subSize / 100} * (1.1em + 0.4vw)) !important; background: rgba(0,0,0,0.55) !important; }`
+    : `video::cue { color: transparent !important; text-shadow: none !important; background: transparent !important; }`;
 
   const sliderStyle = `
     @keyframes noir-flash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
@@ -911,7 +919,11 @@ export default function VideoPlayer({
                     </Btn>
                     {showSettings && (
                       <>
-                        <div className="fixed inset-0 z-40" onClick={() => { setShowSettings(false); setShowSpeedMenu(false); }} onTouchStart={() => { setShowSettings(false); setShowSpeedMenu(false); }} />
+                        {/* overlay يسد القائمة عند الضغط خارجها. pointer-events فقط، ونمنع وصول الحدث للزر تحته */}
+                        <div
+                          className="fixed inset-0 z-40"
+                          onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setShowSettings(false); setShowSpeedMenu(false); }}
+                        />
                       <div className="absolute right-0 bottom-full mb-3 bg-black/70 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-2xl w-48 overflow-hidden z-50">
                         <div className="px-3.5 py-2.5 text-[10px] text-white/40 uppercase tracking-widest border-b border-white/10">الإعدادات</div>
                         <button onClick={() => setShowSpeedMenu(p => !p)} className="w-full flex items-center justify-between px-3.5 py-3 text-sm text-white hover:bg-white/10 transition-colors">
