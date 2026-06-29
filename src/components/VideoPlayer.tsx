@@ -919,10 +919,11 @@ export default function VideoPlayer({
                     </Btn>
                     {showSettings && (
                       <>
-                        {/* overlay يسد القائمة عند الضغط خارجها. pointer-events فقط، ونمنع وصول الحدث للزر تحته */}
+                        {/* overlay شفاف يغطي كل الشاشة (z-40) فوق شريط الأدوات.
+                            أي ضغطة عليه — حتى على زر الإعدادات تحته — تسد القائمة */}
                         <div
                           className="fixed inset-0 z-40"
-                          onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setShowSettings(false); setShowSpeedMenu(false); }}
+                          onPointerDown={(e) => { e.stopPropagation(); setShowSettings(false); setShowSpeedMenu(false); }}
                         />
                       <div className="absolute right-0 bottom-full mb-3 bg-black/70 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-2xl w-48 overflow-hidden z-50">
                         <div className="px-3.5 py-2.5 text-[10px] text-white/40 uppercase tracking-widest border-b border-white/10">الإعدادات</div>
