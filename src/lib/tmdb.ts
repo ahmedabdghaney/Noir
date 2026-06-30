@@ -56,7 +56,7 @@ async function tmdbFetch(path: string, params: Record<string, any> = {}): Promis
 }
 
 // Helpers for images
-export const getPosterUrl = (path: string | null) => path ? `${IMG_BASE}/w500${path}` : null;
+export const getPosterUrl = (path: string | null) => path ? `${IMG_BASE}/original${path}` : null;
 export const getBackdropUrl = (path: string | null) => path ? `${IMG_BASE}/w1280${path}` : null;
 export const getOriginalBackdropUrl = (path: string | null) => path ? `${IMG_BASE}/original${path}` : null;
 export const getProfileUrl = (path: string | null) => path ? `${IMG_BASE}/w185${path}` : null;
@@ -173,7 +173,7 @@ export const getTitleLogoUrl = (data: any): string | null => {
   if (!logos || logos.length === 0) return null;
   const en = logos.find((l: any) => l.iso_639_1 === 'en');
   const chosen = en || logos[0];
-  return chosen?.file_path ? `${IMG_BASE}/w500${chosen.file_path}` : null;
+  return chosen?.file_path ? `${IMG_BASE}/original${chosen.file_path}` : null;
 };
 
 export interface EpisodeInfo {
