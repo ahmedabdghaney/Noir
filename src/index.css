@@ -43,6 +43,12 @@ body::before {
   letter-spacing: -0.03em;
 }
 
+/* الخط العربي العريض (font-black=900) ثقيل بصرياً — نخففه لـ 800 على العناوين */
+.font-display.font-black,
+.font-display.font-extrabold {
+  font-weight: 800;
+}
+
 /* Glass surface — the signature Apple-TV material.
    Softer, more translucent, very subtle hairline border. */
 .glass {

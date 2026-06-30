@@ -27,7 +27,6 @@ import Hero from './components/Hero';
 import MovieRow from './components/MovieRow';
 import CategoryRow from './components/CategoryRow';
 import CategoryPage from './components/CategoryPage';
-import StudiosRow from './components/StudiosRow';
 import StudioPage from './components/StudioPage';
 import PullToRefresh from './components/PullToRefresh';
 import { getCategoryByKey } from './lib/categories';
@@ -1240,8 +1239,6 @@ export default function App() {
                   />
                 </div>
               )}
-
-              <StudiosRow onSelect={(key) => { window.location.hash = `#studio/${key}`; }} />
 
               <MovieRow
                 title="الرائج هذا الأسبوع"

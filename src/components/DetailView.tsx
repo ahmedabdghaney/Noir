@@ -61,6 +61,12 @@ export default function DetailView({
   // Watchlist Save state
   const isSaved = (watchlist || []).some((item) => item.id === id && item.type === type);
 
+  // اسم تبويب المتصفح = اسم الفلم/المسلسل، ويرجع لـ نوار سينما عند الإغلاق
+  useEffect(() => {
+    if (title) document.title = `${title} — نوار سينما`;
+    return () => { document.title = 'نوار سينما'; };
+  }, [title]);
+
   // TV Episode States — القيمة الابتدائية من الـ URL إن وُجدت
   const [selectedSeason, setSelectedSeason] = useState(initialSeason || 1);
   const [selectedEpisode, setSelectedEpisode] = useState(initialEpisode || 1);
