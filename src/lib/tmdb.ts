@@ -15,6 +15,17 @@ const responseCache = new Map<string, any>();
 export let GMAP: Record<number, string> = {};
 export let MOVIE_GENRES: { id: number; name: string }[] = [];
 
+// أقدم سنة مسموحة — أي فلم/مسلسل أقدم منها (سنة الإصدار أقل من 1998) يُستبعد من كل القوائم.
+// 1997 وما قبلها = ممنوع. 1998 فما فوق = مسموح.
+const MIN_YEAR = 1998;
+
+// يفحص سنة الإصدار من item.year (نص "YYYY") — يسمح فقط لو السنة معروفة و≥ MIN_YEAR.
+// عناصر بدون سنة (year فارغة) تُستبعد أيضاً تحسباً (أفضل نرفض غامض من نعرض ممنوع).
+function isYearAllowed(item: MovieOrShow): boolean {
+  const y = parseInt(item.year, 10);
+  return !isNaN(y) && y >= MIN_YEAR;
+}
+
 // Base request tool
 async function tmdbFetch(path: string, params: Record<string, any> = {}): Promise<any> {
   const url = new URL(API_BASE + path);
@@ -117,22 +128,22 @@ export async function initializeGenres(): Promise<void> {
 // Get Home lists
 export async function fetchTrendingWeek(): Promise<MovieOrShow[]> {
   const res = await tmdbFetch('/trending/all/week', { language: 'en-US' });
-  return (res.results || []).map((m: any) => normalizeItem(m)).filter((item: MovieOrShow) => item.poster);
+  return (res.results || []).map((m: any) => normalizeItem(m)).filter((item: MovieOrShow) => item.poster && isYearAllowed(item));
 }
 
 export async function fetchNowPlaying(): Promise<MovieOrShow[]> {
   const res = await tmdbFetch('/movie/now_playing', { region: 'US', language: 'en-US' });
-  return (res.results || []).map((m: any) => normalizeItem(m, 'movie')).filter((item: MovieOrShow) => item.poster);
+  return (res.results || []).map((m: any) => normalizeItem(m, 'movie')).filter((item: MovieOrShow) => item.poster && isYearAllowed(item));
 }
 
 export async function fetchPopularTV(): Promise<MovieOrShow[]> {
   const res = await tmdbFetch('/tv/popular', { language: 'en-US' });
-  return (res.results || []).map((m: any) => normalizeItem(m, 'tv')).filter((item: MovieOrShow) => item.poster);
+  return (res.results || []).map((m: any) => normalizeItem(m, 'tv')).filter((item: MovieOrShow) => item.poster && isYearAllowed(item));
 }
 
 export async function fetchPopularMovies(): Promise<MovieOrShow[]> {
   const res = await tmdbFetch('/movie/popular', { language: 'en-US' });
-  return (res.results || []).map((m: any) => normalizeItem(m, 'movie')).filter((item: MovieOrShow) => item.poster);
+  return (res.results || []).map((m: any) => normalizeItem(m, 'movie')).filter((item: MovieOrShow) => item.poster && isYearAllowed(item));
 }
 
 // Detailed queries
@@ -227,7 +238,7 @@ export async function searchTitles(type: 'movie' | 'tv', query: string, page = 1
   });
   
   return {
-    results: (res.results || []).map((m: any) => normalizeItem(m, type)).filter((item: MovieOrShow) => item.poster),
+    results: (res.results || []).map((m: any) => normalizeItem(m, type)).filter((item: MovieOrShow) => item.poster && isYearAllowed(item)),
     totalPages: Math.min(res.total_pages || 1, 500),
   };
 }
@@ -248,10 +259,16 @@ export async function discoverTitles(type: 'movie' | 'tv', options: DiscoveryOpt
     'vote_count.gte': options.sortBy === 'rating' ? 300 : 50,
     sort_by: activeSort,
     language: 'en-US',
+    // فلترة سنة من السيرفر مباشرة — TMDB ما يرجع نتائج أقدم من MIN_YEAR إطلاقاً
+    [type === 'tv' ? 'first_air_date.gte' : 'primary_release_date.gte']: `${MIN_YEAR}-01-01`,
   };
 
   if (options.genreIds) params.with_genres = options.genreIds;
-  if (options.year) params[type === 'tv' ? 'first_air_date_year' : 'primary_release_year'] = options.year;
+  // لو المستخدم حدد سنة يدوياً أقل من MIN_YEAR، نتجاهلها (نخليها كأنها ما انحددت)
+  // عشان فلتر primary_release_date.gte فوق يضل هو الفيصل ولا يصير تعارض بالنتائج.
+  if (options.year && parseInt(options.year, 10) >= MIN_YEAR) {
+    params[type === 'tv' ? 'first_air_date_year' : 'primary_release_year'] = options.year;
+  }
   if (options.ratingGte) params['vote_average.gte'] = options.ratingGte;
   if (options.originCountry) params.with_origin_country = options.originCountry;
   if (options.originalLanguage) params.with_original_language = options.originalLanguage;
@@ -261,7 +278,7 @@ export async function discoverTitles(type: 'movie' | 'tv', options: DiscoveryOpt
   const res = await tmdbFetch(`/discover/${type}`, params);
 
   return {
-    results: (res.results || []).map((m: any) => normalizeItem(m, type)).filter((item: MovieOrShow) => item.poster),
+    results: (res.results || []).map((m: any) => normalizeItem(m, type)).filter((item: MovieOrShow) => item.poster && isYearAllowed(item)),
     totalPages: Math.min(res.total_pages || 1, 500),
   };
 }
@@ -277,5 +294,5 @@ export async function searchMulti(query: string): Promise<MovieOrShow[]> {
   return (res.results || [])
     .filter((x: any) => x.media_type === 'movie' || x.media_type === 'tv')
     .map((m: any) => normalizeItem(m))
-    .filter((item: MovieOrShow) => item.poster);
+    .filter((item: MovieOrShow) => item.poster && isYearAllowed(item));
 }
