@@ -227,6 +227,8 @@ interface DiscoveryOptions {
   runtimeLte?: string;
   runtimeGte?: string;
   sortBy?: string;
+  withCompanies?: number;   // TMDB company id — يُستخدم مع type='movie'
+  withNetworks?: number;    // TMDB network id — يُستخدم مع type='tv'
 }
 
 export async function searchTitles(type: 'movie' | 'tv', query: string, page = 1): Promise<{ results: MovieOrShow[]; totalPages: number }> {
@@ -264,6 +266,8 @@ export async function discoverTitles(type: 'movie' | 'tv', options: DiscoveryOpt
   };
 
   if (options.genreIds) params.with_genres = options.genreIds;
+  if (options.withCompanies) params.with_companies = options.withCompanies;
+  if (options.withNetworks) params.with_networks = options.withNetworks;
   // لو المستخدم حدد سنة يدوياً أقل من MIN_YEAR، نتجاهلها (نخليها كأنها ما انحددت)
   // عشان فلتر primary_release_date.gte فوق يضل هو الفيصل ولا يصير تعارض بالنتائج.
   if (options.year && parseInt(options.year, 10) >= MIN_YEAR) {

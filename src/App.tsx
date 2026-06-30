@@ -27,8 +27,11 @@ import Hero from './components/Hero';
 import MovieRow from './components/MovieRow';
 import CategoryRow from './components/CategoryRow';
 import CategoryPage from './components/CategoryPage';
+import StudiosRow from './components/StudiosRow';
+import StudioPage from './components/StudioPage';
 import PullToRefresh from './components/PullToRefresh';
 import { getCategoryByKey } from './lib/categories';
+import { getStudioByKey } from './lib/studios';
 import ContinueWatchingRow from './components/ContinueWatchingRow';
 import DetailView from './components/DetailView';
 import SearchOverlay from './components/SearchOverlay';
@@ -79,9 +82,10 @@ const YEARS = (() => {
 
 export default function App() {
   // Navigation & View State
-  const [activeView, setActiveView] = useState<'home' | 'search' | 'detail' | 'watchlist' | 'category'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'search' | 'detail' | 'watchlist' | 'category' | 'studio'>('home');
   const [selectedCategoryKey, setSelectedCategoryKey] = useState<string | null>(null);
   const [categoryAllMode, setCategoryAllMode] = useState(false);
+  const [selectedStudioKey, setSelectedStudioKey] = useState<string | null>(null);
   const [searchMode, setSearchMode] = useState<'movie' | 'tv'>('movie');
   const [selectedTitle, setSelectedTitle] = useState<{ type: 'movie' | 'tv'; id: number } | null>(null);
   // الموسم/الحلقة المقروءة من الـ URL (تُمرَّر لـ DetailView كقيمة ابتدائية)
@@ -564,6 +568,15 @@ export default function App() {
           setSelectedCategoryKey(key);
           setCategoryAllMode(isAll);
           setActiveView('category');
+          setSelectedTitle(null);
+        } else {
+          window.location.hash = '#home';
+        }
+      } else if (hash.startsWith('#studio/')) {
+        const key = hash.replace('#studio/', '');
+        if (getStudioByKey(key)) {
+          setSelectedStudioKey(key);
+          setActiveView('studio');
           setSelectedTitle(null);
         } else {
           window.location.hash = '#home';
@@ -1236,6 +1249,8 @@ export default function App() {
 
               <CategoryRow onSelect={(key) => { window.location.hash = `#category/${key}`; }} />
 
+              <StudiosRow onSelect={(key) => { window.location.hash = `#studio/${key}`; }} />
+
 
               <MovieRow
                 title="جديد دور السينما"
@@ -1827,6 +1842,14 @@ export default function App() {
             onBack={navigateToHome}
             showAllMode={categoryAllMode}
             onOpenAll={(key) => { window.location.hash = `#category/${key}/all`; }}
+          />
+        )}
+
+        {activeView ==='studio' && selectedStudioKey && getStudioByKey(selectedStudioKey) && (
+          <StudioPage
+            studio={getStudioByKey(selectedStudioKey)!}
+            onItemClick={handleTitleClick}
+            onBack={navigateToHome}
           />
         )}
 </main>
