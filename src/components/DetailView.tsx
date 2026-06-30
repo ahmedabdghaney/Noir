@@ -1129,6 +1129,7 @@ export default function DetailView({
             type={type}
             id={id}
             title={title}
+            posterPath={data?.poster_path ?? null}
             season={selectedSeason}
             episode={selectedEpisode}
             episodesCount={episodesCount}

@@ -15,6 +15,7 @@ interface VideoPlayerProps {
   type: 'movie' | 'tv';
   id: number;
   title: string;
+  posterPath?: string | null;   // مسار صورة TMDB — يُعرض بشاشة قفل iPhone (MediaSession)
   season?: number;
   episode?: number;
   episodesCount?: number;
@@ -56,6 +57,7 @@ function formatTime(s: number) {
 
 export default function VideoPlayer({
   type, id, title,
+  posterPath = null,
   season = 1, episode = 1,
   episodesCount = 0,
   youtubeKey, playMode,
@@ -82,7 +84,6 @@ export default function VideoPlayer({
   const [volume,          setVolume]          = useState(1);
   const [isMuted,         setIsMuted]         = useState(false);
   const [showVolume,      setShowVolume]      = useState(false);
-  const [subOffset,       setSubOffset]       = useState(0);
   const [subEnabled,      setSubEnabled]      = useState(true);
   const [subSize,         setSubSize]         = useState(50); // نسبة حجم الترجمة %
   const [cueText,         setCueText]         = useState('');  // نص الترجمة الحالي
@@ -127,6 +128,26 @@ export default function VideoPlayer({
   const customMp4 = playMode === 'movie' ? mp4Url : undefined;
   const vttSrc    = vttUrl;
   const isNative  = playMode === 'movie' && customMp4 && !customMp4Failed;
+
+  /* ── MediaSession: يعرض اسم الفلم + صورته بشاشة قفل iPhone (بدل اسم نوار) ── */
+  useEffect(() => {
+    if (playMode !== 'movie') return;
+    if (!('mediaSession' in navigator)) return;
+    const artwork = posterPath
+      ? [
+          { src: `https://image.tmdb.org/t/p/w512${posterPath}`, sizes: '512x512', type: 'image/jpeg' },
+          { src: `https://image.tmdb.org/t/p/w780${posterPath}`, sizes: '780x780', type: 'image/jpeg' },
+        ]
+      : [];
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: title || '',
+        artist: type === 'tv' ? `الموسم ${season} • الحلقة ${episode}` : 'NOIR',
+        album: 'NOIR',
+        artwork,
+      });
+    } catch (_) { /* MediaMetadata غير مدعوم */ }
+  }, [title, posterPath, type, season, episode, playMode]);
 
   /* ── progress tracker ── */
   useEffect(() => {
@@ -179,7 +200,7 @@ export default function VideoPlayer({
       containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 100);
     setIsLoading(true); setCustomMp4Failed(false);
-    setSubOffset(0); setSubEnabled(true); setSpeed(1);
+    setSubEnabled(true); setSpeed(1);
     setShowSettings(false); setShowSpeedMenu(false); setShowVolume(false);
     setIsPlaying(false); setCurrentTime(0); setDuration(0); setBuffered(0);
     return () => clearTimeout(timer);
@@ -345,44 +366,7 @@ export default function VideoPlayer({
     }, 3000);
   }, [showSettings]);
 
-  const subOffsetRef = useRef(0);
-
   /* ── helpers ── */
-  const adjustSubs = (s: number) => {
-    const v = videoRef.current;
-    if (!v?.textTracks?.length) return;
-    const track = v.textTracks[0];
-    if (track.cues) for (let i = 0; i < track.cues.length; i++) {
-      const c = track.cues[i] as VTTCue;
-      c.startTime += s; c.endTime += s;
-    }
-    subOffsetRef.current += s;
-    setSubOffset(p => p + s);
-  };
-
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    const applyOffsetOnLoad = () => {
-      const track = v.textTracks?.[0];
-      if (!track || subOffsetRef.current === 0) return;
-      const tryApply = () => {
-        if (track.cues && track.cues.length > 0) {
-          for (let i = 0; i < track.cues.length; i++) {
-            const c = track.cues[i] as VTTCue;
-            c.startTime += subOffsetRef.current;
-            c.endTime   += subOffsetRef.current;
-          }
-        } else {
-          setTimeout(tryApply, 100);
-        }
-      };
-      tryApply();
-    };
-    v.addEventListener('seeked', applyOffsetOnLoad);
-    return () => v.removeEventListener('seeked', applyOffsetOnLoad);
-  }, []);
-
   const toggleSubs = () => {
     const v = videoRef.current;
     if (!v?.textTracks?.length) return;
@@ -900,17 +884,6 @@ export default function VideoPlayer({
                   <Btn onClick={toggleSubs} label={subEnabled ? 'Hide subs' : 'Show subs'} active={subEnabled}>
                     <Subtitles className="w-5 h-5" />
                   </Btn>
-
-                  {/* subtitle offset */}
-                  {subEnabled && (
-                    <div className="hidden sm:flex items-center gap-0.5 bg-white/10 backdrop-blur-md rounded-full px-1.5 py-1 border border-white/10">
-                      <Btn onClick={() => adjustSubs(-1)} label="-1s" small><Minus className="w-3 h-3" /></Btn>
-                      <span className="text-[11px] text-white/70 w-9 text-center tabular-nums select-none">
-                        {subOffset >= 0 ? `+${subOffset}s` : `${subOffset}s`}
-                      </span>
-                      <Btn onClick={() => adjustSubs(1)} label="+1s" small><Plus className="w-3 h-3" /></Btn>
-                    </div>
-                  )}
 
                   {/* settings */}
                   <div className="relative">
