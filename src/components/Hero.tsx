@@ -135,16 +135,16 @@ export default function Hero({
                         className="absolute inset-y-0 right-0 w-full sm:w-[55%] md:w-[50%] flex flex-col items-start justify-end text-right p-6 sm:p-9 md:p-12"
                       >
                         {/* Logo or title */}
-                        <motion.div variants={contentItem} className="flex justify-start w-full mb-3">
+                        <motion.div variants={contentItem} className="flex justify-start w-full mb-2.5">
                           {activeLogo ? (
-                            <img src={activeLogo} alt={item.title} referrerPolicy="no-referrer" className="max-h-14 sm:max-h-20 md:max-h-24 max-w-[90%] object-contain object-right drop-shadow-2xl" />
+                            <img src={activeLogo} alt={item.title} referrerPolicy="no-referrer" className="max-h-10 sm:max-h-16 md:max-h-20 max-w-[70%] sm:max-w-[85%] object-contain object-right drop-shadow-2xl" />
                           ) : (
-                            <h1 className="font-display text-3xl sm:text-5xl font-black text-white leading-tight line-clamp-2 drop-shadow-2xl">{item.title}</h1>
+                            <h1 className="font-display text-2xl sm:text-4xl md:text-5xl font-black text-white leading-tight line-clamp-2 drop-shadow-2xl">{item.title}</h1>
                           )}
                         </motion.div>
 
                         {/* Meta */}
-                        <motion.div variants={contentItem} className="flex items-center justify-start gap-2.5 text-[11px] sm:text-xs text-gray-200 font-semibold mb-2.5">
+                        <motion.div variants={contentItem} className="flex items-center justify-start gap-2.5 text-[10px] sm:text-xs text-gray-200 font-semibold mb-2">
                           <span className="text-stone-300">{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
                           <span className="text-stone-400">{item.year || ''}</span>
                           <span className="flex items-center gap-1 text-[#f5c518]">
@@ -162,7 +162,7 @@ export default function Hero({
                           </motion.div>
                         )}
 
-                        {/* Overview */}
+                        {/* Overview — مخفي بالموبايل، يظهر بالأجهزة الأكبر */}
                         {item.overview && (
                           <motion.p variants={contentItem} className="hidden sm:block text-gray-300 text-[11px] sm:text-xs leading-relaxed line-clamp-3 mb-5 max-w-md">
                             {item.overview}
@@ -173,16 +173,16 @@ export default function Hero({
                         <motion.div variants={contentItem} className="flex items-center justify-start gap-2 flex-wrap">
                           <button
                             onClick={() => onPlayClick(item)}
-                            className="flex items-center gap-1.5 sm:gap-2 bg-white text-black hover:bg-white/90 font-bold px-4 sm:px-7 py-2 sm:py-3 rounded-full transition-all hover:scale-[1.04] active:scale-95 cursor-pointer text-xs sm:text-sm shadow-lg"
+                            className="flex items-center gap-1.5 sm:gap-2 bg-white text-black hover:bg-white/90 font-bold px-3.5 sm:px-7 py-1.5 sm:py-3 rounded-full transition-all hover:scale-[1.04] active:scale-95 cursor-pointer text-xs sm:text-sm shadow-lg"
                           >
-                            <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-black text-black" />
+                            <Play className="w-3 h-3 sm:w-4 sm:h-4 fill-black text-black" />
                             <span>تشغيل</span>
                           </button>
 
                           {onTrailerClick && (
                             <button
                               onClick={() => onTrailerClick(item)}
-                              className="flex items-center gap-1.5 sm:gap-2 glass text-white hover:bg-white/15 font-bold px-3 sm:px-5 py-2 sm:py-3 rounded-full transition-all hover:scale-[1.04] active:scale-95 cursor-pointer text-xs sm:text-sm"
+                              className="flex items-center gap-1.5 sm:gap-2 glass text-white hover:bg-white/15 font-bold px-3 sm:px-5 py-1.5 sm:py-3 rounded-full transition-all hover:scale-[1.04] active:scale-95 cursor-pointer text-xs sm:text-sm"
                               title="الإعلان الرسمي"
                             >
                               <svg viewBox="0 0 28 20" className="w-4 h-[11px] sm:w-5 sm:h-[14px] shrink-0" xmlns="http://www.w3.org/2000/svg">
@@ -196,7 +196,7 @@ export default function Hero({
                           {onToggleSave && (
                             <button
                               onClick={() => onToggleSave(item)}
-                              className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all cursor-pointer ${saved ? 'bg-white text-black' : 'glass text-white hover:bg-white/15'}`}
+                              className={`w-8 h-8 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all cursor-pointer ${saved ? 'bg-white text-black' : 'glass text-white hover:bg-white/15'}`}
                               title={saved ? 'محفوظ في قائمتي' : 'إضافة لقائمتي'}
                             >
                               {saved ? <Check className="w-4 h-4 sm:w-5 sm:h-5 text-black" strokeWidth={3} /> : <Plus className="w-4 h-4 sm:w-5 sm:h-5" />}

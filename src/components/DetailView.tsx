@@ -1087,13 +1087,13 @@ export default function DetailView({
             {cast.length > 0 && (
               <div className="space-y-4">
                 <h3 className="font-display text-xl font-black text-white tracking-tight">طاقم العمل</h3>
-                <div className="flex gap-5 overflow-x-auto no-scrollbar pb-3 -mx-1 px-1" dir="rtl">
+                <div className="flex gap-3 sm:gap-5 overflow-x-auto no-scrollbar pb-3 -mx-1 px-1" dir="rtl">
                   {cast.map((c: CastMember) => (
                     <div
                       key={c.id}
-                      className="flex-none w-[110px] flex flex-col items-center text-center group/cast"
+                      className="flex-none w-[72px] sm:w-[110px] flex flex-col items-center text-center group/cast"
                     >
-                      <div className="w-[100px] h-[100px] rounded-full overflow-hidden bg-stone-800 select-none border border-white/8 shadow-[0_8px_20px_-8px_rgba(0,0,0,0.6)] transition-transform duration-300 group-hover/cast:scale-105">
+                      <div className="w-[64px] h-[64px] sm:w-[100px] sm:h-[100px] rounded-full overflow-hidden bg-stone-800 select-none border border-white/8 shadow-[0_8px_20px_-8px_rgba(0,0,0,0.6)] transition-transform duration-300 group-hover/cast:scale-105">
                         {c.profile_path ? (
                           <img
                             src={getProfileUrl(c.profile_path) || undefined}
@@ -1108,10 +1108,10 @@ export default function DetailView({
 </div>
                         )}
 </div>
-                      <span className="text-sm font-bold text-white mt-3 leading-tight line-clamp-1 w-full" title={c.name}>
+                      <span className="text-xs sm:text-sm font-bold text-white mt-2 sm:mt-3 leading-tight line-clamp-1 w-full" title={c.name}>
                         {c.name}
 </span>
-                      <span className="text-xs text-stone-500 truncate mt-0.5 w-full" title={c.character}>
+                      <span className="text-[10px] sm:text-xs text-stone-500 truncate mt-0.5 w-full" title={c.character}>
                         {c.character ||'—'}
 </span>
 </div>

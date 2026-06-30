@@ -89,10 +89,10 @@ export default function Header({
 </div>
 
             {/* Desktop Navigation Links */}
-            <div className="hidden md:flex items-center gap-5 lg:gap-6">
+            <div className="hidden md:flex items-center gap-3 lg:gap-6 shrink-0">
               <button
                 onClick={goHome}
-                className={`text-xs md:text-sm font-semibold transition-colors hover:text-white cursor-pointer select-none ${
+                className={`text-xs lg:text-sm font-semibold transition-colors hover:text-white cursor-pointer select-none whitespace-nowrap ${
                     activeView ==='home' ?'text-white' :'text-gray-400'
                 }`}
               >
@@ -100,7 +100,7 @@ export default function Header({
 </button>
               <button
                 onClick={() => setSearchMode('movie')}
-                className={`text-xs md:text-sm font-semibold transition-colors hover:text-white cursor-pointer select-none ${
+                className={`text-xs lg:text-sm font-semibold transition-colors hover:text-white cursor-pointer select-none whitespace-nowrap ${
                     activeView ==='search' && searchMode ==='movie' ?'text-white' :'text-gray-400'
                 }`}
               >
@@ -108,7 +108,7 @@ export default function Header({
 </button>
               <button
                 onClick={() => setSearchMode('tv')}
-                className={`text-xs md:text-sm font-semibold transition-colors hover:text-white cursor-pointer select-none ${
+                className={`text-xs lg:text-sm font-semibold transition-colors hover:text-white cursor-pointer select-none whitespace-nowrap ${
                     activeView ==='search' && searchMode ==='tv' ?'text-white' :'text-gray-400'
                 }`}
               >
@@ -116,7 +116,7 @@ export default function Header({
 </button>
               <button
                 onClick={onViewWatchlist}
-                className={`text-xs md:text-sm font-semibold transition-colors hover:text-white cursor-pointer select-none ${
+                className={`text-xs lg:text-sm font-semibold transition-colors hover:text-white cursor-pointer select-none whitespace-nowrap ${
                     activeView ==='watchlist' ?'text-white' :'text-gray-400'
                 }`}
               >
@@ -126,13 +126,13 @@ export default function Header({
 </div>
 
           {/* Center Column: Centered Search bar trigger */}
-          <div className="flex justify-center">
+          <div className="flex justify-center px-2">
             <button
               onClick={openSearchOverlay}
-              className="glass flex items-center gap-2 hover:bg-white/10 px-3.5 py-2 rounded-full transition-all text-gray-300 hover:text-white text-xs cursor-pointer group w-full max-w-[300px]"
+              className="glass flex items-center gap-2 hover:bg-white/10 px-3.5 py-2 rounded-full transition-all text-gray-300 hover:text-white text-xs cursor-pointer group w-full max-w-[180px] lg:max-w-[300px]"
             >
               <Search className="w-3.5 h-3.5 text-gray-400 group-hover:text-white transition-colors shrink-0" />
-              <span className="truncate text-[10px] sm:text-xs">ابحث عن عروض وأفلام...</span>
+              <span className="truncate text-[10px] sm:text-xs">ابحث...</span>
             </button>
 </div>
 
