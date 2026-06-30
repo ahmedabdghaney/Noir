@@ -1241,6 +1241,8 @@ export default function App() {
                 </div>
               )}
 
+              <StudiosRow onSelect={(key) => { window.location.hash = `#studio/${key}`; }} />
+
               <MovieRow
                 title="الرائج هذا الأسبوع"
                 items={trendingWeek}
@@ -1248,8 +1250,6 @@ export default function App() {
               />
 
               <CategoryRow onSelect={(key) => { window.location.hash = `#category/${key}`; }} />
-
-              <StudiosRow onSelect={(key) => { window.location.hash = `#studio/${key}`; }} />
 
 
               <MovieRow

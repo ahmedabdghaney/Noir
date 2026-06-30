@@ -287,6 +287,19 @@ export async function discoverTitles(type: 'movie' | 'tv', options: DiscoveryOpt
   };
 }
 
+// يجيب شعار شركة إنتاج (company) أو شبكة بث (network) — TMDB يرجّع logo_path
+// مباشرة بـ endpoint التفاصيل، بدون حاجة لـ /images المنفصل.
+export async function fetchStudioLogo(opts: { companyId?: number; networkId?: number }): Promise<string | null> {
+  try {
+    const path = opts.companyId ? `/company/${opts.companyId}` : opts.networkId ? `/network/${opts.networkId}` : null;
+    if (!path) return null;
+    const res = await tmdbFetch(path, {});
+    return res?.logo_path ? `${IMG_BASE}/w500${res.logo_path}` : null;
+  } catch {
+    return null;
+  }
+}
+
 // يحسب درجة تطابق بين نص البحث وعنوان النتيجة — كل ما زاد الرقم، زاد التطابق
 function relevanceScore(query: string, title: string): number {
   const q = query.trim().toLowerCase();

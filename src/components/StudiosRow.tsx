@@ -6,7 +6,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { STUDIOS } from '../lib/studios';
-import { discoverTitles } from '../lib/tmdb';
+import { fetchStudioLogo } from '../lib/tmdb';
 
 interface StudiosRowProps {
   title?: string;
@@ -17,31 +17,22 @@ export default function StudiosRow({ title = 'تصفّح حسب الشركة ا�
   const rowRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
-  // خلفية تمثيلية (أشهر عمل) لكل شركة — backdrop عريض يناسب شكل البطاقة
-  const [images, setImages] = useState<Record<string, string>>({});
+  // شعار رسمي شفاف لكل شركة من TMDB
+  const [logos, setLogos] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const entries = await Promise.all(
         STUDIOS.map(async (s) => {
-          try {
-            const opts = s.companyId
-              ? { withCompanies: s.companyId, sortBy: 'popularity', page: 1 }
-              : { withNetworks: s.networkId, sortBy: 'popularity', page: 1 };
-            const type: 'movie' | 'tv' = s.companyId ? 'movie' : 'tv';
-            const res = await discoverTitles(type, opts);
-            const withImg = res.results.find((r) => r.backdrop || r.poster);
-            return [s.key, withImg?.backdrop || withImg?.poster || ''] as [string, string];
-          } catch {
-            return [s.key, ''] as [string, string];
-          }
+          const logo = await fetchStudioLogo({ companyId: s.companyId, networkId: s.networkId });
+          return [s.key, logo || ''] as [string, string];
         })
       );
       if (!cancelled) {
         const map: Record<string, string> = {};
         entries.forEach(([k, v]) => { if (v) map[k] = v; });
-        setImages(map);
+        setLogos(map);
       }
     })();
     return () => { cancelled = true; };
@@ -59,7 +50,7 @@ export default function StudiosRow({ title = 'تصفّح حسب الشركة ا�
     checkScroll();
     window.addEventListener('resize', checkScroll);
     return () => window.removeEventListener('resize', checkScroll);
-  }, [images]);
+  }, [logos]);
 
   const handleScroll = (direction: 'left' | 'right') => {
     if (!rowRef.current) return;
@@ -98,33 +89,30 @@ export default function StudiosRow({ title = 'تصفّح حسب الشركة ا�
           ref={rowRef}
           onScroll={checkScroll}
           dir="rtl"
-          className="flex flex-row gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none"
+          className="flex flex-row gap-3 md:gap-4 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none"
         >
           {STUDIOS.map((s) => (
             <div
               key={s.key}
               onClick={() => onSelect(s.key)}
-              className="group/st flex-none w-[280px] sm:w-[340px] md:w-[380px] cursor-pointer"
+              className="group/st flex-none w-[150px] sm:w-[190px] md:w-[220px] cursor-pointer"
             >
               <div
-                className="relative aspect-video rounded-2xl overflow-hidden bg-stone-900 border border-white/8 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.7)]"
-                style={{ backgroundColor: s.color }}
+                className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-stone-900 transition-transform duration-300 group-hover/st:scale-[1.03]"
               >
-                {images[s.key] && (
+                {logos[s.key] ? (
                   <img
-                    src={images[s.key]}
+                    src={logos[s.key]}
                     alt={s.title}
                     loading="lazy"
                     referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover opacity-40 transition-transform duration-500 group-hover/st:scale-105"
+                    className="w-full h-full object-contain p-6"
                   />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="w-8 h-8 border-2 border-white/10 border-t-white/40 rounded-full animate-spin" />
+                  </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/40" />
-                <div className="absolute inset-0 flex items-center justify-center p-4">
-                  <span className="text-white font-black text-2xl sm:text-3xl drop-shadow-lg text-center tracking-tight">
-                    {s.title}
-                  </span>
-                </div>
               </div>
             </div>
           ))}
