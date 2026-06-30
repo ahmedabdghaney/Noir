@@ -91,11 +91,7 @@ export default function DetailView({
   const [wtNewMsg, setWtNewMsg] = useState('');
   const [wtCopied, setWtCopied] = useState(false);
 
-  // اسم تبويب المتصفح = اسم الفلم/المسلسل، ويرجع لـ نوار سينما عند الإغلاق
-  useEffect(() => {
-    if (title) document.title = `${title} — نوار سينما`;
-    return () => { document.title = 'نوار سينما'; };
-  }, [title]);
+  // اسم تبويب المتصفح — يُعرَّف بعد data (انظر أسفل إذا/isLoading)
 
   const wtName = user?.name || 'زائر';
   const {
@@ -456,6 +452,14 @@ export default function DetailView({
 
   const title = data.title || (data as any).name ||'غير معروف';
   const titleLogo = getTitleLogoUrl(data);
+
+  // اسم تبويب المتصفح = اسم الفلم/المسلسل، ويرجع لـ نوار سينما عند الإغلاق
+  // ملاحظة: هذا الـ useEffect هنا (بعد تعريف title) لتجنب TDZ error
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (title) document.title = `${title} — نوار سينما`;
+    return () => { document.title = 'نوار سينما'; };
+  }, [title]);
   const year = (data.release_date || data.first_air_date ||'').slice(0, 4);
   const runtime = data.runtime || (data.episode_run_time && data.episode_run_time[0]) || 0;
   const genres = data.genres ? data.genres.map((g) => g.name) : [];
