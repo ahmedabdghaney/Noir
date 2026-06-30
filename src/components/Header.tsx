@@ -88,8 +88,8 @@ export default function Header({
               <span className="text-gray-500 font-normal text-[10px] mr-1 bg-white/5 px-1.5 py-0.5 rounded">سينما</span>
 </div>
 
-            {/* Desktop Navigation Links */}
-            <div className="hidden md:flex items-center gap-3 lg:gap-6 shrink-0">
+            {/* Desktop Navigation Links — تظهر من lg فقط (تحتها MobileNav السفلي يكفي) */}
+            <div className="hidden lg:flex items-center gap-3 lg:gap-6 shrink-0">
               <button
                 onClick={goHome}
                 className={`text-xs lg:text-sm font-semibold transition-colors hover:text-white cursor-pointer select-none whitespace-nowrap ${
@@ -129,10 +129,10 @@ export default function Header({
           <div className="flex justify-center px-2">
             <button
               onClick={openSearchOverlay}
-              className="glass flex items-center gap-2 hover:bg-white/10 px-3.5 py-2 rounded-full transition-all text-gray-300 hover:text-white text-xs cursor-pointer group w-full max-w-[180px] lg:max-w-[300px]"
+              className="glass flex items-center gap-2 hover:bg-white/10 px-3.5 py-2 rounded-full transition-all text-gray-300 hover:text-white text-xs cursor-pointer group w-full max-w-[300px]"
             >
               <Search className="w-3.5 h-3.5 text-gray-400 group-hover:text-white transition-colors shrink-0" />
-              <span className="truncate text-[10px] sm:text-xs">ابحث...</span>
+              <span className="truncate text-[10px] sm:text-xs">ابحث عن عروض وأفلام...</span>
             </button>
 </div>
 

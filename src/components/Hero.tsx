@@ -112,12 +112,12 @@ export default function Hero({
                   transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
                   className="relative rounded-[28px] overflow-hidden border border-white/12 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)] ring-1 ring-white/10"
                 >
-                  <div className="relative aspect-[16/10] sm:aspect-[16/7] lg:aspect-[2.15/1]">
+                  <div className="relative aspect-[16/11] sm:aspect-[16/7] lg:aspect-[2.15/1]">
                     <img
                       src={wideImg(item)}
                       alt={item.title}
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover object-top"
                     />
 
                     {/* Gradients (darken right for RTL readability) */}
