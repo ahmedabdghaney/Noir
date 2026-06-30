@@ -283,6 +283,21 @@ export async function discoverTitles(type: 'movie' | 'tv', options: DiscoveryOpt
   };
 }
 
+// يحسب درجة تطابق بين نص البحث وعنوان النتيجة — كل ما زاد الرقم، زاد التطابق
+function relevanceScore(query: string, title: string): number {
+  const q = query.trim().toLowerCase();
+  const t = (title || '').trim().toLowerCase();
+  if (!q || !t) return 0;
+
+  if (t === q) return 100;                 // تطابق تام
+  if (t.startsWith(q)) return 80;           // العنوان يبدأ بنص البحث بالضبط
+  // كل كلمة بالعنوان تبدأ بكلمة من كلمات البحث (يلتقط "Frankenstein" من "franken")
+  const titleWords = t.split(/\s+/);
+  if (titleWords.some(w => w.startsWith(q))) return 60;
+  if (t.includes(q)) return 40;             // تطابق جزئي بأي موقع
+  return 0;                                  // ما في تطابق بالعنوان — رجّح حسب الشهرة فقط
+}
+
 // Multi search query for quick predictions overlay
 export async function searchMulti(query: string): Promise<MovieOrShow[]> {
   const res = await tmdbFetch('/search/multi', {
@@ -291,8 +306,21 @@ export async function searchMulti(query: string): Promise<MovieOrShow[]> {
     language: 'en-US',
   });
 
-  return (res.results || [])
+  const items = (res.results || [])
     .filter((x: any) => x.media_type === 'movie' || x.media_type === 'tv')
-    .map((m: any) => normalizeItem(m))
-    .filter((item: MovieOrShow) => item.poster && isYearAllowed(item));
+    .map((m: any) => ({ raw: m, item: normalizeItem(m) }))
+    .filter(({ item }: any) => item.poster && isYearAllowed(item));
+
+  // رجّح: تطابق العنوان أولاً (الأهم) — نقارن بعنوان العرض وبعنوان TMDB الإنجليزي
+  // (original_title ممكن يكون بلغة غير اللي يبحث بيها المستخدم)، وبعدين الشعبية كفاصل
+  items.sort((a: any, b: any) => {
+    const altA = a.raw.title || a.raw.name || '';
+    const altB = b.raw.title || b.raw.name || '';
+    const scoreA = Math.max(relevanceScore(query, a.item.title), relevanceScore(query, altA));
+    const scoreB = Math.max(relevanceScore(query, b.item.title), relevanceScore(query, altB));
+    if (scoreA !== scoreB) return scoreB - scoreA;
+    return (b.raw.popularity || 0) - (a.raw.popularity || 0);
+  });
+
+  return items.map(({ item }: any) => item);
 }
