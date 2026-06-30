@@ -287,14 +287,29 @@ export async function discoverTitles(type: 'movie' | 'tv', options: DiscoveryOpt
   };
 }
 
-// يجيب شعار شركة إنتاج (company) أو شبكة بث (network) — TMDB يرجّع logo_path
-// مباشرة بـ endpoint التفاصيل، بدون حاجة لـ /images المنفصل.
+// يجيب شعار شركة إنتاج (company) أو شبكة بث (network) — نستخدم endpoint الصور
+// المخصص (/images) لأنه أوثق من logo_path المباشر (بعض الشبكات الحديثة زي Apple TV+
+// ناقصة logo_path بـ endpoint التفاصيل العادي بس موجودة بقائمة /images).
 export async function fetchStudioLogo(opts: { companyId?: number; networkId?: number }): Promise<string | null> {
   try {
-    const path = opts.companyId ? `/company/${opts.companyId}` : opts.networkId ? `/network/${opts.networkId}` : null;
-    if (!path) return null;
-    const res = await tmdbFetch(path, {});
-    return res?.logo_path ? `${IMG_BASE}/w500${res.logo_path}` : null;
+    const base = opts.companyId ? `/company/${opts.companyId}` : opts.networkId ? `/network/${opts.networkId}` : null;
+    if (!base) return null;
+
+    const res = await tmdbFetch(`${base}/images`, {});
+    const logos: any[] = res?.logos || [];
+    if (logos.length > 0) {
+      // فضّل PNG على SVG (أسهل للعرض المباشر)، وفضّل بدون لغة (شعار عالمي) أو إنجليزي
+      const byFormat = logos.filter((l: any) => l.file_type === 'png');
+      const pool = byFormat.length > 0 ? byFormat : logos;
+      const noLang = pool.find((l: any) => !l.iso_639_1);
+      const en = pool.find((l: any) => l.iso_639_1 === 'en');
+      const chosen = noLang || en || pool[0];
+      if (chosen?.file_path) return `${IMG_BASE}/w500${chosen.file_path}`;
+    }
+
+    // احتياطي: logo_path المباشر من endpoint التفاصيل العادي
+    const detail = await tmdbFetch(base, {});
+    return detail?.logo_path ? `${IMG_BASE}/w500${detail.logo_path}` : null;
   } catch {
     return null;
   }
