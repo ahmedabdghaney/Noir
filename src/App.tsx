@@ -23,6 +23,7 @@ import {
 
 // Component Imports
 import Header from './components/Header';
+import Sidebar from './components/Sidebar';
 import Hero from './components/Hero';
 import MovieRow from './components/MovieRow';
 import CategoryRow from './components/CategoryRow';
@@ -350,43 +351,6 @@ export default function App() {
   const [shareUrl, setShareUrl] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimer = useRef<NodeJS.Timeout | null>(null);
-
-  // PWA Install Prompt — يظهر زر "أضف للشاشة الرئيسية" على iOS وAndroid
-  const [pwaPrompt, setPwaPrompt] = useState<any>(null);
-  const [showPwaBanner, setShowPwaBanner] = useState(false);
-  const [isIosPwa] = useState(() => {
-    const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent);
-    const isStandalone = (window.navigator as any).standalone === true;
-    return isIos && !isStandalone;
-  });
-
-  useEffect(() => {
-    // Android/Chrome: يحفظ حدث beforeinstallprompt لاستخدامه لاحقاً
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setPwaPrompt(e);
-      if (!localStorage.getItem('noir_pwa_dismissed')) setShowPwaBanner(true);
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    // iOS: يظهر البانر مباشرة (ما عنده beforeinstallprompt)
-    if (isIosPwa && !localStorage.getItem('noir_pwa_dismissed')) {
-      setTimeout(() => setShowPwaBanner(true), 3000);
-    }
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, [isIosPwa]);
-
-  const handlePwaInstall = async () => {
-    if (pwaPrompt) {
-      pwaPrompt.prompt();
-      const { outcome } = await pwaPrompt.userChoice;
-      if (outcome === 'accepted') { setShowPwaBanner(false); localStorage.setItem('noir_pwa_dismissed', '1'); }
-    }
-  };
-
-  const dismissPwaBanner = () => {
-    setShowPwaBanner(false);
-    localStorage.setItem('noir_pwa_dismissed', '1');
-  };
 
   // Quick helper to show success notifications
   const showToast = (msg: string) => {
@@ -1096,7 +1060,7 @@ export default function App() {
                   else if (authView === 'reset') handleResetPassword();
                 }}
                 disabled={isAuthLoading}
-                className="w-full flex items-center justify-center gap-2 bg-[#dc2626] hover:bg-red-500 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer text-sm shadow-xl shadow-red-700/20 mt-2"
+                className="w-full flex items-center justify-center gap-2 bg-[#dc2626] hover:bg-red-500 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl transition-all cursor-pointer text-sm shadow-xl shadow-red-700/20 mt-2"
               >
                 {isAuthLoading && authMethod === 'email' ? (
                   <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -1157,7 +1121,7 @@ export default function App() {
                 <button
                   onClick={() => handleLogin('google')}
                   disabled={isAuthLoading}
-                  className="w-full flex items-center justify-center gap-2.5 bg-white hover:bg-[#eaeaea] disabled:opacity-50 text-gray-900 font-extrabold py-3.5 px-4 rounded-xl cursor-pointer hover:scale-[1.01] transition-all text-xs shadow-md"
+                  className="w-full flex items-center justify-center gap-2.5 bg-white hover:bg-[#eaeaea] disabled:opacity-50 text-gray-900 font-extrabold py-3.5 px-4 rounded-xl cursor-pointer transition-all text-xs shadow-md"
                 >
                   {isAuthLoading && authMethod === 'google' ? (
                     <div className="w-3.5 h-3.5 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" />
@@ -1215,23 +1179,40 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col font-sans relative pb-20 md:pb-0 tracking-normal antialiased">
+    <div className="min-h-screen bg-[#111113] text-white flex flex-row font-sans relative tracking-normal antialiased">
       
-      {/* High-Contrast Frosted Blur Top Header */}
-      <Header
+      {/* Desktop Sidebar — Apple TV style */}
+      <Sidebar
         activeView={activeView}
         searchMode={searchMode}
         setSearchMode={handleSetSearchMode}
         goHome={navigateToHome}
         openSearchOverlay={() => setIsSearchOverlayOpen(true)}
-        user={user}
-        onLogout={handleLogout}
-        onOpenProfile={() => setIsProfileModalOpen(true)}
         onViewWatchlist={handleViewWatchlist}
+        user={user}
+        onOpenProfile={() => setIsProfileModalOpen(true)}
       />
 
+      {/* Mobile Top Header — only on small screens */}
+      <div className="md:hidden">
+        <Header
+          activeView={activeView}
+          searchMode={searchMode}
+          setSearchMode={handleSetSearchMode}
+          goHome={navigateToHome}
+          openSearchOverlay={() => setIsSearchOverlayOpen(true)}
+          user={user}
+          onLogout={handleLogout}
+          onOpenProfile={() => setIsProfileModalOpen(true)}
+          onViewWatchlist={handleViewWatchlist}
+        />
+      </div>
+
+      {/* Main content — shifts right on desktop to account for sidebar */}
+      <div className="flex-1 flex flex-col md:mr-52 min-w-0">
+
       {/* Main Orchestration Views Switcher */}
-      <main className="flex-grow pt-14 selection:bg-red-500/30">
+      <main className="flex-grow md:pt-0 pt-14 selection:bg-red-500/30">
         {activeView ==='home' && (
           <PullToRefresh onRefresh={refreshHome}>
           <div className="animate-fade-in">
@@ -1433,7 +1414,7 @@ export default function App() {
 </p>
                   <button
                     onClick={navigateToHome}
-                    className="mt-6 bg-white hover:bg-white/90 text-black text-xs font-bold px-6 py-3 rounded-full cursor-pointer transition-all hover:scale-105"
+                    className="mt-6 bg-white hover:bg-white/90 text-black text-xs font-bold px-6 py-3 rounded-full cursor-pointer transition-all"
                   >
                     الذهاب للرئيسية وتصفّح العروض 
 </button>
@@ -1891,34 +1872,7 @@ export default function App() {
       {/* Global Minimalist Footer and disclaimer notes */}
       
 
-      {/* PWA Install Banner */}
-      {showPwaBanner && (
-        <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-[300] w-[calc(100%-2rem)] max-w-sm">
-          <div className="glass-strong rounded-2xl p-4 flex items-center gap-3 shadow-2xl border border-white/10">
-            <div className="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center shrink-0">
-              <span className="text-white font-black text-sm">ن</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-bold">ثبّت نوار سينما</p>
-              {isIosPwa ? (
-                <p className="text-stone-400 text-xs mt-0.5">اضغط <span className="text-white">□↑</span> ثم "أضف إلى الشاشة الرئيسية" للحصول على fullscreen حقيقي</p>
-              ) : (
-                <p className="text-stone-400 text-xs mt-0.5">أضفه للشاشة الرئيسية لتجربة أفضل وfullscreen حقيقي</p>
-              )}
-            </div>
-            <div className="flex flex-col gap-1.5 shrink-0">
-              {!isIosPwa && (
-                <button onClick={handlePwaInstall} className="bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full transition-colors cursor-pointer">
-                  تثبيت
-                </button>
-              )}
-              <button onClick={dismissPwaBanner} className="text-stone-500 hover:text-stone-300 text-xs text-center transition-colors cursor-pointer">
-                لاحقاً
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>{/* end main content wrapper */}
 
       {/* iOS/Android style bottom navigation bar on touchscreens */}
       <MobileNav
@@ -1935,6 +1889,10 @@ export default function App() {
         isOpen={isSearchOverlayOpen}
         onClose={() => setIsSearchOverlayOpen(false)}
         onSelectTitle={handleQuickSelectTitle}
+        onBrowseCategory={(key) => {
+          setIsSearchOverlayOpen(false);
+          window.location.hash = `#category/${key}`;
+        }}
       />
 
       {/* Browser URL Share Dialog */}
