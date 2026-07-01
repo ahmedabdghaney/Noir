@@ -73,6 +73,8 @@ export default function VideoPlayer({
   const videoRef      = useRef<HTMLVideoElement>(null);
   const progressRef   = useRef<HTMLDivElement>(null);
   const ambientRef    = useRef<HTMLCanvasElement>(null);
+  const previewVideoRef = useRef<HTMLVideoElement>(null);
+  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const hideTimer     = useRef<ReturnType<typeof setTimeout>>();
   const dblClickTimer = useRef<ReturnType<typeof setTimeout>>();
   const seekFlashTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -150,6 +152,26 @@ export default function VideoPlayer({
       });
     } catch (_) { /* MediaMetadata غير مدعوم */ }
   }, [title, posterPath, type, season, episode, playMode]);
+
+  /* ── preview thumbnail — الفيديو المخفي يقفز لوقت الـ hover ويرسمه على canvas ── */
+  useEffect(() => {
+    if (hoverPct === null || duration <= 0 || !isNative) return;
+    const pv = previewVideoRef.current;
+    if (!pv) return;
+    const t = (hoverPct / 100) * duration;
+    const id2 = setTimeout(() => {
+      try { if (Math.abs(pv.currentTime - t) > 0.3) pv.currentTime = t; } catch (_) {}
+    }, 40);
+    return () => clearTimeout(id2);
+  }, [hoverPct, duration, isNative]);
+
+  const drawPreview = () => {
+    const pv = previewVideoRef.current, c = previewCanvasRef.current;
+    if (!pv || !c) return;
+    const ctx = c.getContext('2d');
+    if (!ctx) return;
+    try { ctx.drawImage(pv, 0, 0, c.width, c.height); } catch (_) {}
+  };
 
   /* ── ambient glow — يستخرج اللون السائد من الفيديو ويطبّقه كتوهج ناعم متدرّج ── */
   const [ambientColor, setAmbientColor] = useState('rgba(0,0,0,0)');
@@ -649,6 +671,12 @@ export default function VideoPlayer({
           />
         </>
       )}
+      {/* فيديو preview مخفي — للـ thumbnails عند hover على الشريط */}
+      {!isFullscreen && isNative && customMp4 && (
+        <video ref={previewVideoRef} src={customMp4} muted playsInline preload="metadata"
+          className="hidden" crossOrigin="anonymous"
+          onSeeked={drawPreview} aria-hidden="true" />
+      )}
       <div
         className={`group/player relative z-10 bg-black overflow-hidden ${isFullscreen ? 'w-full h-full rounded-none border-0' : 'rounded-2xl border border-white/10'}`}
         dir="ltr"
@@ -823,11 +851,16 @@ export default function VideoPlayer({
                   onMouseLeave={() => !isScrubbing && setHoverPct(null)}
                   onMouseDown={startScrub}
                 >
-                  {/* hover time tooltip */}
+                  {/* hover preview — صورة مصغّرة + وقت تحتها (زي يوتيوب) */}
                   {hoverPct !== null && duration > 0 && (
-                    <div className="absolute -top-7 -translate-x-1/2 px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-md border border-white/10 text-[11px] text-white tabular-nums pointer-events-none whitespace-nowrap"
-                      style={{ left: `${hoverPct}%` }}>
-                      {formatTime((hoverPct / 100) * duration)}
+                    <div className="absolute bottom-full mb-3 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none"
+                      style={{ left: `${Math.min(Math.max(hoverPct, 8), 92)}%` }}>
+                      <div className="rounded-lg overflow-hidden border-2 border-white/80 shadow-2xl bg-black w-40 h-[90px]">
+                        <canvas ref={previewCanvasRef} width={160} height={90} className="w-full h-full object-cover" />
+                      </div>
+                      <span className="px-2 py-0.5 rounded bg-black/80 text-[12px] text-white tabular-nums whitespace-nowrap">
+                        {formatTime((hoverPct / 100) * duration)}
+                      </span>
                     </div>
                   )}
                   <div className={`relative w-full bg-white/25 rounded-full transition-all duration-150 ${isScrubbing ? 'h-[6px]' : 'h-[4px] group-hover/bar:h-[6px]'}`}>
