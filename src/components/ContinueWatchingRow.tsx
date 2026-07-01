@@ -58,7 +58,7 @@ export default function ContinueWatchingRow({ title, items, onItemClick, onRemov
         {showRightArrow && (
           <button
             onClick={() => handleScroll('right')}
-            className="hidden md:flex absolute right-12 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/row:opacity-100 transition-all hover:scale-105 cursor-pointer"
+            className="hidden md:flex absolute right-12 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/row:opacity-100 transition-all cursor-pointer"
             aria-label="السابق"
           >
             <ChevronRight className="w-5 h-5" />
@@ -67,7 +67,7 @@ export default function ContinueWatchingRow({ title, items, onItemClick, onRemov
         {showLeftArrow && (
           <button
             onClick={() => handleScroll('left')}
-            className="hidden md:flex absolute left-12 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/row:opacity-100 transition-all hover:scale-105 cursor-pointer"
+            className="hidden md:flex absolute left-12 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/row:opacity-100 transition-all cursor-pointer"
             aria-label="التالي"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -98,7 +98,7 @@ export default function ContinueWatchingRow({ title, items, onItemClick, onRemov
                       alt={item.title}
                       loading="lazy"
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover/cw:scale-105"
+                      className="w-full h-full object-cover transition-transform duration-500"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-stone-700">

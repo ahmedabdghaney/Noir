@@ -683,7 +683,7 @@ export default function DetailView({
                 <>
                   <button
                     onClick={() => handlePlayClick('movie')}
-                    className="flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-white/90 text-black font-bold px-4 sm:px-8 py-2 md:py-3 rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shadow-lg text-xs sm:text-sm"
+                    className="flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-white/90 text-black font-bold px-4 sm:px-8 py-2 md:py-3 rounded-full transition-all cursor-pointer shadow-lg text-xs sm:text-sm"
                   >
                     <Play className="w-3.5 h-3.5 fill-black text-black" />
                     <span>إكمال المشاهدة ({savedProgressPercent}%)</span>
@@ -691,7 +691,7 @@ export default function DetailView({
 
                   <button
                     onClick={handleStartFromBeginning}
-                    className="flex items-center gap-1.5 sm:gap-2 glass hover:bg-white/15 text-white font-bold px-4 sm:px-6 py-2 md:py-3 rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer text-xs sm:text-sm"
+                    className="flex items-center gap-1.5 sm:gap-2 glass hover:bg-white/15 text-white font-bold px-4 sm:px-6 py-2 md:py-3 rounded-full transition-all cursor-pointer text-xs sm:text-sm"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>البدء من البداية</span>
@@ -700,7 +700,7 @@ export default function DetailView({
               ) : (
                 <button
                   onClick={() => handlePlayClick('movie')}
-                  className="flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-white/90 text-black font-bold px-4 sm:px-8 py-2 md:py-3 rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shadow-lg text-xs sm:text-sm"
+                  className="flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-white/90 text-black font-bold px-4 sm:px-8 py-2 md:py-3 rounded-full transition-all cursor-pointer shadow-lg text-xs sm:text-sm"
                 >
                   <Play className="w-3.5 h-3.5 fill-black text-black" />
                   <span>المشاهدة الآن</span>
@@ -723,7 +723,7 @@ export default function DetailView({
               <button
                 onClick={handleToggleSave}
                 title={isSaved ? 'محفوظ في قائمتي' : 'حفظ في قائمتي'}
-                className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 hover:scale-105 active:scale-95 ${
+                className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 ${
                   isSaved 
                     ?'bg-white text-black' 
                     :'glass text-white hover:bg-white/15'
@@ -986,7 +986,7 @@ export default function DetailView({
                     {epShowRight && (
                       <button
                         onClick={() => scrollEpisodes('right')}
-                        className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/eprow:opacity-100 transition-all hover:scale-105 cursor-pointer -mr-2"
+                        className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/eprow:opacity-100 transition-all cursor-pointer -mr-2"
                         aria-label="السابق"
                       >
                         <ChevronRight className="w-5 h-5" />
@@ -995,7 +995,7 @@ export default function DetailView({
                     {epShowLeft && (
                       <button
                         onClick={() => scrollEpisodes('left')}
-                        className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/eprow:opacity-100 transition-all hover:scale-105 cursor-pointer -ml-2"
+                        className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/eprow:opacity-100 transition-all cursor-pointer -ml-2"
                         aria-label="التالي"
                       >
                         <ChevronLeft className="w-5 h-5" />
@@ -1033,7 +1033,7 @@ export default function DetailView({
                                 alt={ep.name}
                                 loading="lazy"
                                 referrerPolicy="no-referrer"
-                                className="w-full h-full object-cover transition-transform duration-500 group-hover/ep:scale-105"
+                                className="w-full h-full object-cover transition-transform duration-500"
                               />
                             ) : (getBackdropUrl(data.backdrop_path) || getPosterUrl(data.poster_path)) ? (
                               <img
@@ -1041,7 +1041,7 @@ export default function DetailView({
                                 alt={ep.name}
                                 loading="lazy"
                                 referrerPolicy="no-referrer"
-                                className="w-full h-full object-cover opacity-50 transition-transform duration-500 group-hover/ep:scale-105"
+                                className="w-full h-full object-cover opacity-50 transition-transform duration-500"
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-stone-700">
@@ -1103,7 +1103,7 @@ export default function DetailView({
                       key={c.id}
                       className="flex-none w-[72px] sm:w-[110px] flex flex-col items-center text-center group/cast"
                     >
-                      <div className="w-[64px] h-[64px] sm:w-[100px] sm:h-[100px] rounded-full overflow-hidden bg-stone-800 select-none border border-white/8 shadow-[0_8px_20px_-8px_rgba(0,0,0,0.6)] transition-transform duration-300 group-hover/cast:scale-105">
+                      <div className="w-[64px] h-[64px] sm:w-[100px] sm:h-[100px] rounded-full overflow-hidden bg-stone-800 select-none border border-white/8 shadow-[0_8px_20px_-8px_rgba(0,0,0,0.6)] transition-transform duration-300">
                         {c.profile_path ? (
                           <img
                             src={getProfileUrl(c.profile_path) || undefined}
@@ -1180,7 +1180,7 @@ export default function DetailView({
         <div className="py-12 text-center">
           <button
             onClick={onBackClick}
-            className="inline-flex items-center gap-2 bg-white hover:bg-white/90 text-black text-sm font-bold px-6 py-3 rounded-full transition-all hover:scale-[1.03] cursor-pointer"
+            className="inline-flex items-center gap-2 bg-white hover:bg-white/90 text-black text-sm font-bold px-6 py-3 rounded-full transition-all cursor-pointer"
           >
             <ArrowRight className="w-4 h-4" />
             <span>العودة للرئيسية</span>

@@ -64,7 +64,7 @@ function GridCard({ item, onClick }: { item: MovieOrShow; onClick: () => void })
     >
       <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
         {item.poster ? (
-          <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105" />
+          <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover transition-transform duration-500" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-stone-600 text-xs">بدون صورة</div>
         )}
@@ -183,7 +183,7 @@ export default function CategoryPage({ category, onItemClick, onBack, showAllMod
               <h2 className="text-xl sm:text-2xl font-bold text-white">الكل</h2>
               <button
                 onClick={() => onOpenAll && onOpenAll(category.key)}
-                className="flex items-center gap-2 glass hover:bg-white/15 text-white text-sm font-bold px-5 py-2.5 rounded-full transition-all hover:scale-[1.03] cursor-pointer"
+                className="flex items-center gap-2 glass hover:bg-white/15 text-white text-sm font-bold px-5 py-2.5 rounded-full transition-all cursor-pointer"
               >
                 <span>عرض كل أفلام ومسلسلات {category.title}</span>
                 <ArrowRight className="w-4 h-4 rotate-180" />

@@ -73,7 +73,7 @@ export default function CategoryRow({ title = 'تصفّح حسب التصنيف'
         {showRightArrow && (
           <button
             onClick={() => handleScroll('right')}
-            className="absolute right-8 top-[42%] z-40 w-10 h-10 rounded-full bg-black/80 hover:bg-stone-900 border border-white/5 text-white items-center justify-center cursor-pointer transition-all shadow-xl hover:scale-110 hidden md:flex"
+            className="absolute right-8 top-[42%] z-40 w-10 h-10 rounded-full bg-black/80 hover:bg-stone-900 border border-white/5 text-white items-center justify-center cursor-pointer transition-all shadow-xl hidden md:flex"
             aria-label="السابق"
           >
             <ChevronRight className="w-5 h-5" />
@@ -82,7 +82,7 @@ export default function CategoryRow({ title = 'تصفّح حسب التصنيف'
         {showLeftArrow && (
           <button
             onClick={() => handleScroll('left')}
-            className="absolute left-8 top-[42%] z-40 w-10 h-10 rounded-full bg-black/80 hover:bg-stone-900 border border-white/5 text-white items-center justify-center cursor-pointer transition-all shadow-xl hover:scale-110 hidden md:flex"
+            className="absolute left-8 top-[42%] z-40 w-10 h-10 rounded-full bg-black/80 hover:bg-stone-900 border border-white/5 text-white items-center justify-center cursor-pointer transition-all shadow-xl hidden md:flex"
             aria-label="التالي"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -107,7 +107,7 @@ export default function CategoryRow({ title = 'تصفّح حسب التصنيف'
                     src={images[cat.key]}
                     alt={cat.title}
                     referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover/cat:scale-105"
+                    className="w-full h-full object-cover transition-transform duration-500"
                   />
                 )}
                 {/* Color overlay (genre identity) */}

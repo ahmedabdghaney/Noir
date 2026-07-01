@@ -311,6 +311,32 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: Search
                   ))}
                 </div>
               )}
+
+              {/* ═══════════════════════════════════════
+                  قسم تصفح — Browse بألوان Apple TV
+              ═══════════════════════════════════════ */}
+              <div className="border-t border-white/5 pt-4 pb-2">
+                <div className="text-[10px] font-bold text-gray-500 px-5 py-1.5 text-right select-none uppercase tracking-wider mb-2">
+                  تصفح
+                </div>
+                <div className="grid grid-cols-3 gap-2 px-4 pb-2">
+                  {browseCategories.map((cat) => (
+                    <button
+                      key={cat.key}
+                      onClick={() => {
+                        onBrowseCategory?.(cat.key);
+                        onClose();
+                      }}
+                      className={`relative bg-gradient-to-br ${cat.color} rounded-xl h-14 flex items-end p-2.5 text-right cursor-pointer overflow-hidden`}
+                    >
+                      <span className="text-white font-bold text-xs leading-tight relative z-10 drop-shadow-md">
+                        {cat.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
             </div>
           )}
         </div>

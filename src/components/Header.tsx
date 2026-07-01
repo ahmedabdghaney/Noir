@@ -142,7 +142,7 @@ export default function Header({
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                  className="w-8 h-8 rounded-full border border-white/10 hover:border-white/20 hover:scale-105 active:scale-95 transition-all overflow-hidden flex items-center justify-center bg-stone-900 cursor-pointer select-none"
+                  className="w-8 h-8 rounded-full border border-white/10 hover:border-white/20 transition-all overflow-hidden flex items-center justify-center bg-stone-900 cursor-pointer select-none"
                   title="خيارات الحساب"
                 >
                   {user.photoURL ? (

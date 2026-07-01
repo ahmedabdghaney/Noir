@@ -69,7 +69,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
         </div>
         <div className="flex gap-4 overflow-hidden">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex-none w-[160px] sm:w-[220px] aspect-[16/9] bg-stone-950 border border-white/5 rounded-2xl p-2 flex flex-col justify-end gap-3 animate-pulse">
+            <div key={i} className="flex-none w-[120px] sm:w-[160px] aspect-[2/3] bg-stone-950 border border-white/8 rounded-xl flex flex-col justify-end gap-3 animate-pulse">
               <div className="w-full h-full bg-stone-900 rounded-xl shimmer-bg" />
               <div className="w-24 h-4 bg-stone-900 rounded" />
               <div className="w-12 h-3 bg-stone-900 rounded" />
@@ -107,16 +107,16 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
       <div className={`relative ${flush ? "" : "px-6 md:px-12"}`}>
         {/* Edge fade gradients (only when scrollable in that direction) */}
         {showRightArrow && (
-          <div className="hidden md:block absolute right-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-l from-[#0b0b0d] to-transparent" />
+          <div className="hidden md:block absolute right-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-l from-[#111113] to-transparent" />
         )}
         {showLeftArrow && (
-          <div className="hidden md:block absolute left-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-r from-[#0b0b0d] to-transparent" />
+          <div className="hidden md:block absolute left-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-r from-[#111113] to-transparent" />
         )}
          {/* Navigation Arrows for desktop hover */}
         {showRightArrow && (
           <button
             onClick={() => handleScroll('right')}
-            className="absolute right-8 top-[41%] z-45 w-10 h-10 rounded-full bg-black/80 hover:bg-stone-900 border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-all shadow-xl hover:scale-110 hidden md:flex"
+            className="absolute right-8 top-[41%] z-45 w-10 h-10 rounded-full bg-black/80 hover:bg-stone-900 border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-all shadow-xl hidden md:flex"
             aria-label="قناة سابقة"
           >
             <ChevronRight className="w-5 h-5" />
@@ -126,7 +126,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
         {showLeftArrow && (
           <button
             onClick={() => handleScroll('left')}
-            className="absolute left-8 top-[41%] z-45 w-10 h-10 rounded-full bg-black/80 hover:bg-stone-900 border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-all shadow-xl hover:scale-110 hidden md:flex"
+            className="absolute left-8 top-[41%] z-45 w-10 h-10 rounded-full bg-black/80 hover:bg-stone-900 border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-all shadow-xl hidden md:flex"
             aria-label="قناة لاحقة"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -138,7 +138,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
           ref={rowRef}
           onScroll={checkScroll}
           dir="rtl"
-          className="flex flex-row gap-4 md:gap-6 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none"
+          className="flex flex-row gap-3 md:gap-4 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none"
         >
           {items.map((item, idx) => {
             const hasScore = item.rating > 0;
@@ -151,10 +151,10 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
                 key={`${item.type}-${item.id}`}
                 onClick={() => onItemClick(item)}
                 style={{ animationDelay: `${idx * 45}ms` }}
-                className="group/card card-transition flex-none w-[125px] sm:w-[185px] md:w-[225px] lg:w-[255px] cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
+                className="group/card card-transition flex-none w-[110px] sm:w-[150px] md:w-[175px] lg:w-[195px] cursor-pointer rounded-xl p-1.5 pb-3 select-none"
               >
                 {/* Poster Artwork container */}
-                <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+                <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-stone-600/40 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.5)]">
                   {onRemove && (
                     <button
                       onClick={(e) => {
