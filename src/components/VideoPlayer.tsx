@@ -513,7 +513,6 @@ export default function VideoPlayer({
 
     // iPhone ما يدعم requestFullscreen على div — نستعمل CSS fullscreen (fixed inset-0)
     // عشان يبقى المشغّل المخصّص ظاهر بدل مشغّل iPhone الافتراضي (native)
-    const isIPhone = /iPhone|iPod/.test(navigator.userAgent);
     const enter = () => {
       setIsFullscreen(true);
       try { (screen.orientation as any)?.lock?.('landscape').catch(() => {}); } catch (_) {}
@@ -609,6 +608,9 @@ export default function VideoPlayer({
 
   const VolumeIcon = isMuted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
 
+  // كشف iPhone مرة وحدة — يُستخدم بالـ toggleFullscreen وبالـ render
+  const isIPhone = /iPhone|iPod/.test(navigator.userAgent);
+
   /* ══════════════════════════════════════ render ══ */
 
   // نخفي native cue بس لما يكون الـ overlay المخصّص شغال (المشغّل العادي)
@@ -626,7 +628,28 @@ export default function VideoPlayer({
   `;
 
   const playerJsx = (
-    <div ref={containerRef} className={`${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-[100dvh] max-w-none m-0 rounded-none bg-black flex items-center justify-center' : 'w-full mt-16 sm:mt-20 mb-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}>
+    <div
+      ref={containerRef}
+      className={`${isFullscreen ? 'fixed inset-0 z-[9999] bg-black flex items-center justify-center' : 'w-full mt-16 sm:mt-20 mb-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}
+      style={isFullscreen && isIPhone ? {
+        // CSS rotation trick — يقلب الشاشة أفقياً إجبارياً حتى لو الجهاز بالطول
+        width: '100vh',
+        height: '100vw',
+        maxWidth: 'none',
+        margin: 0,
+        transform: 'rotate(90deg)',
+        transformOrigin: 'center center',
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        translate: '-50% -50%',
+      } : isFullscreen ? {
+        width: '100vw',
+        height: '100dvh',
+        maxWidth: 'none',
+        margin: 0,
+      } : {}}
+    >
       <style>{sliderStyle}</style>
       <style>{hideCueStyle}</style>
       <div
