@@ -151,20 +151,30 @@ export default function VideoPlayer({
     } catch (_) { /* MediaMetadata غير مدعوم */ }
   }, [title, posterPath, type, season, episode, playMode]);
 
-  /* ── ambient glow — يرسم إطار الفيديو على canvas كل ثانية (توهج بألوان الفيلم) ── */
+  /* ── ambient glow — يستخرج اللون السائد من الفيديو ويطبّقه كتوهج ناعم متدرّج ── */
+  const [ambientColor, setAmbientColor] = useState('rgba(0,0,0,0)');
   useEffect(() => {
     if (isFullscreen || !isNative) return;
-    const draw = () => {
+    let raf = 0;
+    const sample = () => {
       const v = videoRef.current, c = ambientRef.current;
       if (!v || !c || v.paused || v.readyState < 2) return;
-      const ctx = c.getContext('2d');
+      const ctx = c.getContext('2d', { willReadFrequently: true });
       if (!ctx) return;
-      if (c.width !== 32) { c.width = 32; c.height = 18; }
-      try { ctx.drawImage(v, 0, 0, 32, 18); } catch (_) {}
+      c.width = 16; c.height = 9;
+      try {
+        ctx.drawImage(v, 0, 0, 16, 9);
+        const data = ctx.getImageData(0, 0, 16, 9).data;
+        let r = 0, g = 0, b = 0, n = 0;
+        for (let i = 0; i < data.length; i += 4) { r += data[i]; g += data[i+1]; b += data[i+2]; n++; }
+        r = Math.round(r/n); g = Math.round(g/n); b = Math.round(b/n);
+        // نرفع التشبّع شوي عشان التوهج يبان (بدون مبالغة)
+        setAmbientColor(`rgb(${r}, ${g}, ${b})`);
+      } catch (_) {}
     };
-    const timer = setInterval(draw, 1000);
-    draw();
-    return () => clearInterval(timer);
+    const timer = setInterval(() => { raf = requestAnimationFrame(sample); }, 2500);
+    sample();
+    return () => { clearInterval(timer); cancelAnimationFrame(raf); };
   }, [isFullscreen, isNative, id, episode]);
 
   /* ── progress tracker ── */
@@ -628,13 +638,16 @@ export default function VideoPlayer({
     <div ref={containerRef} className={`${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-[100dvh] max-w-none m-0 rounded-none bg-black flex items-center justify-center' : 'relative w-full mt-16 sm:mt-20 mb-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}>
       <style>{sliderStyle}</style>
       <style>{hideCueStyle}</style>
-      {/* ambient glow — canvas مخفي يرسم إطار الفيديو، يتوسّع بـ blur خلف المشغّل (زي يوتيوب) */}
+      {/* ambient glow — توهج ناعم متدرّج بلون الفيلم السائد (بطيء ومتلاشي زي يوتيوب) */}
       {!isFullscreen && isNative && (
-        <canvas
-          ref={ambientRef}
-          className="pointer-events-none absolute -inset-8 w-[calc(100%+4rem)] h-[calc(100%+4rem)] -z-10 blur-3xl opacity-60 saturate-150 transition-opacity duration-1000"
-          aria-hidden="true"
-        />
+        <>
+          <canvas ref={ambientRef} className="hidden" aria-hidden="true" />
+          <div
+            className="pointer-events-none absolute inset-0 -z-10 rounded-full blur-[90px] opacity-50 transition-[background] duration-[3000ms] ease-linear"
+            style={{ background: ambientColor, transform: 'scale(1.15)' }}
+            aria-hidden="true"
+          />
+        </>
       )}
       <div
         className={`group/player relative bg-black overflow-hidden ${isFullscreen ? 'w-full h-full rounded-none border-0' : 'rounded-2xl border border-white/10'}`}
