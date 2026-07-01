@@ -6,12 +6,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, X, Star, ChevronLeft, Loader, Trash2, Clock } from 'lucide-react';
 import { MovieOrShow } from '../types';
-import { searchMulti, fetchTrendingWeek } from '../lib/tmdb';
+import { searchMulti, fetchTrendingWeek, discoverTitles } from '../lib/tmdb';
+import { CATEGORIES } from '../lib/categories';
 
 interface SearchOverlayProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectTitle: (type: 'movie' | 'tv', id: number) => void;
+  onBrowseCategory?: (key: string) => void;
 }
 
 // A recently opened title from search, with the time it was opened.
@@ -33,13 +35,39 @@ function timeAgo(ts: number): string {
   return `قبل ${Math.floor(day / 30)} شهر`;
 }
 
-export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: SearchOverlayProps) {
+export default function SearchOverlay({ isOpen, onClose, onSelectTitle, onBrowseCategory }: SearchOverlayProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<MovieOrShow[]>([]);
   const [trending, setTrending] = useState<MovieOrShow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [recentTitles, setRecentTitles] = useState<RecentTitle[]>([]);
+  const [catImages, setCatImages] = useState<Record<string, string>>({});
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // جلب صورة ممثّلة لكل تصنيف (أشهر فلم) — زي CategoryRow
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    (async () => {
+      const entries = await Promise.all(
+        CATEGORIES.map(async (cat) => {
+          try {
+            const res = await discoverTitles('movie', { genreIds: String(cat.primaryGenre), sortBy: 'popularity', page: 1 });
+            const withPoster = res.results.find((r) => r.poster);
+            return [cat.key, withPoster?.poster || ''] as [string, string];
+          } catch {
+            return [cat.key, ''] as [string, string];
+          }
+        })
+      );
+      if (!cancelled) {
+        const map: Record<string, string> = {};
+        entries.forEach(([k, v]) => { if (v) map[k] = v; });
+        setCatImages(map);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isOpen]);
 
   // Focus on entry & load history/trending
   useEffect(() => {
@@ -106,32 +134,25 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: Search
     localStorage.removeItem('noir_recent_titles');
   };
 
-  const browseCategories = [
-    { key: 'action',      label: 'أكشن',          color: 'from-orange-700 to-red-800' },
-    { key: 'comedy',      label: 'كوميديا',       color: 'from-yellow-600 to-amber-700' },
-    { key: 'drama',       label: 'دراما',          color: 'from-blue-700 to-indigo-800' },
-    { key: 'horror',      label: 'رعب',            color: 'from-stone-700 to-stone-900' },
-    { key: 'scifi',       label: 'خيال علمي',     color: 'from-cyan-700 to-blue-800' },
-    { key: 'romance',     label: 'رومانسي',       color: 'from-pink-600 to-rose-700' },
-    { key: 'animation',   label: 'رسوم متحركة',   color: 'from-purple-600 to-violet-700' },
-    { key: 'thriller',    label: 'إثارة',          color: 'from-teal-700 to-emerald-800' },
-    { key: 'family',      label: 'عائلي',          color: 'from-green-600 to-emerald-700' },
-    { key: 'crime',       label: 'جريمة',          color: 'from-red-800 to-rose-900' },
-    { key: 'history',     label: 'تاريخي',        color: 'from-amber-700 to-yellow-800' },
-    { key: 'documentary', label: 'وثائقي',        color: 'from-sky-700 to-blue-800' },
-  ];
-
   if (!isOpen) return null;
 
   return (
     <div
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-      className="fixed inset-0 bg-black/40 backdrop-blur-2xl z-[500] pt-24 md:pt-32 px-4 selection:bg-red-500/30 overflow-y-auto"
+      className="fixed inset-0 bg-[#0a0a0a] z-[500] pt-20 md:pt-24 px-4 sm:px-6 md:px-10 selection:bg-red-500/30 overflow-y-auto"
     >
-      <div className="max-w-2xl mx-auto glass-panel rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)] overflow-hidden animate-pop-in">
-        
-        {/* Input area */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-white/5">
+      {/* زر إغلاق أعلى */}
+      <button
+        onClick={onClose}
+        className="fixed top-5 left-5 z-[510] w-9 h-9 rounded-full bg-white/8 hover:bg-white/15 text-white flex items-center justify-center cursor-pointer transition-all"
+        aria-label="إغلاق"
+      >
+        <X className="w-5 h-5" />
+      </button>
+
+      <div className="max-w-4xl mx-auto">
+
+        {/* Input area — bar بحث كبير */}
+        <div className="flex items-center gap-3 px-5 py-4 bg-stone-900/80 border border-white/8 rounded-2xl mb-8 sticky top-4 z-10 backdrop-blur-xl">
           <Search className="w-5 h-5 text-gray-400 shrink-0" />
           <input
             ref={inputRef}
@@ -139,7 +160,7 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: Search
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="ابحث عن أفلام، مسلسلات، ممثلين..."
-            className="flex-1 bg-transparent border-0 outline-none text-white text-base font-medium placeholder-gray-500 text-right font-sans"
+            className="flex-1 bg-transparent border-0 outline-none text-white text-base md:text-lg font-medium placeholder-gray-500 text-right font-sans"
             autoComplete="off"
           />
           {isLoading ? (
@@ -148,22 +169,49 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: Search
             query && (
               <button
                 onClick={() => setQuery('')}
-                className="hidden md:flex w-5 h-5 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white items-center justify-center cursor-pointer"
+                className="w-5 h-5 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             )
           )}
-          <span
-            onClick={onClose}
-            className="hidden md:inline text-[10px] font-bold text-gray-400 border border-white/10 rounded px-1.5 py-0.5 cursor-pointer hover:bg-white/5 select-none"
-          >
-            ESC
-          </span>
         </div>
 
+        {/* Body */}
+        <div className="pb-20">
+          {/* قسم التصفح بالتصنيفات — يظهر لما ماكو بحث */}
+          {!query.trim() && (
+            <div className="mb-10">
+              <h2 className="font-display text-xl sm:text-2xl font-black text-white mb-5 text-right">تصفّح حسب التصنيف</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4" dir="rtl">
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.key}
+                    onClick={() => onBrowseCategory?.(cat.key)}
+                    className="group relative aspect-[3/4] rounded-2xl overflow-hidden cursor-pointer border border-white/8 hover:border-white/20 transition-all hover:scale-[1.03]"
+                  >
+                    {catImages[cat.key] && (
+                      <img
+                        src={catImages[cat.key]}
+                        alt={cat.title}
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    )}
+                    <div className="absolute inset-0" style={{ background: cat.overlay }} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                    <div className="absolute inset-0 flex items-center justify-center p-3">
+                      <span className="font-display text-lg sm:text-xl font-black text-white text-center drop-shadow-lg leading-tight">{cat.title}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
         {/* Suggestion Lists Body */}
-        <div className="max-h-[60vh] overflow-y-auto py-2">
+        <div className="overflow-y-auto py-2">
           {query.trim() ? (
             results.length > 0 ? (
               <div className="space-y-0.5">
@@ -327,35 +375,10 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: Search
                 </div>
               )}
 
-              {/* ═══════════════════════════════════════
-                  قسم تصفح — Browse بألوان Apple TV
-              ═══════════════════════════════════════ */}
-              <div className="border-t border-white/5 pt-4 pb-2">
-                <div className="text-[10px] font-bold text-gray-500 px-5 py-1.5 text-right select-none uppercase tracking-wider mb-2">
-                  تصفح
-                </div>
-                <div className="grid grid-cols-3 gap-2 px-4 pb-2">
-                  {browseCategories.map((cat) => (
-                    <button
-                      key={cat.key}
-                      onClick={() => {
-                        onBrowseCategory?.(cat.key);
-                        onClose();
-                      }}
-                      className={`relative bg-gradient-to-br ${cat.color} rounded-xl h-14 flex items-end p-2.5 text-right cursor-pointer overflow-hidden`}
-                    >
-                      <span className="text-white font-bold text-xs leading-tight relative z-10 drop-shadow-md">
-                        {cat.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
             </div>
           )}
         </div>
-        
+        </div>
       </div>
     </div>
   );

@@ -68,14 +68,6 @@ export default function Hero({
     getOriginalBackdropUrl((it as any).backdrop_path) ||
     (it.backdrop || it.poster || '').replace('/w1280', '/original').replace('/w500', '/original');
 
-  // RTL carousel — verified by browser test. dir=rtl makes the flex track
-  // lay cards right-to-left (card 0 rightmost). Translate by container % so the
-  // active card centers. shift>0 moves track to bring later cards to center.
-  const CARD_W = 100;      // full-bleed — الكرت يملأ العرض (زي Apple TV)
-  const GAP = 0;           // بدون فراغات جانبية
-  const step = CARD_W + GAP;
-  const trackX = (currentIndex * step + CARD_W / 2) - 50; // container %
-
   const contentContainer = {
     hidden: {},
     show: { transition: { staggerChildren: 0.07, delayChildren: 0.15 } },
@@ -90,26 +82,19 @@ export default function Hero({
 
   return (
     <div className="relative w-full mb-10 sm:mb-14 select-none overflow-hidden">
-      {/* Sliding track */}
+      {/* Full-bleed stack — البطاقة النشطة تظهر بـ fade (بدون انزلاق عبر البقية) */}
       <div className="relative overflow-hidden">
-        <motion.div
-          dir="rtl"
-          className="flex items-stretch"
-          animate={{ x: `${trackX}%` }}
-          transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
-          style={{ gap: `${GAP}%` }}
-        >
+        <div dir="rtl" className="relative">
           {activePool.map((item, i) => {
             const isActive = i === currentIndex;
             return (
               <div
                 key={`${item.type}-${item.id}`}
-                className="flex-none"
-                style={{ width: `${CARD_W}%` }}
+                className={isActive ? 'relative z-10' : 'absolute inset-0 z-0 pointer-events-none'}
               >
                 <motion.div
-                  animate={{ opacity: isActive ? 1 : 0.6 }}
-                  transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
+                  animate={{ opacity: isActive ? 1 : 0 }}
+                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                   className="relative overflow-hidden"
                 >
                   <div className="relative aspect-[4/5] sm:aspect-[16/9] lg:aspect-[2.4/1] min-h-[420px] sm:min-h-0">
@@ -211,7 +196,7 @@ export default function Hero({
               </div>
             );
           })}
-        </motion.div>
+        </div>
 
         {/* Nav arrows — شكل Apple TV (رمادي شفاف على الحواف) */}
         <button

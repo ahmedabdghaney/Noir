@@ -99,9 +99,9 @@ export default function CategoryRow({ title = 'تصفّح حسب التصنيف'
             <div
               key={cat.key}
               onClick={() => onSelect(cat.key)}
-              className="group/cat flex-none w-[125px] sm:w-[185px] md:w-[225px] lg:w-[255px] cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
+              className="group/cat flex-none w-[110px] sm:w-[150px] md:w-[175px] lg:w-[195px] cursor-pointer rounded-xl p-1.5 pb-3 select-none"
             >
-              <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+              <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-stone-600/40 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.5)]">
                 {images[cat.key] && (
                   <img
                     src={images[cat.key]}
