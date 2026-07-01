@@ -863,32 +863,32 @@ export default function VideoPlayer({
                       </span>
                     </div>
                   )}
-                  <div className={`relative w-full bg-white/25 rounded-full transition-all duration-150 ${isScrubbing ? 'h-[6px]' : 'h-[4px] group-hover/bar:h-[6px]'}`}>
+                  <div className={`relative w-full bg-white/30 rounded-full transition-all duration-100 ${isScrubbing ? 'h-[5px]' : 'h-[3px] group-hover/bar:h-[5px]'}`}>
                     {/* buffered */}
-                    <div className="absolute inset-y-0 left-0 bg-white/30 rounded-full" style={{ width: `${bufferedPct}%` }} />
+                    <div className="absolute inset-y-0 left-0 bg-white/40 rounded-full" style={{ width: `${bufferedPct}%` }} />
                     {/* hover ghost */}
                     {hoverPct !== null && (
-                      <div className="absolute inset-y-0 left-0 bg-white/20 rounded-full" style={{ width: `${hoverPct}%` }} />
+                      <div className="absolute inset-y-0 left-0 bg-white/25 rounded-full" style={{ width: `${hoverPct}%` }} />
                     )}
                     {/* played */}
                     <div className="absolute inset-y-0 left-0 bg-red-500 rounded-full" style={{ width: `${progressPct}%` }}>
-                      <div className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-red-500 shadow-lg transition-opacity ${isScrubbing ? 'opacity-100 scale-110' : 'opacity-0 group-hover/bar:opacity-100'}`} />
+                      <div className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-red-500 shadow-lg transition-all ${isScrubbing ? 'opacity-100 scale-110' : 'opacity-0 group-hover/bar:opacity-100'}`} />
                     </div>
                   </div>
                 </div>
 
                 {/* bottom row */}
-                <div className="flex items-center gap-1 sm:gap-1.5">
+                <div className="flex items-center gap-1.5 sm:gap-2">
 
                   {/* play/pause */}
                   <Btn onClick={togglePlay} label={isPlaying ? 'Pause' : 'Play'} big>
-                    {isPlaying ? <Pause className="w-6 h-6 fill-white" /> : <Play className="w-6 h-6 fill-white" />}
+                    {isPlaying ? <Pause className="w-7 h-7 fill-white" /> : <Play className="w-7 h-7 fill-white" />}
                   </Btn>
 
                   {/* next episode */}
                   {hasNextEp && (
                     <Btn onClick={() => onNextEpisode?.()} label="الحلقة التالية">
-                      <SkipForward className="w-5 h-5 fill-white" />
+                      <SkipForward className="w-6 h-6 fill-white" />
                     </Btn>
                   )}
 
@@ -898,7 +898,7 @@ export default function VideoPlayer({
                     onMouseLeave={() => setShowVolume(false)}
                   >
                     <Btn onClick={toggleMute} label={isMuted ? 'Unmute' : 'Mute'}>
-                      <VolumeIcon className="w-5 h-5" />
+                      <VolumeIcon className="w-6 h-6" />
                     </Btn>
                     <div className={`flex items-center transition-all duration-200 ${showVolume ? 'w-24 ml-2 opacity-100' : 'w-0 opacity-0 overflow-hidden'}`}>
                       <div
@@ -938,13 +938,13 @@ export default function VideoPlayer({
 
                   {/* subtitle toggle */}
                   <Btn onClick={toggleSubs} label={subEnabled ? 'Hide subs' : 'Show subs'} active={subEnabled}>
-                    <Subtitles className="w-5 h-5" />
+                    <Subtitles className="w-6 h-6" />
                   </Btn>
 
                   {/* settings */}
                   <div className="relative">
                     <Btn onClick={() => { setShowSettings(p => !p); setShowSpeedMenu(false); }} label="Settings" active={showSettings}>
-                      <Settings className="w-5 h-5" />
+                      <Settings className="w-6 h-6" />
                     </Btn>
                     {showSettings && (
                       <>
@@ -991,7 +991,7 @@ export default function VideoPlayer({
 
                   {/* fullscreen */}
                   <Btn onClick={toggleFullscreen} label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
-                    {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+                    {isFullscreen ? <Minimize2 className="w-6 h-6" /> : <Maximize2 className="w-6 h-6" />}
                   </Btn>
 
                 </div>
@@ -1015,8 +1015,9 @@ function Btn({ onClick, label, children, active = false, small = false, big = fa
   return (
     <button onClick={onClick} title={label} aria-label={label}
       className={`relative flex items-center justify-center rounded-full transition-all shrink-0 active:scale-90 cursor-pointer
-        ${small ? 'w-5 h-5' : big ? 'w-10 h-10' : 'w-9 h-9'}
-        ${active ? 'text-red-400 bg-red-500/15' : 'text-white/90 hover:text-white hover:bg-white/15'}`}>
+        ${small ? 'w-8 h-8' : big ? 'w-11 h-11' : 'w-10 h-10'}
+        ${active ? 'text-white' : 'text-white/90 hover:text-white'}
+        hover:bg-white/10`}>
       {children}
     </button>
   );
