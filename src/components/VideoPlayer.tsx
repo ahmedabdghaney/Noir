@@ -4,7 +4,6 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import {
   Loader, Pause, Play, Lock,
   Subtitles, Settings, Maximize2, Minimize2,
@@ -129,15 +128,6 @@ export default function VideoPlayer({
   const customMp4 = playMode === 'movie' ? mp4Url : undefined;
   const vttSrc    = vttUrl;
   const isNative  = playMode === 'movie' && customMp4 && !customMp4Failed;
-
-  /* ── cleanup: نضمن إرجاع السكرول لو المشغل اتغلق وهو بالـ fullscreen ── */
-  useEffect(() => {
-    return () => {
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-    };
-  }, []);
 
   /* ── MediaSession: يعرض اسم الفلم + صورته بشاشة قفل iPhone (بدل اسم نوار) ── */
   useEffect(() => {
@@ -488,36 +478,44 @@ export default function VideoPlayer({
 
   const toggleFullscreen = () => {
     const el = containerRef.current as any;
+    const vid = videoRef.current as any;
 
-    // ── iPhone: استخدم المشغل الافتراضي (webkitEnterFullscreen على الـ video مباشرة) ──
-    if (isIPhone) {
-      const video = videoRef.current as any;
-      if (video?.webkitEnterFullscreen) {
-        video.webkitEnterFullscreen();
-      }
-      return;
-    }
+    // كشف iPhone فقط — fullscreen API على div ما تشتغل أبداً
+    const isIPhone = /iPhone|iPod/.test(navigator.userAgent);
 
-    // ── الخروج (غير iPhone) ──
+    // ── الخروج ──
     if (isFullscreen) {
       if (document.fullscreenElement && document.exitFullscreen) {
         document.exitFullscreen().catch(() => {});
       } else if ((document as any).webkitFullscreenElement && (document as any).webkitExitFullscreen) {
         (document as any).webkitExitFullscreen();
+      } else if (vid?.webkitExitFullscreen) {
+        vid.webkitExitFullscreen();
       }
       try { (screen.orientation as any)?.unlock?.(); } catch (_) {}
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
       setIsFullscreen(false);
       return;
     }
 
-    // ── الدخول (غير iPhone) ──
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100%';
+    // ── الدخول ──
+    // iPhone — لازم fullscreen على عنصر <video> نفسه (الوحيد المدعوم)
+    // نحوّل الـ track لـ showing عشان iOS يعرض الترجمة بكنترولاته (الـ offset مطبّق أصلاً على الـ cues)
+    if (isIPhone && vid?.webkitEnterFullscreen) {
+      if (subEnabled && vid.textTracks?.[0]) vid.textTracks[0].mode = 'showing';
+      setIosNativeFs(true);
+      const onEnd = () => {
+        setIosNativeFs(false);
+        // رجّع الـ track لـ hidden عشان يرجع الـ overlay المخصّص
+        if (vid.textTracks?.[0]) vid.textTracks[0].mode = subEnabled ? 'hidden' : 'disabled';
+        vid.removeEventListener('webkitendfullscreen', onEnd);
+      };
+      vid.addEventListener('webkitendfullscreen', onEnd);
+      vid.webkitEnterFullscreen();
+      // ما نضبط isFullscreen — iOS يدير العرض بنفسه
+      return;
+    }
 
+    // باقي الأجهزة (أندرويد/آيباد/ديسكتوب) — fullscreen على الـ container
     const enter = () => {
       setIsFullscreen(true);
       try { (screen.orientation as any)?.lock?.('landscape').catch(() => {}); } catch (_) {}
@@ -528,7 +526,7 @@ export default function VideoPlayer({
       el.webkitRequestFullscreen();
       enter();
     } else {
-      enter();
+      enter(); // fallback CSS
     }
   };
 
@@ -608,9 +606,6 @@ export default function VideoPlayer({
 
   const VolumeIcon = isMuted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
 
-  // كشف iPhone مرة وحدة — يُستخدم بالـ toggleFullscreen وبالـ render
-  const isIPhone = /iPhone|iPod/.test(navigator.userAgent);
-
   /* ══════════════════════════════════════ render ══ */
 
   // نخفي native cue بس لما يكون الـ overlay المخصّص شغال (المشغّل العادي)
@@ -627,12 +622,8 @@ export default function VideoPlayer({
     .noir-pulse { animation: noir-pulse 0.7s ease-out forwards; }
   `;
 
-  const playerJsx = (
-    <div
-      ref={containerRef}
-      className={`${isFullscreen ? 'fixed inset-0 z-[9999] bg-black flex items-center justify-center' : 'w-full mt-16 sm:mt-20 mb-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}
-      style={isFullscreen ? { width: '100vw', height: '100dvh', maxWidth: 'none', margin: 0 } : {}}
-    >
+  return (
+    <div ref={containerRef} className={`${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen max-w-none m-0 rounded-none' : 'w-full mt-16 sm:mt-20 mb-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}>
       <style>{sliderStyle}</style>
       <style>{hideCueStyle}</style>
       <div
@@ -957,15 +948,6 @@ export default function VideoPlayer({
       </div>
     </div>
   );
-
-  // الفلسكرين: نرسمه مباشرة بـ document.body عبر Portal — يتجاوز أي عنصر
-  // بالصفحة عليه transform/animation (مثل detail-enter) يكسر موضعة
-  // "fixed inset-0" ويحصر المشغل بمكانه بدل تغطية الشاشة كلها.
-  // الوضع العادي (مدمج بالصفحة) يبقى برندر مكانه الطبيعي بدون Portal.
-  if (isFullscreen && typeof document !== 'undefined') {
-    return createPortal(playerJsx, document.body);
-  }
-  return playerJsx;
 }
 
 function Btn({ onClick, label, children, active = false, small = false, big = false }: {
