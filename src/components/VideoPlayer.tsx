@@ -478,10 +478,6 @@ export default function VideoPlayer({
 
   const toggleFullscreen = () => {
     const el = containerRef.current as any;
-    const vid = videoRef.current as any;
-
-    // كشف iPhone فقط — fullscreen API على div ما تشتغل أبداً
-    const isIPhone = /iPhone|iPod/.test(navigator.userAgent);
 
     // ── الخروج ──
     if (isFullscreen) {
@@ -489,8 +485,6 @@ export default function VideoPlayer({
         document.exitFullscreen().catch(() => {});
       } else if ((document as any).webkitFullscreenElement && (document as any).webkitExitFullscreen) {
         (document as any).webkitExitFullscreen();
-      } else if (vid?.webkitExitFullscreen) {
-        vid.webkitExitFullscreen();
       }
       try { (screen.orientation as any)?.unlock?.(); } catch (_) {}
       setIsFullscreen(false);
@@ -498,24 +492,8 @@ export default function VideoPlayer({
     }
 
     // ── الدخول ──
-    // iPhone — لازم fullscreen على عنصر <video> نفسه (الوحيد المدعوم)
-    // نحوّل الـ track لـ showing عشان iOS يعرض الترجمة بكنترولاته (الـ offset مطبّق أصلاً على الـ cues)
-    if (isIPhone && vid?.webkitEnterFullscreen) {
-      if (subEnabled && vid.textTracks?.[0]) vid.textTracks[0].mode = 'showing';
-      setIosNativeFs(true);
-      const onEnd = () => {
-        setIosNativeFs(false);
-        // رجّع الـ track لـ hidden عشان يرجع الـ overlay المخصّص
-        if (vid.textTracks?.[0]) vid.textTracks[0].mode = subEnabled ? 'hidden' : 'disabled';
-        vid.removeEventListener('webkitendfullscreen', onEnd);
-      };
-      vid.addEventListener('webkitendfullscreen', onEnd);
-      vid.webkitEnterFullscreen();
-      // ما نضبط isFullscreen — iOS يدير العرض بنفسه
-      return;
-    }
-
-    // باقي الأجهزة (أندرويد/آيباد/ديسكتوب) — fullscreen على الـ container
+    // iPhone ما يدعم requestFullscreen على div — نستعمل CSS fullscreen (fixed inset-0)
+    // عشان يبقى المشغّل المخصّص ظاهر بدل مشغّل iPhone الافتراضي (native)
     const enter = () => {
       setIsFullscreen(true);
       try { (screen.orientation as any)?.lock?.('landscape').catch(() => {}); } catch (_) {}
@@ -526,7 +504,7 @@ export default function VideoPlayer({
       el.webkitRequestFullscreen();
       enter();
     } else {
-      enter(); // fallback CSS
+      enter(); // iPhone — CSS fullscreen فقط (المشغّل المخصّص يملأ الشاشة)
     }
   };
 
