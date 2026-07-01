@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Loader, Pause, Play, Lock,
   Subtitles, Settings, Maximize2, Minimize2,
@@ -606,7 +607,7 @@ export default function VideoPlayer({
     .noir-pulse { animation: noir-pulse 0.7s ease-out forwards; }
   `;
 
-  return (
+  const playerJsx = (
     <div ref={containerRef} className={`${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-[100dvh] max-w-none m-0 rounded-none bg-black flex items-center justify-center' : 'w-full mt-16 sm:mt-20 mb-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}>
       <style>{sliderStyle}</style>
       <style>{hideCueStyle}</style>
@@ -932,6 +933,15 @@ export default function VideoPlayer({
       </div>
     </div>
   );
+
+  // الفلسكرين: نرسمه مباشرة بـ document.body عبر Portal — يتجاوز أي عنصر
+  // بالصفحة عليه transform/animation (مثل detail-enter) يكسر موضعة
+  // "fixed inset-0" ويحصر المشغل بمكانه بدل تغطية الشاشة كلها.
+  // الوضع العادي (مدمج بالصفحة) يبقى برندر مكانه الطبيعي بدون Portal.
+  if (isFullscreen && typeof document !== 'undefined') {
+    return createPortal(playerJsx, document.body);
+  }
+  return playerJsx;
 }
 
 function Btn({ onClick, label, children, active = false, small = false, big = false }: {
