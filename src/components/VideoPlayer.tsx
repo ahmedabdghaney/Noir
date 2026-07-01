@@ -489,7 +489,16 @@ export default function VideoPlayer({
   const toggleFullscreen = () => {
     const el = containerRef.current as any;
 
-    // ── الخروج ──
+    // ── iPhone: استخدم المشغل الافتراضي (webkitEnterFullscreen على الـ video مباشرة) ──
+    if (isIPhone) {
+      const video = videoRef.current as any;
+      if (video?.webkitEnterFullscreen) {
+        video.webkitEnterFullscreen();
+      }
+      return;
+    }
+
+    // ── الخروج (غير iPhone) ──
     if (isFullscreen) {
       if (document.fullscreenElement && document.exitFullscreen) {
         document.exitFullscreen().catch(() => {});
@@ -497,7 +506,6 @@ export default function VideoPlayer({
         (document as any).webkitExitFullscreen();
       }
       try { (screen.orientation as any)?.unlock?.(); } catch (_) {}
-      // أعد السكرول للصفحة عند الخروج
       document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.width = '';
@@ -505,23 +513,15 @@ export default function VideoPlayer({
       return;
     }
 
-    // ── الدخول ──
-    // امنع الصفحة من السكرول خلف المشغل
+    // ── الدخول (غير iPhone) ──
     document.body.style.overflow = 'hidden';
     document.body.style.position = 'fixed';
     document.body.style.width = '100%';
 
-    // iPhone ما يدعم requestFullscreen على div — نستعمل CSS fullscreen (fixed inset-0)
-    // عشان يبقى المشغّل المخصّص ظاهر بدل مشغّل iPhone الافتراضي (native)
     const enter = () => {
       setIsFullscreen(true);
       try { (screen.orientation as any)?.lock?.('landscape').catch(() => {}); } catch (_) {}
     };
-    // iPhone: CSS fullscreen مباشرة (native fullscreen على div ما يشتغل — يفشل صامت)
-    if (isIPhone) {
-      enter();
-      return;
-    }
     if (el?.requestFullscreen) {
       el.requestFullscreen().then(enter).catch(enter);
     } else if (el?.webkitRequestFullscreen) {
@@ -631,24 +631,7 @@ export default function VideoPlayer({
     <div
       ref={containerRef}
       className={`${isFullscreen ? 'fixed inset-0 z-[9999] bg-black flex items-center justify-center' : 'w-full mt-16 sm:mt-20 mb-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}
-      style={isFullscreen && isIPhone ? {
-        // CSS rotation trick — يقلب الشاشة أفقياً إجبارياً حتى لو الجهاز بالطول
-        width: '100vh',
-        height: '100vw',
-        maxWidth: 'none',
-        margin: 0,
-        transform: 'rotate(90deg)',
-        transformOrigin: 'center center',
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
-        translate: '-50% -50%',
-      } : isFullscreen ? {
-        width: '100vw',
-        height: '100dvh',
-        maxWidth: 'none',
-        margin: 0,
-      } : {}}
+      style={isFullscreen ? { width: '100vw', height: '100dvh', maxWidth: 'none', margin: 0 } : {}}
     >
       <style>{sliderStyle}</style>
       <style>{hideCueStyle}</style>
