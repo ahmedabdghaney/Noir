@@ -494,17 +494,23 @@ export default function VideoPlayer({
     // ── الدخول ──
     // iPhone ما يدعم requestFullscreen على div — نستعمل CSS fullscreen (fixed inset-0)
     // عشان يبقى المشغّل المخصّص ظاهر بدل مشغّل iPhone الافتراضي (native)
+    const isIPhone = /iPhone|iPod/.test(navigator.userAgent);
     const enter = () => {
       setIsFullscreen(true);
       try { (screen.orientation as any)?.lock?.('landscape').catch(() => {}); } catch (_) {}
     };
+    // iPhone: CSS fullscreen مباشرة (native fullscreen على div ما يشتغل — يفشل صامت)
+    if (isIPhone) {
+      enter();
+      return;
+    }
     if (el?.requestFullscreen) {
       el.requestFullscreen().then(enter).catch(enter);
     } else if (el?.webkitRequestFullscreen) {
       el.webkitRequestFullscreen();
       enter();
     } else {
-      enter(); // iPhone — CSS fullscreen فقط (المشغّل المخصّص يملأ الشاشة)
+      enter();
     }
   };
 
@@ -601,7 +607,7 @@ export default function VideoPlayer({
   `;
 
   return (
-    <div ref={containerRef} className={`${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen max-w-none m-0 rounded-none' : 'w-full mt-16 sm:mt-20 mb-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}>
+    <div ref={containerRef} className={`${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-[100dvh] max-w-none m-0 rounded-none bg-black flex items-center justify-center' : 'w-full mt-16 sm:mt-20 mb-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}>
       <style>{sliderStyle}</style>
       <style>{hideCueStyle}</style>
       <div
