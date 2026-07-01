@@ -130,6 +130,15 @@ export default function VideoPlayer({
   const vttSrc    = vttUrl;
   const isNative  = playMode === 'movie' && customMp4 && !customMp4Failed;
 
+  /* ── cleanup: نضمن إرجاع السكرول لو المشغل اتغلق وهو بالـ fullscreen ── */
+  useEffect(() => {
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    };
+  }, []);
+
   /* ── MediaSession: يعرض اسم الفلم + صورته بشاشة قفل iPhone (بدل اسم نوار) ── */
   useEffect(() => {
     if (playMode !== 'movie') return;
@@ -488,11 +497,20 @@ export default function VideoPlayer({
         (document as any).webkitExitFullscreen();
       }
       try { (screen.orientation as any)?.unlock?.(); } catch (_) {}
+      // أعد السكرول للصفحة عند الخروج
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
       setIsFullscreen(false);
       return;
     }
 
     // ── الدخول ──
+    // امنع الصفحة من السكرول خلف المشغل
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+
     // iPhone ما يدعم requestFullscreen على div — نستعمل CSS fullscreen (fixed inset-0)
     // عشان يبقى المشغّل المخصّص ظاهر بدل مشغّل iPhone الافتراضي (native)
     const isIPhone = /iPhone|iPod/.test(navigator.userAgent);
