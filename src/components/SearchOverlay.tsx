@@ -106,6 +106,21 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle }: Search
     localStorage.removeItem('noir_recent_titles');
   };
 
+  const browseCategories = [
+    { key: 'action',      label: 'أكشن',          color: 'from-orange-700 to-red-800' },
+    { key: 'comedy',      label: 'كوميديا',       color: 'from-yellow-600 to-amber-700' },
+    { key: 'drama',       label: 'دراما',          color: 'from-blue-700 to-indigo-800' },
+    { key: 'horror',      label: 'رعب',            color: 'from-stone-700 to-stone-900' },
+    { key: 'scifi',       label: 'خيال علمي',     color: 'from-cyan-700 to-blue-800' },
+    { key: 'romance',     label: 'رومانسي',       color: 'from-pink-600 to-rose-700' },
+    { key: 'animation',   label: 'رسوم متحركة',   color: 'from-purple-600 to-violet-700' },
+    { key: 'thriller',    label: 'إثارة',          color: 'from-teal-700 to-emerald-800' },
+    { key: 'family',      label: 'عائلي',          color: 'from-green-600 to-emerald-700' },
+    { key: 'crime',       label: 'جريمة',          color: 'from-red-800 to-rose-900' },
+    { key: 'history',     label: 'تاريخي',        color: 'from-amber-700 to-yellow-800' },
+    { key: 'documentary', label: 'وثائقي',        color: 'from-sky-700 to-blue-800' },
+  ];
+
   if (!isOpen) return null;
 
   return (
