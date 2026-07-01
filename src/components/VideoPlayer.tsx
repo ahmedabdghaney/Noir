@@ -643,14 +643,14 @@ export default function VideoPlayer({
         <>
           <canvas ref={ambientRef} className="hidden" aria-hidden="true" />
           <div
-            className="pointer-events-none absolute inset-0 -z-10 rounded-full blur-[90px] opacity-50 transition-[background] duration-[3000ms] ease-linear"
-            style={{ background: ambientColor, transform: 'scale(1.15)' }}
+            className="pointer-events-none absolute inset-0 blur-[70px] opacity-70 transition-[background] duration-[3000ms] ease-linear"
+            style={{ background: ambientColor, transform: 'scale(0.92) translateY(12px)', zIndex: 0 }}
             aria-hidden="true"
           />
         </>
       )}
       <div
-        className={`group/player relative bg-black overflow-hidden ${isFullscreen ? 'w-full h-full rounded-none border-0' : 'rounded-2xl border border-white/10'}`}
+        className={`group/player relative z-10 bg-black overflow-hidden ${isFullscreen ? 'w-full h-full rounded-none border-0' : 'rounded-2xl border border-white/10'}`}
         dir="ltr"
         onMouseMove={resetHideTimer}
         onMouseLeave={() => { if (videoRef.current && !videoRef.current.paused && !showSettings) setControlsVisible(false); }}
