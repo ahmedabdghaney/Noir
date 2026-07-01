@@ -71,8 +71,8 @@ export default function Hero({
   // RTL carousel — verified by browser test. dir=rtl makes the flex track
   // lay cards right-to-left (card 0 rightmost). Translate by container % so the
   // active card centers. shift>0 moves track to bring later cards to center.
-  const CARD_W = 76;       // center card width, % of container
-  const GAP = 1.5;         // gap, % of container
+  const CARD_W = 100;      // full-bleed — الكرت يملأ العرض (زي Apple TV)
+  const GAP = 0;           // بدون فراغات جانبية
   const step = CARD_W + GAP;
   const trackX = (currentIndex * step + CARD_W / 2) - 50; // container %
 
@@ -89,7 +89,7 @@ export default function Hero({
   const saved = isSaved ? isSaved(activeItem) : false;
 
   return (
-    <div className="relative w-full mb-12 sm:mb-16 pt-4 sm:pt-8 select-none overflow-hidden">
+    <div className="relative w-full mb-10 sm:mb-14 select-none overflow-hidden">
       {/* Sliding track */}
       <div className="relative overflow-hidden">
         <motion.div
@@ -108,11 +108,11 @@ export default function Hero({
                 style={{ width: `${CARD_W}%` }}
               >
                 <motion.div
-                  animate={{ scale: isActive ? 1 : 0.92, opacity: isActive ? 1 : 0.45 }}
+                  animate={{ opacity: isActive ? 1 : 0.6 }}
                   transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
-                  className="relative rounded-[28px] overflow-hidden border border-white/12 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)] ring-1 ring-white/10"
+                  className="relative overflow-hidden"
                 >
-                  <div className="relative aspect-[16/11] sm:aspect-[16/7] lg:aspect-[2.15/1]">
+                  <div className="relative aspect-[4/5] sm:aspect-[16/9] lg:aspect-[2.4/1] min-h-[420px] sm:min-h-0">
                     <img
                       src={wideImg(item)}
                       alt={item.title}
@@ -120,9 +120,10 @@ export default function Hero({
                       className="w-full h-full object-cover object-top"
                     />
 
-                    {/* Gradients (darken right for RTL readability) */}
-                    <div className="absolute inset-0 bg-gradient-to-l from-black/95 via-black/45 to-transparent" />
-                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent" />
+                    {/* Gradients — full-bleed زي Apple TV (تعتيم قوي من الأسفل) */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-l from-black/70 via-transparent to-transparent" />
+                    <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0a0a0a] to-transparent" />
 
                     {/* Details only on active card */}
                     {isActive && (
@@ -132,14 +133,14 @@ export default function Hero({
                         initial="hidden"
                         animate="show"
                         dir="rtl"
-                        className="absolute inset-y-0 right-0 w-full sm:w-[55%] md:w-[50%] flex flex-col items-start justify-end text-right p-6 sm:p-9 md:p-12"
+                        className="absolute inset-x-0 bottom-0 flex flex-col items-start justify-end text-right px-6 sm:px-12 md:px-16 lg:px-20 pb-10 sm:pb-12 md:pb-16 max-w-2xl"
                       >
                         {/* Logo or title */}
-                        <motion.div variants={contentItem} className="flex justify-start w-full mb-2.5">
+                        <motion.div variants={contentItem} className="flex justify-start w-full mb-3 sm:mb-4">
                           {activeLogo ? (
-                            <img src={activeLogo} alt={item.title} referrerPolicy="no-referrer" className="max-h-10 sm:max-h-16 md:max-h-20 max-w-[70%] sm:max-w-[85%] object-contain object-right drop-shadow-2xl" />
+                            <img src={activeLogo} alt={item.title} referrerPolicy="no-referrer" className="max-h-16 sm:max-h-24 md:max-h-32 max-w-[80%] sm:max-w-[70%] object-contain object-right drop-shadow-2xl" />
                           ) : (
-                            <h1 className="font-display text-2xl sm:text-4xl md:text-5xl font-black text-white leading-tight line-clamp-2 drop-shadow-2xl">{item.title}</h1>
+                            <h1 className="font-display text-3xl sm:text-5xl md:text-6xl font-black text-white leading-tight line-clamp-2 drop-shadow-2xl">{item.title}</h1>
                           )}
                         </motion.div>
 
@@ -212,20 +213,20 @@ export default function Hero({
           })}
         </motion.div>
 
-        {/* Nav arrows */}
+        {/* Nav arrows — شكل Apple TV (رمادي شفاف على الحواف) */}
         <button
           onClick={() => goTo(-1)}
-          className="flex absolute right-2 sm:right-[14%] top-1/2 -translate-y-1/2 w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-white/90 hover:bg-white text-black items-center justify-center cursor-pointer transition-all shadow-lg z-30"
+          className="hidden sm:flex absolute right-4 md:right-6 top-1/2 -translate-y-1/2 w-10 h-16 rounded-2xl bg-black/40 hover:bg-black/60 backdrop-blur-md text-white/90 hover:text-white items-center justify-center cursor-pointer transition-all z-30 border border-white/10"
           aria-label="السابق"
         >
-          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+          <ChevronRight className="w-6 h-6" strokeWidth={2.5} />
         </button>
         <button
           onClick={() => goTo(1)}
-          className="flex absolute left-2 sm:left-[14%] top-1/2 -translate-y-1/2 w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-white/90 hover:bg-white text-black items-center justify-center cursor-pointer transition-all shadow-lg z-30"
+          className="hidden sm:flex absolute left-4 md:left-6 top-1/2 -translate-y-1/2 w-10 h-16 rounded-2xl bg-black/40 hover:bg-black/60 backdrop-blur-md text-white/90 hover:text-white items-center justify-center cursor-pointer transition-all z-30 border border-white/10"
           aria-label="التالي"
         >
-          <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+          <ChevronLeft className="w-6 h-6" strokeWidth={2.5} />
         </button>
       </div>
 
