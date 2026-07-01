@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Loader, Pause, Play, Lock,
   Subtitles, Settings, Maximize2, Minimize2,
@@ -71,6 +72,7 @@ export default function VideoPlayer({
   const containerRef  = useRef<HTMLDivElement>(null);
   const videoRef      = useRef<HTMLVideoElement>(null);
   const progressRef   = useRef<HTMLDivElement>(null);
+  const ambientRef    = useRef<HTMLCanvasElement>(null);
   const hideTimer     = useRef<ReturnType<typeof setTimeout>>();
   const dblClickTimer = useRef<ReturnType<typeof setTimeout>>();
   const seekFlashTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -148,6 +150,22 @@ export default function VideoPlayer({
       });
     } catch (_) { /* MediaMetadata غير مدعوم */ }
   }, [title, posterPath, type, season, episode, playMode]);
+
+  /* ── ambient glow — يرسم إطار الفيديو على canvas كل ثانية (توهج بألوان الفيلم) ── */
+  useEffect(() => {
+    if (isFullscreen || !isNative) return;
+    const draw = () => {
+      const v = videoRef.current, c = ambientRef.current;
+      if (!v || !c || v.paused || v.readyState < 2) return;
+      const ctx = c.getContext('2d');
+      if (!ctx) return;
+      if (c.width !== 32) { c.width = 32; c.height = 18; }
+      try { ctx.drawImage(v, 0, 0, 32, 18); } catch (_) {}
+    };
+    const timer = setInterval(draw, 1000);
+    draw();
+    return () => clearInterval(timer);
+  }, [isFullscreen, isNative, id, episode]);
 
   /* ── progress tracker ── */
   useEffect(() => {
@@ -478,10 +496,6 @@ export default function VideoPlayer({
 
   const toggleFullscreen = () => {
     const el = containerRef.current as any;
-    const vid = videoRef.current as any;
-
-    // كشف iPhone فقط — fullscreen API على div ما تشتغل أبداً
-    const isIPhone = /iPhone|iPod/.test(navigator.userAgent);
 
     // ── الخروج ──
     if (isFullscreen) {
@@ -489,8 +503,6 @@ export default function VideoPlayer({
         document.exitFullscreen().catch(() => {});
       } else if ((document as any).webkitFullscreenElement && (document as any).webkitExitFullscreen) {
         (document as any).webkitExitFullscreen();
-      } else if (vid?.webkitExitFullscreen) {
-        vid.webkitExitFullscreen();
       }
       try { (screen.orientation as any)?.unlock?.(); } catch (_) {}
       setIsFullscreen(false);
@@ -498,35 +510,25 @@ export default function VideoPlayer({
     }
 
     // ── الدخول ──
-    // iPhone — لازم fullscreen على عنصر <video> نفسه (الوحيد المدعوم)
-    // نحوّل الـ track لـ showing عشان iOS يعرض الترجمة بكنترولاته (الـ offset مطبّق أصلاً على الـ cues)
-    if (isIPhone && vid?.webkitEnterFullscreen) {
-      if (subEnabled && vid.textTracks?.[0]) vid.textTracks[0].mode = 'showing';
-      setIosNativeFs(true);
-      const onEnd = () => {
-        setIosNativeFs(false);
-        // رجّع الـ track لـ hidden عشان يرجع الـ overlay المخصّص
-        if (vid.textTracks?.[0]) vid.textTracks[0].mode = subEnabled ? 'hidden' : 'disabled';
-        vid.removeEventListener('webkitendfullscreen', onEnd);
-      };
-      vid.addEventListener('webkitendfullscreen', onEnd);
-      vid.webkitEnterFullscreen();
-      // ما نضبط isFullscreen — iOS يدير العرض بنفسه
-      return;
-    }
-
-    // باقي الأجهزة (أندرويد/آيباد/ديسكتوب) — fullscreen على الـ container
+    // iPhone ما يدعم requestFullscreen على div — نستعمل CSS fullscreen (fixed inset-0)
+    // عشان يبقى المشغّل المخصّص ظاهر بدل مشغّل iPhone الافتراضي (native)
+    const isIPhone = /iPhone|iPod/.test(navigator.userAgent);
     const enter = () => {
       setIsFullscreen(true);
       try { (screen.orientation as any)?.lock?.('landscape').catch(() => {}); } catch (_) {}
     };
+    // iPhone: CSS fullscreen مباشرة (native fullscreen على div ما يشتغل — يفشل صامت)
+    if (isIPhone) {
+      enter();
+      return;
+    }
     if (el?.requestFullscreen) {
       el.requestFullscreen().then(enter).catch(enter);
     } else if (el?.webkitRequestFullscreen) {
       el.webkitRequestFullscreen();
       enter();
     } else {
-      enter(); // fallback CSS
+      enter();
     }
   };
 
@@ -622,12 +624,20 @@ export default function VideoPlayer({
     .noir-pulse { animation: noir-pulse 0.7s ease-out forwards; }
   `;
 
-  return (
-    <div ref={containerRef} className={`${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen max-w-none m-0 rounded-none' : 'w-full mt-16 sm:mt-20 mb-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}>
+  const playerTree = (
+    <div ref={containerRef} className={`${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-[100dvh] max-w-none m-0 rounded-none bg-black flex items-center justify-center' : 'relative w-full mt-16 sm:mt-20 mb-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}>
       <style>{sliderStyle}</style>
       <style>{hideCueStyle}</style>
+      {/* ambient glow — canvas مخفي يرسم إطار الفيديو، يتوسّع بـ blur خلف المشغّل (زي يوتيوب) */}
+      {!isFullscreen && isNative && (
+        <canvas
+          ref={ambientRef}
+          className="pointer-events-none absolute -inset-8 w-[calc(100%+4rem)] h-[calc(100%+4rem)] -z-10 blur-3xl opacity-60 saturate-150 transition-opacity duration-1000"
+          aria-hidden="true"
+        />
+      )}
       <div
-        className={`group/player relative bg-black overflow-hidden shadow-[0_24px_64px_-12px_rgba(0,0,0,0.95)] ${isFullscreen ? 'w-full h-full rounded-none border-0' : 'rounded-2xl border border-white/10'}`}
+        className={`group/player relative bg-black overflow-hidden ${isFullscreen ? 'w-full h-full rounded-none border-0' : 'rounded-2xl border border-white/10'}`}
         dir="ltr"
         onMouseMove={resetHideTimer}
         onMouseLeave={() => { if (videoRef.current && !videoRef.current.paused && !showSettings) setControlsVisible(false); }}
@@ -844,9 +854,9 @@ export default function VideoPlayer({
                     <Btn onClick={toggleMute} label={isMuted ? 'Unmute' : 'Mute'}>
                       <VolumeIcon className="w-5 h-5" />
                     </Btn>
-                    <div className={`flex items-center transition-all duration-200 overflow-hidden ${showVolume ? 'w-20 ml-1.5 opacity-100' : 'w-0 opacity-0'}`}>
+                    <div className={`flex items-center transition-all duration-200 ${showVolume ? 'w-24 ml-2 opacity-100' : 'w-0 opacity-0 overflow-hidden'}`}>
                       <div
-                        className="group/vol w-full py-2 cursor-pointer relative"
+                        className="group/vol w-full py-2 pr-2 cursor-pointer relative"
                         onClick={e => {
                           const rect = e.currentTarget.getBoundingClientRect();
                           changeVolume((e.clientX - rect.left) / rect.width);
@@ -898,32 +908,31 @@ export default function VideoPlayer({
                           className="fixed inset-0 z-40"
                           onPointerDown={(e) => { e.stopPropagation(); setShowSettings(false); setShowSpeedMenu(false); }}
                         />
-                      <div className="absolute right-0 bottom-full mb-3 bg-black/70 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-2xl w-48 overflow-hidden z-50">
-                        <div className="px-3.5 py-2.5 text-[10px] text-white/40 uppercase tracking-widest border-b border-white/10">الإعدادات</div>
-                        <button onClick={() => setShowSpeedMenu(p => !p)} className="w-full flex items-center justify-between px-3.5 py-3 text-sm text-white hover:bg-white/10 transition-colors">
+                      <div className="absolute right-0 bottom-full mb-3 bg-[#212121]/95 backdrop-blur-2xl border border-white/10 rounded-xl shadow-2xl w-56 overflow-hidden z-50" dir="rtl">
+                        <button onClick={() => setShowSpeedMenu(p => !p)} className="w-full flex items-center justify-between px-4 py-3 text-sm text-white hover:bg-white/10 transition-colors whitespace-nowrap">
                           <span>السرعة</span>
-                          <span className="flex items-center gap-1 text-red-400 font-semibold text-xs">
+                          <span className="flex items-center gap-1 text-white/70 text-xs">
                             {speed === 1 ? 'عادي' : `${speed}×`}
-                            <ChevronDown className={`w-3 h-3 transition-transform ${showSpeedMenu ? 'rotate-180' : ''}`} />
+                            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showSpeedMenu ? 'rotate-180' : ''}`} />
                           </span>
                         </button>
                         {showSpeedMenu && (
                           <div className="border-t border-white/10 max-h-48 overflow-y-auto">
                             {SPEEDS.map(s => (
-                              <button key={s} onClick={() => changeSpeed(s)} className={`w-full text-right px-3.5 py-2.5 text-sm transition-colors ${speed === s ? 'text-red-400 bg-red-500/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
-                                {s === 1 ? 'عادي (1×)' : `${s}×`}
+                              <button key={s} onClick={() => changeSpeed(s)} className={`w-full text-right px-4 py-2.5 text-sm transition-colors whitespace-nowrap ${speed === s ? 'text-white bg-white/15 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
+                                {s === 1 ? 'عادي' : `${s}×`}
                               </button>
                             ))}
                           </div>
                         )}
-                        {/* حجم الترجمة */}
-                        <div className="border-t border-white/10 px-3.5 py-3 flex items-center justify-between">
+                        {/* حجم الترجمة — سطر واحد RTL */}
+                        <div className="border-t border-white/10 px-4 py-3 flex items-center justify-between whitespace-nowrap">
                           <span className="text-sm text-white">حجم الترجمة</span>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-2">
                             <button onClick={() => changeSubSize(-10)} className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="تصغير">
                               <Minus className="w-3 h-3" />
                             </button>
-                            <span className="text-xs text-red-400 font-semibold w-10 text-center tabular-nums select-none">{subSize}%</span>
+                            <span className="text-xs text-white/70 font-semibold w-9 text-center tabular-nums select-none">{subSize}%</span>
                             <button onClick={() => changeSubSize(10)} className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="تكبير">
                               <Plus className="w-3 h-3" />
                             </button>
@@ -948,6 +957,10 @@ export default function VideoPlayer({
       </div>
     </div>
   );
+
+  // وقت fullscreen: ننقل المشغّل لـ body مباشرة (Portal) عشان يتجاوز أي transform
+  // بعنصر أب (مثل animate-fade-in) اللي يكسر position:fixed ويمنع ملء الشاشة
+  return isFullscreen ? createPortal(playerTree, document.body) : playerTree;
 }
 
 function Btn({ onClick, label, children, active = false, small = false, big = false }: {
