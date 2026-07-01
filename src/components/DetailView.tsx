@@ -610,8 +610,8 @@ export default function DetailView({
             backgroundImage: `url(${getOriginalBackdropUrl(data.backdrop_path) || getPosterUrl(data.poster_path) ||''})`,
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#08080a] via-[#08080a]/70 to-[#08080a]/20" />
-        <div className="absolute inset-0 bg-gradient-to-l from-[#08080a]/80 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#111113] via-[#111113]/70 to-[#111113]/20" />
+        <div className="absolute inset-0 bg-gradient-to-l from-[#111113]/80 via-transparent to-transparent" />
 </div>
 
       {/* Main Details Panel Layout */}
