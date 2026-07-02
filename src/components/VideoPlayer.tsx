@@ -73,8 +73,6 @@ export default function VideoPlayer({
   const videoRef      = useRef<HTMLVideoElement>(null);
   const progressRef   = useRef<HTMLDivElement>(null);
   const ambientRef    = useRef<HTMLCanvasElement>(null);
-  const previewVideoRef = useRef<HTMLVideoElement>(null);
-  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const hideTimer     = useRef<ReturnType<typeof setTimeout>>();
   const dblClickTimer = useRef<ReturnType<typeof setTimeout>>();
   const seekFlashTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -152,26 +150,6 @@ export default function VideoPlayer({
       });
     } catch (_) { /* MediaMetadata غير مدعوم */ }
   }, [title, posterPath, type, season, episode, playMode]);
-
-  /* ── preview thumbnail — الفيديو المخفي يقفز لوقت الـ hover ويرسمه على canvas ── */
-  useEffect(() => {
-    if (hoverPct === null || duration <= 0 || !isNative) return;
-    const pv = previewVideoRef.current;
-    if (!pv) return;
-    const t = (hoverPct / 100) * duration;
-    const id2 = setTimeout(() => {
-      try { if (Math.abs(pv.currentTime - t) > 0.3) pv.currentTime = t; } catch (_) {}
-    }, 40);
-    return () => clearTimeout(id2);
-  }, [hoverPct, duration, isNative]);
-
-  const drawPreview = () => {
-    const pv = previewVideoRef.current, c = previewCanvasRef.current;
-    if (!pv || !c) return;
-    const ctx = c.getContext('2d');
-    if (!ctx) return;
-    try { ctx.drawImage(pv, 0, 0, c.width, c.height); } catch (_) {}
-  };
 
   /* ── ambient glow — يستخرج اللون السائد من الفيديو ويطبّقه كتوهج ناعم متدرّج ── */
   const [ambientColor, setAmbientColor] = useState('rgba(0,0,0,0)');
@@ -527,8 +505,6 @@ export default function VideoPlayer({
   };
 
   const toggleFullscreen = () => {
-    const el = containerRef.current as any;
-
     // ── الخروج ──
     if (isFullscreen) {
       if (document.fullscreenElement && document.exitFullscreen) {
@@ -542,26 +518,20 @@ export default function VideoPlayer({
     }
 
     // ── الدخول ──
-    // iPhone ما يدعم requestFullscreen على div — نستعمل CSS fullscreen (fixed inset-0)
-    // عشان يبقى المشغّل المخصّص ظاهر بدل مشغّل iPhone الافتراضي (native)
-    const isIPhone = /iPhone|iPod/.test(navigator.userAgent);
-    const enter = () => {
-      setIsFullscreen(true);
-      try { (screen.orientation as any)?.lock?.('landscape').catch(() => {}); } catch (_) {}
-    };
-    // iPhone: CSS fullscreen مباشرة (native fullscreen على div ما يشتغل — يفشل صامت)
-    if (isIPhone) {
-      enter();
-      return;
-    }
-    if (el?.requestFullscreen) {
-      el.requestFullscreen().then(enter).catch(enter);
-    } else if (el?.webkitRequestFullscreen) {
-      el.webkitRequestFullscreen();
-      enter();
-    } else {
-      enter();
-    }
+    // نستعمل CSS fullscreen (fixed inset-0) بدل requestFullscreen على الحاوية،
+    // لأن المشغّل ينتقل عبر Portal للـ body عند الدخول — وطلب fullscreen على عنصر
+    // ثم نقله بالـ DOM يخلّي المتصفح يلغي fullscreen فوراً (الشاشة تدخل وتخرج).
+    // CSS fullscreen يعطي نفس النتيجة بدون هذا التعارض.
+    setIsFullscreen(true);
+    try { (screen.orientation as any)?.lock?.('landscape').catch(() => {}); } catch (_) {}
+
+    // نحاول native fullscreen على الـ body (مو الحاوية) — اختياري، للأجهزة اللي تدعمه
+    // فشله ما يأثر: CSS fullscreen شغّال أصلاً
+    const body = document.documentElement as any;
+    try {
+      if (body?.requestFullscreen) body.requestFullscreen().catch(() => {});
+      else if (body?.webkitRequestFullscreen) body.webkitRequestFullscreen();
+    } catch (_) {}
   };
 
   /* ── tap: ضغطة = play/pause، ضغطتين على الجوانب = seek، الوسط = fullscreen ── */
@@ -671,14 +641,8 @@ export default function VideoPlayer({
           />
         </>
       )}
-      {/* فيديو preview مخفي — للـ thumbnails عند hover على الشريط */}
-      {!isFullscreen && isNative && customMp4 && (
-        <video ref={previewVideoRef} src={customMp4} muted playsInline preload="metadata"
-          className="hidden" crossOrigin="anonymous"
-          onSeeked={drawPreview} aria-hidden="true" />
-      )}
       <div
-        className={`group/player relative z-10 bg-black overflow-hidden ${isFullscreen ? 'w-full h-full rounded-none border-0' : 'rounded-2xl border border-white/10'}`}
+        className={`group/player relative z-10 bg-black overflow-hidden ${isFullscreen ? 'w-full h-full rounded-none border-0' : 'rounded-2xl'}`}
         dir="ltr"
         onMouseMove={resetHideTimer}
         onMouseLeave={() => { if (videoRef.current && !videoRef.current.paused && !showSettings) setControlsVisible(false); }}
@@ -851,14 +815,11 @@ export default function VideoPlayer({
                   onMouseLeave={() => !isScrubbing && setHoverPct(null)}
                   onMouseDown={startScrub}
                 >
-                  {/* hover preview — صورة مصغّرة + وقت تحتها (زي يوتيوب) */}
+                  {/* hover time — وقت صغير فوق موضع المؤشر */}
                   {hoverPct !== null && duration > 0 && (
-                    <div className="absolute bottom-full mb-3 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none"
-                      style={{ left: `${Math.min(Math.max(hoverPct, 8), 92)}%` }}>
-                      <div className="rounded-lg overflow-hidden border-2 border-white/80 shadow-2xl bg-black w-40 h-[90px]">
-                        <canvas ref={previewCanvasRef} width={160} height={90} className="w-full h-full object-cover" />
-                      </div>
-                      <span className="px-2 py-0.5 rounded bg-black/80 text-[12px] text-white tabular-nums whitespace-nowrap">
+                    <div className="absolute bottom-full mb-2 -translate-x-1/2 pointer-events-none"
+                      style={{ left: `${Math.min(Math.max(hoverPct, 4), 96)}%` }}>
+                      <span className="px-1.5 py-0.5 rounded bg-black/80 text-[11px] text-white tabular-nums whitespace-nowrap">
                         {formatTime((hoverPct / 100) * duration)}
                       </span>
                     </div>
@@ -1016,7 +977,7 @@ function Btn({ onClick, label, children, active = false, small = false, big = fa
     <button onClick={onClick} title={label} aria-label={label}
       className={`relative flex items-center justify-center rounded-full transition-all shrink-0 active:scale-90 cursor-pointer
         ${small ? 'w-8 h-8' : big ? 'w-11 h-11' : 'w-10 h-10'}
-        ${active ? 'text-white' : 'text-white/90 hover:text-white'}
+        ${active ? 'text-red-500' : 'text-white/90 hover:text-white'}
         hover:bg-white/10`}>
       {children}
     </button>
