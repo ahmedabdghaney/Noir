@@ -15,6 +15,7 @@ interface VideoPlayerProps {
   type: 'movie' | 'tv';
   id: number;
   title: string;
+  posterPath?: string | null;   // مسار صورة TMDB — يُعرض بشاشة قفل iPhone (MediaSession)
   season?: number;
   episode?: number;
   episodesCount?: number;
@@ -37,6 +38,14 @@ interface VideoPlayerProps {
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 const CDN_BASE_URL = 'https://d269k7J205s3hx.cloudfront.net/';
 
+// تنظيف اسم المسلسل ليطابق مسار S3 — لازم يطابق sanitizeName ببوت المسلسلات حرفياً
+function sanitizeName(name: string): string {
+  return (name || '')
+    .replace(/[:/\\?#%"<>|]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function formatTime(s: number) {
   if (!s || isNaN(s)) return '0:00';
   const h = Math.floor(s / 3600);
@@ -48,6 +57,7 @@ function formatTime(s: number) {
 
 export default function VideoPlayer({
   type, id, title,
+  posterPath = null,
   season = 1, episode = 1,
   episodesCount = 0,
   youtubeKey, playMode,
@@ -74,7 +84,6 @@ export default function VideoPlayer({
   const [volume,          setVolume]          = useState(1);
   const [isMuted,         setIsMuted]         = useState(false);
   const [showVolume,      setShowVolume]      = useState(false);
-  const [subOffset,       setSubOffset]       = useState(0);
   const [subEnabled,      setSubEnabled]      = useState(true);
   const [subSize,         setSubSize]         = useState(50); // نسبة حجم الترجمة %
   const [cueText,         setCueText]         = useState('');  // نص الترجمة الحالي
@@ -82,6 +91,7 @@ export default function VideoPlayer({
   const [showSettings,    setShowSettings]    = useState(false);
   const [showSpeedMenu,   setShowSpeedMenu]   = useState(false);
   const [isFullscreen,    setIsFullscreen]    = useState(false);
+  const [iosNativeFs,     setIosNativeFs]     = useState(false); // iPhone native video fullscreen
 
   const [controlsVisible, setControlsVisible] = useState(true);
 
@@ -100,10 +110,44 @@ export default function VideoPlayer({
   const progressKey = `noir_progress_${type}_${id}`;
 
   /* ── URLs + native flag (معرّفة مبكراً عشان الـ effects تستخدمها) ── */
-  const mp4Key    = type === 'tv' ? `tv_${id}_${season}_${episode}` : `movie_${id}`;
-  const customMp4 = playMode === 'movie' ? `${CDN_BASE_URL}${mp4Key}.mp4` : undefined;
-  const vttSrc    = `${CDN_BASE_URL}${mp4Key}.vtt`;
+  // المسلسلات: TV/{اسم}/{tmdbId}/Season {n}/{episode}
+  // الأفلام:   Movies/{اسم}/{tmdbId}/movie  — tmdbId يميّز الأفلام بنفس الاسم (Scream 1997 vs 2022)
+  let mp4Url: string, vttUrl: string;
+  if (type === 'tv') {
+    const seriesFolder = sanitizeName(title);
+    const pathParts = ['TV', seriesFolder, String(id), `Season ${season}`];
+    const encodedDir = pathParts.map((p) => encodeURIComponent(p)).join('/');
+    mp4Url = `${CDN_BASE_URL}${encodedDir}/${episode}.mp4`;
+    vttUrl = `${CDN_BASE_URL}${encodedDir}/${episode}.vtt`;
+  } else {
+    const movieFolder = sanitizeName(title);
+    const encodedDir = ['Movies', movieFolder].map((p) => encodeURIComponent(p)).join('/');
+    mp4Url = `${CDN_BASE_URL}${encodedDir}/movie_${id}.mp4`;
+    vttUrl = `${CDN_BASE_URL}${encodedDir}/movie_${id}.vtt`;
+  }
+  const customMp4 = playMode === 'movie' ? mp4Url : undefined;
+  const vttSrc    = vttUrl;
   const isNative  = playMode === 'movie' && customMp4 && !customMp4Failed;
+
+  /* ── MediaSession: يعرض اسم الفلم + صورته بشاشة قفل iPhone (بدل اسم نوار) ── */
+  useEffect(() => {
+    if (playMode !== 'movie') return;
+    if (!('mediaSession' in navigator)) return;
+    const artwork = posterPath
+      ? [
+          { src: `https://image.tmdb.org/t/p/w512${posterPath}`, sizes: '512x512', type: 'image/jpeg' },
+          { src: `https://image.tmdb.org/t/p/w780${posterPath}`, sizes: '780x780', type: 'image/jpeg' },
+        ]
+      : [];
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: title || '',
+        artist: type === 'tv' ? `الموسم ${season} • الحلقة ${episode}` : 'NOIR',
+        album: 'NOIR',
+        artwork,
+      });
+    } catch (_) { /* MediaMetadata غير مدعوم */ }
+  }, [title, posterPath, type, season, episode, playMode]);
 
   /* ── progress tracker ── */
   useEffect(() => {
@@ -156,7 +200,7 @@ export default function VideoPlayer({
       containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 100);
     setIsLoading(true); setCustomMp4Failed(false);
-    setSubOffset(0); setSubEnabled(true); setSpeed(1);
+    setSubEnabled(true); setSpeed(1);
     setShowSettings(false); setShowSpeedMenu(false); setShowVolume(false);
     setIsPlaying(false); setCurrentTime(0); setDuration(0); setBuffered(0);
     return () => clearTimeout(timer);
@@ -168,20 +212,7 @@ export default function VideoPlayer({
     if (saved && saved >= 50 && saved <= 250) setSubSize(saved);
   }, []);
 
-  /* ── close settings on click outside the whole player ── */
-  useEffect(() => {
-    if (!showSettings) return;
-    const onDocClick = (e: MouseEvent) => {
-      const container = containerRef.current;
-      if (container && !container.contains(e.target as Node)) {
-        setShowSettings(false);
-        setShowSpeedMenu(false);
-      }
-    };
-    // نأخّر التسجيل tick عشان ما يُغلق فوراً من نفس النقرة اللي فتحته
-    const t = setTimeout(() => document.addEventListener('mousedown', onDocClick), 0);
-    return () => { clearTimeout(t); document.removeEventListener('mousedown', onDocClick); };
-  }, [showSettings]);
+  /* ملاحظة: إغلاق الإعدادات يتم عبر الـ overlay (onPointerDown) — يشتغل ماوس ولمس */
 
   const changeSubSize = (delta: number) => {
     setSubSize(prev => {
@@ -195,15 +226,9 @@ export default function VideoPlayer({
   useEffect(() => {
     const h = () => {
       const nativeFs = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
-      // نحدّث فقط لما يكون في عنصر native fullscreen أو لما نخرج من native
-      // (CSS fullscreen على iOS يُدار يدوياً ولا يطلق هذا الحدث)
-      if (nativeFs) setIsFullscreen(true);
-      else if (document.fullscreenElement === null) {
-        // خرجنا من native — بس ما نلمس CSS fullscreen
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        if (!isIOS) setIsFullscreen(false);
-      }
+      // مزامنة الحالة مع native fullscreen (أندرويد/آيباد/ديسكتوب)
+      // iPhone يستخدم webkitEnterFullscreen على الفيديو ولا يطلق هذا الحدث
+      setIsFullscreen(nativeFs);
     };
     document.addEventListener('fullscreenchange', h);
     document.addEventListener('webkitfullscreenchange', h);
@@ -341,44 +366,7 @@ export default function VideoPlayer({
     }, 3000);
   }, [showSettings]);
 
-  const subOffsetRef = useRef(0);
-
   /* ── helpers ── */
-  const adjustSubs = (s: number) => {
-    const v = videoRef.current;
-    if (!v?.textTracks?.length) return;
-    const track = v.textTracks[0];
-    if (track.cues) for (let i = 0; i < track.cues.length; i++) {
-      const c = track.cues[i] as VTTCue;
-      c.startTime += s; c.endTime += s;
-    }
-    subOffsetRef.current += s;
-    setSubOffset(p => p + s);
-  };
-
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    const applyOffsetOnLoad = () => {
-      const track = v.textTracks?.[0];
-      if (!track || subOffsetRef.current === 0) return;
-      const tryApply = () => {
-        if (track.cues && track.cues.length > 0) {
-          for (let i = 0; i < track.cues.length; i++) {
-            const c = track.cues[i] as VTTCue;
-            c.startTime += subOffsetRef.current;
-            c.endTime   += subOffsetRef.current;
-          }
-        } else {
-          setTimeout(tryApply, 100);
-        }
-      };
-      tryApply();
-    };
-    v.addEventListener('seeked', applyOffsetOnLoad);
-    return () => v.removeEventListener('seeked', applyOffsetOnLoad);
-  }, []);
-
   const toggleSubs = () => {
     const v = videoRef.current;
     if (!v?.textTracks?.length) return;
@@ -396,6 +384,8 @@ export default function VideoPlayer({
     if (!v || !isNative) return;
     const track = v.textTracks?.[0];
     if (!track) return;
+    // وقت iPhone native fullscreen نخلي iOS يدير الـ track (showing) — ما نلمسه
+    if (iosNativeFs) return;
     // hidden = الأحداث تشتغل بس بدون رسم المتصفح الأصلي
     // metadata kind: hidden = نقرأ الـ cues بدون عرض native, disabled = نوقف الـ events
     track.mode = subEnabled ? 'hidden' : 'disabled';
@@ -414,12 +404,30 @@ export default function VideoPlayer({
     track.addEventListener('cuechange', onCueChange);
     onCueChange();
     return () => track.removeEventListener('cuechange', onCueChange);
-  }, [isNative, subEnabled, customMp4]);
+  }, [isNative, subEnabled, customMp4, iosNativeFs]);
 
   const changeSpeed = (s: number) => {
     if (videoRef.current) videoRef.current.playbackRate = s;
     setSpeed(s); setShowSpeedMenu(false); setShowSettings(false);
   };
+
+  /* ── iPhone native fullscreen: ارفع الترجمة من قاع الشاشة (cue.line) ── */
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v?.textTracks?.length || !iosNativeFs) return;
+    const track = v.textTracks[0];
+    // line = رقم السطر من الأعلى (سالب = من الأسفل). -3 يرفعها فوق حافة الشاشة
+    const applyLine = () => {
+      const cues = track.cues;
+      if (!cues) return;
+      for (let i = 0; i < cues.length; i++) {
+        try { (cues[i] as any).line = -3; (cues[i] as any).snapToLines = true; } catch (_) {}
+      }
+    };
+    applyLine();
+    track.addEventListener('cuechange', applyLine);
+    return () => track.removeEventListener('cuechange', applyLine);
+  }, [iosNativeFs, subEnabled]);
 
   const playPulseTimer = useRef<ReturnType<typeof setTimeout>>();
   const togglePlay = () => {
@@ -470,40 +478,55 @@ export default function VideoPlayer({
 
   const toggleFullscreen = () => {
     const el = containerRef.current as any;
+    const vid = videoRef.current as any;
 
-    // كشف iOS (iPhone/iPad) — fullscreen API غير موثوق عليها، نستخدم CSS
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    // كشف iPhone فقط — fullscreen API على div ما تشتغل أبداً
+    const isIPhone = /iPhone|iPod/.test(navigator.userAgent);
 
     // ── الخروج ──
-    // CSS fullscreen شغال؟
     if (isFullscreen) {
       if (document.fullscreenElement && document.exitFullscreen) {
         document.exitFullscreen().catch(() => {});
       } else if ((document as any).webkitFullscreenElement && (document as any).webkitExitFullscreen) {
         (document as any).webkitExitFullscreen();
+      } else if (vid?.webkitExitFullscreen) {
+        vid.webkitExitFullscreen();
       }
+      try { (screen.orientation as any)?.unlock?.(); } catch (_) {}
       setIsFullscreen(false);
       return;
     }
 
     // ── الدخول ──
-    if (isIOS) {
-      // iOS — CSS fullscreen (يحافظ على كل عناصر التحكم والترجمة)
-      setIsFullscreen(true);
-      // نحاول نقفل الاتجاه أفقي لو متاح
-      try { (screen.orientation as any)?.lock?.('landscape').catch(() => {}); } catch (_) {}
+    // iPhone — لازم fullscreen على عنصر <video> نفسه (الوحيد المدعوم)
+    // نحوّل الـ track لـ showing عشان iOS يعرض الترجمة بكنترولاته (الـ offset مطبّق أصلاً على الـ cues)
+    if (isIPhone && vid?.webkitEnterFullscreen) {
+      if (subEnabled && vid.textTracks?.[0]) vid.textTracks[0].mode = 'showing';
+      setIosNativeFs(true);
+      const onEnd = () => {
+        setIosNativeFs(false);
+        // رجّع الـ track لـ hidden عشان يرجع الـ overlay المخصّص
+        if (vid.textTracks?.[0]) vid.textTracks[0].mode = subEnabled ? 'hidden' : 'disabled';
+        vid.removeEventListener('webkitendfullscreen', onEnd);
+      };
+      vid.addEventListener('webkitendfullscreen', onEnd);
+      vid.webkitEnterFullscreen();
+      // ما نضبط isFullscreen — iOS يدير العرض بنفسه
       return;
     }
 
-    // باقي الأجهزة — native fullscreen
+    // باقي الأجهزة (أندرويد/آيباد/ديسكتوب) — fullscreen على الـ container
+    const enter = () => {
+      setIsFullscreen(true);
+      try { (screen.orientation as any)?.lock?.('landscape').catch(() => {}); } catch (_) {}
+    };
     if (el?.requestFullscreen) {
-      el.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => setIsFullscreen(true));
+      el.requestFullscreen().then(enter).catch(enter);
     } else if (el?.webkitRequestFullscreen) {
       el.webkitRequestFullscreen();
-      setIsFullscreen(true);
+      enter();
     } else {
-      setIsFullscreen(true); // fallback CSS
+      enter(); // fallback CSS
     }
   };
 
@@ -585,7 +608,12 @@ export default function VideoPlayer({
 
   /* ══════════════════════════════════════ render ══ */
 
-  const hideCueStyle = `video::cue { color: transparent !important; text-shadow: none !important; background: transparent !important; }`;
+  // نخفي native cue بس لما يكون الـ overlay المخصّص شغال (المشغّل العادي)
+  // وقت iPhone native fullscreen: iOS يعرض الترجمة الأصلية — نتحكم بحجمها عبر ::cue
+  // (موضعها يُتحكم بـ track.cues[].line اللي نضبطه بـ effect منفصل)
+  const hideCueStyle = iosNativeFs
+    ? `video::cue { font-size: calc(${subSize / 100} * (1.1em + 0.4vw)) !important; background: rgba(0,0,0,0.55) !important; }`
+    : `video::cue { color: transparent !important; text-shadow: none !important; background: transparent !important; }`;
 
   const sliderStyle = `
     @keyframes noir-flash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
@@ -595,7 +623,7 @@ export default function VideoPlayer({
   `;
 
   return (
-    <div ref={containerRef} className={`${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen max-w-none m-0 rounded-none' : 'w-full my-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}>
+    <div ref={containerRef} className={`${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen max-w-none m-0 rounded-none' : 'w-full mt-16 sm:mt-20 mb-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}>
       <style>{sliderStyle}</style>
       <style>{hideCueStyle}</style>
       <div
@@ -857,17 +885,6 @@ export default function VideoPlayer({
                     <Subtitles className="w-5 h-5" />
                   </Btn>
 
-                  {/* subtitle offset */}
-                  {subEnabled && (
-                    <div className="hidden sm:flex items-center gap-0.5 bg-white/10 backdrop-blur-md rounded-full px-1.5 py-1 border border-white/10">
-                      <Btn onClick={() => adjustSubs(-1)} label="-1s" small><Minus className="w-3 h-3" /></Btn>
-                      <span className="text-[11px] text-white/70 w-9 text-center tabular-nums select-none">
-                        {subOffset >= 0 ? `+${subOffset}s` : `${subOffset}s`}
-                      </span>
-                      <Btn onClick={() => adjustSubs(1)} label="+1s" small><Plus className="w-3 h-3" /></Btn>
-                    </div>
-                  )}
-
                   {/* settings */}
                   <div className="relative">
                     <Btn onClick={() => { setShowSettings(p => !p); setShowSpeedMenu(false); }} label="Settings" active={showSettings}>
@@ -875,7 +892,12 @@ export default function VideoPlayer({
                     </Btn>
                     {showSettings && (
                       <>
-                        <div className="fixed inset-0 z-40" onClick={() => { setShowSettings(false); setShowSpeedMenu(false); }} onTouchStart={() => { setShowSettings(false); setShowSpeedMenu(false); }} />
+                        {/* overlay شفاف يغطي كل الشاشة (z-40) فوق شريط الأدوات.
+                            أي ضغطة عليه — حتى على زر الإعدادات تحته — تسد القائمة */}
+                        <div
+                          className="fixed inset-0 z-40"
+                          onPointerDown={(e) => { e.stopPropagation(); setShowSettings(false); setShowSpeedMenu(false); }}
+                        />
                       <div className="absolute right-0 bottom-full mb-3 bg-black/70 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-2xl w-48 overflow-hidden z-50">
                         <div className="px-3.5 py-2.5 text-[10px] text-white/40 uppercase tracking-widest border-b border-white/10">الإعدادات</div>
                         <button onClick={() => setShowSpeedMenu(p => !p)} className="w-full flex items-center justify-between px-3.5 py-3 text-sm text-white hover:bg-white/10 transition-colors">
