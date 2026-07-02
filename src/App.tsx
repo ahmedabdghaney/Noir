@@ -519,6 +519,7 @@ export default function App() {
   };
 
   const handleViewWatchlist = () => {
+    setIsSearchOverlayOpen(false);
     setActiveView('watchlist');
     setSelectedTitle(null);
     window.location.hash ='#watchlist';
@@ -751,6 +752,7 @@ export default function App() {
 
   // Global redirection tool
   const navigateToHome = () => {
+    setIsSearchOverlayOpen(false);
     setActiveView('home');
     setSelectedTitle(null);
     window.location.hash ='#home';
@@ -770,6 +772,7 @@ export default function App() {
   }, []);
 
   const handleSetSearchMode = (mode: 'movie' | 'tv') => {
+    setIsSearchOverlayOpen(false);
     setSearchMode(mode);
     setActiveView('search');
     setSelectedTitle(null);
@@ -1179,7 +1182,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#111113] text-white flex flex-row font-sans relative tracking-normal antialiased">
+    <div className="min-h-screen bg-[#17171a] text-white flex flex-row font-sans relative tracking-normal antialiased">
       
       {/* Desktop Sidebar — Apple TV style */}
       <Sidebar
@@ -1983,71 +1986,7 @@ export default function App() {
 </div>
 </div>
 
-            {/* Sync Troubleshooting Assistant */}
-            <div className="mt-4 border border-indigo-500/20 bg-indigo-500/5 rounded-2xl overflow-hidden [direction:rtl] text-right">
-              <button
-                onClick={() => setShowSyncHelper(!showSyncHelper)}
-                className="w-full flex items-center justify-between p-3.5 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors focus:outline-none"
-              >
-                <span>🛠️ حل مشكلة مزامنة القائمة وتسجيل الدخول سحابياً</span>
-                <span className="text-[10px] bg-indigo-500/10 px-2 py-0.5 rounded-full">
-                  {showSyncHelper ? 'إغلاق ✕' : 'تفاصيل وحلول ✓'}
-                </span>
-              </button>
-              
-              {showSyncHelper && (
-                <div className="p-3.5 border-t border-indigo-500/10 space-y-3.5 text-xs text-gray-300 leading-relaxed font-sans max-h-[320px] overflow-y-auto">
-                  
-                  {/* Google Login issue */}
-                  <div className="space-y-1.5 pb-2.5 border-b border-white/5 font-sans">
-                    <h4 className="font-extrabold text-[#e2e8f0] flex items-center gap-1.5 text-[11px]">
-                      <span className="text-red-400">●</span> 1. تفعيل تسجيل الدخول بجوجل (Google Sign-In)
-                    </h4>
-                    <p className="text-[10px] text-gray-400 leading-relaxed">
-                      بما أن هذا نطاق تطبيق جديد أو مختلف، فلن يعمل تسجيل الدخول بجوجل إلا بعد إضافة هذا النطاق إلى قائمة النطاقات المصرح بها في لوحة تحكم Firebase وتفعيل الموفر.
-                    </p>
-                    <div className="p-2 bg-stone-900 rounded-lg text-left select-all font-mono text-[9px] text-gray-400 border border-white/5">
-                      {window.location.host}
-                    </div>
-                    <p className="text-[10px] text-amber-500 font-bold leading-relaxed">
-                      الحل: اذهب إلى لوحة تحكم Firebase الخاصة بك ← Authentication ← Settings ← Authorized Domains ← ثم أضف النطاق المذكور بالأعلى في الحقل واضغط حفظ. وتأكد من تفعيل Google في تبويب Sign-in Providers.
-                    </p>
-                  </div>
 
-                  {/* Firestore Sync issue */}
-                  <div className="space-y-1.5 pb-2.5 border-b border-white/5 font-sans">
-                    <h4 className="font-extrabold text-[#e2e8f0] flex items-center gap-1.5 text-[11px]">
-                      <span className="text-red-400">●</span> 2. حل مشكلة (Permission Denied) ومزامنة الأجهزة
-                    </h4>
-                    <p className="text-[10px] text-gray-400 leading-relaxed">
-                      قاعدة البيانات تمنع الحفظ التلقائي أو المزامنة بسبب قواعد الأمان الافتراضية (Firestore Rules) المغلقة في تطبيق الـ Firebase الخاص بك. لتفعيل الحفظ الفوري التلقائي والتزامن بين بقية الهواتف والأجهزة، انسخ الكود التالي:
-                    </p>
-                    <pre className="p-2.5 bg-stone-900 rounded-lg text-left font-mono text-[9px] text-[#34d399] overflow-x-auto select-all leading-normal border border-white/5">
-{`rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      match /watchlist/{itemId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-    }
-  }
-}`}
-                    </pre>
-                    <p className="text-[10px] text-amber-500 font-bold leading-relaxed">
-                      الحل: توجه إلى لوحة تحكم الـ Firebase الخاصة بك ← اختر Firestore Database ← ثم تبويب Rules (القواعد) ← استبدل كل الأسطر بالكود البرمجي الأخضر أعلاه ثم اضغط على زر Publish.
-                    </p>
-                  </div>
-
-                  {/* Summary tip */}
-                  <p className="text-[10px] text-gray-400 font-bold bg-[#1e1b4b]/35 border border-indigo-500/10 p-2 rounded-xl text-center leading-relaxed">
-                     بمجرد تطبيق الخطوات البسيطة أعلاه في مشروع الـ Firebase الخاص بك، سيعمل تسجيل الدخول بجوجل وتتزامن جميع الأفلام المحفوظة تلقائياً وفوراً بين جميع أجهزتك الذكية!
-                  </p>
-
-                </div>
-              )}
-            </div>
 
             {/* Restrict warning or list status */}
             <div className="mt-8 p-3.5 rounded-2xl bg-stone-900/60 border border-white/5 text-right space-y-1">

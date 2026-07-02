@@ -89,13 +89,13 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
             {viewAllHash ? (
               <a
                 href={viewAllHash}
-                className="group/title font-display text-xl md:text-2xl font-black tracking-tight text-white flex items-center gap-1.5 hover:text-white/80 transition-colors cursor-pointer"
+                className="group/title text-lg sm:text-xl md:text-2xl font-bold text-white flex items-center gap-1.5 hover:text-white/80 transition-colors cursor-pointer"
               >
                 <span>{title}</span>
                 <ChevronLeft className="w-5 h-5 text-stone-500 group-hover/title:text-white group-hover/title:-translate-x-0.5 transition-all" />
               </a>
             ) : (
-              <h2 className="font-display text-xl md:text-2xl font-black tracking-tight text-white flex items-center">
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white flex items-center">
                 <span>{title}</span>
               </h2>
             )}
@@ -107,16 +107,16 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
       <div className={`relative ${flush ? "" : "px-6 md:px-12"}`}>
         {/* Edge fade gradients (only when scrollable in that direction) */}
         {showRightArrow && (
-          <div className="hidden md:block absolute right-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-l from-[#111113] to-transparent" />
+          <div className="hidden md:block absolute right-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-l from-[#17171a] to-transparent" />
         )}
         {showLeftArrow && (
-          <div className="hidden md:block absolute left-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-r from-[#111113] to-transparent" />
+          <div className="hidden md:block absolute left-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-r from-[#17171a] to-transparent" />
         )}
          {/* Navigation Arrows for desktop hover */}
         {showRightArrow && (
           <button
             onClick={() => handleScroll('right')}
-            className="absolute right-8 top-[41%] z-45 w-10 h-10 rounded-full bg-black/80 hover:bg-stone-900 border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-all shadow-xl hidden md:flex"
+            className="absolute right-8 top-[41%] z-45 w-9 h-9 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md text-white/90 hover:text-white items-center justify-center cursor-pointer pointer-events-auto transition-all opacity-0 group-hover/row:opacity-100 hidden md:flex"
             aria-label="قناة سابقة"
           >
             <ChevronRight className="w-5 h-5" />
@@ -126,7 +126,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
         {showLeftArrow && (
           <button
             onClick={() => handleScroll('left')}
-            className="absolute left-8 top-[41%] z-45 w-10 h-10 rounded-full bg-black/80 hover:bg-stone-900 border border-white/5 text-white flex items-center justify-center cursor-pointer pointer-events-auto transition-all shadow-xl hidden md:flex"
+            className="absolute left-8 top-[41%] z-45 w-9 h-9 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md text-white/90 hover:text-white items-center justify-center cursor-pointer pointer-events-auto transition-all opacity-0 group-hover/row:opacity-100 hidden md:flex"
             aria-label="قناة لاحقة"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -138,7 +138,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
           ref={rowRef}
           onScroll={checkScroll}
           dir="rtl"
-          className="flex flex-row gap-3 md:gap-4 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none"
+          className="flex flex-row gap-2.5 md:gap-3 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none"
         >
           {items.map((item, idx) => {
             const hasScore = item.rating > 0;
@@ -151,10 +151,10 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
                 key={`${item.type}-${item.id}`}
                 onClick={() => onItemClick(item)}
                 style={{ animationDelay: `${idx * 45}ms` }}
-                className="group/card card-transition flex-none w-[110px] sm:w-[150px] md:w-[175px] lg:w-[195px] cursor-pointer rounded-xl p-1.5 pb-3 select-none"
+                className="group/card card-transition flex-none w-[100px] sm:w-[135px] md:w-[155px] lg:w-[170px] cursor-pointer rounded-xl p-1.5 pb-3 select-none"
               >
                 {/* Poster Artwork container */}
-                <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-stone-600/40 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.5)]">
+                <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-stone-600/40">
                   {onRemove && (
                     <button
                       onClick={(e) => {

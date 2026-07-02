@@ -51,14 +51,14 @@ export default function ContinueWatchingRow({ title, items, onItemClick, onRemov
   return (
     <div className="mb-16 md:mb-20 relative flex flex-col group/row">
       <div className="px-6 md:px-12 mb-4 md:mb-5">
-        <h2 className="font-display text-xl md:text-2xl font-black tracking-tight text-white">{title}</h2>
+        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">{title}</h2>
       </div>
 
       <div className="relative px-6 md:px-12">
         {showRightArrow && (
           <button
             onClick={() => handleScroll('right')}
-            className="hidden md:flex absolute right-12 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/row:opacity-100 transition-all cursor-pointer"
+            className="hidden md:flex absolute right-12 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md text-white/90 hover:text-white items-center justify-center opacity-0 group-hover/row:opacity-100 transition-all cursor-pointer"
             aria-label="السابق"
           >
             <ChevronRight className="w-5 h-5" />
@@ -67,7 +67,7 @@ export default function ContinueWatchingRow({ title, items, onItemClick, onRemov
         {showLeftArrow && (
           <button
             onClick={() => handleScroll('left')}
-            className="hidden md:flex absolute left-12 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/row:opacity-100 transition-all cursor-pointer"
+            className="hidden md:flex absolute left-12 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md text-white/90 hover:text-white items-center justify-center opacity-0 group-hover/row:opacity-100 transition-all cursor-pointer"
             aria-label="التالي"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -77,7 +77,7 @@ export default function ContinueWatchingRow({ title, items, onItemClick, onRemov
         <div
           ref={rowRef}
           onScroll={checkScroll}
-          className="flex flex-row gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none"
+          className="flex flex-row gap-2.5 md:gap-3 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none"
         >
           {items.map((item) => {
             const progressKey = `noir_progress_${item.type}_${item.id}`;
@@ -89,9 +89,9 @@ export default function ContinueWatchingRow({ title, items, onItemClick, onRemov
               <div
                 key={`${item.type}-${item.id}`}
                 onClick={() => onItemClick(item)}
-                className="group/cw flex-none w-[280px] sm:w-[340px] md:w-[380px] cursor-pointer"
+                className="group/cw flex-none w-[240px] sm:w-[300px] md:w-[330px] cursor-pointer"
               >
-                <div className="relative aspect-video rounded-2xl overflow-hidden bg-stone-900 border border-white/8 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.7)]">
+                <div className="relative aspect-video rounded-2xl overflow-hidden bg-stone-900 border border-white/8">
                   {img ? (
                     <img
                       src={img}

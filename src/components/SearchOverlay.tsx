@@ -44,7 +44,7 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle, onBrowse
   const [catImages, setCatImages] = useState<Record<string, string>>({});
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // جلب صورة ممثّلة لكل تصنيف (أشهر فلم) — زي CategoryRow
+  // جلب صورة ممثّلة لكل تصنيف (أشهر فلم) — بدون تكرار نفس الصورة بين التصنيفات
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
@@ -53,16 +53,21 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle, onBrowse
         CATEGORIES.map(async (cat) => {
           try {
             const res = await discoverTitles('movie', { genreIds: String(cat.primaryGenre), sortBy: 'popularity', page: 1 });
-            const withPoster = res.results.find((r) => r.poster);
-            return [cat.key, withPoster?.poster || ''] as [string, string];
+            const posters = res.results.filter((r) => r.poster).map((r) => r.poster as string);
+            return [cat.key, posters] as [string, string[]];
           } catch {
-            return [cat.key, ''] as [string, string];
+            return [cat.key, []] as [string, string[]];
           }
         })
       );
       if (!cancelled) {
+        // كل تصنيف ياخذ أول صورة غير مستعملة من قائمته — يمنع التكرار
+        const used = new Set<string>();
         const map: Record<string, string> = {};
-        entries.forEach(([k, v]) => { if (v) map[k] = v; });
+        entries.forEach(([k, posters]) => {
+          const pick = posters.find((p) => !used.has(p)) || posters[0] || '';
+          if (pick) { map[k] = pick; used.add(pick); }
+        });
         setCatImages(map);
       }
     })();
@@ -138,28 +143,19 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle, onBrowse
 
   return (
     <div
-      className="fixed inset-0 bg-[#0a0a0a] z-[500] pt-20 md:pt-24 px-4 sm:px-6 md:px-10 selection:bg-red-500/30 overflow-y-auto"
+      className="fixed inset-y-0 left-0 right-0 md:right-52 bg-[#17171a] z-[170] pt-20 md:pt-24 px-4 sm:px-6 md:px-10 selection:bg-red-500/30 overflow-y-auto"
     >
-      {/* زر إغلاق أعلى */}
-      <button
-        onClick={onClose}
-        className="fixed top-5 left-5 z-[510] w-9 h-9 rounded-full bg-white/8 hover:bg-white/15 text-white flex items-center justify-center cursor-pointer transition-all"
-        aria-label="إغلاق"
-      >
-        <X className="w-5 h-5" />
-      </button>
-
-      <div className="max-w-4xl mx-auto">
+      <div className="w-full">
 
         {/* Input area — bar بحث كبير */}
-        <div className="flex items-center gap-3 px-5 py-4 bg-stone-900/80 border border-white/8 rounded-2xl mb-8 sticky top-4 z-10 backdrop-blur-xl">
+        <div className="flex items-center gap-3 px-5 py-4 bg-stone-900/80 border border-white/8 rounded-2xl mb-6 backdrop-blur-xl">
           <Search className="w-5 h-5 text-gray-400 shrink-0" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="ابحث عن أفلام، مسلسلات، ممثلين..."
+            placeholder=""
             className="flex-1 bg-transparent border-0 outline-none text-white text-base md:text-lg font-medium placeholder-gray-500 text-right font-sans"
             autoComplete="off"
           />
@@ -176,6 +172,40 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle, onBrowse
             )
           )}
         </div>
+
+        {/* آخر ما شاهدته من البحث — أفقي تحت الـ bar */}
+        {!query.trim() && recentTitles.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-3 select-none" dir="rtl">
+              <span className="text-[11px] font-bold text-gray-500 uppercase">آخر ما شاهدته من البحث</span>
+              <button
+                onClick={clearRecentTitles}
+                className="text-red-500 hover:text-red-400 flex items-center gap-1 transition-colors text-[10px] font-bold cursor-pointer"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>مسح السجل</span>
+              </button>
+            </div>
+            <div className="flex flex-row gap-2.5 md:gap-3 overflow-x-auto no-scrollbar pb-2" dir="rtl">
+              {recentTitles.map((item) => (
+                <div
+                  key={`recent-${item.type}-${item.id}`}
+                  onClick={() => { addToRecentTitles(item); onSelectTitle(item.type, item.id); onClose(); }}
+                  className="flex-none w-[90px] sm:w-[110px] cursor-pointer select-none"
+                >
+                  <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-stone-900 border border-white/8">
+                    {item.poster ? (
+                      <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-stone-600">{item.title.slice(0, 2)}</div>
+                    )}
+                  </div>
+                  <p className="text-white/85 text-[11px] font-semibold truncate mt-1.5 text-right">{item.title}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Body */}
         <div className="pb-20">
@@ -271,111 +301,7 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle, onBrowse
               </div>
             )
           ) : (
-            <div className="space-y-4">
-              {/* Recently opened titles from search */}
-              {recentTitles.length > 0 && (
-                <div className="space-y-0.5">
-                  <div className="flex items-center justify-between px-5 py-1.5 select-none">
-                    <span className="text-[10px] font-bold text-gray-500 uppercase">آخر ما شاهدته من البحث</span>
-                    <button
-                      onClick={clearRecentTitles}
-                      className="text-red-500 hover:text-red-400 flex items-center gap-1 transition-colors text-[10px] font-bold"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      <span>مسح السجل</span>
-                    </button>
-                  </div>
-                  {recentTitles.map((item) => (
-                    <div
-                      key={`recent-${item.type}-${item.id}`}
-                      onClick={() => {
-                        addToRecentTitles(item);
-                        onSelectTitle(item.type, item.id);
-                        onClose();
-                      }}
-                      className="flex items-center gap-4 px-5 py-3 hover:bg-white/5 cursor-pointer transition-colors text-right"
-                    >
-                      <div className="w-10 h-14 bg-stone-800 rounded-lg overflow-hidden shrink-0 select-none">
-                        {item.poster ? (
-                          <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-stone-600">
-                            {item.title.slice(0, 2)}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex-1 min-w-0 pr-1">
-                        <h5 className="text-white font-semibold text-sm truncate">{item.title}</h5>
-                        <p className="text-gray-400 text-xs mt-1 font-medium flex items-center gap-1.5">
-                          <span>{item.year || '—'}</span>
-                          <span className="w-1 h-1 bg-stone-700 rounded-full" />
-                          <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="flex items-center gap-1 text-[10px] text-stone-500 font-medium whitespace-nowrap">
-                          <Clock className="w-3 h-3" />
-                          <span>{timeAgo(item.openedAt)}</span>
-                        </span>
-                        <ChevronLeft className="w-4 h-4 text-gray-500" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Suggestions / Trending List */}
-              {trending.length > 0 && (
-                <div className={`space-y-0.5 ${recentTitles.length > 0 ? 'border-t border-white/5 pt-3' : ''}`}>
-                  <div className="text-[10px] font-bold text-gray-500 px-5 py-1.5 text-right select-none uppercase">
-                    أبحر في العناوين الرائجة اليوم
-                  </div>
-                  {trending.slice(0, 6).map((item) => (
-                    <div
-                      key={`${item.type}-${item.id}`}
-                      onClick={() => {
-                        addToRecentTitles(item);
-                        onSelectTitle(item.type, item.id);
-                        onClose();
-                      }}
-                      className="flex items-center gap-4 px-5 py-3 hover:bg-white/5 cursor-pointer transition-colors text-right"
-                    >
-                      <div className="w-10 h-14 bg-stone-800 rounded-lg overflow-hidden shrink-0 select-none">
-                        {item.poster ? (
-                          <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-stone-600">
-                            {item.title.slice(0, 2)}
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0 pr-1">
-                        <h5 className="text-white font-semibold text-sm truncate">{item.title}</h5>
-                        <p className="text-gray-400 text-xs mt-1 font-medium flex items-center gap-1.5">
-                          <span>{item.year || '—'}</span>
-                          <span className="w-1 h-1 bg-stone-700 rounded-full" />
-                          <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-4">
-                        {item.rating > 0 && (
-                          <div className="flex items-center gap-1 text-[#f5c518] text-xs font-bold">
-                            <Star className="w-3.5 h-3.5 fill-current" />
-                            <span>{item.rating.toFixed(1)}</span>
-                          </div>
-                        )}
-                        <ChevronLeft className="w-4 h-4 text-gray-500" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-            </div>
+            null
           )}
         </div>
         </div>

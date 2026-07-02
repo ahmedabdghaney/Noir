@@ -73,7 +73,7 @@ export default function CategoryRow({ title = 'تصفّح حسب التصنيف'
         {showRightArrow && (
           <button
             onClick={() => handleScroll('right')}
-            className="absolute right-8 top-[42%] z-40 w-10 h-10 rounded-full bg-black/80 hover:bg-stone-900 border border-white/5 text-white items-center justify-center cursor-pointer transition-all shadow-xl hidden md:flex"
+            className="absolute right-8 top-[42%] z-40 w-9 h-9 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md text-white/90 hover:text-white items-center justify-center cursor-pointer pointer-events-auto transition-all opacity-0 group-hover/row:opacity-100 hidden md:flex"
             aria-label="السابق"
           >
             <ChevronRight className="w-5 h-5" />
@@ -82,7 +82,7 @@ export default function CategoryRow({ title = 'تصفّح حسب التصنيف'
         {showLeftArrow && (
           <button
             onClick={() => handleScroll('left')}
-            className="absolute left-8 top-[42%] z-40 w-10 h-10 rounded-full bg-black/80 hover:bg-stone-900 border border-white/5 text-white items-center justify-center cursor-pointer transition-all shadow-xl hidden md:flex"
+            className="absolute left-8 top-[42%] z-40 w-9 h-9 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md text-white/90 hover:text-white items-center justify-center cursor-pointer pointer-events-auto transition-all opacity-0 group-hover/row:opacity-100 hidden md:flex"
             aria-label="التالي"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -93,15 +93,15 @@ export default function CategoryRow({ title = 'تصفّح حسب التصنيف'
           ref={rowRef}
           onScroll={checkScroll}
           dir="rtl"
-          className="flex flex-row gap-4 md:gap-6 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none"
+          className="flex flex-row gap-2.5 md:gap-3 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none"
         >
           {CATEGORIES.map((cat) => (
             <div
               key={cat.key}
               onClick={() => onSelect(cat.key)}
-              className="group/cat flex-none w-[110px] sm:w-[150px] md:w-[175px] lg:w-[195px] cursor-pointer rounded-xl p-1.5 pb-3 select-none"
+              className="group/cat flex-none w-[100px] sm:w-[135px] md:w-[155px] lg:w-[170px] cursor-pointer rounded-xl p-1.5 pb-3 select-none"
             >
-              <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-stone-600/40 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.5)]">
+              <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-stone-600/40">
                 {images[cat.key] && (
                   <img
                     src={images[cat.key]}

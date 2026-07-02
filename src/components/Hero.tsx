@@ -83,7 +83,7 @@ export default function Hero({
   return (
     <div className="relative w-full mb-10 sm:mb-14 select-none overflow-hidden">
       {/* Full-bleed stack — البطاقة النشطة تظهر بـ fade (بدون انزلاق عبر البقية) */}
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-hidden group/hero">
         <div dir="rtl" className="relative">
           {activePool.map((item, i) => {
             const isActive = i === currentIndex;
@@ -198,20 +198,20 @@ export default function Hero({
           })}
         </div>
 
-        {/* Nav arrows — شكل Apple TV (رمادي شفاف على الحواف) */}
+        {/* Nav arrows — تظهر فقط عند hover على الهيرو */}
         <button
           onClick={() => goTo(-1)}
-          className="hidden sm:flex absolute right-4 md:right-6 top-1/2 -translate-y-1/2 w-10 h-16 rounded-2xl bg-black/40 hover:bg-black/60 backdrop-blur-md text-white/90 hover:text-white items-center justify-center cursor-pointer transition-all z-30 border border-white/10"
+          className="hidden sm:flex absolute right-4 md:right-6 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md text-white/90 hover:text-white items-center justify-center cursor-pointer transition-all z-30 opacity-0 group-hover/hero:opacity-100"
           aria-label="السابق"
         >
-          <ChevronRight className="w-6 h-6" strokeWidth={2.5} />
+          <ChevronRight className="w-5 h-5" strokeWidth={2.5} />
         </button>
         <button
           onClick={() => goTo(1)}
-          className="hidden sm:flex absolute left-4 md:left-6 top-1/2 -translate-y-1/2 w-10 h-16 rounded-2xl bg-black/40 hover:bg-black/60 backdrop-blur-md text-white/90 hover:text-white items-center justify-center cursor-pointer transition-all z-30 border border-white/10"
+          className="hidden sm:flex absolute left-4 md:left-6 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md text-white/90 hover:text-white items-center justify-center cursor-pointer transition-all z-30 opacity-0 group-hover/hero:opacity-100"
           aria-label="التالي"
         >
-          <ChevronLeft className="w-6 h-6" strokeWidth={2.5} />
+          <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
         </button>
       </div>
 
