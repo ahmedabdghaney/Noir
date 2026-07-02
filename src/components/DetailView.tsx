@@ -683,7 +683,7 @@ export default function DetailView({
                 <>
                   <button
                     onClick={() => handlePlayClick('movie')}
-                    className="flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-white/90 text-black font-bold px-4 sm:px-8 py-2 md:py-3 rounded-full transition-all cursor-pointer shadow-lg text-xs sm:text-sm"
+                    className="flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-white/90 text-black font-bold px-4 sm:px-8 py-2 md:py-3 rounded-full transition-all cursor-pointer text-xs sm:text-sm"
                   >
                     <Play className="w-3.5 h-3.5 fill-black text-black" />
                     <span>إكمال المشاهدة ({savedProgressPercent}%)</span>
@@ -700,7 +700,7 @@ export default function DetailView({
               ) : (
                 <button
                   onClick={() => handlePlayClick('movie')}
-                  className="flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-white/90 text-black font-bold px-4 sm:px-8 py-2 md:py-3 rounded-full transition-all cursor-pointer shadow-lg text-xs sm:text-sm"
+                  className="flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-white/90 text-black font-bold px-4 sm:px-8 py-2 md:py-3 rounded-full transition-all cursor-pointer text-xs sm:text-sm"
                 >
                   <Play className="w-3.5 h-3.5 fill-black text-black" />
                   <span>المشاهدة الآن</span>
@@ -744,7 +744,7 @@ export default function DetailView({
 
           {/* Left Side: Solid Poster Art (Order-1 on display size to look traditional) */}
           <div className="order-1 md:order-1">
-            <div className="w-[160px] md:w-[240px] aspect-[2/3] mx-auto md:mx-0 rounded-2xl overflow-hidden bg-stone-900 border border-white/10 shadow-2xl relative select-none">
+            <div className="w-[160px] md:w-[240px] aspect-[2/3] mx-auto md:mx-0 rounded-2xl overflow-hidden bg-stone-900 border border-white/[0.06] relative select-none">
               {data.poster_path ? (
                 <img
                   src={getPosterUrl(data.poster_path) || undefined}
@@ -764,7 +764,7 @@ export default function DetailView({
 
         {/* Watch Together Live Synchronization Panel */}
         {isWatchTogetherOpen && (
-          <div className="mt-8 bg-stone-950 border border-white/5 rounded-3xl p-4 sm:p-6 md:p-8 shadow-2xl space-y-6 text-right animate-fade-in max-w-4xl mx-auto selection:bg-red-500/25">
+          <div className="mt-8 bg-stone-950 border border-white/5 rounded-3xl p-4 sm:p-6 md:p-8 space-y-6 text-right animate-fade-in max-w-4xl mx-auto selection:bg-red-500/25">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/5 pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-red-600/10 border border-red-500/20 flex items-center justify-center">
@@ -793,7 +793,7 @@ export default function DetailView({
                 </div>
                 <button
                   onClick={handleCopyRoomLink}
-                  className="flex items-center gap-1 bg-white hover:bg-white/90 text-black font-bold text-xs px-3.5 py-1.5 rounded-full transition-all cursor-pointer shadow-md"
+                  className="flex items-center gap-1 bg-white hover:bg-white/90 text-black font-bold text-xs px-3.5 py-1.5 rounded-full transition-all cursor-pointer"
                 >
                   <Copy className="w-3 h-3" />
                   <span>{wtCopied ?'تم النسخ!' :'نسخ الرابط'}</span>
@@ -876,43 +876,43 @@ export default function DetailView({
         )}
 
         {/* Specs Factors Panel - Technical Details cards matrix */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 my-12 md:my-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 my-14 md:my-20">
           <div className="flex flex-col gap-1.5 glass rounded-2xl px-5 py-4">
-            <span className="text-[11px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-1.5">
+            <span className="text-[11px] text-white/45 font-medium uppercase tracking-wide flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5" />
               عام الإصدار
             </span>
-            <span className="text-white text-lg md:text-2xl font-extrabold">
+            <span className="text-white text-lg md:text-2xl font-semibold">
               {year || 'غ/م'}
             </span>
           </div>
 
           <div className="flex flex-col gap-1.5 glass rounded-2xl px-5 py-4">
-            <span className="text-[11px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-1.5">
+            <span className="text-[11px] text-white/45 font-medium uppercase tracking-wide flex items-center gap-1.5">
               <RotateCcw className="w-3.5 h-3.5" />
               الإخراج
             </span>
-            <span className="text-white text-sm md:text-lg font-bold truncate" title={director}>
+            <span className="text-white text-sm md:text-lg font-semibold truncate" title={director}>
               {director}
             </span>
           </div>
 
           <div className="flex flex-col gap-1.5 glass rounded-2xl px-5 py-4">
-            <span className="text-[11px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-1.5">
+            <span className="text-[11px] text-white/45 font-medium uppercase tracking-wide flex items-center gap-1.5">
               <Globe className="w-3.5 h-3.5" />
               دولة الإنتاج
             </span>
-            <span className="text-white text-sm md:text-lg font-bold truncate" title={country}>
+            <span className="text-white text-sm md:text-lg font-semibold truncate" title={country}>
               {country}
             </span>
           </div>
 
           <div className="flex flex-col gap-1.5 glass rounded-2xl px-5 py-4">
-            <span className="text-[11px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-1.5">
+            <span className="text-[11px] text-white/45 font-medium uppercase tracking-wide flex items-center gap-1.5">
               <Languages className="w-3.5 h-3.5" />
               اللغة الأصلية
             </span>
-            <span className="text-white text-sm md:text-lg font-bold truncate">
+            <span className="text-white text-sm md:text-lg font-semibold truncate">
               {mainLang}
             </span>
           </div>
@@ -922,13 +922,13 @@ export default function DetailView({
         {/* TV Episodes section - full width below info cards */}
             {/* TV Series: season selector + Apple-TV style episode cards */}
             {type ==='tv' && data.seasons && data.seasons.length > 0 && (
-              <div className="w-full mb-12 md:mb-16 mt-4">
+              <div className="w-full mb-16 md:mb-24 mt-4">
                 {/* Season selector — Apple TV style */}
                 <div className="flex items-center gap-3 mb-5">
                   <div className="relative">
                     <button
                       onClick={() => setSeasonMenuOpen((v) => !v)}
-                      className="flex items-center gap-2 text-white text-lg sm:text-xl font-display font-black tracking-tight hover:text-white/80 transition-colors cursor-pointer"
+                      className="flex items-center gap-2 text-white text-lg sm:text-xl font-bold hover:text-white/80 transition-colors cursor-pointer"
                     >
                       <span>الموسم {selectedSeason}</span>
                       <ChevronsUpDown className="w-4 h-4 text-stone-400" />
@@ -1026,7 +1026,7 @@ export default function DetailView({
                           className="group/ep flex-none w-[300px] sm:w-[380px] text-right snap-start cursor-pointer"
                         >
                           {/* Card with image + overlaid text */}
-                          <div className={`relative h-[280px] sm:h-[320px] rounded-3xl overflow-hidden bg-stone-900 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.7)] ${selectedEpisode === ep.episode_number ? 'ring-2 ring-inset ring-red-500/90' : 'border border-white/8'}`}>
+                          <div className={`relative h-[280px] sm:h-[320px] rounded-xl overflow-hidden bg-stone-900 ${selectedEpisode === ep.episode_number ? 'ring-2 ring-inset ring-red-500/90' : 'border border-white/[0.06]'}`}>
                             {still ? (
                               <img
                                 src={still}
@@ -1096,14 +1096,14 @@ export default function DetailView({
             {/* Cast roster row component */}
             {cast.length > 0 && (
               <div className="space-y-4">
-                <h3 className="font-display text-xl font-black text-white tracking-tight">طاقم العمل</h3>
+                <h3 className="text-lg sm:text-xl font-bold text-white">طاقم العمل</h3>
                 <div className="flex gap-3 sm:gap-5 overflow-x-auto no-scrollbar pb-3 -mx-1 px-1" dir="rtl">
                   {cast.map((c: CastMember) => (
                     <div
                       key={c.id}
                       className="flex-none w-[72px] sm:w-[110px] flex flex-col items-center text-center group/cast"
                     >
-                      <div className="w-[64px] h-[64px] sm:w-[100px] sm:h-[100px] rounded-full overflow-hidden bg-stone-800 select-none border border-white/8 shadow-[0_8px_20px_-8px_rgba(0,0,0,0.6)] transition-transform duration-300">
+                      <div className="w-[64px] h-[64px] sm:w-[100px] sm:h-[100px] rounded-full overflow-hidden bg-stone-800 select-none border border-white/[0.06] transition-transform duration-300">
                         {c.profile_path ? (
                           <img
                             src={getProfileUrl(c.profile_path) || undefined}
