@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Dot, Star, Clock, Calendar, Globe, Languages, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DetailedInfo, MovieOrShow, CastMember } from '../types';
-import { fetchDetailedTitle, getPosterUrl, getBackdropUrl, getOriginalBackdropUrl } from '../lib/tmdb';
+import { fetchDetailedTitle, getPosterUrl, getLargePosterUrl, getBackdropUrl, getOriginalBackdropUrl } from '../lib/tmdb';
 import VideoPlayer from './VideoPlayer';
 import MovieRow from './MovieRow';
 import { useWatchTogether } from '../lib/useWatchTogether';
@@ -607,7 +607,7 @@ export default function DetailView({
         <div
           className="absolute inset-0 bg-cover bg-center ken-burns"
           style={{
-            backgroundImage: `url(${getOriginalBackdropUrl(data.backdrop_path) || getPosterUrl(data.poster_path) ||''})`,
+            backgroundImage: `url(${getOriginalBackdropUrl(data.backdrop_path) || getLargePosterUrl(data.poster_path) ||''})`,
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#111113] via-[#111113]/70 to-[#111113]/20" />
