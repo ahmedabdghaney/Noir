@@ -62,7 +62,7 @@ function GridCard({ item, onClick }: { item: MovieOrShow; onClick: () => void })
       onClick={onClick}
       className="group/card card-transition cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
     >
-      <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8">
+      <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-white/[0.06]">
         {item.poster ? (
           <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover transition-transform duration-500" />
         ) : (

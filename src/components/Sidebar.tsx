@@ -74,7 +74,7 @@ export default function Sidebar({
   ];
 
   return (
-    <aside className="hidden md:flex flex-col fixed right-0 top-0 bottom-0 w-52 z-[180] border-l border-white/[0.06] bg-[#0f0f11]"
+    <aside className="hidden md:flex flex-col fixed right-0 top-0 bottom-0 w-52 z-[180] border-l border-white/[0.06] bg-[#141417]"
       style={{ direction: 'rtl' }}
     >
       {/* Logo */}

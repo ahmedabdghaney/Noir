@@ -60,7 +60,7 @@ export default function StudiosRow({ title = 'تصفّح حسب الشركة ا�
   };
 
   return (
-    <div className="mb-16 md:mb-20 relative flex flex-col group/row">
+    <div className="mb-16 md:mb-24 relative flex flex-col group/row">
       <div className="px-6 md:px-12 mb-4 md:mb-5">
         <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">{title}</h2>
       </div>

@@ -49,7 +49,7 @@ export default function ContinueWatchingRow({ title, items, onItemClick, onRemov
   if (!items || items.length === 0) return null;
 
   return (
-    <div className="mb-16 md:mb-20 relative flex flex-col group/row">
+    <div className="mb-16 md:mb-24 relative flex flex-col group/row">
       <div className="px-6 md:px-12 mb-4 md:mb-5">
         <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">{title}</h2>
       </div>
@@ -91,7 +91,7 @@ export default function ContinueWatchingRow({ title, items, onItemClick, onRemov
                 onClick={() => onItemClick(item)}
                 className="group/cw flex-none w-[240px] sm:w-[300px] md:w-[330px] cursor-pointer"
               >
-                <div className="relative aspect-video rounded-2xl overflow-hidden bg-stone-900 border border-white/8">
+                <div className="relative aspect-video rounded-xl overflow-hidden bg-stone-900 border border-white/[0.06]">
                   {img ? (
                     <img
                       src={img}
@@ -128,7 +128,7 @@ export default function ContinueWatchingRow({ title, items, onItemClick, onRemov
                   )}
 
                   <div className="absolute inset-x-0 bottom-0 p-3.5">
-                    <h3 className="text-white font-bold text-sm leading-tight line-clamp-1 mb-2">{item.title || (item as any).name || 'بدون عنوان'}</h3>
+                    <h3 className="text-white font-semibold text-sm leading-tight line-clamp-1 mb-2">{item.title || (item as any).name || 'بدون عنوان'}</h3>
                     <div className="h-1 w-full bg-white/20 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-red-500 rounded-full"

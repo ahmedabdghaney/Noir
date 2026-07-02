@@ -81,7 +81,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
   }
 
   return (
-    <div className="mb-16 md:mb-20 relative group/row flex flex-col">
+    <div className="mb-16 md:mb-24 relative group/row flex flex-col">
       {/* Category Header */}
       <div className={`mb-4 md:mb-5 flex flex-col text-right ${flush ? "" : "px-6 md:px-12"}`}>
         <div className="flex items-center justify-between flex-wrap gap-2">
@@ -92,7 +92,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
                 className="group/title text-lg sm:text-xl md:text-2xl font-bold text-white flex items-center gap-1.5 hover:text-white/80 transition-colors cursor-pointer"
               >
                 <span>{title}</span>
-                <ChevronLeft className="w-5 h-5 text-stone-500 group-hover/title:text-white group-hover/title:-translate-x-0.5 transition-all" />
+                <ChevronLeft className="w-5 h-5 text-white/40 group-hover/title:text-white group-hover/title:-translate-x-0.5 transition-all" />
               </a>
             ) : (
               <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white flex items-center">
@@ -154,7 +154,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
                 className="group/card card-transition flex-none w-[100px] sm:w-[135px] md:w-[155px] lg:w-[170px] cursor-pointer rounded-xl p-1.5 pb-3 select-none"
               >
                 {/* Poster Artwork container */}
-                <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-stone-600/40">
+                <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-white/[0.06]">
                   {onRemove && (
                     <button
                       onClick={(e) => {
@@ -208,10 +208,10 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
 
                 {/* Meta details */}
                 <div className="mt-2.5 px-1 text-right flex flex-col">
-                  <span className="text-white font-bold text-xs sm:text-sm line-clamp-1 leading-tight transition-colors">
+                  <span className="text-white font-semibold text-xs sm:text-sm line-clamp-1 leading-tight transition-colors">
                     {item.title}
                   </span>
-                  <span className="text-stone-500 font-semibold text-[10px] sm:text-xs mt-1 flex items-center gap-1 justify-start">
+                  <span className="text-white/45 font-medium text-[10px] sm:text-xs mt-1 flex items-center gap-1 justify-start">
                     <span>{item.year || '—'}</span>
                     <span className="w-1 h-1 bg-stone-800 rounded-full" />
                     <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>

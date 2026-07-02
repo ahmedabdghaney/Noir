@@ -65,7 +65,7 @@ export default function CategoryRow({ title = 'تصفّح حسب التصنيف'
   };
 
   return (
-    <div className="relative group/row mb-14 flex flex-col gap-4">
+    <div className="relative group/row mb-16 md:mb-24 flex flex-col gap-4">
       <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white px-6 md:px-12 text-right">{title}</h2>
 
       <div className="relative px-6 md:px-12">
@@ -101,7 +101,7 @@ export default function CategoryRow({ title = 'تصفّح حسب التصنيف'
               onClick={() => onSelect(cat.key)}
               className="group/cat flex-none w-[100px] sm:w-[135px] md:w-[155px] lg:w-[170px] cursor-pointer rounded-xl p-1.5 pb-3 select-none"
             >
-              <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-stone-600/40">
+              <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-white/[0.06]">
                 {images[cat.key] && (
                   <img
                     src={images[cat.key]}

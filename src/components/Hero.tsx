@@ -81,7 +81,7 @@ export default function Hero({
   const saved = isSaved ? isSaved(activeItem) : false;
 
   return (
-    <div className="relative w-full mb-10 sm:mb-14 select-none overflow-hidden">
+    <div className="relative w-full mb-12 sm:mb-16 select-none overflow-hidden">
       {/* Full-bleed stack — البطاقة النشطة تظهر بـ fade (بدون انزلاق عبر البقية) */}
       <div className="relative overflow-hidden group/hero">
         <div dir="rtl" className="relative">
