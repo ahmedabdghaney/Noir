@@ -528,9 +528,12 @@ export default function VideoPlayer({
 
   const toggleFullscreen = () => {
     const el = containerRef.current as any;
+    const vid = videoRef.current;
 
     // ── الخروج ──
     if (isFullscreen) {
+      const savedTime  = vid?.currentTime ?? 0;
+      const wasPlaying = vid ? !vid.paused : false;
       if (document.fullscreenElement && document.exitFullscreen) {
         document.exitFullscreen().catch(() => {});
       } else if ((document as any).webkitFullscreenElement && (document as any).webkitExitFullscreen) {
@@ -538,22 +541,39 @@ export default function VideoPlayer({
       }
       try { (screen.orientation as any)?.unlock?.(); } catch (_) {}
       setIsFullscreen(false);
+      // نرجّع الوقت والتشغيل بعد remount
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const v = videoRef.current;
+          if (!v) return;
+          if (Math.abs(v.currentTime - savedTime) > 0.5) v.currentTime = savedTime;
+          if (wasPlaying && v.paused) v.play().catch(() => {});
+        });
+      });
       return;
     }
 
     // ── الدخول ──
-    // iPhone ما يدعم requestFullscreen على div — نستعمل CSS fullscreen (fixed inset-0)
-    // عشان يبقى المشغّل المخصّص ظاهر بدل مشغّل iPhone الافتراضي (native)
+    // نحفظ الوقت الحالي والحالة قبل الانتقال — Portal يسبب remount للـ <video>
+    // فنرجّع الوقت والتشغيل بعد ما يُركَّب من جديد
+    const savedTime    = vid?.currentTime ?? 0;
+    const wasPlaying   = vid ? !vid.paused : false;
+
     const isIPhone = /iPhone|iPod/.test(navigator.userAgent);
     const enter = () => {
       setIsFullscreen(true);
       try { (screen.orientation as any)?.lock?.('landscape').catch(() => {}); } catch (_) {}
+      // نرجّع الوقت والتشغيل بعد remount الـ <video> (rAF يضمن إن الـ DOM اتحدّث)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const v = videoRef.current;
+          if (!v) return;
+          if (Math.abs(v.currentTime - savedTime) > 0.5) v.currentTime = savedTime;
+          if (wasPlaying && v.paused) v.play().catch(() => {});
+        });
+      });
     };
-    // iPhone: CSS fullscreen مباشرة (native fullscreen على div ما يشتغل — يفشل صامت)
-    if (isIPhone) {
-      enter();
-      return;
-    }
+    if (isIPhone) { enter(); return; }
     if (el?.requestFullscreen) {
       el.requestFullscreen().then(enter).catch(enter);
     } else if (el?.webkitRequestFullscreen) {
@@ -1004,29 +1024,11 @@ export default function VideoPlayer({
     </div>
   );
 
-  // ── Portal دائماً active — الـ <video> لا يتحرك من DOM أبداً ──
-  // المشكلة الأصلية: تبديل createPortal↔️playerTree مباشرة = unmount/remount للـ <video> = يتوقف الفلم
-  // الحل: playerTree دائماً داخل Portal في document.body
-  //   • fullscreen=true  → wrapper مرئي (fixed inset-0 z-[9999])
-  //   • fullscreen=false → wrapper مخفي (visibility:hidden) لكن الـ <video> لا يُفصل
-  //   • placeholder شفاف يحجز مكانه الأصلي في الصفحة
-  return (
-    <>
-      {/* placeholder يحجز المساحة الأصلية للمشغّل وقت fullscreen */}
-      {!isFullscreen && (
-        <div ref={containerRef} style={{ visibility: 'hidden' }} aria-hidden="true" />
-      )}
-      {createPortal(
-        <div style={isFullscreen
-          ? { position: 'fixed', inset: 0, zIndex: 9999 }
-          : { visibility: 'hidden', pointerEvents: 'none', position: 'fixed', inset: 0, zIndex: -1 }
-        }>
-          {playerTree}
-        </div>,
-        document.body
-      )}
-    </>
-  );
+  // fullscreen: ننقل المشغّل لـ body عبر Portal عشان يتجاوز أي transform بعنصر أب
+  // الـ <video> لا يتحرك من DOM — Portal دائماً موجود، الوضع العادي يُعرض مباشرة
+  return isFullscreen
+    ? createPortal(playerTree, document.body)
+    : playerTree;
 }
 
 function Btn({ onClick, label, children, active = false, small = false, big = false }: {
