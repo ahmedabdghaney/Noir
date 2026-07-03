@@ -652,6 +652,7 @@ export default function VideoPlayer({
               ref={videoRef}
               key={`mp4-${id}-${episode}`}
               autoPlay playsInline
+              crossOrigin="anonymous"
               className={`w-full h-full bg-black ${controlsVisible ? 'cursor-default' : 'cursor-none'}`}
               onClick={handleVideoClick}
               onLoadedData={() => { setIsLoading(false); setDuration(videoRef.current?.duration || 0); }}
