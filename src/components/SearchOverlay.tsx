@@ -212,13 +212,13 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle, onBrowse
           {/* قسم التصفح بالتصنيفات — يظهر لما ماكو بحث */}
           {!query.trim() && (
             <div className="mb-10">
-              <h2 className="font-display text-xl sm:text-2xl font-black text-white mb-5 text-right">تصفّح حسب التصنيف</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4" dir="rtl">
+              <h2 className="font-display text-xl sm:text-2xl font-black text-white mb-4 text-right">تصفّح حسب التصنيف</h2>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1 sm:gap-2" dir="rtl">
                 {CATEGORIES.map((cat) => (
                   <button
                     key={cat.key}
                     onClick={() => onBrowseCategory?.(cat.key)}
-                    className="group relative aspect-[3/4] rounded-2xl overflow-hidden cursor-pointer border border-white/8 hover:border-white/20 transition-all hover:scale-[1.03]"
+                    className="group relative aspect-[2/3] rounded-xl overflow-hidden cursor-pointer border border-white/[0.06] hover:border-white/20 transition-all hover:scale-[1.03]"
                   >
                     {catImages[cat.key] && (
                       <img
@@ -231,8 +231,8 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle, onBrowse
                     )}
                     <div className="absolute inset-0" style={{ background: cat.overlay }} />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                    <div className="absolute inset-0 flex items-center justify-center p-3">
-                      <span className="font-display text-lg sm:text-xl font-black text-white text-center drop-shadow-lg leading-tight">{cat.title}</span>
+                    <div className="absolute inset-0 flex items-center justify-center p-2">
+                      <span className="font-display text-sm sm:text-base font-black text-white text-center drop-shadow-lg leading-tight">{cat.title}</span>
                     </div>
                   </button>
                 ))}

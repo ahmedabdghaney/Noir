@@ -638,7 +638,7 @@ export default function VideoPlayer({
           {isLoading && !isPausedByHost && (
             <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-10 gap-3">
               <Loader className="w-8 h-8 text-red-500 animate-spin" />
-              <span className="text-xs text-white/30 select-none">Loading...</span>
+              <span className="text-xs text-white/30 select-none">جاري التحميل...</span>
             </div>
           )}
 

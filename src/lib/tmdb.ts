@@ -147,6 +147,16 @@ export async function fetchPopularMovies(): Promise<MovieOrShow[]> {
   return (res.results || []).map((m: any) => normalizeItem(m, 'movie')).filter((item: MovieOrShow) => item.poster && isYearAllowed(item));
 }
 
+// قريباً — أفلام لسا ما نزلت (تاريخ الإصدار بالمستقبل). نعتمد على /movie/upcoming
+// ونفلتر بس اللي تاريخها بعد اليوم عشان نضمن إنها فعلاً قادمة مو نازلة أصلاً.
+export async function fetchUpcoming(): Promise<MovieOrShow[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const res = await tmdbFetch('/movie/upcoming', { region: 'US', language: 'en-US' });
+  return (res.results || [])
+    .map((m: any) => normalizeItem(m, 'movie'))
+    .filter((item: MovieOrShow) => item.poster && item.date && item.date > today);
+}
+
 // Detailed queries
 export async function fetchDetailedTitle(type: 'movie' | 'tv', id: number): Promise<DetailedInfo> {
   // Fetch Arabic first (for overview), then English as fallback for missing fields.

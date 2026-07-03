@@ -16,6 +16,7 @@ import {
   fetchNowPlaying,
   fetchPopularTV,
   fetchPopularMovies,
+  fetchUpcoming,
   discoverTitles,
   searchTitles,
   MOVIE_GENRES,
@@ -277,6 +278,7 @@ export default function App() {
   const [nowPlaying, setNowPlaying] = useState<MovieOrShow[]>([]);
   const [popularTV, setPopularTV] = useState<MovieOrShow[]>([]);
   const [popularMovies, setPopularMovies] = useState<MovieOrShow[]>([]);
+  const [upcoming, setUpcoming] = useState<MovieOrShow[]>([]);
   const [isHomeLoading, setIsHomeLoading] = useState(true);
 
   // Reusable home feed reload (used on mount + pull-to-refresh)
@@ -287,6 +289,7 @@ export default function App() {
         fetchNowPlaying().then(setNowPlaying),
         fetchPopularTV().then(setPopularTV),
         fetchPopularMovies().then(setPopularMovies),
+        fetchUpcoming().then(setUpcoming),
       ]);
     } catch (e) {
       console.error('refreshHome failed:', e);
@@ -616,6 +619,7 @@ export default function App() {
           fetchNowPlaying().then(setNowPlaying),
           fetchPopularTV().then(setPopularTV),
           fetchPopularMovies().then(setPopularMovies),
+          fetchUpcoming().then(setUpcoming),
         ]);
       })
       .then(() => {
@@ -1230,7 +1234,7 @@ export default function App() {
             />
 
             {/* Custom Horizontal Cinema Rows */}
-            <div className="space-y-4 md:space-y-6">
+            <div className="space-y-1 md:space-y-2">
               {watchlist.length > 0 && (
                 <div id="watchlist-section" className="scroll-mt-20">
                   <MovieRow
@@ -1266,6 +1270,14 @@ export default function App() {
                 items={trendingWeek}
                 onItemClick={handleTitleClick}
               />
+
+              {upcoming.length > 0 && (
+                <MovieRow
+                  title="قريباً"
+                  items={upcoming}
+                  onItemClick={handleTitleClick}
+                />
+              )}
 
               <CategoryRow onSelect={(key) => { window.location.hash = `#category/${key}`; }} />
 
@@ -1663,7 +1675,7 @@ export default function App() {
                           {isLoadingMore ? (
                             <>
                               <Loader className="w-4 h-4 text-red-500 animate-spin" />
-                              <span>جاري المسح والتحميل...</span>
+                              <span>جاري التحميل...</span>
 </>
                           ) : (
                             <span>عرض المزيد من العناوين</span>

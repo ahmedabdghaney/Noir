@@ -434,7 +434,7 @@ export default function DetailView({
     return (
       <div className="w-full min-h-[60vh] flex flex-col items-center justify-center gap-4 py-20">
         <div className="w-10 h-10 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
-        <span className="text-gray-400 font-medium text-sm">جاري جلب تفاصيل الفيلم من قاعدة البيانات...</span>
+        <span className="text-gray-400 font-medium text-sm">جاري التحميل...</span>
 </div>
     );
   }
