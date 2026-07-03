@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { Play, Plus, Check, ChevronRight, ChevronLeft, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MovieOrShow } from '../types';
-import { fetchDetailedTitle, getTitleLogoUrl, getOriginalBackdropUrl } from '../lib/tmdb';
+import { fetchDetailedTitle, getTitleLogoUrl, getBackdropUrl } from '../lib/tmdb';
 
 interface HeroProps {
   trendingItems: MovieOrShow[];
@@ -65,8 +65,9 @@ export default function Hero({
   };
 
   const wideImg = (it: MovieOrShow) =>
-    getOriginalBackdropUrl((it as any).backdrop_path) ||
-    (it.backdrop || it.poster || '').replace('/w1280', '/original').replace('/w500', '/original');
+    getBackdropUrl((it as any).backdrop_path) ||
+    it.backdrop ||
+    (it.poster || '').replace('/w342', '/w780').replace('/w500', '/w780');
 
   const contentContainer = {
     hidden: {},
@@ -87,6 +88,10 @@ export default function Hero({
         <div dir="rtl" className="relative">
           {activePool.map((item, i) => {
             const isActive = i === currentIndex;
+            // نرندر بس النشطة والمجاورات (السابقة/الجاية) — الباقي ما ينحمل صوره إطلاقاً
+            const n = activePool.length;
+            const isNear = i === currentIndex || i === (currentIndex + 1) % n || i === (currentIndex - 1 + n) % n;
+            if (!isNear) return null;
             return (
               <div
                 key={`${item.type}-${item.id}`}
@@ -102,6 +107,9 @@ export default function Hero({
                       src={wideImg(item)}
                       alt={item.title}
                       referrerPolicy="no-referrer"
+                      loading={isActive ? 'eager' : 'lazy'}
+                      {...(isActive ? { fetchpriority: 'high' } : { fetchpriority: 'low' })}
+                      decoding="async"
                       className="w-full h-full object-cover object-top"
                     />
 
