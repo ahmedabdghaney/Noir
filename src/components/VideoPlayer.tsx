@@ -507,31 +507,18 @@ export default function VideoPlayer({
   const toggleFullscreen = () => {
     // ── الخروج ──
     if (isFullscreen) {
-      if (document.fullscreenElement && document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
-      } else if ((document as any).webkitFullscreenElement && (document as any).webkitExitFullscreen) {
-        (document as any).webkitExitFullscreen();
-      }
       try { (screen.orientation as any)?.unlock?.(); } catch (_) {}
       setIsFullscreen(false);
       return;
     }
 
     // ── الدخول ──
-    // نستعمل CSS fullscreen (fixed inset-0) بدل requestFullscreen على الحاوية،
-    // لأن المشغّل ينتقل عبر Portal للـ body عند الدخول — وطلب fullscreen على عنصر
-    // ثم نقله بالـ DOM يخلّي المتصفح يلغي fullscreen فوراً (الشاشة تدخل وتخرج).
-    // CSS fullscreen يعطي نفس النتيجة بدون هذا التعارض.
+    // CSS fullscreen نقي (fixed inset-0) — بدون requestFullscreen نهائياً.
+    // السبب: المشغّل ينتقل عبر Portal للـ body عند الدخول، وطلب native fullscreen
+    // بنفس اللحظة يتعارض مع النقل ويخلّي الفيديو يعلّق (شاشة سوداء).
+    // CSS fullscreen يملأ الشاشة بالكامل بدون أي تعارض.
     setIsFullscreen(true);
     try { (screen.orientation as any)?.lock?.('landscape').catch(() => {}); } catch (_) {}
-
-    // نحاول native fullscreen على الـ body (مو الحاوية) — اختياري، للأجهزة اللي تدعمه
-    // فشله ما يأثر: CSS fullscreen شغّال أصلاً
-    const body = document.documentElement as any;
-    try {
-      if (body?.requestFullscreen) body.requestFullscreen().catch(() => {});
-      else if (body?.webkitRequestFullscreen) body.webkitRequestFullscreen();
-    } catch (_) {}
   };
 
   /* ── tap: ضغطة = play/pause، ضغطتين على الجوانب = seek، الوسط = fullscreen ── */
