@@ -467,3 +467,28 @@ export async function searchMulti(query: string): Promise<MovieOrShow[]> {
 
   return items.map(({ item }: any) => item);
 }
+
+// بحث خاص بالداشبورد — بدون فلتر السنة، عشان الأدمن يضيف أي فلم من أي سنة
+export async function searchAdmin(query: string): Promise<MovieOrShow[]> {
+  const res = await tmdbFetch('/search/multi', {
+    query,
+    include_adult: false,
+    language: 'en-US',
+  });
+
+  const items = (res.results || [])
+    .filter((x: any) => x.media_type === 'movie' || x.media_type === 'tv')
+    .map((m: any) => ({ raw: m, item: normalizeItem(m) }))
+    .filter(({ item }: any) => item.poster); // بس نتأكد في كفر — بدون قيد سنة
+
+  items.sort((a: any, b: any) => {
+    const altA = a.raw.title || a.raw.name || '';
+    const altB = b.raw.title || b.raw.name || '';
+    const scoreA = Math.max(relevanceScore(query, a.item.title), relevanceScore(query, altA));
+    const scoreB = Math.max(relevanceScore(query, b.item.title), relevanceScore(query, altB));
+    if (scoreA !== scoreB) return scoreB - scoreA;
+    return (b.raw.popularity || 0) - (a.raw.popularity || 0);
+  });
+
+  return items.map(({ item }: any) => item);
+}

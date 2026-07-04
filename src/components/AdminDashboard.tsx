@@ -6,10 +6,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Search, Plus, Trash2, Eye, EyeOff, FolderPlus, Loader, ArrowRight,
-  Edit3, Star, Film, Import, PenLine, X,
+  Edit3, Star, Film, Import, PenLine, X, Upload,
 } from 'lucide-react';
 import { MovieOrShow } from '../types';
-import { searchMulti, importFromTmdb, TmdbImport } from '../lib/tmdb';
+import { searchAdmin, importFromTmdb, TmdbImport } from '../lib/tmdb';
 import { CATEGORIES } from '../lib/categories';
 import {
   isAdmin, manualKey, genUid,
@@ -85,7 +85,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
     if (!query.trim()) { setResults([]); return; }
     const t = setTimeout(async () => {
       setSearching(true);
-      try { setResults((await searchMulti(query.trim())).slice(0, 18)); }
+      try { setResults((await searchAdmin(query.trim())).slice(0, 18)); }
       catch { setResults([]); }
       setSearching(false);
     }, 400);
@@ -151,6 +151,35 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
 
   const setF = <K extends keyof ManualItem>(k: K, v: ManualItem[K]) =>
     setForm((f) => (f ? { ...f, [k]: v } : f));
+
+  // رفع صورة من الجهاز → ضغط وتصغير لأبعاد مناسبة → base64 نخزنه مباشرة.
+  // poster: عمودي 500×750، backdrop: عريض 1280×720. الضغط يحافظ على Firestore
+  // تحت الحد (وثيقة واحدة لكل العناصر، حد Firestore ~1MB للوثيقة).
+  const uploadImage = (file: File, kind: 'poster' | 'backdrop') => {
+    const maxW = kind === 'poster' ? 500 : 1280;
+    const maxH = kind === 'poster' ? 750 : 720;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        // نحافظ على النسبة داخل الحد الأقصى
+        let { width, height } = img;
+        const ratio = Math.min(maxW / width, maxH / height, 1);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, width, height);
+        // jpeg بجودة 0.82 — توازن جيد بين الحجم والوضوح
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        setF(kind, dataUrl);
+      };
+      img.src = ev.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   // حارس الوصول
   if (!isAdmin(userEmail)) {
@@ -329,13 +358,20 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                 {/* عمود الصور */}
                 <div className="space-y-4">
                   <div>
-                    <label className="text-white text-xs font-bold mb-1.5 block">الكفر (رابط الصورة)</label>
+                    <label className="text-white text-xs font-bold mb-1.5 block">الكفر (بوستر عمودي)</label>
                     <div className="flex gap-3">
                       <div className="w-20 h-28 rounded-lg overflow-hidden bg-stone-900 border border-white/8 shrink-0">
                         {form.poster && <img src={form.poster} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
                       </div>
-                      <input value={form.poster || ''} onChange={(e) => setF('poster', e.target.value || null)} placeholder="https://..."
-                        className="flex-1 h-fit bg-stone-900 border border-white/10 focus:border-red-500/60 outline-none text-white text-xs py-2.5 px-3 rounded-lg" dir="ltr" />
+                      <div className="flex-1 space-y-2">
+                        <input value={form.poster?.startsWith('data:') ? '' : (form.poster || '')} onChange={(e) => setF('poster', e.target.value || null)} placeholder="الصق رابط الصورة https://..."
+                          className="w-full bg-stone-900 border border-white/10 focus:border-red-500/60 outline-none text-white text-xs py-2.5 px-3 rounded-lg" dir="ltr" />
+                        <label className="flex items-center justify-center gap-1.5 bg-stone-800 hover:bg-stone-700 border border-white/10 text-white text-xs font-bold py-2 rounded-lg cursor-pointer transition-all">
+                          <Upload className="w-3.5 h-3.5" /> رفع من الجهاز
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f, 'poster'); e.target.value = ''; }} />
+                        </label>
+                        <p className="text-gray-500 text-[10px] leading-relaxed">المقاس المثالي 500×750 (نسبة 2:3). أي حجم يشتغل — تنضغط تلقائياً.</p>
+                      </div>
                     </div>
                   </div>
                   <div>
@@ -343,8 +379,13 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                     <div className="w-full h-24 rounded-lg overflow-hidden bg-stone-900 border border-white/8 mb-2">
                       {form.backdrop && <img src={form.backdrop} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
                     </div>
-                    <input value={form.backdrop || ''} onChange={(e) => setF('backdrop', e.target.value || null)} placeholder="https://..."
-                      className="w-full bg-stone-900 border border-white/10 focus:border-red-500/60 outline-none text-white text-xs py-2.5 px-3 rounded-lg" dir="ltr" />
+                    <input value={form.backdrop?.startsWith('data:') ? '' : (form.backdrop || '')} onChange={(e) => setF('backdrop', e.target.value || null)} placeholder="الصق رابط الصورة https://..."
+                      className="w-full bg-stone-900 border border-white/10 focus:border-red-500/60 outline-none text-white text-xs py-2.5 px-3 rounded-lg mb-2" dir="ltr" />
+                    <label className="flex items-center justify-center gap-1.5 bg-stone-800 hover:bg-stone-700 border border-white/10 text-white text-xs font-bold py-2 rounded-lg cursor-pointer transition-all">
+                      <Upload className="w-3.5 h-3.5" /> رفع من الجهاز
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f, 'backdrop'); e.target.value = ''; }} />
+                    </label>
+                    <p className="text-gray-500 text-[10px] leading-relaxed mt-1.5">المقاس المثالي 1280×720 (نسبة 16:9). أي حجم يشتغل — تنضغط تلقائياً.</p>
                   </div>
                 </div>
 
