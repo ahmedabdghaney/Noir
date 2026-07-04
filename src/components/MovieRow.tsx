@@ -81,7 +81,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
   }
 
   return (
-    <div className="mb-6 md:mb-8 relative group/row flex flex-col row-rise">
+    <div className="mb-6 md:mb-8 relative group/row flex flex-col">
       {/* Category Header */}
       <div className={`mb-4 md:mb-5 flex flex-col text-right ${flush ? "" : "px-6 md:px-12"}`}>
         <div className="flex items-center justify-between flex-wrap gap-2">
@@ -154,7 +154,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
                 className="group/card card-pop flex-none w-[100px] sm:w-[135px] md:w-[155px] lg:w-[170px] cursor-pointer rounded-xl p-1.5 pb-3 select-none"
               >
                 {/* Poster Artwork container */}
-                <div className="card-cinematic relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-white/[0.06]">
+                <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-white/[0.06]">
                   {onRemove && (
                     <button
                       onClick={(e) => {
