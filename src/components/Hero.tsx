@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Play, Plus, Check, ChevronRight, ChevronLeft, Star } from 'lucide-react';
+import { Play, Plus, Check, ChevronRight, ChevronLeft, Star, Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MovieOrShow } from '../types';
 import { fetchDetailedTitle, getTitleLogoUrl, getBackdropUrl } from '../lib/tmdb';
@@ -26,8 +26,14 @@ export default function Hero({
   isSaved,
   onToggleSave,
 }: HeroProps) {
-  const [currentIndex, setCurrentIndex] = useState(1);
+  const [currentIndex, setCurrentIndex] = useState(2);
   const [logoCache, setLogoCache] = useState<Record<string, string | null>>({});
+  // خريطة مفتاح التريلر لكل عنصر (من TMDB videos)
+  const [trailerCache, setTrailerCache] = useState<Record<string, string | null>>({});
+  // هل نعرض التريلر الآن (بعد ثانيتين من التبديل)
+  const [showTrailer, setShowTrailer] = useState(false);
+  // كتم صوت التريلر (مكتوم افتراضياً — تشغيل تلقائي يتطلب كتم)
+  const [muted, setMuted] = useState(true);
 
   const activePool = trendingItems.slice(0, 12);
 
@@ -46,9 +52,30 @@ export default function Hero({
     if (key in logoCache) return;
     let cancelled = false;
     fetchDetailedTitle(activeItem.type, activeItem.id)
-      .then((d) => { if (!cancelled) setLogoCache((c) => ({ ...c, [key]: getTitleLogoUrl(d) })); })
-      .catch(() => { if (!cancelled) setLogoCache((c) => ({ ...c, [key]: null })); });
+      .then((d) => {
+        if (cancelled) return;
+        setLogoCache((c) => ({ ...c, [key]: getTitleLogoUrl(d) }));
+        // استخرج مفتاح تريلر يوتيوب: نفضّل Trailer، وإلا أي فيديو YouTube
+        const vids = ((d as any)?.videos?.results || []).filter((v: any) => v.site === 'YouTube');
+        const trailer = vids.find((v: any) => v.type === 'Trailer') || vids.find((v: any) => v.type === 'Teaser') || vids[0];
+        setTrailerCache((c) => ({ ...c, [key]: trailer ? trailer.key : null }));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLogoCache((c) => ({ ...c, [key]: null }));
+        setTrailerCache((c) => ({ ...c, [key]: null }));
+      });
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeItem?.id, activeItem?.type]);
+
+  // مؤقّت التريلر: بعد ثانيتين من تبديل الفلم، شغّل التريلر (لو متوفر)
+  useEffect(() => {
+    setShowTrailer(false); // اخفِ التريلر فوراً عند التبديل
+    if (!activeItem) return;
+    const key = `${activeItem.type}-${activeItem.id}`;
+    const timer = setTimeout(() => setShowTrailer(true), 2000);
+    return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeItem?.id, activeItem?.type]);
 
@@ -112,6 +139,20 @@ export default function Hero({
                       decoding="async"
                       className="w-full h-full object-cover object-top"
                     />
+
+                    {/* التريلر التلقائي — يظهر بعد ثانيتين، مكتوم افتراضياً، يغطي الصورة */}
+                    {isActive && showTrailer && trailerCache[`${item.type}-${item.id}`] && (
+                      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                        <iframe
+                          key={`trailer-${item.id}-${muted}`}
+                          src={`https://www.youtube-nocookie.com/embed/${trailerCache[`${item.type}-${item.id}`]}?autoplay=1&mute=${muted ? 1 : 0}&controls=0&loop=1&playlist=${trailerCache[`${item.type}-${item.id}`]}&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&playsinline=1`}
+                          allow="autoplay; encrypted-media"
+                          title="trailer"
+                          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[177.77vh] h-[56.25vw] min-w-full min-h-full"
+                          style={{ border: 0 }}
+                        />
+                      </div>
+                    )}
 
                     {/* Gradients — full-bleed زي Apple TV (تعتيم قوي من الأسفل) */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
@@ -221,6 +262,18 @@ export default function Hero({
         >
           <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
         </button>
+
+        {/* زر كتم/تشغيل صوت التريلر — يظهر بس لما التريلر شغّال */}
+        {showTrailer && activeItem && trailerCache[`${activeItem.type}-${activeItem.id}`] && (
+          <button
+            onClick={() => setMuted((m) => !m)}
+            className="absolute left-4 md:left-6 bottom-6 md:bottom-8 z-40 w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/15 text-white flex items-center justify-center cursor-pointer transition-all"
+            aria-label={muted ? 'تشغيل الصوت' : 'كتم الصوت'}
+            title={muted ? 'تشغيل الصوت' : 'كتم الصوت'}
+          >
+            {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+          </button>
+        )}
       </div>
 
       {/* Dots */}
