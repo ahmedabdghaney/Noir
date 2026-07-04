@@ -592,12 +592,12 @@ export default function VideoPlayer({
   };
 
   /* ── URLs ── */
-  // قائمة مشغّلات الـ embed بالترتيب: VidSrc أساسي، vidapi احتياطي
+  // قائمة مشغّلات الـ embed بالترتيب — لو وحدة ما اشتغلت، بدّل من الزر
   const EMBED_SERVERS = [
     {
       name: 'مشغل 1',
-      movie: () => `https://vidsrc.xyz/embed/movie/${id}`,
-      tv: () => `https://vidsrc.xyz/embed/tv/${id}/${season}/${episode}`,
+      movie: () => `https://vidsrc.cc/v2/embed/movie/${id}?autoPlay=true`,
+      tv: () => `https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}?autoPlay=true`,
     },
     {
       name: 'مشغل 2',
@@ -611,6 +611,11 @@ export default function VideoPlayer({
         if (startAt && startAt > 5) params.set('startAt', String(Math.floor(startAt)));
         return `https://vidapi.qzz.io/tv/${id}/${season}/${episode}?${params}`;
       },
+    },
+    {
+      name: 'مشغل 3',
+      movie: () => `https://vidsrc-embed.ru/embed/movie?tmdb=${id}&autoplay=1`,
+      tv: () => `https://vidsrc-embed.ru/embed/tv?tmdb=${id}&season=${season}&episode=${episode}&autoplay=1&autonext=1`,
     },
   ];
 

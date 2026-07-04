@@ -606,9 +606,9 @@ export default function App() {
           window.location.hash = '#home';
         }
       } else {
-        const movieMatch = hash.match(/^#movie\/(\d+)$/);
-        // يدعم: #tv/123 أو #tv/123/s2/e5
-        const tvMatch = hash.match(/^#tv\/(\d+)(?:\/s(\d+)\/e(\d+))?$/);
+        const movieMatch = hash.match(/^#movie\/(-?\d+)$/);
+        // يدعم: #tv/123 أو #tv/123/s2/e5 (والـ id ممكن يكون سالب للعناصر اليدوية)
+        const tvMatch = hash.match(/^#tv\/(-?\d+)(?:\/s(\d+)\/e(\d+))?$/);
 
         if (movieMatch) {
           setSelectedTitle({ type: 'movie', id: Number(movieMatch[1]) });
