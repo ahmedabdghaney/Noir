@@ -42,7 +42,7 @@ import MobileNav from './components/MobileNav';
 import AdminDashboard from './components/AdminDashboard';
 import {
   subscribeHidden, subscribeManualItems, subscribeCustomSections, subscribeSectionOrder,
-  subscribeHeroHidden, toggleHeroHidden,
+  subscribeHeroHidden, toggleHeroHidden, subscribeHeroExtra, subscribeHeroOrder, HeroExtra,
   toggleHidden,
   itemKey, ManualItem, CustomSection,
 } from './lib/adminStore';
@@ -291,6 +291,8 @@ export default function App() {
   // بيانات الإدارة (مشتركة لكل الزوار) — إخفاء، عناصر يدوية، أقسام مخصصة
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
   const [heroHiddenIds, setHeroHiddenIds] = useState<string[]>([]);
+  const [heroExtra, setHeroExtra] = useState<HeroExtra[]>([]);
+  const [heroOrder, setHeroOrder] = useState<string[]>([]);
   const [manualItems, setManualItems] = useState<ManualItem[]>([]);
   const [customSections, setCustomSections] = useState<CustomSection[]>([]);
   const [sectionOrder, setSectionOrder] = useState<string[]>([]);
@@ -679,7 +681,9 @@ export default function App() {
     const u3 = subscribeCustomSections(setCustomSections);
     const u4 = subscribeSectionOrder(setSectionOrder);
     const u5 = subscribeHeroHidden(setHeroHiddenIds);
-    return () => { u1(); u2(); u3(); u4(); u5(); };
+    const u6 = subscribeHeroExtra(setHeroExtra);
+    const u7 = subscribeHeroOrder(setHeroOrder);
+    return () => { u1(); u2(); u3(); u4(); u5(); u6(); u7(); };
   }, []);
 
   // جلب محتوى أقسام التصنيف التلقائية من TMDB (تتحدّث لما تتغير الأقسام)
@@ -1294,18 +1298,40 @@ export default function App() {
     [manualItems, manualToMovie]
   );
 
-  // كل عناصر الهيرو المحتملة (يدوي + رائج) — تُعرض بالداشبورد للتحكم
-  const heroItemsAll = useMemo(
-    () => [...manualHeroItems, ...applyHidden(trendingWeek)],
-    [manualHeroItems, trendingWeek, applyHidden]
+  // عناصر الهيرو المضافة من الداشبورد (بالبحث)
+  const heroExtraItems = useMemo<MovieOrShow[]>(
+    () => heroExtra.map((h) => ({
+      id: h.id, type: h.type, title: h.title, overview: '',
+      poster: h.poster, backdrop: h.backdrop, rating: h.rating,
+      year: h.year, date: h.year ? `${h.year}-01-01` : '', genres: h.genres,
+    })),
+    [heroExtra]
   );
 
-  // الهيرو النهائي المعروض بالموقع: بعد شطب المخفي من الهيرو تحديداً
+  // كل عناصر الهيرو المحتملة (مضاف + يدوي + رائج) بدون تكرار — تُعرض بالداشبورد
+  const heroItemsAll = useMemo(() => {
+    const seen = new Set<string>();
+    const out: MovieOrShow[] = [];
+    for (const it of [...heroExtraItems, ...manualHeroItems, ...applyHidden(trendingWeek)]) {
+      const k = itemKey(it.type, it.id);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(it);
+    }
+    return out;
+  }, [heroExtraItems, manualHeroItems, trendingWeek, applyHidden]);
+
+  // الهيرو النهائي المعروض بالموقع: بعد شطب المخفي + تطبيق الترتيب المحفوظ
   const heroHiddenSet = useMemo(() => new Set(heroHiddenIds), [heroHiddenIds]);
-  const heroItems = useMemo(
-    () => heroItemsAll.filter((it) => !heroHiddenSet.has(itemKey(it.type, it.id))),
-    [heroItemsAll, heroHiddenSet]
-  );
+  const heroItems = useMemo(() => {
+    const visible = heroItemsAll.filter((it) => !heroHiddenSet.has(itemKey(it.type, it.id)));
+    if (heroOrder.length === 0) return visible;
+    const idx = (k: string) => {
+      const i = heroOrder.indexOf(k);
+      return i === -1 ? 9999 : i;
+    };
+    return [...visible].sort((a, b) => idx(itemKey(a.type, a.id)) - idx(itemKey(b.type, b.id)));
+  }, [heroItemsAll, heroHiddenSet, heroOrder]);
 
   // أقسام الموقع التلقائية — تُمرّر للداشبورد عشان الأدمن يخفي/يظهر منها
   const siteSectionsForAdmin = useMemo(() => [

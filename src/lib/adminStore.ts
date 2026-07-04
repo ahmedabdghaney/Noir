@@ -173,6 +173,75 @@ export async function toggleHeroHidden(type: 'movie' | 'tv', id: number, hide: b
   return next;
 }
 
+// ── عناصر هيرو مضافة من الأدمن (بالبحث) — منفصلة عن الرائج واليدوي ──
+// كل عنصر: بيانات كافية للعرض بالكاروسيل (من TMDB)
+export interface HeroExtra {
+  type: 'movie' | 'tv';
+  id: number;            // TMDB id
+  title: string;
+  poster: string | null;
+  backdrop: string | null;
+  rating: number;
+  year: string;
+  genres: string[];
+  addedAt: number;
+}
+
+export async function fetchHeroExtra(): Promise<HeroExtra[]> {
+  try {
+    const snap = await getDoc(doc(db, CFG, 'heroExtra'));
+    const d = snap.data();
+    const list = Array.isArray(d?.items) ? d!.items : [];
+    return list.slice().sort((a: HeroExtra, b: HeroExtra) => (a.addedAt || 0) - (b.addedAt || 0));
+  } catch { return []; }
+}
+
+export function subscribeHeroExtra(cb: (items: HeroExtra[]) => void): () => void {
+  return onSnapshot(doc(db, CFG, 'heroExtra'), (snap) => {
+    const d = snap.data();
+    const list = Array.isArray(d?.items) ? d!.items : [];
+    cb(list.slice().sort((a: HeroExtra, b: HeroExtra) => (a.addedAt || 0) - (b.addedAt || 0)));
+  }, () => cb([]));
+}
+
+export async function addHeroExtra(item: Omit<HeroExtra, 'addedAt'>): Promise<HeroExtra[]> {
+  const current = await fetchHeroExtra();
+  const key = itemKey(item.type, item.id);
+  const filtered = current.filter((h) => itemKey(h.type, h.id) !== key);
+  const next = [...filtered, { ...item, addedAt: Date.now() }];
+  await setDoc(doc(db, CFG, 'heroExtra'), { items: clean(next) }, { merge: false });
+  return next;
+}
+
+export async function removeHeroExtra(type: 'movie' | 'tv', id: number): Promise<HeroExtra[]> {
+  const key = itemKey(type, id);
+  const current = await fetchHeroExtra();
+  const next = current.filter((h) => itemKey(h.type, h.id) !== key);
+  await setDoc(doc(db, CFG, 'heroExtra'), { items: clean(next) }, { merge: false });
+  return next;
+}
+
+// ── ترتيب الهيرو (مفاتيح مرتّبة) ──
+
+export async function fetchHeroOrder(): Promise<string[]> {
+  try {
+    const snap = await getDoc(doc(db, CFG, 'heroOrder'));
+    const d = snap.data();
+    return Array.isArray(d?.order) ? d!.order : [];
+  } catch { return []; }
+}
+
+export function subscribeHeroOrder(cb: (order: string[]) => void): () => void {
+  return onSnapshot(doc(db, CFG, 'heroOrder'), (snap) => {
+    const d = snap.data();
+    cb(Array.isArray(d?.order) ? d!.order : []);
+  }, () => cb([]));
+}
+
+export async function setHeroOrder(order: string[]): Promise<void> {
+  await setDoc(doc(db, CFG, 'heroOrder'), { order: clean(order) }, { merge: false });
+}
+
 // ── الكتابة: العناصر اليدوية ──
 
 export async function setManualItems(items: ManualItem[]): Promise<void> {

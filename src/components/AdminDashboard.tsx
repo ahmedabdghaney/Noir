@@ -6,17 +6,19 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Search, Plus, Trash2, Eye, EyeOff, FolderPlus, Loader, ArrowRight,
-  Edit3, Star, Film, Import, PenLine, X, Upload, ChevronUp, ChevronDown,
+  Edit3, Star, Film, Import, PenLine, X, Upload, ChevronUp, ChevronDown, Check,
 } from 'lucide-react';
 import { MovieOrShow } from '../types';
 import { searchAdmin, importFromTmdb, TmdbImport, discoverForSection } from '../lib/tmdb';
 import { CATEGORIES } from '../lib/categories';
 import {
   isAdmin, manualKey, genUid, itemKey,
-  ManualItem, CustomSection,
+  ManualItem, CustomSection, HeroExtra,
   subscribeManualItems, subscribeCustomSections, subscribeSectionOrder,
+  subscribeHeroExtra, subscribeHeroOrder,
   upsertManualItem, removeManualItem,
   upsertCustomSection, removeCustomSection, setSectionOrder,
+  addHeroExtra, removeHeroExtra, setHeroOrder,
 } from '../lib/adminStore';
 
 interface SiteSection {
@@ -31,7 +33,7 @@ interface AdminDashboardProps {
   siteSections?: SiteSection[];
   hiddenIds?: string[];
   onToggleHidden?: (type: 'movie' | 'tv', id: number, hide: boolean) => void;
-  heroItems?: MovieOrShow[];
+  heroItems?: MovieOrShow[];        // كل عناصر الهيرو الحالية (للعرض والترتيب)
   heroHiddenIds?: string[];
   onToggleHeroHidden?: (type: 'movie' | 'tv', id: number, hide: boolean) => void;
 }
@@ -91,12 +93,37 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
   const [secPreview, setSecPreview] = useState<MovieOrShow[]>([]);
   const [previewing, setPreviewing] = useState(false);
 
+  // الهيرو: عناصر مضافة + ترتيب + بحث الإضافة
+  const [heroExtra, setHeroExtra] = useState<HeroExtra[]>([]);
+  const [heroOrder, setHeroOrderState] = useState<string[]>([]);
+  const [heroQuery, setHeroQuery] = useState('');
+  const [heroResults, setHeroResults] = useState<MovieOrShow[]>([]);
+  const [heroSearching, setHeroSearching] = useState(false);
+
+  // محتوى الموقع: بحث + فرز
+  const [siteQuery, setSiteQuery] = useState('');
+  const [siteSort, setSiteSort] = useState<'default' | 'az' | 'year' | 'rating'>('default');
+
   useEffect(() => {
     const u1 = subscribeManualItems(setItems);
     const u2 = subscribeCustomSections(setSections);
     const u3 = subscribeSectionOrder(setOrderState);
-    return () => { u1(); u2(); u3(); };
+    const u4 = subscribeHeroExtra(setHeroExtra);
+    const u5 = subscribeHeroOrder(setHeroOrderState);
+    return () => { u1(); u2(); u3(); u4(); u5(); };
   }, []);
+
+  // بحث الهيرو
+  useEffect(() => {
+    if (!heroQuery.trim()) { setHeroResults([]); return; }
+    const t = setTimeout(async () => {
+      setHeroSearching(true);
+      try { setHeroResults((await searchAdmin(heroQuery.trim())).slice(0, 12)); }
+      catch { setHeroResults([]); }
+      setHeroSearching(false);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [heroQuery]);
 
   useEffect(() => {
     if (!query.trim()) { setResults([]); return; }
@@ -258,6 +285,38 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
     reader.readAsDataURL(file);
   };
 
+  // ── الهيرو ──
+  // قائمة الهيرو المرتّبة حسب heroOrder المحفوظ
+  const orderedHero = (() => {
+    const idx = (k: string) => {
+      const i = heroOrder.indexOf(k);
+      return i === -1 ? 9999 : i;
+    };
+    return [...heroItems].sort((a, b) => idx(itemKey(a.type, a.id)) - idx(itemKey(b.type, b.id)));
+  })();
+
+  const moveHero = async (key: string, dir: -1 | 1) => {
+    const keys = orderedHero.map((h) => itemKey(h.type, h.id));
+    const i = keys.indexOf(key);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= keys.length) return;
+    [keys[i], keys[j]] = [keys[j], keys[i]];
+    setHeroOrderState(keys);
+    await setHeroOrder(keys);
+  };
+
+  const addToHero = async (item: MovieOrShow) => {
+    await addHeroExtra({
+      type: item.type, id: item.id, title: item.title,
+      poster: item.poster, backdrop: item.backdrop,
+      rating: item.rating, year: item.year, genres: item.genres,
+    });
+    setHeroQuery('');
+    setHeroResults([]);
+  };
+
+  const isInHero = (item: MovieOrShow) => heroExtra.some((h) => h.type === item.type && h.id === item.id);
+
   // حارس الوصول
   if (!isAdmin(userEmail)) {
     return (
@@ -350,34 +409,91 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
       {/* ══ الهيرو (الكاروسيل الكبير) ══ */}
       {tab === 'hero' && (
         <div>
-          <p className="text-gray-400 text-xs mb-6 leading-relaxed">
-            العناصر اللي تظهر بالكاروسيل الكبير فوق الصفحة الرئيسية. عناصرك المضافة تظهر أول (علّمها "يظهر بالهيرو" وقت الإضافة)، بعدها الرائج تلقائياً. اضغط العين لإخفاء أي عنصر من الهيرو.
+          {/* بحث وإضافة للهيرو */}
+          <div className="bg-[#141417] border border-white/8 rounded-2xl p-4 mb-6">
+            <label className="text-white text-xs font-bold mb-2 block">أضف فلم أو مسلسل للكاروسيل الكبير</label>
+            <div className="relative">
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+              <input value={heroQuery} onChange={(e) => setHeroQuery(e.target.value)} placeholder="دور بـ TMDB..."
+                className="w-full bg-stone-900 border border-white/10 focus:border-red-500/60 outline-none text-white text-sm font-semibold py-3 pr-12 pl-4 rounded-xl transition-all placeholder-gray-600" />
+              {heroSearching && <Loader className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500 animate-spin" />}
+            </div>
+            {heroResults.length > 0 && (
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mt-3">
+                {heroResults.map((item) => {
+                  const added = isInHero(item);
+                  return (
+                    <button key={`${item.type}_${item.id}`} onClick={() => !added && addToHero(item)} disabled={added}
+                      className="relative aspect-[2/3] rounded-lg overflow-hidden bg-stone-900 border border-white/[0.06] hover:border-red-500/50 cursor-pointer group transition-all disabled:opacity-50">
+                      {item.poster && <img src={item.poster} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />}
+                      <div className={`absolute inset-0 flex items-center justify-center transition-all ${added ? 'bg-green-600/40' : 'bg-black/60 opacity-0 group-hover:opacity-100'}`}>
+                        {added ? <Check className="w-6 h-6 text-white" /> : <Plus className="w-6 h-6 text-white" />}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <p className="text-gray-400 text-xs mb-4 leading-relaxed">
+            عناصر الكاروسيل الحالية بالترتيب. رتّب بالأسهم، أخفِ بالعين، وعناصرك المضافة تقدر تلغيها بالسلة.
           </p>
-          {heroItems.length === 0 ? (
-            <div className="text-center py-20">
+
+          {orderedHero.length === 0 ? (
+            <div className="text-center py-16">
               <Loader className="w-8 h-8 text-gray-600 mx-auto mb-3 animate-spin" />
               <p className="text-gray-500 text-sm">جاري التحميل...</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {heroItems.map((item) => {
+            <div className="space-y-2">
+              {orderedHero.map((item, i) => {
                 const key = itemKey(item.type, item.id);
                 const isHidden = heroHiddenIds.includes(key);
+                const isExtra = heroExtra.some((h) => h.type === item.type && h.id === item.id);
                 return (
-                  <div key={key} className="relative">
-                    <div className={`relative aspect-video rounded-xl overflow-hidden bg-stone-900 border border-white/[0.06] transition-all ${isHidden ? 'opacity-30 grayscale' : ''}`}>
-                      {(item.backdrop || item.poster) && (
-                        <img src={item.backdrop || item.poster || ''} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                      <p className="absolute bottom-2 right-2 left-2 text-white text-xs font-bold line-clamp-1 text-right">{item.title}</p>
-                      <button
-                        onClick={() => onToggleHeroHidden?.(item.type, item.id, !isHidden)}
-                        className="absolute top-2 right-2 w-8 h-8 rounded-full glass flex items-center justify-center text-white cursor-pointer hover:bg-white/25 transition-all"
-                        title={isHidden ? 'إظهار بالهيرو' : 'إخفاء من الهيرو'}
-                      >
-                        {isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  <div key={key} className="flex items-center gap-3 bg-[#141417] border border-white/8 rounded-xl p-2.5">
+                    {/* أسهم */}
+                    <div className="flex flex-col gap-0.5 shrink-0">
+                      <button onClick={() => moveHero(key, -1)} disabled={i === 0}
+                        className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 disabled:opacity-20 flex items-center justify-center text-gray-300 cursor-pointer">
+                        <ChevronUp className="w-3.5 h-3.5" />
                       </button>
+                      <button onClick={() => moveHero(key, 1)} disabled={i === orderedHero.length - 1}
+                        className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 disabled:opacity-20 flex items-center justify-center text-gray-300 cursor-pointer">
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    {/* صورة مصغرة */}
+                    <div className={`w-24 aspect-video rounded-lg overflow-hidden bg-stone-900 shrink-0 ${isHidden ? 'opacity-30 grayscale' : ''}`}>
+                      {(item.backdrop || item.poster) && <img src={item.backdrop || item.poster || ''} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />}
+                    </div>
+                    {/* المعلومات */}
+                    <div className="flex-1 text-right min-w-0">
+                      <p className="text-white text-sm font-bold line-clamp-1">{item.title}</p>
+                      <div className="flex items-center gap-2 justify-start mt-0.5">
+                        <span className="text-gray-500 text-[11px]">{item.year}</span>
+                        {isExtra ? (
+                          <span className="bg-red-600/20 text-red-400 text-[9px] font-black px-2 py-0.5 rounded-full">مضاف</span>
+                        ) : (
+                          <span className="bg-white/5 text-gray-400 text-[9px] font-black px-2 py-0.5 rounded-full">تلقائي</span>
+                        )}
+                        {isHidden && <span className="text-gray-500 text-[10px]">مخفي</span>}
+                      </div>
+                    </div>
+                    {/* أزرار */}
+                    <div className="flex gap-1.5 shrink-0">
+                      <button onClick={() => onToggleHeroHidden?.(item.type, item.id, !isHidden)}
+                        className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-300 cursor-pointer"
+                        title={isHidden ? 'إظهار' : 'إخفاء'}>
+                        {isHidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                      {isExtra && (
+                        <button onClick={() => removeHeroExtra(item.type, item.id)}
+                          className="w-9 h-9 rounded-full bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center text-red-400 cursor-pointer" title="إلغاء من الهيرو">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -390,16 +506,95 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
       {/* ══ محتوى الموقع (الأقسام التلقائية) ══ */}
       {tab === 'site' && (
         <div>
-          <p className="text-gray-400 text-xs mb-6 leading-relaxed">
-            كل أفلام ومسلسلات الموقع التلقائية. اضغط العين لإخفاء أو إظهار أي عنصر من الموقع. لإضافة قسم جديد روح لتبويب "الأقسام".
-          </p>
-          {siteSections.every((s) => s.items.length === 0) ? (
-            <div className="text-center py-20">
-              <Loader className="w-8 h-8 text-gray-600 mx-auto mb-3 animate-spin" />
-              <p className="text-gray-500 text-sm">جاري التحميل...</p>
+          {/* أدوات البحث والفرز */}
+          <div className="flex flex-col sm:flex-row gap-2 mb-5">
+            <div className="relative flex-1">
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+              <input value={siteQuery} onChange={(e) => setSiteQuery(e.target.value)} placeholder="دور بمحتوى الموقع..."
+                className="w-full bg-[#141417] border border-white/10 focus:border-red-500/60 outline-none text-white text-sm font-semibold py-2.5 pr-12 pl-4 rounded-xl transition-all placeholder-gray-600" />
             </div>
-          ) : (
-            siteSections.map((sec) => (
+            <select value={siteSort} onChange={(e) => setSiteSort(e.target.value as any)}
+              className="bg-[#141417] border border-white/10 text-white text-sm font-semibold py-2.5 px-4 rounded-xl outline-none cursor-pointer">
+              <option value="default">الترتيب الافتراضي</option>
+              <option value="az">أبجدي (أ-ي)</option>
+              <option value="year">الأحدث سنة</option>
+              <option value="rating">الأعلى تقييم</option>
+            </select>
+          </div>
+
+          {(() => {
+            // اجمع كل العناصر من كل الأقسام (بدون تكرار)
+            const seen = new Set<string>();
+            const all: MovieOrShow[] = [];
+            for (const sec of siteSections) {
+              for (const it of sec.items) {
+                const k = itemKey(it.type, it.id);
+                if (seen.has(k)) continue;
+                seen.add(k);
+                all.push(it);
+              }
+            }
+
+            const searching = siteQuery.trim() !== '';
+            const sorting = siteSort !== 'default';
+
+            // لو في بحث أو فرز: شبكة موحّدة. غير هيك: بالأقسام
+            if (searching || sorting) {
+              let filtered = all;
+              if (searching) {
+                const q = siteQuery.trim().toLowerCase();
+                filtered = filtered.filter((it) => it.title.toLowerCase().includes(q));
+              }
+              if (siteSort === 'az') filtered = [...filtered].sort((a, b) => a.title.localeCompare(b.title, 'ar'));
+              else if (siteSort === 'year') filtered = [...filtered].sort((a, b) => (Number(b.year) || 0) - (Number(a.year) || 0));
+              else if (siteSort === 'rating') filtered = [...filtered].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+
+              if (all.length === 0) {
+                return (
+                  <div className="text-center py-20">
+                    <Loader className="w-8 h-8 text-gray-600 mx-auto mb-3 animate-spin" />
+                    <p className="text-gray-500 text-sm">جاري التحميل...</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div>
+                  <p className="text-gray-500 text-xs mb-3">{filtered.length} نتيجة</p>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                    {filtered.map((item) => {
+                      const key = itemKey(item.type, item.id);
+                      const isHidden = hiddenIds.includes(key);
+                      return (
+                        <div key={key} className="relative">
+                          <div className={`relative aspect-[2/3] rounded-xl overflow-hidden bg-stone-900 border border-white/[0.06] transition-all ${isHidden ? 'opacity-30 grayscale' : ''}`}>
+                            {item.poster && <img src={item.poster} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />}
+                            <button onClick={() => onToggleHidden?.(item.type, item.id, !isHidden)}
+                              className="absolute top-1.5 right-1.5 w-8 h-8 rounded-full glass flex items-center justify-center text-white cursor-pointer hover:bg-white/25 transition-all"
+                              title={isHidden ? 'إظهار' : 'إخفاء'}>
+                              {isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                          <p className="text-white text-[10px] font-semibold mt-1 line-clamp-1 text-right">{item.title}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            }
+
+            // الوضع الافتراضي: بالأقسام
+            if (all.length === 0) {
+              return (
+                <div className="text-center py-20">
+                  <Loader className="w-8 h-8 text-gray-600 mx-auto mb-3 animate-spin" />
+                  <p className="text-gray-500 text-sm">جاري التحميل...</p>
+                </div>
+              );
+            }
+
+            return siteSections.map((sec) => (
               sec.items.length > 0 && (
                 <div key={sec.key} className="mb-8">
                   <h3 className="text-white text-sm font-black mb-3">{sec.title}</h3>
@@ -411,11 +606,9 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                         <div key={key} className="relative">
                           <div className={`relative aspect-[2/3] rounded-xl overflow-hidden bg-stone-900 border border-white/[0.06] transition-all ${isHidden ? 'opacity-30 grayscale' : ''}`}>
                             {item.poster && <img src={item.poster} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />}
-                            <button
-                              onClick={() => onToggleHidden?.(item.type, item.id, !isHidden)}
+                            <button onClick={() => onToggleHidden?.(item.type, item.id, !isHidden)}
                               className="absolute top-1.5 right-1.5 w-8 h-8 rounded-full glass flex items-center justify-center text-white cursor-pointer hover:bg-white/25 transition-all"
-                              title={isHidden ? 'إظهار' : 'إخفاء'}
-                            >
+                              title={isHidden ? 'إظهار' : 'إخفاء'}>
                               {isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                             </button>
                           </div>
@@ -426,8 +619,8 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                   </div>
                 </div>
               )
-            ))
-          )}
+            ));
+          })()}
         </div>
       )}
 
