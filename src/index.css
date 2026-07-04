@@ -19,8 +19,8 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Clean, quiet depth — a single soft vertical gradient, Apple-TV style.
-   Deeper near-black base with a subtle cool top glow. */
+/* خلفية سينمائية حيّة — طبقات gradient ملوّنة تتحرك ببطء شديد لإحساس عمق.
+   ثلاث بقع لونية (أحمر نوار خافت + أزرق بارد + بنفسجي) فوق قاعدة شبه سوداء. */
 body::before {
   content: "";
   position: fixed;
@@ -28,8 +28,23 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(120% 60% at 50% 0%, rgba(55, 58, 75, 0.35), transparent 55%),
-    linear-gradient(180deg, #141416 0%, #111113 45%, #0e0e10 100%);
+    radial-gradient(60% 50% at 85% 8%, rgba(227, 36, 26, 0.10), transparent 60%),
+    radial-gradient(55% 45% at 12% 12%, rgba(60, 84, 140, 0.14), transparent 62%),
+    radial-gradient(70% 55% at 50% 100%, rgba(90, 60, 130, 0.12), transparent 65%),
+    linear-gradient(180deg, #141416 0%, #111113 45%, #0d0d0f 100%);
+  background-attachment: fixed;
+  animation: ambientDrift 26s ease-in-out infinite alternate;
+}
+
+/* حركة خفيفة جداً للبقع اللونية — تعطي حياة بدون تشتيت */
+@keyframes ambientDrift {
+  0%   { background-position: 0% 0%, 0% 0%, 0% 0%, 0% 0%; filter: saturate(1); }
+  50%  { background-position: 3% 2%, -2% 3%, 2% -2%, 0% 0%; filter: saturate(1.15); }
+  100% { background-position: -2% 3%, 3% -2%, -3% 2%, 0% 0%; filter: saturate(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
 }
 
 #root {
@@ -290,3 +305,78 @@ button, a {
 }
 
 /* Card press feedback removed */
+
+/* ═══════════════════════════════════════════════════════
+   حزمة الحركة المتقدمة — دخول متسلسل، hover سينمائي، ترانزشن أنعم
+   ═══════════════════════════════════════════════════════ */
+
+/* دخول صفّ كامل (قسم) بانزلاق ناعم لأعلى */
+@keyframes rowRise {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.row-rise {
+  animation: rowRise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* دخول متسلسل للبطاقات داخل الصف (كل بطاقة تتأخر شوية عن اللي قبلها) */
+@keyframes cardPop {
+  from { opacity: 0; transform: translateY(20px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.card-pop {
+  animation: cardPop 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+/* تأخير متدرّج — يعطي إحساس التتابع (stagger) */
+.card-pop:nth-child(1)  { animation-delay: 0.02s; }
+.card-pop:nth-child(2)  { animation-delay: 0.06s; }
+.card-pop:nth-child(3)  { animation-delay: 0.10s; }
+.card-pop:nth-child(4)  { animation-delay: 0.14s; }
+.card-pop:nth-child(5)  { animation-delay: 0.18s; }
+.card-pop:nth-child(6)  { animation-delay: 0.22s; }
+.card-pop:nth-child(7)  { animation-delay: 0.26s; }
+.card-pop:nth-child(8)  { animation-delay: 0.30s; }
+
+/* hover سينمائي للبطاقات — رفعة ناعمة + توهّج خفيف + تكبير لطيف.
+   استخدمها بإضافة class="card-cinematic" على غلاف البطاقة. */
+.card-cinematic {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.35s ease,
+              filter 0.35s ease;
+  will-change: transform;
+}
+.card-cinematic:hover {
+  transform: translateY(-6px) scale(1.035);
+  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.7),
+              0 0 0 1px rgba(255, 255, 255, 0.08),
+              0 8px 30px -8px rgba(227, 36, 26, 0.25);
+  filter: brightness(1.08);
+  z-index: 5;
+}
+
+/* توهّج نبضي خفيف للعناصر المميزة (شارة، زر) */
+@keyframes softPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(227, 36, 26, 0.4); }
+  50%      { box-shadow: 0 0 0 6px rgba(227, 36, 26, 0); }
+}
+.soft-pulse { animation: softPulse 2.4s ease-in-out infinite; }
+
+/* ترانزشن عام أنعم لكل التفاعلات (منحنى Apple) */
+button, a {
+  transition: color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+              background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.25s ease,
+              transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* دخول ناعم لأي عنصر (fade + scale خفيف) */
+@keyframes gentleIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.gentle-in { animation: gentleIn 0.4s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .row-rise, .card-pop, .gentle-in, .soft-pulse { animation: none; }
+  .card-cinematic { transition: none; }
+}
