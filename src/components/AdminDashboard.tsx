@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Search, Plus, Trash2, Eye, EyeOff, FolderPlus, Loader, ArrowRight,
-  Edit3, Star, Film, Import, PenLine, X, Upload, ChevronUp, ChevronDown, Check,
+  Edit3, Star, Film, Import, PenLine, X, Upload, GripVertical, Check,
 } from 'lucide-react';
 import { MovieOrShow } from '../types';
 import { searchAdmin, importFromTmdb, TmdbImport, discoverForSection } from '../lib/tmdb';
@@ -100,9 +100,11 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
   const [heroResults, setHeroResults] = useState<MovieOrShow[]>([]);
   const [heroSearching, setHeroSearching] = useState(false);
 
-  // محتوى الموقع: بحث + فرز
+  // محتوى الموقع: بحث TMDB مباشر + فرز
   const [siteQuery, setSiteQuery] = useState('');
   const [siteSort, setSiteSort] = useState<'default' | 'az' | 'year' | 'rating'>('default');
+  const [siteResults, setSiteResults] = useState<MovieOrShow[]>([]);
+  const [siteSearching, setSiteSearching] = useState(false);
 
   useEffect(() => {
     const u1 = subscribeManualItems(setItems);
@@ -124,6 +126,18 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
     }, 400);
     return () => clearTimeout(t);
   }, [heroQuery]);
+
+  // بحث TMDB لمحتوى الموقع (مباشر — مو محصور بالأقسام)
+  useEffect(() => {
+    if (!siteQuery.trim()) { setSiteResults([]); return; }
+    const t = setTimeout(async () => {
+      setSiteSearching(true);
+      try { setSiteResults((await searchAdmin(siteQuery.trim())).slice(0, 40)); }
+      catch { setSiteResults([]); }
+      setSiteSearching(false);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [siteQuery]);
 
   useEffect(() => {
     if (!query.trim()) { setResults([]); return; }
@@ -201,14 +215,21 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
   })();
 
   // حرّك قسم صعود/نزول ويحفظ الترتيب الجديد
-  const moveSection = async (key: string, dir: -1 | 1) => {
-    const keys = orderedSections.map((s) => s.key);
-    const i = keys.indexOf(key);
-    const j = i + dir;
-    if (i < 0 || j < 0 || j >= keys.length) return;
-    [keys[i], keys[j]] = [keys[j], keys[i]];
-    setOrderState(keys);
-    await setSectionOrder(keys);
+  // ── السحب والإفلات (drag & drop) — مشترك للأقسام والهيرو ──
+  // نخزن المفتاح المسحوب، وعند الإفلات نعيد ترتيب المصفوفة ونحفظ
+  const dragKey = useRef<string | null>(null);
+  const [dragOver, setDragOver] = useState<string | null>(null);
+
+  // يعيد ترتيب قائمة مفاتيح: ينقل from قبل to
+  const reorder = (keys: string[], from: string, to: string): string[] => {
+    if (from === to) return keys;
+    const arr = [...keys];
+    const fi = arr.indexOf(from);
+    const ti = arr.indexOf(to);
+    if (fi < 0 || ti < 0) return keys;
+    arr.splice(fi, 1);
+    arr.splice(ti, 0, from);
+    return arr;
   };
 
   // فتح محرر قسم مخصص (جديد أو تعديل)
@@ -295,14 +316,28 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
     return [...heroItems].sort((a, b) => idx(itemKey(a.type, a.id)) - idx(itemKey(b.type, b.id)));
   })();
 
-  const moveHero = async (key: string, dir: -1 | 1) => {
+  // إفلات قسم على قسم آخر → إعادة ترتيب وحفظ
+  const dropSection = async (toKey: string) => {
+    const from = dragKey.current;
+    dragKey.current = null;
+    setDragOver(null);
+    if (!from) return;
+    const keys = orderedSections.map((s) => s.key);
+    const next = reorder(keys, from, toKey);
+    setOrderState(next);
+    await setSectionOrder(next);
+  };
+
+  // إفلات عنصر هيرو على آخر → إعادة ترتيب وحفظ
+  const dropHero = async (toKey: string) => {
+    const from = dragKey.current;
+    dragKey.current = null;
+    setDragOver(null);
+    if (!from) return;
     const keys = orderedHero.map((h) => itemKey(h.type, h.id));
-    const i = keys.indexOf(key);
-    const j = i + dir;
-    if (i < 0 || j < 0 || j >= keys.length) return;
-    [keys[i], keys[j]] = [keys[j], keys[i]];
-    setHeroOrderState(keys);
-    await setHeroOrder(keys);
+    const next = reorder(keys, from, toKey);
+    setHeroOrderState(next);
+    await setHeroOrder(next);
   };
 
   const addToHero = async (item: MovieOrShow) => {
@@ -452,17 +487,16 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                 const isHidden = heroHiddenIds.includes(key);
                 const isExtra = heroExtra.some((h) => h.type === item.type && h.id === item.id);
                 return (
-                  <div key={key} className="flex items-center gap-3 bg-[#141417] border border-white/8 rounded-xl p-2.5">
-                    {/* أسهم */}
-                    <div className="flex flex-col gap-0.5 shrink-0">
-                      <button onClick={() => moveHero(key, -1)} disabled={i === 0}
-                        className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 disabled:opacity-20 flex items-center justify-center text-gray-300 cursor-pointer">
-                        <ChevronUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={() => moveHero(key, 1)} disabled={i === orderedHero.length - 1}
-                        className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 disabled:opacity-20 flex items-center justify-center text-gray-300 cursor-pointer">
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      </button>
+                  <div key={key}
+                    draggable
+                    onDragStart={() => { dragKey.current = key; }}
+                    onDragOver={(e) => { e.preventDefault(); if (dragOver !== key) setDragOver(key); }}
+                    onDragEnd={() => { dragKey.current = null; setDragOver(null); }}
+                    onDrop={(e) => { e.preventDefault(); dropHero(key); }}
+                    className={`flex items-center gap-3 bg-[#141417] border rounded-xl p-2.5 transition-all ${dragOver === key ? 'border-red-500 bg-red-500/5' : 'border-white/8'}`}>
+                    {/* مقبض السحب */}
+                    <div className="shrink-0 cursor-grab active:cursor-grabbing text-gray-500 hover:text-white px-1" title="اسحب للترتيب">
+                      <GripVertical className="w-5 h-5" />
                     </div>
                     {/* صورة مصغرة */}
                     <div className={`w-24 aspect-video rounded-lg overflow-hidden bg-stone-900 shrink-0 ${isHidden ? 'opacity-30 grayscale' : ''}`}>
@@ -503,15 +537,18 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
         </div>
       )}
 
-      {/* ══ محتوى الموقع (الأقسام التلقائية) ══ */}
+      {/* ══ محتوى الموقع — بحث TMDB مباشر + فرز ══ */}
       {tab === 'site' && (
         <div>
-          {/* أدوات البحث والفرز */}
+          <p className="text-gray-400 text-xs mb-4 leading-relaxed">
+            دور عن أي فلم أو مسلسل بـ TMDB (مو محصور بأقسام الرئيسية) وأخفِه من الموقع. بدون بحث تشوف محتوى الرئيسية.
+          </p>
           <div className="flex flex-col sm:flex-row gap-2 mb-5">
             <div className="relative flex-1">
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-              <input value={siteQuery} onChange={(e) => setSiteQuery(e.target.value)} placeholder="دور بمحتوى الموقع..."
+              <input value={siteQuery} onChange={(e) => setSiteQuery(e.target.value)} placeholder="دور عن أي فلم أو مسلسل..."
                 className="w-full bg-[#141417] border border-white/10 focus:border-red-500/60 outline-none text-white text-sm font-semibold py-2.5 pr-12 pl-4 rounded-xl transition-all placeholder-gray-600" />
+              {siteSearching && <Loader className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500 animate-spin" />}
             </div>
             <select value={siteSort} onChange={(e) => setSiteSort(e.target.value as any)}
               className="bg-[#141417] border border-white/10 text-white text-sm font-semibold py-2.5 px-4 rounded-xl outline-none cursor-pointer">
@@ -523,46 +560,26 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
           </div>
 
           {(() => {
-            // اجمع كل العناصر من كل الأقسام (بدون تكرار)
-            const seen = new Set<string>();
-            const all: MovieOrShow[] = [];
-            for (const sec of siteSections) {
-              for (const it of sec.items) {
-                const k = itemKey(it.type, it.id);
-                if (seen.has(k)) continue;
-                seen.add(k);
-                all.push(it);
-              }
-            }
-
             const searching = siteQuery.trim() !== '';
-            const sorting = siteSort !== 'default';
 
-            // لو في بحث أو فرز: شبكة موحّدة. غير هيك: بالأقسام
-            if (searching || sorting) {
-              let filtered = all;
-              if (searching) {
-                const q = siteQuery.trim().toLowerCase();
-                filtered = filtered.filter((it) => it.title.toLowerCase().includes(q));
+            // مع بحث: نتائج TMDB المباشرة (مع فرز)
+            if (searching) {
+              let list = [...siteResults];
+              if (siteSort === 'az') list.sort((a, b) => a.title.localeCompare(b.title, 'ar'));
+              else if (siteSort === 'year') list.sort((a, b) => (Number(b.year) || 0) - (Number(a.year) || 0));
+              else if (siteSort === 'rating') list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+
+              if (siteSearching && list.length === 0) {
+                return <div className="text-center py-16"><Loader className="w-8 h-8 text-gray-600 mx-auto animate-spin" /></div>;
               }
-              if (siteSort === 'az') filtered = [...filtered].sort((a, b) => a.title.localeCompare(b.title, 'ar'));
-              else if (siteSort === 'year') filtered = [...filtered].sort((a, b) => (Number(b.year) || 0) - (Number(a.year) || 0));
-              else if (siteSort === 'rating') filtered = [...filtered].sort((a, b) => (b.rating || 0) - (a.rating || 0));
-
-              if (all.length === 0) {
-                return (
-                  <div className="text-center py-20">
-                    <Loader className="w-8 h-8 text-gray-600 mx-auto mb-3 animate-spin" />
-                    <p className="text-gray-500 text-sm">جاري التحميل...</p>
-                  </div>
-                );
+              if (list.length === 0) {
+                return <p className="text-gray-600 text-sm text-center py-12">ما في نتائج</p>;
               }
-
               return (
                 <div>
-                  <p className="text-gray-500 text-xs mb-3">{filtered.length} نتيجة</p>
+                  <p className="text-gray-500 text-xs mb-3">{list.length} نتيجة</p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                    {filtered.map((item) => {
+                    {list.map((item) => {
                       const key = itemKey(item.type, item.id);
                       const isHidden = hiddenIds.includes(key);
                       return (
@@ -576,6 +593,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                             </button>
                           </div>
                           <p className="text-white text-[10px] font-semibold mt-1 line-clamp-1 text-right">{item.title}</p>
+                          <p className="text-gray-500 text-[9px] text-right">{item.year} · {item.type === 'tv' ? 'مسلسل' : 'فلم'}</p>
                         </div>
                       );
                     })}
@@ -584,16 +602,10 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
               );
             }
 
-            // الوضع الافتراضي: بالأقسام
-            if (all.length === 0) {
-              return (
-                <div className="text-center py-20">
-                  <Loader className="w-8 h-8 text-gray-600 mx-auto mb-3 animate-spin" />
-                  <p className="text-gray-500 text-sm">جاري التحميل...</p>
-                </div>
-              );
+            // بدون بحث: محتوى الرئيسية بالأقسام
+            if (siteSections.every((s) => s.items.length === 0)) {
+              return <div className="text-center py-20"><Loader className="w-8 h-8 text-gray-600 mx-auto mb-3 animate-spin" /><p className="text-gray-500 text-sm">جاري التحميل...</p></div>;
             }
-
             return siteSections.map((sec) => (
               sec.items.length > 0 && (
                 <div key={sec.key} className="mb-8">
@@ -623,7 +635,6 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
           })()}
         </div>
       )}
-
       {/* ══ إضافة / تحرير ══ */}
       {tab === 'add' && (
         <div>
@@ -895,17 +906,16 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                   const count = s.custom ? items.filter((m) => m.section === s.key).length : null;
                   const isGenre = s.custom && (s as any).data?.kind === 'genre';
                   return (
-                    <div key={s.key} className="flex items-center gap-3 bg-[#141417] border border-white/8 rounded-xl px-3 py-3">
-                      {/* أسهم الترتيب */}
-                      <div className="flex flex-col gap-0.5 shrink-0">
-                        <button onClick={() => moveSection(s.key, -1)} disabled={i === 0}
-                          className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 disabled:opacity-20 flex items-center justify-center text-gray-300 cursor-pointer" title="صعّد">
-                          <ChevronUp className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => moveSection(s.key, 1)} disabled={i === orderedSections.length - 1}
-                          className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 disabled:opacity-20 flex items-center justify-center text-gray-300 cursor-pointer" title="نزّل">
-                          <ChevronDown className="w-3.5 h-3.5" />
-                        </button>
+                    <div key={s.key}
+                      draggable
+                      onDragStart={() => { dragKey.current = s.key; }}
+                      onDragOver={(e) => { e.preventDefault(); if (dragOver !== s.key) setDragOver(s.key); }}
+                      onDragEnd={() => { dragKey.current = null; setDragOver(null); }}
+                      onDrop={(e) => { e.preventDefault(); dropSection(s.key); }}
+                      className={`flex items-center gap-3 bg-[#141417] border rounded-xl px-3 py-3 transition-all ${dragOver === s.key ? 'border-red-500 bg-red-500/5' : 'border-white/8'}`}>
+                      {/* مقبض السحب */}
+                      <div className="shrink-0 cursor-grab active:cursor-grabbing text-gray-500 hover:text-white px-1" title="اسحب للترتيب">
+                        <GripVertical className="w-5 h-5" />
                       </div>
 
                       {/* المعلومات */}
