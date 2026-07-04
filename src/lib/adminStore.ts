@@ -60,6 +60,21 @@ export interface CustomSection {
 
 const CFG = 'site_config';
 
+// Firestore يرفض قيم undefined — ننظّفها بعمق قبل أي كتابة.
+// (نحوّل undefined لحذف المفتاح، ونعالج المصفوفات والكائنات المتداخلة.)
+function clean<T>(v: T): T {
+  if (Array.isArray(v)) return v.map(clean) as any;
+  if (v && typeof v === 'object') {
+    const out: any = {};
+    for (const [k, val] of Object.entries(v)) {
+      if (val === undefined) continue;
+      out[k] = clean(val);
+    }
+    return out;
+  }
+  return v;
+}
+
 // ── القراءة ──
 
 export async function fetchHidden(): Promise<string[]> {
@@ -122,7 +137,7 @@ export const manualKey = (it: Pick<ManualItem, 'type' | 'tmdbId' | 'uid'>) =>
 // ── الكتابة: الإخفاء ──
 
 export async function setHidden(ids: string[]): Promise<void> {
-  await setDoc(doc(db, CFG, 'hidden'), { ids }, { merge: false });
+  await setDoc(doc(db, CFG, 'hidden'), { ids: clean(ids) }, { merge: false });
 }
 
 export async function toggleHidden(type: 'movie' | 'tv', id: number, hide: boolean): Promise<string[]> {
@@ -133,10 +148,35 @@ export async function toggleHidden(type: 'movie' | 'tv', id: number, hide: boole
   return next;
 }
 
+// ── إخفاء خاص بالهيرو (الكاروسيل الكبير) — منفصل عن الإخفاء العام ──
+
+export async function fetchHeroHidden(): Promise<string[]> {
+  try {
+    const snap = await getDoc(doc(db, CFG, 'heroHidden'));
+    const d = snap.data();
+    return Array.isArray(d?.ids) ? d!.ids : [];
+  } catch { return []; }
+}
+
+export function subscribeHeroHidden(cb: (ids: string[]) => void): () => void {
+  return onSnapshot(doc(db, CFG, 'heroHidden'), (snap) => {
+    const d = snap.data();
+    cb(Array.isArray(d?.ids) ? d!.ids : []);
+  }, () => cb([]));
+}
+
+export async function toggleHeroHidden(type: 'movie' | 'tv', id: number, hide: boolean): Promise<string[]> {
+  const key = itemKey(type, id);
+  const current = await fetchHeroHidden();
+  const next = hide ? Array.from(new Set([...current, key])) : current.filter((k) => k !== key);
+  await setDoc(doc(db, CFG, 'heroHidden'), { ids: clean(next) }, { merge: false });
+  return next;
+}
+
 // ── الكتابة: العناصر اليدوية ──
 
 export async function setManualItems(items: ManualItem[]): Promise<void> {
-  await setDoc(doc(db, CFG, 'manualItems'), { items }, { merge: false });
+  await setDoc(doc(db, CFG, 'manualItems'), { items: clean(items) }, { merge: false });
 }
 
 // upsert — لو نفس المفتاح موجود نستبدله
@@ -159,7 +199,7 @@ export async function removeManualItem(key: string): Promise<ManualItem[]> {
 // ── الكتابة: الأقسام المخصصة ──
 
 export async function setCustomSections(list: CustomSection[]): Promise<void> {
-  await setDoc(doc(db, CFG, 'sections'), { list }, { merge: false });
+  await setDoc(doc(db, CFG, 'sections'), { list: clean(list) }, { merge: false });
 }
 
 // إنشاء أو تحديث قسم مخصص (upsert). لو ما في key نولّد واحد جديد.
@@ -220,7 +260,7 @@ export function subscribeSectionOrder(cb: (order: string[]) => void): () => void
 }
 
 export async function setSectionOrder(order: string[]): Promise<void> {
-  await setDoc(doc(db, CFG, 'order'), { order }, { merge: false });
+  await setDoc(doc(db, CFG, 'order'), { order: clean(order) }, { merge: false });
 }
 
 export const genUid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

@@ -42,6 +42,7 @@ import MobileNav from './components/MobileNav';
 import AdminDashboard from './components/AdminDashboard';
 import {
   subscribeHidden, subscribeManualItems, subscribeCustomSections, subscribeSectionOrder,
+  subscribeHeroHidden, toggleHeroHidden,
   toggleHidden,
   itemKey, ManualItem, CustomSection,
 } from './lib/adminStore';
@@ -289,6 +290,7 @@ export default function App() {
 
   // بيانات الإدارة (مشتركة لكل الزوار) — إخفاء، عناصر يدوية، أقسام مخصصة
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
+  const [heroHiddenIds, setHeroHiddenIds] = useState<string[]>([]);
   const [manualItems, setManualItems] = useState<ManualItem[]>([]);
   const [customSections, setCustomSections] = useState<CustomSection[]>([]);
   const [sectionOrder, setSectionOrder] = useState<string[]>([]);
@@ -676,7 +678,8 @@ export default function App() {
     const u2 = subscribeManualItems(setManualItems);
     const u3 = subscribeCustomSections(setCustomSections);
     const u4 = subscribeSectionOrder(setSectionOrder);
-    return () => { u1(); u2(); u3(); u4(); };
+    const u5 = subscribeHeroHidden(setHeroHiddenIds);
+    return () => { u1(); u2(); u3(); u4(); u5(); };
   }, []);
 
   // جلب محتوى أقسام التصنيف التلقائية من TMDB (تتحدّث لما تتغير الأقسام)
@@ -700,6 +703,13 @@ export default function App() {
     })();
     return () => { cancelled = true; };
   }, [customSections]);
+
+  // لو فُتحت صفحة الأدمن مباشرة (#noir-control) والأقسام لسا فاضية، حمّلها
+  useEffect(() => {
+    if (activeView === 'admin' && trendingWeek.length === 0) {
+      refreshHome();
+    }
+  }, [activeView, trendingWeek.length, refreshHome]);
 
   // Sync Search results when filters or query updates
   useEffect(() => {
@@ -1273,10 +1283,17 @@ export default function App() {
     [manualItems, manualToMovie]
   );
 
-  // الهيرو النهائي: عناصر الأدمن أولاً، بعدها الرائج التلقائي
-  const heroItems = useMemo(
+  // كل عناصر الهيرو المحتملة (يدوي + رائج) — تُعرض بالداشبورد للتحكم
+  const heroItemsAll = useMemo(
     () => [...manualHeroItems, ...applyHidden(trendingWeek)],
     [manualHeroItems, trendingWeek, applyHidden]
+  );
+
+  // الهيرو النهائي المعروض بالموقع: بعد شطب المخفي من الهيرو تحديداً
+  const heroHiddenSet = useMemo(() => new Set(heroHiddenIds), [heroHiddenIds]);
+  const heroItems = useMemo(
+    () => heroItemsAll.filter((it) => !heroHiddenSet.has(itemKey(it.type, it.id))),
+    [heroItemsAll, heroHiddenSet]
   );
 
   // أقسام الموقع التلقائية — تُمرّر للداشبورد عشان الأدمن يخفي/يظهر منها
@@ -2017,6 +2034,9 @@ export default function App() {
             siteSections={siteSectionsForAdmin}
             hiddenIds={hiddenIds}
             onToggleHidden={(type, id, hide) => { toggleHidden(type, id, hide); }}
+            heroItems={heroItemsAll}
+            heroHiddenIds={heroHiddenIds}
+            onToggleHeroHidden={(type, id, hide) => { toggleHeroHidden(type, id, hide); }}
           />
         )}
 </main>

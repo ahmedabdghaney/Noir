@@ -31,6 +31,9 @@ interface AdminDashboardProps {
   siteSections?: SiteSection[];
   hiddenIds?: string[];
   onToggleHidden?: (type: 'movie' | 'tv', id: number, hide: boolean) => void;
+  heroItems?: MovieOrShow[];
+  heroHiddenIds?: string[];
+  onToggleHeroHidden?: (type: 'movie' | 'tv', id: number, hide: boolean) => void;
 }
 
 // الأقسام الأصلية الثابتة (مفاتيحها + أسماؤها) — تظهر بقائمة الترتيب لكن ما تنعدّل
@@ -42,7 +45,7 @@ const NATIVE_SECTIONS: { key: string; title: string }[] = [
   { key: 'popularMovies', title: 'أفلام شعبية مميزة' },
 ];
 
-type Tab = 'library' | 'site' | 'add' | 'sections';
+type Tab = 'library' | 'hero' | 'site' | 'add' | 'sections';
 
 // عنصر فورم فارغ
 const emptyForm = (): ManualItem => ({
@@ -65,7 +68,7 @@ const emptyForm = (): ManualItem => ({
   addedAt: Date.now(),
 });
 
-export default function AdminDashboard({ userEmail, onBack, siteSections = [], hiddenIds = [], onToggleHidden }: AdminDashboardProps) {
+export default function AdminDashboard({ userEmail, onBack, siteSections = [], hiddenIds = [], onToggleHidden, heroItems = [], heroHiddenIds = [], onToggleHeroHidden }: AdminDashboardProps) {
   const [tab, setTab] = useState<Tab>('library');
 
   const [items, setItems] = useState<ManualItem[]>([]);
@@ -286,7 +289,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
 
       {/* تبويبات */}
       <div className="flex gap-2 mb-8 border-b border-white/5 pb-3">
-        {([['library', 'المكتبة'], ['site', 'محتوى الموقع'], ['add', form ? 'تحرير' : 'إضافة'], ['sections', 'الأقسام']] as [Tab, string][]).map(([k, label]) => (
+        {([['library', 'المكتبة'], ['hero', 'الهيرو'], ['site', 'محتوى الموقع'], ['add', form ? 'تحرير' : 'إضافة'], ['sections', 'الأقسام']] as [Tab, string][]).map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
             className={`px-4 py-2 rounded-full text-xs font-bold cursor-pointer transition-all ${tab === k ? 'bg-red-600 text-white' : 'bg-stone-900 text-gray-400 hover:text-white'}`}>
             {label}
@@ -339,6 +342,46 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ══ الهيرو (الكاروسيل الكبير) ══ */}
+      {tab === 'hero' && (
+        <div>
+          <p className="text-gray-400 text-xs mb-6 leading-relaxed">
+            العناصر اللي تظهر بالكاروسيل الكبير فوق الصفحة الرئيسية. عناصرك المضافة تظهر أول (علّمها "يظهر بالهيرو" وقت الإضافة)، بعدها الرائج تلقائياً. اضغط العين لإخفاء أي عنصر من الهيرو.
+          </p>
+          {heroItems.length === 0 ? (
+            <div className="text-center py-20">
+              <Loader className="w-8 h-8 text-gray-600 mx-auto mb-3 animate-spin" />
+              <p className="text-gray-500 text-sm">جاري التحميل...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {heroItems.map((item) => {
+                const key = itemKey(item.type, item.id);
+                const isHidden = heroHiddenIds.includes(key);
+                return (
+                  <div key={key} className="relative">
+                    <div className={`relative aspect-video rounded-xl overflow-hidden bg-stone-900 border border-white/[0.06] transition-all ${isHidden ? 'opacity-30 grayscale' : ''}`}>
+                      {(item.backdrop || item.poster) && (
+                        <img src={item.backdrop || item.poster || ''} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                      <p className="absolute bottom-2 right-2 left-2 text-white text-xs font-bold line-clamp-1 text-right">{item.title}</p>
+                      <button
+                        onClick={() => onToggleHeroHidden?.(item.type, item.id, !isHidden)}
+                        className="absolute top-2 right-2 w-8 h-8 rounded-full glass flex items-center justify-center text-white cursor-pointer hover:bg-white/25 transition-all"
+                        title={isHidden ? 'إظهار بالهيرو' : 'إخفاء من الهيرو'}
+                      >
+                        {isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
