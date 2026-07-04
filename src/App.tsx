@@ -17,6 +17,7 @@ import {
   fetchPopularTV,
   fetchPopularMovies,
   fetchUpcoming,
+  discoverForSection,
   discoverTitles,
   searchTitles,
   MOVIE_GENRES,
@@ -40,7 +41,7 @@ import ShareModal from './components/ShareModal';
 import MobileNav from './components/MobileNav';
 import AdminDashboard from './components/AdminDashboard';
 import {
-  subscribeHidden, subscribeManualItems, subscribeCustomSections,
+  subscribeHidden, subscribeManualItems, subscribeCustomSections, subscribeSectionOrder,
   toggleHidden,
   itemKey, ManualItem, CustomSection,
 } from './lib/adminStore';
@@ -290,6 +291,9 @@ export default function App() {
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
   const [manualItems, setManualItems] = useState<ManualItem[]>([]);
   const [customSections, setCustomSections] = useState<CustomSection[]>([]);
+  const [sectionOrder, setSectionOrder] = useState<string[]>([]);
+  // نتائج أقسام التصنيف التلقائية: key القسم -> عناصره من TMDB
+  const [genreSectionData, setGenreSectionData] = useState<Record<string, MovieOrShow[]>>({});
   const [isHomeLoading, setIsHomeLoading] = useState(true);
 
   // Reusable home feed reload (used on mount + pull-to-refresh)
@@ -671,8 +675,31 @@ export default function App() {
     const u1 = subscribeHidden(setHiddenIds);
     const u2 = subscribeManualItems(setManualItems);
     const u3 = subscribeCustomSections(setCustomSections);
-    return () => { u1(); u2(); u3(); };
+    const u4 = subscribeSectionOrder(setSectionOrder);
+    return () => { u1(); u2(); u3(); u4(); };
   }, []);
+
+  // جلب محتوى أقسام التصنيف التلقائية من TMDB (تتحدّث لما تتغير الأقسام)
+  useEffect(() => {
+    const genreSecs = customSections.filter((s) => s.kind === 'genre' && s.genreId);
+    if (genreSecs.length === 0) { setGenreSectionData({}); return; }
+    let cancelled = false;
+    (async () => {
+      const entries = await Promise.all(genreSecs.map(async (s) => {
+        const items = await discoverForSection({
+          genreId: s.genreId,
+          mediaType: s.mediaType || 'movie',
+          minYear: s.minYear,
+          maxYear: s.maxYear,
+          minRating: s.minRating,
+          language: s.language,
+        });
+        return [s.key, items] as [string, MovieOrShow[]];
+      }));
+      if (!cancelled) setGenreSectionData(Object.fromEntries(entries));
+    })();
+    return () => { cancelled = true; };
+  }, [customSections]);
 
   // Sync Search results when filters or query updates
   useEffect(() => {
@@ -1261,6 +1288,41 @@ export default function App() {
     { key: 'popularMovies', title: 'أفلام شعبية مميزة', items: popularMovies },
   ], [trendingWeek, upcoming, nowPlaying, popularTV, popularMovies]);
 
+  // بناء كل أقسام الرئيسية بشكل موحّد، ثم ترتيبها حسب sectionOrder من الداشبورد.
+  // كل قسم: { key, title, items }. الأقسام الفاضية تُحذف عند العرض.
+  const renderableSections = useMemo(() => {
+    // الأصلية
+    const native: { key: string; title: string; items: MovieOrShow[] }[] = [
+      { key: 'trending', title: 'الرائج هذا الأسبوع', items: applyHidden(trendingWeek) },
+      { key: 'upcoming', title: 'قريباً', items: applyHidden(upcoming) },
+      { key: 'nowPlaying', title: 'جديد دور السينما', items: applyHidden(nowPlaying) },
+      { key: 'popularTV', title: 'المسلسلات الموصى بها', items: applyHidden(popularTV) },
+      { key: 'popularMovies', title: 'أفلام شعبية مميزة', items: applyHidden(popularMovies) },
+    ];
+
+    // المخصصة: يدوية + تصنيف. للتصنيف ندمج العناصر اليدوية فوق نتائج TMDB.
+    const custom = customSections.map((sec) => {
+      const manual = manualBySection[sec.key] || [];
+      let items: MovieOrShow[] = manual;
+      if (sec.kind === 'genre') {
+        const genreItems = applyHidden(genreSectionData[sec.key] || []);
+        // العناصر اليدوية أولاً، بعدها التصنيف (بدون تكرار)
+        const seen = new Set(manual.map((m) => `${m.type}_${m.id}`));
+        items = [...manual, ...genreItems.filter((g) => !seen.has(`${g.type}_${g.id}`))];
+      }
+      return { key: sec.key, title: sec.title, items };
+    });
+
+    const all = [...native, ...custom];
+
+    // رتّب حسب sectionOrder؛ اللي مو بالترتيب يروح للنهاية
+    const idx = (k: string) => {
+      const i = sectionOrder.indexOf(k);
+      return i === -1 ? 9999 : i;
+    };
+    return all.sort((a, b) => idx(a.key) - idx(b.key));
+  }, [trendingWeek, upcoming, nowPlaying, popularTV, popularMovies, customSections, manualBySection, genreSectionData, sectionOrder, applyHidden]);
+
   return (
     <div className="min-h-screen bg-[#17171a] text-white flex flex-row font-sans relative tracking-normal antialiased">
       
@@ -1341,13 +1403,7 @@ export default function App() {
                 </div>
               )}
 
-              <MovieRow
-                title="الرائج هذا الأسبوع"
-                items={applyHidden(trendingWeek)}
-                onItemClick={handleTitleClick}
-              />
-
-              {/* حصري نوار — العناصر المضافة يدوياً بلا قسم مخصص */}
+              {/* حصري نوار — العناصر المضافة يدوياً بلا قسم مخصص (يظهر أول دائماً) */}
               {(manualBySection['manual']?.length ?? 0) > 0 && (
                 <MovieRow
                   title="حصري نوار"
@@ -1356,44 +1412,18 @@ export default function App() {
                 />
               )}
 
-              {upcoming.length > 0 && (
-                <MovieRow
-                  title="قريباً"
-                  items={applyHidden(upcoming)}
-                  onItemClick={handleTitleClick}
-                />
-              )}
-
-              <CategoryRow onSelect={(key) => { window.location.hash = `#category/${key}`; }} />
-
-
-              <MovieRow
-                title="جديد دور السينما"
-                items={applyHidden(nowPlaying)}
-                onItemClick={handleTitleClick}
-              />
-
-              <MovieRow
-                title="المسلسلات الموصى بها"
-                items={applyHidden(popularTV)}
-                onItemClick={handleTitleClick}
-              />
-
-              <MovieRow
-                title="أفلام شعبية مميزة"
-                items={applyHidden(popularMovies)}
-                onItemClick={handleTitleClick}
-              />
-
-              {/* الأقسام المخصصة من الداشبورد — تظهر بس لو فيها عناصر */}
-              {customSections.map((sec) => (
-                (manualBySection[sec.key]?.length ?? 0) > 0 && (
-                  <MovieRow
-                    key={sec.key}
-                    title={sec.title}
-                    items={manualBySection[sec.key]}
-                    onItemClick={handleTitleClick}
-                  />
+              {/* كل الأقسام مرتّبة حسب الداشبورد (أصلية + مخصصة)، الفاضية تُحذف */}
+              {renderableSections.map((sec, i) => (
+                sec.items.length > 0 && (
+                  <div key={sec.key}>
+                    <MovieRow
+                      title={sec.title}
+                      items={sec.items}
+                      onItemClick={handleTitleClick}
+                    />
+                    {/* شريط التصنيفات يظهر بعد أول قسم */}
+                    {i === 0 && <CategoryRow onSelect={(key) => { window.location.hash = `#category/${key}`; }} />}
+                  </div>
                 )
               ))}
 </div>

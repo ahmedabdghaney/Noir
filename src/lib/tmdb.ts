@@ -398,6 +398,45 @@ export async function discoverTitles(type: 'movie' | 'tv', options: DiscoveryOpt
   };
 }
 
+// discover للأقسام المخصصة بالداشبورد — تصنيف + فلاتر (سنة، تقييم، لغة)
+// بدون قيد MIN_YEAR (الأدمن حر يعرض أي سنة).
+export interface SectionFilters {
+  genreId?: number;
+  mediaType?: 'movie' | 'tv';
+  minYear?: number;
+  maxYear?: number;
+  minRating?: number;
+  language?: string;   // كود اللغة الأصلية
+}
+
+export async function discoverForSection(f: SectionFilters): Promise<MovieOrShow[]> {
+  const type = f.mediaType || 'movie';
+  const params: Record<string, any> = {
+    include_adult: false,
+    page: 1,
+    sort_by: 'popularity.desc',
+    'vote_count.gte': 50,
+    language: 'en-US',
+  };
+  if (f.genreId) params.with_genres = f.genreId;
+  if (f.language) params.with_original_language = f.language;
+  if (f.minRating) params['vote_average.gte'] = f.minRating;
+
+  const dateGte = type === 'tv' ? 'first_air_date.gte' : 'primary_release_date.gte';
+  const dateLte = type === 'tv' ? 'first_air_date.lte' : 'primary_release_date.lte';
+  if (f.minYear) params[dateGte] = `${f.minYear}-01-01`;
+  if (f.maxYear) params[dateLte] = `${f.maxYear}-12-31`;
+
+  try {
+    const res = await tmdbFetch(`/discover/${type}`, params);
+    return (res.results || [])
+      .map((m: any) => normalizeItem(m, type))
+      .filter((item: MovieOrShow) => item.poster)
+      .slice(0, 20);
+  } catch {
+    return [];
+  }
+}
 // يجيب شعار شركة إنتاج (company) أو شبكة بث (network) — نستخدم endpoint الصور
 // المخصص (/images) لأنه أوثق من logo_path المباشر (بعض الشبكات الحديثة زي Apple TV+
 // ناقصة logo_path بـ endpoint التفاصيل العادي بس موجودة بقائمة /images).

@@ -49,6 +49,13 @@ export interface CustomSection {
   key: string;
   title: string;
   order: number;
+  kind?: 'manual' | 'genre';       // افتراضي manual للتوافق مع القديم
+  genreId?: number;                // TMDB genre id (لو kind='genre')
+  mediaType?: 'movie' | 'tv';      // نوع المحتوى للقسم بالتصنيف
+  minYear?: number;                // فلتر: أقل سنة
+  maxYear?: number;                // فلتر: أعلى سنة
+  minRating?: number;              // فلتر: أقل تقييم
+  language?: string;               // فلتر: كود اللغة الأصلية (en, ar, ...)
 }
 
 const CFG = 'site_config';
@@ -155,13 +162,34 @@ export async function setCustomSections(list: CustomSection[]): Promise<void> {
   await setDoc(doc(db, CFG, 'sections'), { list }, { merge: false });
 }
 
-export async function addCustomSection(title: string): Promise<CustomSection[]> {
+// إنشاء أو تحديث قسم مخصص (upsert). لو ما في key نولّد واحد جديد.
+export async function upsertCustomSection(sec: Partial<CustomSection> & { title: string }): Promise<CustomSection[]> {
   const current = await fetchCustomSections();
-  const key = `custom_${Date.now()}`;
-  const order = current.length ? Math.max(...current.map((s) => s.order || 0)) + 1 : 0;
-  const next = [...current, { key, title: title.trim(), order }];
+  const key = sec.key || `custom_${Date.now()}`;
+  const existing = current.find((s) => s.key === key);
+  const order = existing ? existing.order : (current.length ? Math.max(...current.map((s) => s.order || 0)) + 1 : 0);
+  const merged: CustomSection = {
+    key,
+    title: sec.title.trim(),
+    order,
+    kind: sec.kind || 'manual',
+    genreId: sec.genreId,
+    mediaType: sec.mediaType || 'movie',
+    minYear: sec.minYear,
+    maxYear: sec.maxYear,
+    minRating: sec.minRating,
+    language: sec.language,
+  };
+  const next = existing
+    ? current.map((s) => (s.key === key ? merged : s))
+    : [...current, merged];
   await setCustomSections(next);
   return next;
+}
+
+// إبقاء addCustomSection للتوافق (قسم يدوي بسيط)
+export async function addCustomSection(title: string): Promise<CustomSection[]> {
+  return upsertCustomSection({ title, kind: 'manual' });
 }
 
 export async function removeCustomSection(key: string): Promise<CustomSection[]> {
@@ -172,6 +200,27 @@ export async function removeCustomSection(key: string): Promise<CustomSection[]>
   const fixed = items.map((m) => (m.section === key ? { ...m, section: 'manual' } : m));
   await setManualItems(fixed);
   return next;
+}
+
+// ── الترتيب الموحّد لكل الأقسام (أصلية + مخصصة) ──
+
+export async function fetchSectionOrder(): Promise<string[]> {
+  try {
+    const snap = await getDoc(doc(db, CFG, 'order'));
+    const d = snap.data();
+    return Array.isArray(d?.order) ? d!.order : [];
+  } catch { return []; }
+}
+
+export function subscribeSectionOrder(cb: (order: string[]) => void): () => void {
+  return onSnapshot(doc(db, CFG, 'order'), (snap) => {
+    const d = snap.data();
+    cb(Array.isArray(d?.order) ? d!.order : []);
+  }, () => cb([]));
+}
+
+export async function setSectionOrder(order: string[]): Promise<void> {
+  await setDoc(doc(db, CFG, 'order'), { order }, { merge: false });
 }
 
 export const genUid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

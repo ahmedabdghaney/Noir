@@ -6,17 +6,17 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Search, Plus, Trash2, Eye, EyeOff, FolderPlus, Loader, ArrowRight,
-  Edit3, Star, Film, Import, PenLine, X, Upload,
+  Edit3, Star, Film, Import, PenLine, X, Upload, ChevronUp, ChevronDown,
 } from 'lucide-react';
 import { MovieOrShow } from '../types';
-import { searchAdmin, importFromTmdb, TmdbImport } from '../lib/tmdb';
+import { searchAdmin, importFromTmdb, TmdbImport, discoverForSection } from '../lib/tmdb';
 import { CATEGORIES } from '../lib/categories';
 import {
-  isAdmin, manualKey, genUid,
+  isAdmin, manualKey, genUid, itemKey,
   ManualItem, CustomSection,
-  subscribeManualItems, subscribeCustomSections,
+  subscribeManualItems, subscribeCustomSections, subscribeSectionOrder,
   upsertManualItem, removeManualItem,
-  addCustomSection, removeCustomSection,
+  upsertCustomSection, removeCustomSection, setSectionOrder,
 } from '../lib/adminStore';
 
 interface SiteSection {
@@ -32,6 +32,15 @@ interface AdminDashboardProps {
   hiddenIds?: string[];
   onToggleHidden?: (type: 'movie' | 'tv', id: number, hide: boolean) => void;
 }
+
+// الأقسام الأصلية الثابتة (مفاتيحها + أسماؤها) — تظهر بقائمة الترتيب لكن ما تنعدّل
+const NATIVE_SECTIONS: { key: string; title: string }[] = [
+  { key: 'trending', title: 'الرائج هذا الأسبوع' },
+  { key: 'upcoming', title: 'قريباً' },
+  { key: 'nowPlaying', title: 'جديد دور السينما' },
+  { key: 'popularTV', title: 'المسلسلات الموصى بها' },
+  { key: 'popularMovies', title: 'أفلام شعبية مميزة' },
+];
 
 type Tab = 'library' | 'site' | 'add' | 'sections';
 
@@ -73,12 +82,17 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
   const [importing, setImporting] = useState<number | null>(null);
 
   // أقسام مخصصة
-  const [newSectionName, setNewSectionName] = useState('');
+  const [order, setOrderState] = useState<string[]>([]);
+  // محرر القسم (null = مغلق). نميّز جديد/تعديل بوجود key
+  const [secForm, setSecForm] = useState<Partial<CustomSection> | null>(null);
+  const [secPreview, setSecPreview] = useState<MovieOrShow[]>([]);
+  const [previewing, setPreviewing] = useState(false);
 
   useEffect(() => {
     const u1 = subscribeManualItems(setItems);
     const u2 = subscribeCustomSections(setSections);
-    return () => { u1(); u2(); };
+    const u3 = subscribeSectionOrder(setOrderState);
+    return () => { u1(); u2(); u3(); };
   }, []);
 
   useEffect(() => {
@@ -143,10 +157,70 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
     await removeManualItem(manualKey(it));
   };
 
-  const handleAddSection = async () => {
-    if (!newSectionName.trim()) return;
-    await addCustomSection(newSectionName);
-    setNewSectionName('');
+  // القائمة الموحّدة لكل الأقسام (أصلية + مخصصة) مرتّبة حسب order المحفوظ.
+  // الأقسام اللي مو بالـ order تنحط بالنهاية بترتيبها الطبيعي.
+  const orderedSections = (() => {
+    const native = NATIVE_SECTIONS.map((s) => ({ ...s, custom: false as const }));
+    const custom = sections.map((s) => ({ key: s.key, title: s.title, custom: true as const, data: s }));
+    const all = [...native, ...custom];
+    const idx = (k: string) => {
+      const i = order.indexOf(k);
+      return i === -1 ? 9999 : i;
+    };
+    return all.sort((a, b) => idx(a.key) - idx(b.key));
+  })();
+
+  // حرّك قسم صعود/نزول ويحفظ الترتيب الجديد
+  const moveSection = async (key: string, dir: -1 | 1) => {
+    const keys = orderedSections.map((s) => s.key);
+    const i = keys.indexOf(key);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= keys.length) return;
+    [keys[i], keys[j]] = [keys[j], keys[i]];
+    setOrderState(keys);
+    await setSectionOrder(keys);
+  };
+
+  // فتح محرر قسم مخصص (جديد أو تعديل)
+  const openSectionEditor = (sec?: CustomSection) => {
+    setSecPreview([]);
+    setSecForm(sec ? { ...sec } : { title: '', kind: 'manual', mediaType: 'movie' });
+  };
+
+  const setSF = <K extends keyof CustomSection>(k: K, v: CustomSection[K]) =>
+    setSecForm((f) => (f ? { ...f, [k]: v } : f));
+
+  // معاينة نتائج التصنيف+الفلاتر قبل الحفظ
+  const previewSection = async () => {
+    if (!secForm) return;
+    setPreviewing(true);
+    const items = await discoverForSection({
+      genreId: secForm.genreId,
+      mediaType: secForm.mediaType || 'movie',
+      minYear: secForm.minYear,
+      maxYear: secForm.maxYear,
+      minRating: secForm.minRating,
+      language: secForm.language,
+    });
+    setSecPreview(items);
+    setPreviewing(false);
+  };
+
+  const saveSectionEditor = async () => {
+    if (!secForm || !secForm.title?.trim()) return;
+    await upsertCustomSection({
+      key: secForm.key,
+      title: secForm.title,
+      kind: secForm.kind || 'manual',
+      genreId: secForm.genreId,
+      mediaType: secForm.mediaType || 'movie',
+      minYear: secForm.minYear,
+      maxYear: secForm.maxYear,
+      minRating: secForm.minRating,
+      language: secForm.language,
+    });
+    setSecForm(null);
+    setSecPreview([]);
   };
 
   const setF = <K extends keyof ManualItem>(k: K, v: ManualItem[K]) =>
@@ -470,36 +544,163 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
       {/* ══ الأقسام ══ */}
       {tab === 'sections' && (
         <div>
-          <div className="bg-[#141417] border border-white/8 rounded-2xl p-4 mb-6">
-            <label className="text-white text-xs font-bold mb-2 block">إنشاء قسم مخصص جديد</label>
-            <div className="flex gap-2">
-              <input value={newSectionName} onChange={(e) => setNewSectionName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddSection()} placeholder="اسم القسم (مثلاً: أفلام عراقية)"
-                className="flex-1 bg-stone-900 border border-white/10 focus:border-red-500/60 outline-none text-white text-sm font-semibold py-2.5 px-3 rounded-xl transition-all placeholder-gray-600" />
-              <button onClick={handleAddSection} className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-all whitespace-nowrap">
-                <FolderPlus className="w-4 h-4" /> إضافة
-              </button>
-            </div>
-          </div>
-          <h3 className="text-white text-sm font-bold mb-3">أقسامك المخصصة</h3>
-          {sections.length === 0 ? (
-            <p className="text-gray-600 text-sm text-center py-8">ما في أقسام مخصصة. أنشئ واحد فوق.</p>
-          ) : (
-            <div className="space-y-2">
-              {sections.map((s) => {
-                const count = items.filter((m) => m.section === s.key).length;
-                return (
-                  <div key={s.key} className="flex items-center justify-between bg-[#141417] border border-white/8 rounded-xl px-4 py-3">
-                    <div className="text-right">
-                      <p className="text-white text-sm font-bold">{s.title}</p>
-                      <p className="text-gray-500 text-[11px]">{count} عنصر</p>
-                    </div>
-                    <button onClick={() => removeCustomSection(s.key)} className="w-9 h-9 rounded-full bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center text-red-400 cursor-pointer transition-all" title="حذف القسم">
-                      <Trash2 className="w-4 h-4" />
+          {/* المحرر (يطفو فوق القائمة لما يكون مفتوح) */}
+          {secForm ? (
+            <div className="bg-[#141417] border border-white/8 rounded-2xl p-5 md:p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-white font-black text-lg">{secForm.key ? 'تعديل قسم' : 'قسم جديد'}</h3>
+                <button onClick={() => { setSecForm(null); setSecPreview([]); }} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 cursor-pointer">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <Field label="اسم القسم" value={secForm.title || ''} onChange={(v) => setSF('title', v)} />
+
+                {/* نوع القسم */}
+                <div>
+                  <label className="text-white text-xs font-bold mb-2 block">طريقة التعبئة</label>
+                  <div className="flex gap-2">
+                    <button onClick={() => setSF('kind', 'manual')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${(secForm.kind || 'manual') === 'manual' ? 'bg-red-600 text-white' : 'bg-stone-900 text-gray-400 hover:text-white'}`}>
+                      <PenLine className="w-3.5 h-3.5" /> يدوي
+                    </button>
+                    <button onClick={() => setSF('kind', 'genre')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${secForm.kind === 'genre' ? 'bg-red-600 text-white' : 'bg-stone-900 text-gray-400 hover:text-white'}`}>
+                      <Film className="w-3.5 h-3.5" /> تصنيف تلقائي
                     </button>
                   </div>
-                );
-              })}
+                  <p className="text-gray-500 text-[10px] mt-1.5 leading-relaxed">
+                    {secForm.kind === 'genre'
+                      ? 'يتعبّى تلقائياً من TMDB حسب التصنيف والفلاتر، وتقدر تضيف عناصر يدوية فوقه من تبويب الإضافة.'
+                      : 'تضيف الأفلام والمسلسلات يدوياً من تبويب الإضافة.'}
+                  </p>
+                </div>
+
+                {/* حقول التصنيف — بس لو النوع genre */}
+                {secForm.kind === 'genre' && (
+                  <div className="bg-stone-900/50 border border-white/5 rounded-xl p-4 space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-white text-xs font-bold mb-1.5 block">النوع</label>
+                        <select value={secForm.mediaType || 'movie'} onChange={(e) => setSF('mediaType', e.target.value as 'movie' | 'tv')}
+                          className="w-full bg-stone-900 border border-white/10 text-white text-sm py-2.5 px-3 rounded-lg outline-none cursor-pointer">
+                          <option value="movie">أفلام</option>
+                          <option value="tv">مسلسلات</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-white text-xs font-bold mb-1.5 block">التصنيف</label>
+                        <select value={secForm.genreId || ''} onChange={(e) => setSF('genreId', e.target.value ? Number(e.target.value) : undefined)}
+                          className="w-full bg-stone-900 border border-white/10 text-white text-sm py-2.5 px-3 rounded-lg outline-none cursor-pointer">
+                          <option value="">اختر تصنيف</option>
+                          {CATEGORIES.map((c) => <option key={c.key} value={c.primaryGenre}>{c.title}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <NumField label="من سنة" value={secForm.minYear} onChange={(v) => setSF('minYear', v)} placeholder="1990" />
+                      <NumField label="إلى سنة" value={secForm.maxYear} onChange={(v) => setSF('maxYear', v)} placeholder="2026" />
+                      <NumField label="أقل تقييم" value={secForm.minRating} onChange={(v) => setSF('minRating', v)} placeholder="7" step="0.1" />
+                    </div>
+                    <div>
+                      <label className="text-white text-xs font-bold mb-1.5 block">اللغة الأصلية (اختياري)</label>
+                      <select value={secForm.language || ''} onChange={(e) => setSF('language', e.target.value || undefined)}
+                        className="w-full bg-stone-900 border border-white/10 text-white text-sm py-2.5 px-3 rounded-lg outline-none cursor-pointer">
+                        <option value="">الكل</option>
+                        <option value="ar">العربية</option>
+                        <option value="en">الإنجليزية</option>
+                        <option value="tr">التركية</option>
+                        <option value="ko">الكورية</option>
+                        <option value="ja">اليابانية</option>
+                        <option value="hi">الهندية</option>
+                        <option value="fr">الفرنسية</option>
+                        <option value="es">الإسبانية</option>
+                      </select>
+                    </div>
+
+                    <button onClick={previewSection} disabled={previewing || !secForm.genreId}
+                      className="flex items-center gap-2 bg-stone-800 hover:bg-stone-700 disabled:opacity-40 text-white px-4 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all">
+                      {previewing ? <Loader className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />} معاينة النتائج
+                    </button>
+
+                    {secPreview.length > 0 && (
+                      <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 pt-2">
+                        {secPreview.slice(0, 12).map((it) => (
+                          <div key={`${it.type}_${it.id}`} className="aspect-[2/3] rounded-md overflow-hidden bg-stone-900">
+                            {it.poster && <img src={it.poster} alt={it.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-2">
+                  <button onClick={saveSectionEditor} disabled={!secForm.title?.trim() || (secForm.kind === 'genre' && !secForm.genreId)}
+                    className="flex items-center gap-2 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white px-8 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all">
+                    <Plus className="w-4 h-4" /> حفظ
+                  </button>
+                  <button onClick={() => { setSecForm(null); setSecPreview([]); }} className="bg-stone-900 hover:bg-stone-800 text-gray-300 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all">إلغاء</button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center justify-between mb-5">
+                <p className="text-gray-400 text-xs leading-relaxed max-w-md">كل أقسام الصفحة الرئيسية. رتّبها بالأسهم، عدّل المخصصة، والأصلية معلّمة "أصلي" وثابتة.</p>
+                <button onClick={() => openSectionEditor()} className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-all whitespace-nowrap shrink-0">
+                  <FolderPlus className="w-4 h-4" /> قسم جديد
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {orderedSections.map((s, i) => {
+                  const count = s.custom ? items.filter((m) => m.section === s.key).length : null;
+                  const isGenre = s.custom && (s as any).data?.kind === 'genre';
+                  return (
+                    <div key={s.key} className="flex items-center gap-3 bg-[#141417] border border-white/8 rounded-xl px-3 py-3">
+                      {/* أسهم الترتيب */}
+                      <div className="flex flex-col gap-0.5 shrink-0">
+                        <button onClick={() => moveSection(s.key, -1)} disabled={i === 0}
+                          className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 disabled:opacity-20 flex items-center justify-center text-gray-300 cursor-pointer" title="صعّد">
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => moveSection(s.key, 1)} disabled={i === orderedSections.length - 1}
+                          className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 disabled:opacity-20 flex items-center justify-center text-gray-300 cursor-pointer" title="نزّل">
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* المعلومات */}
+                      <div className="flex-1 text-right">
+                        <div className="flex items-center gap-2 justify-start">
+                          <p className="text-white text-sm font-bold">{s.title}</p>
+                          {s.custom ? (
+                            <span className="bg-red-600/20 text-red-400 text-[9px] font-black px-2 py-0.5 rounded-full">مضاف من قبلك</span>
+                          ) : (
+                            <span className="bg-white/5 text-gray-400 text-[9px] font-black px-2 py-0.5 rounded-full">أصلي</span>
+                          )}
+                          {isGenre && <span className="bg-blue-600/20 text-blue-400 text-[9px] font-black px-2 py-0.5 rounded-full">تصنيف تلقائي</span>}
+                        </div>
+                        {s.custom && <p className="text-gray-500 text-[11px] mt-0.5">{isGenre ? 'يتعبّى تلقائياً' : `${count} عنصر يدوي`}</p>}
+                      </div>
+
+                      {/* أزرار التعديل/الحذف — بس للمخصصة */}
+                      {s.custom && (
+                        <div className="flex gap-1.5 shrink-0">
+                          <button onClick={() => openSectionEditor((s as any).data)} className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-300 cursor-pointer" title="تعديل">
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => removeCustomSection(s.key)} className="w-9 h-9 rounded-full bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center text-red-400 cursor-pointer" title="حذف">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -515,6 +716,18 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
       <label className="text-white text-xs font-bold mb-1.5 block">{label}</label>
       <input value={value} onChange={(e) => onChange(e.target.value)}
         className="w-full bg-stone-900 border border-white/10 focus:border-red-500/60 outline-none text-white text-sm py-2.5 px-3 rounded-lg transition-all" />
+    </div>
+  );
+}
+
+// حقل رقمي (للفلاتر: سنة، تقييم)
+function NumField({ label, value, onChange, placeholder, step }: { label: string; value?: number; onChange: (v: number | undefined) => void; placeholder?: string; step?: string }) {
+  return (
+    <div>
+      <label className="text-white text-xs font-bold mb-1.5 block">{label}</label>
+      <input type="number" step={step} value={value ?? ''} placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
+        className="w-full bg-stone-900 border border-white/10 focus:border-red-500/60 outline-none text-white text-sm py-2.5 px-3 rounded-lg transition-all placeholder-gray-600" dir="ltr" />
     </div>
   );
 }
