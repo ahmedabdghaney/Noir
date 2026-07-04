@@ -19,12 +19,21 @@ import {
   addCustomSection, removeCustomSection,
 } from '../lib/adminStore';
 
+interface SiteSection {
+  key: string;
+  title: string;
+  items: MovieOrShow[];
+}
+
 interface AdminDashboardProps {
   userEmail?: string | null;
   onBack: () => void;
+  siteSections?: SiteSection[];
+  hiddenIds?: string[];
+  onToggleHidden?: (type: 'movie' | 'tv', id: number, hide: boolean) => void;
 }
 
-type Tab = 'library' | 'add' | 'sections';
+type Tab = 'library' | 'site' | 'add' | 'sections';
 
 // عنصر فورم فارغ
 const emptyForm = (): ManualItem => ({
@@ -47,7 +56,7 @@ const emptyForm = (): ManualItem => ({
   addedAt: Date.now(),
 });
 
-export default function AdminDashboard({ userEmail, onBack }: AdminDashboardProps) {
+export default function AdminDashboard({ userEmail, onBack, siteSections = [], hiddenIds = [], onToggleHidden }: AdminDashboardProps) {
   const [tab, setTab] = useState<Tab>('library');
 
   const [items, setItems] = useState<ManualItem[]>([]);
@@ -174,7 +183,7 @@ export default function AdminDashboard({ userEmail, onBack }: AdminDashboardProp
 
       {/* تبويبات */}
       <div className="flex gap-2 mb-8 border-b border-white/5 pb-3">
-        {([['library', 'المكتبة'], ['add', form ? 'تحرير' : 'إضافة'], ['sections', 'الأقسام']] as [Tab, string][]).map(([k, label]) => (
+        {([['library', 'المكتبة'], ['site', 'محتوى الموقع'], ['add', form ? 'تحرير' : 'إضافة'], ['sections', 'الأقسام']] as [Tab, string][]).map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
             className={`px-4 py-2 rounded-full text-xs font-bold cursor-pointer transition-all ${tab === k ? 'bg-red-600 text-white' : 'bg-stone-900 text-gray-400 hover:text-white'}`}>
             {label}
@@ -228,6 +237,50 @@ export default function AdminDashboard({ userEmail, onBack }: AdminDashboardProp
                 </div>
               ))}
             </div>
+          )}
+        </div>
+      )}
+
+      {/* ══ محتوى الموقع (الأقسام التلقائية) ══ */}
+      {tab === 'site' && (
+        <div>
+          <p className="text-gray-400 text-xs mb-6 leading-relaxed">
+            كل أفلام ومسلسلات الموقع التلقائية. اضغط العين لإخفاء أو إظهار أي عنصر من الموقع. لإضافة قسم جديد روح لتبويب "الأقسام".
+          </p>
+          {siteSections.every((s) => s.items.length === 0) ? (
+            <div className="text-center py-20">
+              <Loader className="w-8 h-8 text-gray-600 mx-auto mb-3 animate-spin" />
+              <p className="text-gray-500 text-sm">جاري التحميل...</p>
+            </div>
+          ) : (
+            siteSections.map((sec) => (
+              sec.items.length > 0 && (
+                <div key={sec.key} className="mb-8">
+                  <h3 className="text-white text-sm font-black mb-3">{sec.title}</h3>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                    {sec.items.map((item) => {
+                      const key = itemKey(item.type, item.id);
+                      const isHidden = hiddenIds.includes(key);
+                      return (
+                        <div key={key} className="relative">
+                          <div className={`relative aspect-[2/3] rounded-xl overflow-hidden bg-stone-900 border border-white/[0.06] transition-all ${isHidden ? 'opacity-30 grayscale' : ''}`}>
+                            {item.poster && <img src={item.poster} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />}
+                            <button
+                              onClick={() => onToggleHidden?.(item.type, item.id, !isHidden)}
+                              className="absolute top-1.5 right-1.5 w-8 h-8 rounded-full glass flex items-center justify-center text-white cursor-pointer hover:bg-white/25 transition-all"
+                              title={isHidden ? 'إظهار' : 'إخفاء'}
+                            >
+                              {isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                          <p className="text-white text-[10px] font-semibold mt-1 line-clamp-1 text-right">{item.title}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )
+            ))
           )}
         </div>
       )}

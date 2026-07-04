@@ -41,6 +41,7 @@ import MobileNav from './components/MobileNav';
 import AdminDashboard from './components/AdminDashboard';
 import {
   subscribeHidden, subscribeManualItems, subscribeCustomSections,
+  toggleHidden,
   itemKey, ManualItem, CustomSection,
 } from './lib/adminStore';
 
@@ -1251,6 +1252,15 @@ export default function App() {
     [manualHeroItems, trendingWeek, applyHidden]
   );
 
+  // أقسام الموقع التلقائية — تُمرّر للداشبورد عشان الأدمن يخفي/يظهر منها
+  const siteSectionsForAdmin = useMemo(() => [
+    { key: 'trending', title: 'الرائج هذا الأسبوع', items: trendingWeek },
+    { key: 'upcoming', title: 'قريباً', items: upcoming },
+    { key: 'nowPlaying', title: 'جديد دور السينما', items: nowPlaying },
+    { key: 'popularTV', title: 'المسلسلات الموصى بها', items: popularTV },
+    { key: 'popularMovies', title: 'أفلام شعبية مميزة', items: popularMovies },
+  ], [trendingWeek, upcoming, nowPlaying, popularTV, popularMovies]);
+
   return (
     <div className="min-h-screen bg-[#17171a] text-white flex flex-row font-sans relative tracking-normal antialiased">
       
@@ -1974,6 +1984,9 @@ export default function App() {
           <AdminDashboard
             userEmail={user?.email}
             onBack={navigateToHome}
+            siteSections={siteSectionsForAdmin}
+            hiddenIds={hiddenIds}
+            onToggleHidden={(type, id, hide) => { toggleHidden(type, id, hide); }}
           />
         )}
 </main>
