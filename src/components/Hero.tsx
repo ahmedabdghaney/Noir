@@ -26,7 +26,7 @@ export default function Hero({
   isSaved,
   onToggleSave,
 }: HeroProps) {
-  const [currentIndex, setCurrentIndex] = useState(2);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [logoCache, setLogoCache] = useState<Record<string, string | null>>({});
   // خريطة مفتاح التريلر لكل عنصر (من TMDB videos)
   const [trailerCache, setTrailerCache] = useState<Record<string, string | null>>({});
@@ -49,20 +49,21 @@ export default function Hero({
   useEffect(() => {
     if (!activeItem || !activeItem.id || !activeItem.type) return;
     const key = `${activeItem.type}-${activeItem.id}`;
-    if (key in logoCache) return;
+    // لو عندنا التريلر مخزّن من قبل، ما نعيد الجلب
+    if (key in trailerCache) return;
     let cancelled = false;
     fetchDetailedTitle(activeItem.type, activeItem.id)
       .then((d) => {
         if (cancelled) return;
-        setLogoCache((c) => ({ ...c, [key]: getTitleLogoUrl(d) }));
-        // استخرج مفتاح تريلر يوتيوب: نفضّل Trailer، وإلا أي فيديو YouTube
+        if (!(key in logoCache)) setLogoCache((c) => ({ ...c, [key]: getTitleLogoUrl(d) }));
+        // استخرج مفتاح تريلر يوتيوب: نفضّل Trailer، وإلا Teaser، وإلا أي فيديو YouTube
         const vids = ((d as any)?.videos?.results || []).filter((v: any) => v.site === 'YouTube');
         const trailer = vids.find((v: any) => v.type === 'Trailer') || vids.find((v: any) => v.type === 'Teaser') || vids[0];
         setTrailerCache((c) => ({ ...c, [key]: trailer ? trailer.key : null }));
       })
       .catch(() => {
         if (cancelled) return;
-        setLogoCache((c) => ({ ...c, [key]: null }));
+        if (!(key in logoCache)) setLogoCache((c) => ({ ...c, [key]: null }));
         setTrailerCache((c) => ({ ...c, [key]: null }));
       });
     return () => { cancelled = true; };
