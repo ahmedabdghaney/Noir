@@ -27,6 +27,20 @@ interface DetailViewProps {
   autoOpenWatchTogether?: string;
   onClearAutoOpenWatchTogether?: () => void;
   watchlist: MovieOrShow[];
+  // بيانات عنصر يدوي محض (خارج TMDB). لو موجودة، نعرضها بدل جلب TMDB.
+  manualData?: {
+    title: string;
+    overview: string;
+    poster: string | null;
+    backdrop: string | null;
+    rating: number;
+    year: string;
+    genres: string[];
+    director: string;
+    country: string;
+    language: string;
+    runtime?: number;
+  } | null;
 }
 
 function formatHms(seconds: number): string {
@@ -53,6 +67,7 @@ export default function DetailView({
   autoOpenWatchTogether = '',
   onClearAutoOpenWatchTogether,
   watchlist,
+  manualData = null,
 }: DetailViewProps) {
   const [data, setData] = useState<DetailedInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -292,6 +307,34 @@ export default function DetailView({
       if (document.body) document.body.scrollTop = 0;
 
       try {
+        // عنصر يدوي محض — نبني التفاصيل من بياناتك مباشرة، بلا TMDB
+        if (manualData) {
+          const built: any = {
+            id,
+            type,
+            title: manualData.title,
+            overview: manualData.overview,
+            poster_path: null,
+            backdrop_path: null,
+            vote_average: manualData.rating,
+            release_date: manualData.year ? `${manualData.year}-01-01` : '',
+            first_air_date: manualData.year ? `${manualData.year}-01-01` : '',
+            runtime: manualData.runtime,
+            genres: (manualData.genres || []).map((name, i) => ({ id: i, name })),
+            production_countries: manualData.country ? [{ iso_3166_1: '', name: manualData.country }] : [],
+            spoken_languages: manualData.language ? [{ english_name: manualData.language, name: manualData.language }] : [],
+            credits: { cast: [], crew: manualData.director ? [{ id: 0, name: manualData.director, job: 'Director', department: 'Directing' }] : [] },
+            // نمرّر الصور الجاهزة (روابط كاملة) عبر حقول مخصصة يقرأها العرض
+            _manualPoster: manualData.poster,
+            _manualBackdrop: manualData.backdrop,
+            videos: { results: [] },
+            similar: { results: [] },
+            seasons: [],
+          };
+          if (active) { setData(built); setIsLoading(false); }
+          return;
+        }
+
         const details = await fetchDetailedTitle(type, id);
         if (!active) return;
         setData(details);
@@ -459,6 +502,12 @@ export default function DetailView({
   const title = data.title || (data as any).name ||'غير معروف';
   const titleLogo = getTitleLogoUrl(data);
 
+  // للعناصر اليدوية: نفضّل الروابط الجاهزة اللي مرّرناها
+  const manualPoster = (data as any)._manualPoster as string | null | undefined;
+  const manualBackdrop = (data as any)._manualBackdrop as string | null | undefined;
+  const posterSrc = manualPoster || getPosterUrl(data.poster_path);
+  const backdropSrc = manualBackdrop || getOriginalBackdropUrl(data.backdrop_path) || getLargePosterUrl(data.poster_path);
+
 
   const year = (data.release_date || data.first_air_date ||'').slice(0, 4);
   const runtime = data.runtime || (data.episode_run_time && data.episode_run_time[0]) || 0;
@@ -607,7 +656,7 @@ export default function DetailView({
         <div
           className="absolute inset-0 bg-cover bg-center ken-burns"
           style={{
-            backgroundImage: `url(${getOriginalBackdropUrl(data.backdrop_path) || getLargePosterUrl(data.poster_path) ||''})`,
+            backgroundImage: `url(${backdropSrc ||''})`,
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#111113] via-[#111113]/70 to-[#111113]/20" />
@@ -745,9 +794,9 @@ export default function DetailView({
           {/* Left Side: Solid Poster Art (Order-1 on display size to look traditional) */}
           <div className="order-1 md:order-1">
             <div className="w-[160px] md:w-[240px] aspect-[2/3] mx-auto md:mx-0 rounded-2xl overflow-hidden bg-stone-900 border border-white/[0.06] relative select-none">
-              {data.poster_path ? (
+              {posterSrc ? (
                 <img
-                  src={getPosterUrl(data.poster_path) || undefined}
+                  src={posterSrc || undefined}
                   alt={title}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover"
