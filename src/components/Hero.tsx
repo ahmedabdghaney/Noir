@@ -120,6 +120,7 @@ export default function Hero({
   // مؤقّت التريلر: بعد ثانيتين من تبديل الفلم، شغّل التريلر (لو متوفر)
   useEffect(() => {
     setShowTrailer(false); // اخفِ التريلر فوراً عند التبديل
+    setMuted(true);        // ارجع للكتم الافتراضي مع كل فلم جديد
     if (!activeItem) return;
     const key = `${activeItem.type}-${activeItem.id}`;
     const timer = setTimeout(() => setShowTrailer(true), 2000);
@@ -193,15 +194,15 @@ export default function Hero({
                       <div className="absolute inset-0 overflow-hidden">
                         <iframe
                           ref={trailerIframeRef}
-                          key={`trailer-${item.id}-${muted}`}
-                          src={`https://www.youtube-nocookie.com/embed/${trailerCache[`${item.type}-${item.id}`]}?autoplay=1&mute=${muted ? 1 : 0}&controls=0&loop=0&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&playsinline=1&fs=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
+                          key={`trailer-${item.id}`}
+                          src={`https://www.youtube-nocookie.com/embed/${trailerCache[`${item.type}-${item.id}`]}?autoplay=1&mute=1&controls=0&loop=0&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&playsinline=1&fs=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
                           allow="autoplay; encrypted-media"
                           title="trailer"
                           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[177.77vh] h-[56.25vw] min-w-full min-h-full pointer-events-none"
                           style={{ border: 0 }}
                         />
-                        {/* طبقة تغطية شفافة — تمنع تفاعل يوتيوب وتخفي أزراره */}
-                        <div className="absolute inset-0 z-10" style={{ pointerEvents: 'auto' }} />
+                        {/* طبقة تغطية شفافة كاملة — تحجب أزرار يوتيوب وتمنع التفاعل */}
+                        <div className="absolute inset-0 z-20 cursor-default" style={{ pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()} />
                       </div>
                     )}
 
@@ -317,7 +318,14 @@ export default function Hero({
         {/* زر كتم/تشغيل صوت التريلر — يظهر بس لما التريلر شغّال */}
         {showTrailer && activeItem && trailerCache[`${activeItem.type}-${activeItem.id}`] && (
           <button
-            onClick={() => setMuted((m) => !m)}
+            onClick={() => {
+              const iframe = trailerIframeRef.current;
+              const cmd = muted ? 'unMute' : 'mute';
+              iframe?.contentWindow?.postMessage(
+                JSON.stringify({ event: 'command', func: cmd, args: [] }), '*'
+              );
+              setMuted((m) => !m);
+            }}
             className="absolute left-4 md:left-6 bottom-6 md:bottom-8 z-40 w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/15 text-white flex items-center justify-center cursor-pointer transition-all"
             aria-label={muted ? 'تشغيل الصوت' : 'كتم الصوت'}
             title={muted ? 'تشغيل الصوت' : 'كتم الصوت'}
