@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Play, Plus, Check, ChevronRight, ChevronLeft, Star, Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MovieOrShow } from '../types';
@@ -34,16 +34,63 @@ export default function Hero({
   const [showTrailer, setShowTrailer] = useState(false);
   // كتم صوت التريلر (مكتوم افتراضياً — تشغيل تلقائي يتطلب كتم)
   const [muted, setMuted] = useState(true);
+  const trailerIframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const activePool = trendingItems.slice(0, 12);
 
+  // التبديل التلقائي: لو في تريلر شغّال، ننتظر انتهاءه (يتكفّل onTrailerEnd).
+  // لو ما في تريلر، نبدّل كل 8 ثواني.
+  const activeItemKey = activePool[currentIndex] ? `${activePool[currentIndex].type}-${activePool[currentIndex].id}` : '';
+  const activeTrailerKey = trailerCache[activeItemKey];
+
   useEffect(() => {
     if (activePool.length <= 1) return;
-    const timer = setInterval(() => {
+    // لو التريلر شغّال حالياً، لا نستخدم مؤقّت ثابت — ننتظر انتهاء التريلر
+    if (showTrailer && activeTrailerKey) return;
+    const timer = setTimeout(() => {
       setCurrentIndex((prev) => (prev + 1) % activePool.length);
     }, 8000);
-    return () => clearInterval(timer);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePool.length, currentIndex, showTrailer, activeTrailerKey]);
+
+  // ينتقل للفلم التالي (يُستدعى عند انتهاء التريلر)
+  const goToNext = () => setCurrentIndex((prev) => (prev + 1) % activePool.length);
+
+  // مستمع أحداث YouTube IFrame API — يكتشف انتهاء التريلر (state=0) وينتقل للتالي
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      if (typeof e.data !== 'string') return;
+      try {
+        const data = JSON.parse(e.data);
+        // YouTube يرسل info.playerState=0 لما ينتهي الفيديو
+        if (data.event === 'onStateChange' && data.info === 0) {
+          goToNext();
+        }
+        // عند جاهزية المشغّل، نشترك بأحداث الحالة
+        if (data.event === 'onReady' && trailerIframeRef.current?.contentWindow) {
+          trailerIframeRef.current.contentWindow.postMessage(
+            JSON.stringify({ event: 'listening', id: 1 }), '*'
+          );
+        }
+      } catch (_) {}
+    };
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePool.length]);
+
+  // عند ظهور التريلر، نطلب من يوتيوب يبدأ يبثّ أحداثه (listening)
+  useEffect(() => {
+    if (!showTrailer || !activeTrailerKey) return;
+    const t = setTimeout(() => {
+      trailerIframeRef.current?.contentWindow?.postMessage(
+        JSON.stringify({ event: 'listening', id: 1 }), '*'
+      );
+    }, 500);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showTrailer, activeTrailerKey]);
 
   const activeItem = activePool[currentIndex];
   useEffect(() => {
@@ -143,15 +190,18 @@ export default function Hero({
 
                     {/* التريلر التلقائي — يظهر بعد ثانيتين، مكتوم افتراضياً، يغطي الصورة */}
                     {isActive && showTrailer && trailerCache[`${item.type}-${item.id}`] && (
-                      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                      <div className="absolute inset-0 overflow-hidden">
                         <iframe
+                          ref={trailerIframeRef}
                           key={`trailer-${item.id}-${muted}`}
-                          src={`https://www.youtube-nocookie.com/embed/${trailerCache[`${item.type}-${item.id}`]}?autoplay=1&mute=${muted ? 1 : 0}&controls=0&loop=1&playlist=${trailerCache[`${item.type}-${item.id}`]}&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&playsinline=1`}
+                          src={`https://www.youtube-nocookie.com/embed/${trailerCache[`${item.type}-${item.id}`]}?autoplay=1&mute=${muted ? 1 : 0}&controls=0&loop=0&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&playsinline=1&fs=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
                           allow="autoplay; encrypted-media"
                           title="trailer"
-                          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[177.77vh] h-[56.25vw] min-w-full min-h-full"
+                          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[177.77vh] h-[56.25vw] min-w-full min-h-full pointer-events-none"
                           style={{ border: 0 }}
                         />
+                        {/* طبقة تغطية شفافة — تمنع تفاعل يوتيوب وتخفي أزراره */}
+                        <div className="absolute inset-0 z-10" style={{ pointerEvents: 'auto' }} />
                       </div>
                     )}
 
