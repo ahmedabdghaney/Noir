@@ -106,6 +106,8 @@ export default function VideoPlayer({
   const [seekHold, setSeekHold] = useState<'fwd' | 'back' | null>(null);
   // تسريع 2x مؤقت بالضغط المستمر على Space
   const [speedBoost, setSpeedBoost] = useState(false);
+  // مصدر الـ embed المختار: 0 = VidSrc (أساسي)، 1 = vidapi (احتياطي)
+  const [embedSource, setEmbedSource] = useState(0);
 
   const progressKey = `noir_progress_${type}_${id}`;
 
@@ -590,14 +592,34 @@ export default function VideoPlayer({
   };
 
   /* ── URLs ── */
+  // قائمة مشغّلات الـ embed بالترتيب: VidSrc أساسي، vidapi احتياطي
+  const EMBED_SERVERS = [
+    {
+      name: 'مشغل 1',
+      movie: () => `https://vidsrc.xyz/embed/movie/${id}`,
+      tv: () => `https://vidsrc.xyz/embed/tv/${id}/${season}/${episode}`,
+    },
+    {
+      name: 'مشغل 2',
+      movie: () => {
+        const params = new URLSearchParams({ primaryColor: 'ff453a', secondaryColor: '0a0a0a', iconColor: 'FFFFFF', icons: 'vid', title: 'true', poster: 'true', autoplay: 'true' });
+        if (startAt && startAt > 5) params.set('startAt', String(Math.floor(startAt)));
+        return `https://vidapi.qzz.io/movie/${id}?${params}`;
+      },
+      tv: () => {
+        const params = new URLSearchParams({ primaryColor: 'ff453a', secondaryColor: '0a0a0a', iconColor: 'FFFFFF', icons: 'vid', title: 'true', poster: 'true', autoplay: 'true', nextbutton: 'true' });
+        if (startAt && startAt > 5) params.set('startAt', String(Math.floor(startAt)));
+        return `https://vidapi.qzz.io/tv/${id}/${season}/${episode}?${params}`;
+      },
+    },
+  ];
+
   const getEmbedUrl = () => {
     if (playMode === 'trailer' && youtubeKey) {
       return `https://www.youtube-nocookie.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&origin=${encodeURIComponent(window.location.origin)}`;
     }
-    const params = new URLSearchParams({ primaryColor: 'ff453a', secondaryColor: '0a0a0a', iconColor: 'FFFFFF', icons: 'vid', title: 'true', poster: 'true', autoplay: 'true' });
-    if (startAt && startAt > 5) params.set('startAt', String(Math.floor(startAt)));
-    if (type === 'tv') { params.set('nextbutton', 'true'); return `https://vidapi.qzz.io/tv/${id}/${season}/${episode}?${params}`; }
-    return `https://vidapi.qzz.io/movie/${id}?${params}`;
+    const srv = EMBED_SERVERS[embedSource] || EMBED_SERVERS[0];
+    return type === 'tv' ? srv.tv() : srv.movie();
   };
 
   const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
@@ -679,7 +701,24 @@ export default function VideoPlayer({
 
           /* fallback iframe */
           ) : (
-            <iframe key={`player-${id}-${episode}`} src={isPausedByHost ? 'about:blank' : getEmbedUrl()} allow="autoplay; encrypted-media; fullscreen; picture-in-picture" sandbox="allow-scripts allow-same-origin allow-presentation allow-forms" referrerPolicy="no-referrer" allowFullScreen className="w-full h-full border-0" onLoad={() => setIsLoading(false)} />
+            <>
+              <iframe key={`player-${id}-${episode}-${embedSource}`} src={isPausedByHost ? 'about:blank' : getEmbedUrl()} allow="autoplay; encrypted-media; fullscreen; picture-in-picture" sandbox="allow-scripts allow-same-origin allow-presentation allow-forms" referrerPolicy="no-referrer" allowFullScreen className="w-full h-full border-0" onLoad={() => setIsLoading(false)} />
+
+              {/* مبدّل المشغلات — يظهر بس بمشغلات الـ embed (مو المشغل الأصلي) */}
+              {playMode === 'movie' && !isPausedByHost && (
+                <div className="absolute top-3 left-3 z-30 flex items-center gap-1 bg-black/70 backdrop-blur-md rounded-full p-1 border border-white/10">
+                  {EMBED_SERVERS.map((srv, i) => (
+                    <button
+                      key={i}
+                      onClick={() => { setEmbedSource(i); setIsLoading(true); }}
+                      className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer transition-all ${embedSource === i ? 'bg-red-600 text-white' : 'text-white/60 hover:text-white'}`}
+                    >
+                      {srv.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
           {/* ══ custom subtitle overlay (تحكم كامل بالحجم) ══ */}
