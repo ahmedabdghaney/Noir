@@ -1253,19 +1253,30 @@ export default function App() {
     [hiddenSet]
   );
 
-  // تحويل ManualItem (بنية الإدارة) لـ MovieOrShow (بنية العرض بالموقع)
-  const manualToMovie = useCallback((m: ManualItem): MovieOrShow => ({
-    id: m.tmdbId ?? Number(m.uid.replace(/\D/g, '').slice(0, 9) || Date.now()),
-    type: m.type,
-    title: m.title,
-    overview: m.overview,
-    poster: m.poster,
-    backdrop: m.backdrop,
-    rating: m.rating,
-    year: m.year,
-    date: m.year ? `${m.year}-01-01` : '',
-    genres: m.genres,
-  }), []);
+  // تحويل ManualItem (بنية الإدارة) لـ MovieOrShow (بنية العرض بالموقع).
+  // العنصر اليدوي المحض (بدون tmdbId) ياخذ id سالب ثابت مشتق من uid عشان
+  // نميّزه عن معرّفات TMDB (الموجبة) ويظل ثابت عبر الـ renders.
+  const manualToMovie = useCallback((m: ManualItem): MovieOrShow => {
+    let id = m.tmdbId ?? 0;
+    if (!m.tmdbId) {
+      // hash ثابت من uid → رقم سالب (djb2 مبسّط)
+      let h = 0;
+      for (let i = 0; i < m.uid.length; i++) h = (h * 31 + m.uid.charCodeAt(i)) | 0;
+      id = -Math.abs(h) - 1; // سالب دائماً ومختلف عن 0
+    }
+    return {
+      id,
+      type: m.type,
+      title: m.title,
+      overview: m.overview,
+      poster: m.poster,
+      backdrop: m.backdrop,
+      rating: m.rating,
+      year: m.year,
+      date: m.year ? `${m.year}-01-01` : '',
+      genres: m.genres,
+    };
+  }, []);
 
   // خريطة القسم -> عناصره المضافة يدوياً (بترتيب الإضافة)، مع تجاهل المخفي
   const manualBySection = useMemo(() => {
@@ -2005,6 +2016,17 @@ export default function App() {
               autoOpenWatchTogether={joinRoomCode}
               onClearAutoOpenWatchTogether={() => setJoinRoomCode('')}
               watchlist={watchlist}
+              manualData={(() => {
+                // عنصر يدوي محض: id سالب. نلقاه ونمرّر بياناته
+                if (selectedTitle.id >= 0) return null;
+                const m = manualItems.find((mi) => !mi.tmdbId && manualToMovie(mi).id === selectedTitle.id);
+                if (!m) return null;
+                return {
+                  title: m.title, overview: m.overview, poster: m.poster, backdrop: m.backdrop,
+                  rating: m.rating, year: m.year, genres: m.genres, director: m.director,
+                  country: m.country, language: m.language,
+                };
+              })()}
             />
 </div>
         )}
