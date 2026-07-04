@@ -175,6 +175,88 @@ export async function fetchItemsByIds(refs: { type: 'movie' | 'tv'; id: number }
   return results.filter((x): x is MovieOrShow => x !== null);
 }
 
+// يجيب كل تفاصيل الفلم/المسلسل من TMDB بصيغة جاهزة لملء فورم الداشبورد.
+// يرجع الحقول: العنوان، الوصف، الكفر، صورة الهيرو، التقييم، السنة، التصنيفات،
+// المخرج، دولة الإنتاج، اللغة الأصلية.
+export interface TmdbImport {
+  tmdbId: number;
+  type: 'movie' | 'tv';
+  title: string;
+  overview: string;
+  poster: string | null;
+  backdrop: string | null;
+  rating: number;
+  year: string;
+  genres: string[];
+  director: string;
+  country: string;
+  language: string;
+}
+
+// خريطة أكواد اللغات الشائعة للعربي
+const LANG_AR: Record<string, string> = {
+  en: 'الإنجليزية', ar: 'العربية', fr: 'الفرنسية', es: 'الإسبانية',
+  de: 'الألمانية', it: 'الإيطالية', ja: 'اليابانية', ko: 'الكورية',
+  zh: 'الصينية', hi: 'الهندية', tr: 'التركية', ru: 'الروسية',
+  pt: 'البرتغالية', fa: 'الفارسية', ur: 'الأردية',
+};
+
+export async function importFromTmdb(type: 'movie' | 'tv', id: number): Promise<TmdbImport | null> {
+  try {
+    const data = await fetchDetailedTitle(type, id);
+    if (!data || !data.id) return null;
+
+    const title = (data as any).title || (data as any).name || '';
+    const dateStr = (data as any).release_date || (data as any).first_air_date || '';
+    const year = dateStr ? String(dateStr).slice(0, 4) : '';
+
+    // المخرج: من الطاقم (Director) — للمسلسلات نستخدم created_by
+    let director = '';
+    const crew = (data as any).credits?.crew || [];
+    const dir = crew.find((c: any) => c.job === 'Director');
+    if (dir) director = dir.name;
+    else if ((data as any).created_by?.length) director = (data as any).created_by[0].name;
+
+    // دولة الإنتاج
+    const countries = (data as any).production_countries || [];
+    const country = countries.length ? countries[0].name : '';
+
+    // اللغة الأصلية
+    const origLang = (data as any).original_language || '';
+    const language = LANG_AR[origLang] || origLang.toUpperCase();
+
+    // التصنيفات
+    const genres = ((data as any).genres || []).map((g: any) => g.name).filter(Boolean);
+
+    return {
+      tmdbId: data.id,
+      type,
+      title,
+      overview: data.overview || '',
+      poster: getPosterUrl((data as any).poster_path),
+      backdrop: getBackdropUrl((data as any).backdrop_path),
+      rating: Number((data as any).vote_average || 0),
+      year,
+      genres,
+      director,
+      country,
+      language,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// يجيب التقييم المحدّث فقط (للعناصر اللي autoRating=true)
+export async function fetchRating(type: 'movie' | 'tv', id: number): Promise<number | null> {
+  try {
+    const data = await tmdbFetch(`/${type}/${id}`, { language: 'en-US' });
+    return data?.vote_average != null ? Number(data.vote_average) : null;
+  } catch {
+    return null;
+  }
+}
+
 // Detailed queries
 export async function fetchDetailedTitle(type: 'movie' | 'tv', id: number): Promise<DetailedInfo> {
   // Fetch Arabic first (for overview), then English as fallback for missing fields.

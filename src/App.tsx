@@ -39,10 +39,9 @@ import SearchOverlay from './components/SearchOverlay';
 import ShareModal from './components/ShareModal';
 import MobileNav from './components/MobileNav';
 import AdminDashboard from './components/AdminDashboard';
-import { fetchItemsByIds } from './lib/tmdb';
 import {
   subscribeHidden, subscribeManualItems, subscribeCustomSections,
-  itemKey, ManualRef, CustomSection,
+  itemKey, ManualItem, CustomSection,
 } from './lib/adminStore';
 
 // Static Configuration Constants
@@ -288,9 +287,8 @@ export default function App() {
 
   // بيانات الإدارة (مشتركة لكل الزوار) — إخفاء، عناصر يدوية، أقسام مخصصة
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
-  const [manualRefs, setManualRefs] = useState<ManualRef[]>([]);
+  const [manualItems, setManualItems] = useState<ManualItem[]>([]);
   const [customSections, setCustomSections] = useState<CustomSection[]>([]);
-  const [manualItemsData, setManualItemsData] = useState<MovieOrShow[]>([]);
   const [isHomeLoading, setIsHomeLoading] = useState(true);
 
   // Reusable home feed reload (used on mount + pull-to-refresh)
@@ -670,16 +668,10 @@ export default function App() {
   // اشتراك حي ببيانات الإدارة — أي تغيير من الداشبورد ينعكس فوراً على الموقع
   useEffect(() => {
     const u1 = subscribeHidden(setHiddenIds);
-    const u2 = subscribeManualItems(setManualRefs);
+    const u2 = subscribeManualItems(setManualItems);
     const u3 = subscribeCustomSections(setCustomSections);
     return () => { u1(); u2(); u3(); };
   }, []);
-
-  // جيب تفاصيل العناصر المضافة يدوياً من TMDB
-  useEffect(() => {
-    if (!manualRefs.length) { setManualItemsData([]); return; }
-    fetchItemsByIds(manualRefs.map((m) => ({ type: m.type, id: m.id }))).then(setManualItemsData);
-  }, [manualRefs]);
 
   // Sync Search results when filters or query updates
   useEffect(() => {
@@ -1223,17 +1215,41 @@ export default function App() {
     [hiddenSet]
   );
 
-  // خريطة القسم -> عناصره المضافة يدوياً (بترتيب الإضافة)
+  // تحويل ManualItem (بنية الإدارة) لـ MovieOrShow (بنية العرض بالموقع)
+  const manualToMovie = useCallback((m: ManualItem): MovieOrShow => ({
+    id: m.tmdbId ?? Number(m.uid.replace(/\D/g, '').slice(0, 9) || Date.now()),
+    type: m.type,
+    title: m.title,
+    overview: m.overview,
+    poster: m.poster,
+    backdrop: m.backdrop,
+    rating: m.rating,
+    year: m.year,
+    date: m.year ? `${m.year}-01-01` : '',
+    genres: m.genres,
+  }), []);
+
+  // خريطة القسم -> عناصره المضافة يدوياً (بترتيب الإضافة)، مع تجاهل المخفي
   const manualBySection = useMemo(() => {
     const map: Record<string, MovieOrShow[]> = {};
-    for (const ref of manualRefs) {
-      const data = manualItemsData.find((d) => d.type === ref.type && d.id === ref.id);
-      if (!data) continue;
-      if (hiddenSet.has(itemKey(data.type, data.id))) continue;
-      (map[ref.section] ||= []).push(data);
+    for (const m of manualItems) {
+      if (m.tmdbId && hiddenSet.has(itemKey(m.type, m.tmdbId))) continue;
+      (map[m.section] ||= []).push(manualToMovie(m));
     }
     return map;
-  }, [manualRefs, manualItemsData, hiddenSet]);
+  }, [manualItems, hiddenSet, manualToMovie]);
+
+  // عناصر الهيرو المضافة يدوياً — تُدمج فوق التلقائي (الرائج)
+  const manualHeroItems = useMemo(
+    () => manualItems.filter((m) => m.inHero).map(manualToMovie),
+    [manualItems, manualToMovie]
+  );
+
+  // الهيرو النهائي: عناصر الأدمن أولاً، بعدها الرائج التلقائي
+  const heroItems = useMemo(
+    () => [...manualHeroItems, ...applyHidden(trendingWeek)],
+    [manualHeroItems, trendingWeek, applyHidden]
+  );
 
   return (
     <div className="min-h-screen bg-[#17171a] text-white flex flex-row font-sans relative tracking-normal antialiased">
@@ -1275,7 +1291,7 @@ export default function App() {
           <div className="animate-fade-in">
             {/* Display Hero slider */}
             <Hero
-              trendingItems={trendingWeek}
+              trendingItems={heroItems}
               onPlayClick={(item) => handleTitleClick(item)}
               onInfoClick={(item) => handleTitleClick(item)}
               onTrailerClick={(item) => handleTitleClick(item)}
