@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.5
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, Star, X } from 'lucide-react';
 import LogoIcon from './components/LogoIcon';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -38,6 +38,12 @@ import DetailView from './components/DetailView';
 import SearchOverlay from './components/SearchOverlay';
 import ShareModal from './components/ShareModal';
 import MobileNav from './components/MobileNav';
+import AdminDashboard from './components/AdminDashboard';
+import { fetchItemsByIds } from './lib/tmdb';
+import {
+  subscribeHidden, subscribeManualItems, subscribeCustomSections,
+  itemKey, ManualRef, CustomSection,
+} from './lib/adminStore';
 
 // Static Configuration Constants
 const COUNTRIES = [
@@ -83,7 +89,7 @@ const YEARS = (() => {
 
 export default function App() {
   // Navigation & View State
-  const [activeView, setActiveView] = useState<'home' | 'search' | 'detail' | 'watchlist' | 'category' | 'studio'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'search' | 'detail' | 'watchlist' | 'category' | 'studio' | 'admin'>('home');
   const [selectedCategoryKey, setSelectedCategoryKey] = useState<string | null>(null);
   const [categoryAllMode, setCategoryAllMode] = useState(false);
   const [selectedStudioKey, setSelectedStudioKey] = useState<string | null>(null);
@@ -279,6 +285,12 @@ export default function App() {
   const [popularTV, setPopularTV] = useState<MovieOrShow[]>([]);
   const [popularMovies, setPopularMovies] = useState<MovieOrShow[]>([]);
   const [upcoming, setUpcoming] = useState<MovieOrShow[]>([]);
+
+  // بيانات الإدارة (مشتركة لكل الزوار) — إخفاء، عناصر يدوية، أقسام مخصصة
+  const [hiddenIds, setHiddenIds] = useState<string[]>([]);
+  const [manualRefs, setManualRefs] = useState<ManualRef[]>([]);
+  const [customSections, setCustomSections] = useState<CustomSection[]>([]);
+  const [manualItemsData, setManualItemsData] = useState<MovieOrShow[]>([]);
   const [isHomeLoading, setIsHomeLoading] = useState(true);
 
   // Reusable home feed reload (used on mount + pull-to-refresh)
@@ -548,6 +560,9 @@ export default function App() {
       } else if (hash ==='#watchlist') {
         setActiveView('watchlist');
         setSelectedTitle(null);
+      } else if (hash ==='#noir-control') {
+        setActiveView('admin');
+        setSelectedTitle(null);
       } else if (hash.startsWith('#watch-together')) {
         const parts = hash.split('?');
         const queryStr = parts[1] ||'';
@@ -651,6 +666,20 @@ export default function App() {
       if (toastTimer.current) clearTimeout(toastTimer.current);
     };
   }, []);
+
+  // اشتراك حي ببيانات الإدارة — أي تغيير من الداشبورد ينعكس فوراً على الموقع
+  useEffect(() => {
+    const u1 = subscribeHidden(setHiddenIds);
+    const u2 = subscribeManualItems(setManualRefs);
+    const u3 = subscribeCustomSections(setCustomSections);
+    return () => { u1(); u2(); u3(); };
+  }, []);
+
+  // جيب تفاصيل العناصر المضافة يدوياً من TMDB
+  useEffect(() => {
+    if (!manualRefs.length) { setManualItemsData([]); return; }
+    fetchItemsByIds(manualRefs.map((m) => ({ type: m.type, id: m.id }))).then(setManualItemsData);
+  }, [manualRefs]);
 
   // Sync Search results when filters or query updates
   useEffect(() => {
@@ -1185,6 +1214,27 @@ export default function App() {
     );
   }
 
+  // ── فلترة الإخفاء ودمج العناصر اليدوية (بيانات الإدارة) ──
+  const hiddenSet = useMemo(() => new Set(hiddenIds), [hiddenIds]);
+
+  // يشيل أي عنصر مخفي من أي قائمة
+  const applyHidden = useCallback(
+    (list: MovieOrShow[]) => list.filter((it) => !hiddenSet.has(itemKey(it.type, it.id))),
+    [hiddenSet]
+  );
+
+  // خريطة القسم -> عناصره المضافة يدوياً (بترتيب الإضافة)
+  const manualBySection = useMemo(() => {
+    const map: Record<string, MovieOrShow[]> = {};
+    for (const ref of manualRefs) {
+      const data = manualItemsData.find((d) => d.type === ref.type && d.id === ref.id);
+      if (!data) continue;
+      if (hiddenSet.has(itemKey(data.type, data.id))) continue;
+      (map[ref.section] ||= []).push(data);
+    }
+    return map;
+  }, [manualRefs, manualItemsData, hiddenSet]);
+
   return (
     <div className="min-h-screen bg-[#17171a] text-white flex flex-row font-sans relative tracking-normal antialiased">
       
@@ -1267,14 +1317,23 @@ export default function App() {
 
               <MovieRow
                 title="الرائج هذا الأسبوع"
-                items={trendingWeek}
+                items={applyHidden(trendingWeek)}
                 onItemClick={handleTitleClick}
               />
+
+              {/* حصري نوار — العناصر المضافة يدوياً بلا قسم مخصص */}
+              {(manualBySection['manual']?.length ?? 0) > 0 && (
+                <MovieRow
+                  title="حصري نوار"
+                  items={manualBySection['manual']}
+                  onItemClick={handleTitleClick}
+                />
+              )}
 
               {upcoming.length > 0 && (
                 <MovieRow
                   title="قريباً"
-                  items={upcoming}
+                  items={applyHidden(upcoming)}
                   onItemClick={handleTitleClick}
                 />
               )}
@@ -1284,21 +1343,33 @@ export default function App() {
 
               <MovieRow
                 title="جديد دور السينما"
-                items={nowPlaying}
+                items={applyHidden(nowPlaying)}
                 onItemClick={handleTitleClick}
               />
 
               <MovieRow
                 title="المسلسلات الموصى بها"
-                items={popularTV}
+                items={applyHidden(popularTV)}
                 onItemClick={handleTitleClick}
               />
 
               <MovieRow
                 title="أفلام شعبية مميزة"
-                items={popularMovies}
+                items={applyHidden(popularMovies)}
                 onItemClick={handleTitleClick}
               />
+
+              {/* الأقسام المخصصة من الداشبورد — تظهر بس لو فيها عناصر */}
+              {customSections.map((sec) => (
+                (manualBySection[sec.key]?.length ?? 0) > 0 && (
+                  <MovieRow
+                    key={sec.key}
+                    title={sec.title}
+                    items={manualBySection[sec.key]}
+                    onItemClick={handleTitleClick}
+                  />
+                )
+              ))}
 </div>
 </div>
           </PullToRefresh>
@@ -1879,6 +1950,13 @@ export default function App() {
           <StudioPage
             studio={getStudioByKey(selectedStudioKey)!}
             onItemClick={handleTitleClick}
+            onBack={navigateToHome}
+          />
+        )}
+
+        {activeView ==='admin' && (
+          <AdminDashboard
+            userEmail={user?.email}
             onBack={navigateToHome}
           />
         )}

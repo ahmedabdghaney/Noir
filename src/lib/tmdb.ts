@@ -157,6 +157,24 @@ export async function fetchUpcoming(): Promise<MovieOrShow[]> {
     .filter((item: MovieOrShow) => item.poster && item.date && item.date > today);
 }
 
+// يجيب عنصر واحد (فلم أو مسلسل) بالـ TMDB id — يُستخدم للعناصر المضافة يدوياً
+// من الداشبورد. يرجع null لو فشل (id غلط أو محذوف من TMDB).
+export async function fetchItemById(type: 'movie' | 'tv', id: number): Promise<MovieOrShow | null> {
+  try {
+    const data = await tmdbFetch(`/${type}/${id}`, { language: 'en-US' });
+    if (!data || !data.id) return null;
+    return normalizeItem(data, type);
+  } catch {
+    return null;
+  }
+}
+
+// يجيب عدة عناصر بالتوازي من قائمة {type,id} — يتجاهل اللي يفشل
+export async function fetchItemsByIds(refs: { type: 'movie' | 'tv'; id: number }[]): Promise<MovieOrShow[]> {
+  const results = await Promise.all(refs.map((r) => fetchItemById(r.type, r.id)));
+  return results.filter((x): x is MovieOrShow => x !== null);
+}
+
 // Detailed queries
 export async function fetchDetailedTitle(type: 'movie' | 'tv', id: number): Promise<DetailedInfo> {
   // Fetch Arabic first (for overview), then English as fallback for missing fields.
