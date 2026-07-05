@@ -57,37 +57,12 @@ export default function Hero({
   // ينتقل للفلم التالي (يُستدعى عند انتهاء التريلر)
   const goToNext = () => setCurrentIndex((prev) => (prev + 1) % activePool.length);
 
-  // مستمع أحداث YouTube IFrame API — يكتشف انتهاء التريلر (state=0) وينتقل للتالي
-  useEffect(() => {
-    const onMsg = (e: MessageEvent) => {
-      if (typeof e.data !== 'string') return;
-      try {
-        const data = JSON.parse(e.data);
-        // YouTube يرسل info.playerState=0 لما ينتهي الفيديو
-        if (data.event === 'onStateChange' && data.info === 0) {
-          goToNext();
-        }
-        // عند جاهزية المشغّل، نشترك بأحداث الحالة
-        if (data.event === 'onReady' && trailerIframeRef.current?.contentWindow) {
-          trailerIframeRef.current.contentWindow.postMessage(
-            JSON.stringify({ event: 'listening', id: 1 }), '*'
-          );
-        }
-      } catch (_) {}
-    };
-    window.addEventListener('message', onMsg);
-    return () => window.removeEventListener('message', onMsg);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePool.length]);
-
-  // عند ظهور التريلر، نطلب من يوتيوب يبدأ يبثّ أحداثه (listening)
+  // بدل الاعتماد على أحداث يوتيوب (تسبب ظهور أيقونات الحالة)،
+  // نستخدم مدة قصوى للتريلر: 150 ثانية (أغلب التريلرات 1.5-2.5 دقيقة).
+  // بعدها ننتقل للفلم التالي تلقائياً.
   useEffect(() => {
     if (!showTrailer || !activeTrailerKey) return;
-    const t = setTimeout(() => {
-      trailerIframeRef.current?.contentWindow?.postMessage(
-        JSON.stringify({ event: 'listening', id: 1 }), '*'
-      );
-    }, 500);
+    const t = setTimeout(() => goToNext(), 150000);
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showTrailer, activeTrailerKey]);
