@@ -86,6 +86,7 @@ export default function VideoPlayer({
   const [showVolume,      setShowVolume]      = useState(false);
   const [subEnabled,      setSubEnabled]      = useState(true);
   const [subSize,         setSubSize]         = useState(50); // نسبة حجم الترجمة %
+  const [subOffset,       setSubOffset]       = useState(0);  // تأخير الترجمة بالثانية (+/-)
   const [cueText,         setCueText]         = useState('');  // نص الترجمة الحالي
   const [speed,           setSpeed]           = useState(1);
   const [showSettings,    setShowSettings]    = useState(false);
@@ -394,19 +395,28 @@ export default function VideoPlayer({
 
     const onCueChange = () => {
       if (!subEnabled) { setCueText(''); return; }
-      const active = track.activeCues;
-      if (active && active.length > 0) {
-        const txt = Array.from(active).map((c: any) => c.text).join('\n');
-        setCueText(txt);
+      // نطبّق subOffset: نبحث يدوياً عن الـ cue المناسب للوقت المعدّل
+      const vid = videoRef.current;
+      const adjustedTime = (vid?.currentTime ?? 0) - (subOffset);
+      const allCues = track.cues ? Array.from(track.cues as any) : [];
+      const matching = allCues.filter((c: any) => adjustedTime >= c.startTime && adjustedTime <= c.endTime);
+      if (matching.length > 0) {
+        setCueText(matching.map((c: any) => c.text).join('\n'));
       } else {
         setCueText('');
       }
     };
 
     track.addEventListener('cuechange', onCueChange);
+    // نستمع لـ timeupdate أيضاً عشان يتحدث مع الـ offset
+    const vid = videoRef.current;
+    vid?.addEventListener('timeupdate', onCueChange);
     onCueChange();
-    return () => track.removeEventListener('cuechange', onCueChange);
-  }, [isNative, subEnabled, customMp4, iosNativeFs]);
+    return () => {
+      track.removeEventListener('cuechange', onCueChange);
+      vid?.removeEventListener('timeupdate', onCueChange);
+    };
+  }, [isNative, subEnabled, customMp4, iosNativeFs, subOffset]);
 
   const changeSpeed = (s: number) => {
     if (videoRef.current) videoRef.current.playbackRate = s;
@@ -943,14 +953,14 @@ export default function VideoPlayer({
                           className="fixed inset-0 z-40"
                           onPointerDown={(e) => { e.stopPropagation(); setShowSettings(false); setShowSpeedMenu(false); }}
                         />
-                      <div className="absolute right-0 bottom-full mb-3 bg-black/70 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-2xl w-48 overflow-hidden z-50">
-                        <div className="px-3.5 py-2.5 text-[10px] text-white/40 uppercase tracking-widest border-b border-white/10">الإعدادات</div>
+                      <div dir="rtl" className="absolute right-0 bottom-full mb-3 bg-black/70 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-2xl w-52 overflow-hidden z-50">
+                        <div className="px-3.5 py-2.5 text-[10px] text-white/40 uppercase tracking-widest border-b border-white/10 text-right">الإعدادات</div>
                         <button onClick={() => setShowSpeedMenu(p => !p)} className="w-full flex items-center justify-between px-3.5 py-3 text-sm text-white hover:bg-white/10 transition-colors">
-                          <span>السرعة</span>
                           <span className="flex items-center gap-1 text-red-400 font-semibold text-xs">
                             {speed === 1 ? 'عادي' : `${speed}×`}
                             <ChevronDown className={`w-3 h-3 transition-transform ${showSpeedMenu ? 'rotate-180' : ''}`} />
                           </span>
+                          <span>السرعة</span>
                         </button>
                         {showSpeedMenu && (
                           <div className="border-t border-white/10 max-h-48 overflow-y-auto">
@@ -963,16 +973,31 @@ export default function VideoPlayer({
                         )}
                         {/* حجم الترجمة */}
                         <div className="border-t border-white/10 px-3.5 py-3 flex items-center justify-between">
-                          <span className="text-sm text-white">حجم الترجمة</span>
                           <div className="flex items-center gap-1.5">
-                            <button onClick={() => changeSubSize(-10)} className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="تصغير">
-                              <Minus className="w-3 h-3" />
-                            </button>
-                            <span className="text-xs text-red-400 font-semibold w-10 text-center tabular-nums select-none">{subSize}%</span>
                             <button onClick={() => changeSubSize(10)} className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="تكبير">
                               <Plus className="w-3 h-3" />
                             </button>
+                            <span className="text-xs text-red-400 font-semibold w-10 text-center tabular-nums select-none">{subSize}%</span>
+                            <button onClick={() => changeSubSize(-10)} className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="تصغير">
+                              <Minus className="w-3 h-3" />
+                            </button>
                           </div>
+                          <span className="text-sm text-white">حجم الترجمة</span>
+                        </div>
+                        {/* تأخير الترجمة */}
+                        <div className="border-t border-white/10 px-3.5 py-3 flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <button onClick={() => setSubOffset(o => Math.min(o + 0.5, 10))} className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="+0.5s">
+                              <Plus className="w-3 h-3" />
+                            </button>
+                            <span className={`text-xs font-semibold w-14 text-center tabular-nums select-none ${subOffset === 0 ? 'text-white/40' : subOffset > 0 ? 'text-red-400' : 'text-blue-400'}`}>
+                              {subOffset === 0 ? '0.0s' : `${subOffset > 0 ? '+' : ''}${subOffset.toFixed(1)}s`}
+                            </span>
+                            <button onClick={() => setSubOffset(o => Math.max(o - 0.5, -10))} className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="-0.5s">
+                              <Minus className="w-3 h-3" />
+                            </button>
+                          </div>
+                          <span className="text-sm text-white">تأخير الترجمة</span>
                         </div>
                       </div>
                       </>
