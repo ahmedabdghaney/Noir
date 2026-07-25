@@ -23,7 +23,6 @@ import {
   query,
   orderBy,
   serverTimestamp,
-  getDocFromServer,
 } from 'firebase/firestore';
 import { MovieOrShow } from '../types';
 
@@ -54,18 +53,6 @@ export const db = initializeFirestore(
   },
   "ai-studio-d038e6e0-89a6-457a-a50e-97b6aadc9e67",
 );
-
-// Test connection to Firestore instantly on bootstrap
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
-    }
-  }
-}
-testConnection();
 
 // Configure Google Sign-In Provider
 export const googleProvider = new GoogleAuthProvider();
@@ -302,4 +289,3 @@ export const removeFromFirestoreWatchlist = async (userId: string, type: 'movie'
     handleFirestoreError(error, OperationType.DELETE, pathSpec);
   }
 };
-

@@ -150,11 +150,20 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
               <div
                 key={`${item.type}-${item.id}`}
                 onClick={() => onItemClick(item)}
-                style={{ animationDelay: `${idx * 45}ms` }}
-                className="group/card card-pop flex-none w-[100px] sm:w-[135px] md:w-[155px] lg:w-[170px] cursor-pointer rounded-xl p-1.5 pb-3 select-none"
+                onKeyDown={(event) => {
+                  if (event.target !== event.currentTarget) return;
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onItemClick(item);
+                  }
+                }}
+                role="link"
+                tabIndex={0}
+                aria-label={`${item.title}، ${item.type === 'movie' ? 'فيلم' : 'مسلسل'} ${item.year || ''}`}
+                className="group/card flex-none w-[112px] sm:w-[140px] md:w-[160px] lg:w-[175px] cursor-pointer rounded-[18px] p-1.5 pb-3 select-none focus-visible:outline-none"
               >
                 {/* Poster Artwork container */}
-                <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-white/[0.06]">
+                <div className="noir-card relative aspect-[2/3]">
                   {onRemove && (
                     <button
                       onClick={(e) => {
@@ -162,8 +171,9 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
                         e.preventDefault();
                         onRemove(item);
                       }}
-                      className="absolute top-2 left-2 z-10 w-8 h-8 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-all hover:bg-white/20 cursor-pointer"
+                      className="absolute top-2 left-2 z-10 w-10 h-10 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-100 lg:opacity-0 lg:group-hover/card:opacity-100 transition-opacity hover:bg-white/20 cursor-pointer"
                       title="إزالة من قائمتي"
+                      aria-label={`إزالة ${item.title} من قائمتي`}
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -189,7 +199,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
 
                   {/* Rating stamp */}
                   {hasScore && (
-                    <div className="absolute bottom-2 right-2 glass text-[#f5c518] text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5">
+                    <div className="absolute bottom-2 right-2 glass text-[#ffd60a] text-[11px] font-bold px-2 py-1 rounded-lg flex items-center gap-1">
                       <Star className="w-2.5 h-2.5 fill-current" />
                       <span>{item.rating.toFixed(1)}</span>
                     </div>
@@ -199,7 +209,7 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
                   {progress > 0 && (
                     <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40">
                       <div 
-                        className="h-full bg-red-600 transition-all duration-300" 
+                        className="h-full bg-white transition-all duration-300"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
@@ -208,10 +218,10 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
 
                 {/* Meta details */}
                 <div className="mt-2.5 px-1 text-right flex flex-col">
-                  <span className="text-white font-semibold text-xs sm:text-sm line-clamp-1 leading-tight transition-colors">
+                  <span className="text-white font-semibold text-[13px] sm:text-sm line-clamp-1 leading-tight transition-colors">
                     {item.title}
                   </span>
-                  <span className="text-white/45 font-medium text-[10px] sm:text-xs mt-1 flex items-center gap-1 justify-start">
+                  <span className="text-white/50 font-medium text-xs mt-1 flex items-center gap-1 justify-start">
                     <span>{item.year || '—'}</span>
                     <span className="w-1 h-1 bg-stone-800 rounded-full" />
                     <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>

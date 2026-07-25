@@ -15,6 +15,14 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function isAdmin() {
+      return isSignedIn()
+        && (
+          request.auth.token.admin == true
+          || request.auth.token.email == 'ahmedabdghaney@gmail.com'
+        );
+    }
+
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
@@ -48,8 +56,16 @@ service cloud.firestore {
       allow read, write: if isOwner(userId);
 
       match /watchlist/{itemId} {
-        allow read, write: if isOwner(userId);
+        allow read: if isOwner(userId);
+        allow delete: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && isValidWatchlistItem(incoming());
       }
+    }
+
+    match /site_config/{documentId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }

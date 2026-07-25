@@ -1,7 +1,6 @@
-// نوار سينما — Service Worker
-// يفعّل PWA mode على iOS ويتيح requestFullscreen الحقيقي على أي عنصر
+// نوار سينما — minimal same-origin shell cache for installed PWA mode.
 
-const CACHE_NAME = 'noir-v1';
+const CACHE_NAME = 'noir-v2';
 
 // ملفات نحفظها للتشغيل بدون إنترنت (الواجهة فقط، مو الفيديوهات)
 const PRECACHE = ['/', '/index.html', '/manifest.json'];
@@ -24,13 +23,8 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
-  // الفيديوهات والـ API: ما نتدخل — تروح للشبكة مباشرة
-  if (
-    url.hostname.includes('cloudfront.net') ||
-    url.hostname.includes('tmdb.org') ||
-    url.hostname.includes('railway.app') ||
-    url.pathname.startsWith('/api/')
-  ) {
+  // Never intercept writes or third-party media, auth, font, and API traffic.
+  if (e.request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) {
     return;
   }
 

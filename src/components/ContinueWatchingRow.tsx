@@ -49,7 +49,7 @@ export default function ContinueWatchingRow({ title, items, onItemClick, onRemov
   if (!items || items.length === 0) return null;
 
   return (
-    <div className="mb-16 md:mb-24 relative flex flex-col group/row">
+    <div className="mb-9 md:mb-12 relative flex flex-col group/row">
       <div className="px-6 md:px-12 mb-4 md:mb-5">
         <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">{title}</h2>
       </div>
@@ -89,9 +89,19 @@ export default function ContinueWatchingRow({ title, items, onItemClick, onRemov
               <div
                 key={`${item.type}-${item.id}`}
                 onClick={() => onItemClick(item)}
-                className="group/cw flex-none w-[240px] sm:w-[300px] md:w-[330px] cursor-pointer"
+                onKeyDown={(event) => {
+                  if (event.target !== event.currentTarget) return;
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onItemClick(item);
+                  }
+                }}
+                role="link"
+                tabIndex={0}
+                aria-label={`إكمال مشاهدة ${item.title}`}
+                className="group/cw flex-none w-[250px] sm:w-[300px] md:w-[330px] cursor-pointer rounded-[18px]"
               >
-                <div className="relative aspect-video rounded-xl overflow-hidden bg-stone-900 border border-white/[0.06]">
+                <div className="noir-card relative aspect-video">
                   {img ? (
                     <img
                       src={img}
@@ -120,18 +130,26 @@ export default function ContinueWatchingRow({ title, items, onItemClick, onRemov
                         e.stopPropagation();
                         onRemove(item);
                       }}
-                      className="absolute top-2.5 left-2.5 w-8 h-8 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-100 md:opacity-0 md:group-hover/cw:opacity-100 transition-all hover:bg-white/20 cursor-pointer z-10"
+                      className="absolute top-2.5 left-2.5 w-10 h-10 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-100 lg:opacity-0 lg:group-hover/cw:opacity-100 transition-opacity hover:bg-white/20 cursor-pointer z-10"
                       title="إزالة من المتابعة"
+                      aria-label={`إزالة ${item.title} من أكمل المشاهدة`}
                     >
                       <X className="w-4 h-4" />
                     </button>
                   )}
 
                   <div className="absolute inset-x-0 bottom-0 p-3.5">
-                    <h3 className="text-white font-semibold text-sm leading-tight line-clamp-1 mb-2">{item.title || (item as any).name || 'بدون عنوان'}</h3>
+                    <div className="flex items-end justify-between gap-3 mb-2">
+                      <h3 className="text-white font-semibold text-sm leading-tight line-clamp-1">{item.title || (item as any).name || 'بدون عنوان'}</h3>
+                      {item.type === 'tv' && item.season && item.episode && (
+                        <span className="text-[11px] text-white/60 whitespace-nowrap">
+                          م{item.season} · ح{item.episode}
+                        </span>
+                      )}
+                    </div>
                     <div className="h-1 w-full bg-white/20 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-red-500 rounded-full"
+                        className="h-full bg-white rounded-full"
                         style={{ width: `${Math.max(progress, 3)}%` }}
                       />
                     </div>

@@ -158,8 +158,17 @@ export default function DetailView({
 
   const loadSavedProgress = () => {
     const progressKey =`noir_progress_${type}_${id}`;
+    const resumeKey = `noir_resume_${type}_${id}`;
     const stored = localStorage.getItem(progressKey);
+    const resume = localStorage.getItem(resumeKey);
     setSavedProgressPercent(stored ? Number(stored) : 0);
+    if (type === 'tv' && !initialSeason && resume) {
+      try {
+        const parsed = JSON.parse(resume);
+        if (Number(parsed.season) > 0) setSelectedSeason(Number(parsed.season));
+        if (Number(parsed.episode) > 0) setSelectedEpisode(Number(parsed.episode));
+      } catch {}
+    }
   };
 
   useEffect(() => {
@@ -168,7 +177,9 @@ export default function DetailView({
 
   const handleStartFromBeginning = () => {
     const progressKey =`noir_progress_${type}_${id}`;
+    const resumeKey = `noir_resume_${type}_${id}`;
     localStorage.setItem(progressKey,'0');
+    localStorage.removeItem(resumeKey);
     setSavedProgressPercent(0);
     // Open main movie stream
     handlePlayClick('movie');
@@ -341,18 +352,32 @@ export default function DetailView({
 
         // Initialize TV states if needed
         if (type ==='tv' && details.seasons && details.seasons.length > 0) {
+          let resumeSeason = 0;
+          let resumeEpisode = 0;
+          if (!initialSeason) {
+            try {
+              const savedResume = localStorage.getItem(`noir_resume_${type}_${id}`);
+              if (savedResume) {
+                const parsed = JSON.parse(savedResume);
+                resumeSeason = Number(parsed.season) || 0;
+                resumeEpisode = Number(parsed.episode) || 0;
+              }
+            } catch {}
+          }
+          const requestedSeason = initialSeason || resumeSeason;
+          const requestedEpisode = initialEpisode || resumeEpisode;
           // إذا الـ URL حدّد موسم، استخدمه إذا كان موجوداً فعلاً؛ وإلا أول موسم صالح
           const urlSeasonValid =
-            initialSeason &&
-            details.seasons.some((s) => s.season_number === initialSeason);
+            requestedSeason &&
+            details.seasons.some((s) => s.season_number === requestedSeason);
           const targetSeason = urlSeasonValid
-            ? details.seasons.find((s) => s.season_number === initialSeason)!
+            ? details.seasons.find((s) => s.season_number === requestedSeason)!
             : (details.seasons.find((s) => s.season_number > 0) || details.seasons[0]);
           setSelectedSeason(targetSeason.season_number);
           setEpisodesCount(targetSeason.episode_count || 1);
           // احترم حلقة الـ URL إذا ضمن نطاق الموسم؛ وإلا الحلقة 1
-          if (urlSeasonValid && initialEpisode && initialEpisode <= (targetSeason.episode_count || 1)) {
-            setSelectedEpisode(initialEpisode);
+          if (urlSeasonValid && requestedEpisode && requestedEpisode <= (targetSeason.episode_count || 1)) {
+            setSelectedEpisode(requestedEpisode);
           } else {
             setSelectedEpisode(1);
           }
@@ -390,7 +415,14 @@ export default function DetailView({
     setHostPauseByName('');
     if (mode === 'movie') {
       // Host starts fresh; a late-joining viewer should boot from the host's current time.
-      const startFrom = wtConnected && !wtIsHost ? Math.max(0, Math.floor(wtHostTime)) : 0;
+      let localResume = 0;
+      try {
+        const saved = localStorage.getItem(`noir_resume_${type}_${id}`);
+        if (saved) localResume = Math.max(0, Number(JSON.parse(saved).time) || 0);
+      } catch {}
+      const startFrom = wtConnected && !wtIsHost
+        ? Math.max(0, Math.floor(wtHostTime))
+        : localResume;
       setStartAtSnapshot(startFrom);
       localTimeRef.current = startFrom;
 
@@ -413,7 +445,9 @@ export default function DetailView({
             rating: data.vote_average || 0,
             year: (data.release_date || data.first_air_date || '').substring(0, 4) || '—',
             date: data.release_date || data.first_air_date || '',
-            genres: data.genres ? data.genres.map((g: any) => g.name) : []
+            genres: data.genres ? data.genres.map((g: any) => g.name) : [],
+            season: type === 'tv' ? selectedSeason : undefined,
+            episode: type === 'tv' ? selectedEpisode : undefined,
           };
           
           cwList.unshift(itemToSave);
@@ -679,7 +713,7 @@ export default function DetailView({
                 className="max-h-20 sm:max-h-28 md:max-h-36 max-w-[280px] sm:max-w-[420px] object-contain object-right mb-3 sm:mb-4 drop-shadow-2xl select-none"
               />
             ) : (
-              <h1 className="font-display text-3xl sm:text-4xl md:text-6xl font-black text-gradient-noir mb-2 sm:mb-3 tracking-tight leading-[1.05] select-all drop-shadow-2xl">
+              <h1 className="font-display text-3xl sm:text-4xl md:text-6xl font-bold text-gradient-noir mb-2 sm:mb-3 tracking-tight leading-[1.05] select-all drop-shadow-2xl">
                 {title}
 </h1>
             )}
@@ -732,7 +766,7 @@ export default function DetailView({
                 <>
                   <button
                     onClick={() => handlePlayClick('movie')}
-                    className="flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-white/90 text-black font-bold px-4 sm:px-8 py-2 md:py-3 rounded-full transition-all cursor-pointer text-xs sm:text-sm"
+                    className="noir-button-primary flex items-center gap-2 text-sm"
                   >
                     <Play className="w-3.5 h-3.5 fill-black text-black" />
                     <span>إكمال المشاهدة ({savedProgressPercent}%)</span>
@@ -740,7 +774,7 @@ export default function DetailView({
 
                   <button
                     onClick={handleStartFromBeginning}
-                    className="flex items-center gap-1.5 sm:gap-2 glass hover:bg-white/15 text-white font-bold px-4 sm:px-6 py-2 md:py-3 rounded-full transition-all cursor-pointer text-xs sm:text-sm"
+                    className="noir-button-secondary flex items-center gap-2 text-sm"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>البدء من البداية</span>
@@ -749,7 +783,7 @@ export default function DetailView({
               ) : (
                 <button
                   onClick={() => handlePlayClick('movie')}
-                  className="flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-white/90 text-black font-bold px-4 sm:px-8 py-2 md:py-3 rounded-full transition-all cursor-pointer text-xs sm:text-sm"
+                  className="noir-button-primary flex items-center gap-2 text-sm"
                 >
                   <Play className="w-3.5 h-3.5 fill-black text-black" />
                   <span>المشاهدة الآن</span>
@@ -759,32 +793,47 @@ export default function DetailView({
               {youtubeKey && (
                 <button
                   onClick={() => handlePlayClick('trailer')}
-                  className="flex items-center gap-1.5 sm:gap-2 glass hover:bg-white/15 text-white px-4 sm:px-5 py-2 md:py-3 rounded-full transition-all cursor-pointer text-xs sm:text-sm font-bold"
+                  className="noir-button-secondary flex items-center gap-2 text-sm"
                 >
                   <svg viewBox="0 0 28 20" className="w-6 h-[18px] shrink-0" xmlns="http://www.w3.org/2000/svg">
                     <rect width="28" height="20" rx="5" fill="#FF0000" />
                     <path d="M11 6 L19 10 L11 14 Z" fill="white" />
                   </svg>
                   <span>الإعلان</span>
-</button>
+                </button>
               )}
+
+              <button
+                onClick={() => setIsWatchTogetherOpen((open) => !open)}
+                className={`noir-icon-button ${
+                  isWatchTogetherOpen
+                    ? '!bg-white !text-black'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+                title={isWatchTogetherOpen ? 'إغلاق المشاهدة الجماعية' : 'المشاهدة مع الأصدقاء'}
+                aria-label={isWatchTogetherOpen ? 'إغلاق المشاهدة الجماعية' : 'المشاهدة مع الأصدقاء'}
+              >
+                <Users className="w-4.5 h-4.5" />
+              </button>
 
               <button
                 onClick={handleToggleSave}
                 title={isSaved ? 'محفوظ في قائمتي' : 'حفظ في قائمتي'}
-                className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+                className={`noir-icon-button ${
                   isSaved 
-                    ?'bg-white text-black' 
-                    :'glass text-white hover:bg-white/15'
+                    ?'!bg-white !text-black'
+                    :'text-white'
                 }`}
+                aria-label={isSaved ? 'إزالة من قائمتي' : 'حفظ في قائمتي'}
               >
                 {isSaved ? <Check className="w-5 h-5 text-black" strokeWidth={3} /> : <Plus className="w-5 h-5" />}
 </button>
 
               <button
                 onClick={() => onOpenShare(window.location.href)}
-                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full glass flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/15 transition-colors cursor-pointer shrink-0"
+                className="noir-icon-button"
                 title="مشاركة الرابط الحالي"
+                aria-label="مشاركة الرابط الحالي"
               >
                 <Share2 className="w-4 h-4" />
 </button>
@@ -813,7 +862,7 @@ export default function DetailView({
 
         {/* Watch Together Live Synchronization Panel */}
         {isWatchTogetherOpen && (
-          <div className="mt-8 bg-stone-950 border border-white/5 rounded-3xl p-4 sm:p-6 md:p-8 space-y-6 text-right animate-fade-in max-w-4xl mx-auto selection:bg-red-500/25">
+          <div className="mt-8 noir-surface p-4 sm:p-6 md:p-8 space-y-6 text-right animate-fade-in max-w-4xl mx-auto selection:bg-red-500/25">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/5 pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-red-600/10 border border-red-500/20 flex items-center justify-center">
@@ -925,8 +974,8 @@ export default function DetailView({
         )}
 
         {/* Specs Factors Panel - Technical Details cards matrix */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 my-14 md:my-20">
-          <div className="flex flex-col gap-1.5 glass rounded-2xl px-5 py-4">
+        <div className="noir-surface grid grid-cols-2 md:grid-cols-4 gap-2 p-2 my-10 md:my-14">
+          <div className="flex flex-col gap-1.5 rounded-2xl px-4 py-4 bg-white/[0.025]">
             <span className="text-[11px] text-white/45 font-medium uppercase tracking-wide flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5" />
               عام الإصدار
@@ -936,7 +985,7 @@ export default function DetailView({
             </span>
           </div>
 
-          <div className="flex flex-col gap-1.5 glass rounded-2xl px-5 py-4">
+          <div className="flex flex-col gap-1.5 rounded-2xl px-4 py-4 bg-white/[0.025]">
             <span className="text-[11px] text-white/45 font-medium uppercase tracking-wide flex items-center gap-1.5">
               <RotateCcw className="w-3.5 h-3.5" />
               الإخراج
@@ -946,7 +995,7 @@ export default function DetailView({
             </span>
           </div>
 
-          <div className="flex flex-col gap-1.5 glass rounded-2xl px-5 py-4">
+          <div className="flex flex-col gap-1.5 rounded-2xl px-4 py-4 bg-white/[0.025]">
             <span className="text-[11px] text-white/45 font-medium uppercase tracking-wide flex items-center gap-1.5">
               <Globe className="w-3.5 h-3.5" />
               دولة الإنتاج
@@ -956,7 +1005,7 @@ export default function DetailView({
             </span>
           </div>
 
-          <div className="flex flex-col gap-1.5 glass rounded-2xl px-5 py-4">
+          <div className="flex flex-col gap-1.5 rounded-2xl px-4 py-4 bg-white/[0.025]">
             <span className="text-[11px] text-white/45 font-medium uppercase tracking-wide flex items-center gap-1.5">
               <Languages className="w-3.5 h-3.5" />
               اللغة الأصلية
@@ -1072,10 +1121,10 @@ export default function DetailView({
                             setSelectedEpisode(ep.episode_number);
                             handlePlayClick('movie');
                           }}
-                          className="group/ep flex-none w-[300px] sm:w-[380px] text-right snap-start cursor-pointer"
+                          className="group/ep flex-none w-[280px] sm:w-[340px] text-right snap-start cursor-pointer"
                         >
                           {/* Card with image + overlaid text */}
-                          <div className={`relative h-[280px] sm:h-[320px] rounded-xl overflow-hidden bg-stone-900 ${selectedEpisode === ep.episode_number ? 'ring-2 ring-inset ring-red-500/90' : 'border border-white/[0.06]'}`}>
+                          <div className={`relative aspect-video rounded-[18px] overflow-hidden bg-stone-900 ${selectedEpisode === ep.episode_number ? 'ring-2 ring-inset ring-white/80' : 'border border-white/[0.08]'}`}>
                             {still ? (
                               <img
                                 src={still}

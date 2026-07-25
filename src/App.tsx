@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.5
  */
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, Star, X } from 'lucide-react';
+import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Search, Loader, Filter, ArrowUpDown, Bookmark, Eye, EyeOff, Star, WifiOff, X } from 'lucide-react';
 import LogoIcon from './components/LogoIcon';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
@@ -29,23 +29,26 @@ import Sidebar from './components/Sidebar';
 import Hero from './components/Hero';
 import MovieRow from './components/MovieRow';
 import CategoryRow from './components/CategoryRow';
-import CategoryPage from './components/CategoryPage';
-import StudioPage from './components/StudioPage';
+import StudiosRow from './components/StudiosRow';
 import PullToRefresh from './components/PullToRefresh';
 import { getCategoryByKey } from './lib/categories';
 import { getStudioByKey } from './lib/studios';
 import ContinueWatchingRow from './components/ContinueWatchingRow';
-import DetailView from './components/DetailView';
-import SearchOverlay from './components/SearchOverlay';
 import ShareModal from './components/ShareModal';
 import MobileNav from './components/MobileNav';
-import AdminDashboard from './components/AdminDashboard';
+import Footer from './components/Footer';
 import {
   subscribeHidden, subscribeManualItems, subscribeCustomSections, subscribeSectionOrder,
   subscribeHeroHidden, toggleHeroHidden, subscribeHeroExtra, subscribeHeroOrder, HeroExtra,
   toggleHidden,
   itemKey, ManualItem, CustomSection,
 } from './lib/adminStore';
+
+const DetailView = lazy(() => import('./components/DetailView'));
+const SearchOverlay = lazy(() => import('./components/SearchOverlay'));
+const CategoryPage = lazy(() => import('./components/CategoryPage'));
+const StudioPage = lazy(() => import('./components/StudioPage'));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 
 // Static Configuration Constants
 const COUNTRIES = [
@@ -89,6 +92,14 @@ const YEARS = (() => {
   return Array.from({ length: 15 }, (_, i) => String(current - i));
 })();
 
+function ViewFallback() {
+  return (
+    <div className="min-h-[55vh] flex items-center justify-center" role="status" aria-label="جاري تحميل الصفحة">
+      <div className="w-7 h-7 rounded-full border-2 border-white/15 border-t-white animate-spin" />
+    </div>
+  );
+}
+
 export default function App() {
   // Navigation & View State
   const [activeView, setActiveView] = useState<'home' | 'search' | 'detail' | 'watchlist' | 'category' | 'studio' | 'admin'>('home');
@@ -105,6 +116,20 @@ export default function App() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isSendingVerification, setIsSendingVerification] = useState(false);
 
+  useEffect(() => {
+    if (!isProfileModalOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsProfileModalOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isProfileModalOpen]);
+
   // Watchlist custom filter & sorting options
   const [watchlistFilter, setWatchlistFilter] = useState<'all' | 'movie' | 'tv'>('all');
   const [watchlistSort, setWatchlistSort] = useState<'default' | 'rating' | 'year'>('default');
@@ -116,15 +141,11 @@ export default function App() {
       const stored = localStorage.getItem('noir_user');
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed && parsed.type ==='guest') {
-          localStorage.removeItem('noir_user');
-          return null;
-        }
         return parsed;
       }
-      return null;
+      return { name: 'زائر نوار', type: 'guest' };
     } catch {
-      return null;
+      return { name: 'زائر نوار', type: 'guest' };
     }
   });
   const [isAuthLoading, setIsAuthLoading] = useState(false);
@@ -142,8 +163,6 @@ export default function App() {
 
   // Bookmark / Watchlist feeds
   const [watchlist, setWatchlist] = useState<MovieOrShow[]>([]);
-  const [showSyncHelper, setShowSyncHelper] = useState(false);
-
   // loadWatchlist checks cloud for authenticated users or local storage for guests
   const loadWatchlist = async () => {
     const curUser = auth.currentUser;
@@ -170,26 +189,6 @@ export default function App() {
   // Synchronize authenticated identity with Firebase state-listener and real-time watchlist
   useEffect(() => {
     let unsubscribeWatchlist: (() => void) | null = null;
-
-    // Background auto-login for iframe environments where IndexedDB/Storage persistence is restricted
-    const attemptAutoLogin = async () => {
-      const storedCreds = localStorage.getItem('noir_credentials');
-      if (storedCreds) {
-        try {
-          const { email, password } = JSON.parse(storedCreds);
-          if (email && password && !auth.currentUser) {
-            await signInWithEmail(email, password);
-          }
-        } catch (err) {
-          console.error("Background auto-login failed: ", err);
-          localStorage.removeItem('noir_credentials');
-          localStorage.removeItem('noir_user');
-          setUser(null);
-          loadWatchlist();
-        }
-      }
-    };
-    attemptAutoLogin();
 
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       // Unsubscribe previous watchlist listener if exists
@@ -248,12 +247,6 @@ export default function App() {
           loadWatchlist();
         }
       } else {
-        // Skip immediate logout if we are in the middle of a background credentials auto-login
-        const storedCreds = localStorage.getItem('noir_credentials');
-        if (storedCreds) {
-          return;
-        }
-
         const stored = localStorage.getItem('noir_user');
         if (stored) {
           try {
@@ -287,6 +280,7 @@ export default function App() {
   const [popularTV, setPopularTV] = useState<MovieOrShow[]>([]);
   const [popularMovies, setPopularMovies] = useState<MovieOrShow[]>([]);
   const [upcoming, setUpcoming] = useState<MovieOrShow[]>([]);
+  const [homeLoadError, setHomeLoadError] = useState(false);
 
   // بيانات الإدارة (مشتركة لكل الزوار) — إخفاء، عناصر يدوية، أقسام مخصصة
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
@@ -298,10 +292,9 @@ export default function App() {
   const [sectionOrder, setSectionOrder] = useState<string[]>([]);
   // نتائج أقسام التصنيف التلقائية: key القسم -> عناصره من TMDB
   const [genreSectionData, setGenreSectionData] = useState<Record<string, MovieOrShow[]>>({});
-  const [isHomeLoading, setIsHomeLoading] = useState(true);
-
   // Reusable home feed reload (used on mount + pull-to-refresh)
   const refreshHome = useCallback(async () => {
+    setHomeLoadError(false);
     try {
       await Promise.all([
         fetchTrendingWeek().then(setTrendingWeek),
@@ -312,6 +305,7 @@ export default function App() {
       ]);
     } catch (e) {
       console.error('refreshHome failed:', e);
+      setHomeLoadError(true);
     }
   }, []);
 
@@ -366,6 +360,20 @@ export default function App() {
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isFilterSidebarOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsFilterSidebarOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isFilterSidebarOpen]);
 
   // Modals & Overlays State
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
@@ -424,8 +432,6 @@ export default function App() {
     setAuthMethod('email');
     try {
       await signInWithEmail(authEmail, authPassword);
-      // Save credentials for persistent session in sandboxed iframe environment
-      localStorage.setItem('noir_credentials', JSON.stringify({ email: authEmail, password: authPassword }));
       showToast('أهلاً بك من جديد');
       setAuthEmail('');
       setAuthPassword('');
@@ -464,8 +470,6 @@ export default function App() {
     setAuthMethod('email');
     try {
       await signUpWithEmail(authEmail, authPassword, authName);
-      // Save credentials for persistent session in sandboxed iframe environment
-      localStorage.setItem('noir_credentials', JSON.stringify({ email: authEmail, password: authPassword }));
       showToast('تم إنشاء حسابك، أهلاً بك');
       setAuthEmail('');
       setAuthPassword('');
@@ -522,7 +526,6 @@ export default function App() {
       }
     }
     localStorage.removeItem('noir_user');
-    localStorage.removeItem('noir_credentials');
     setUser(null);
     showToast('تم تسجيل الخروج بنجاح');
   };
@@ -632,7 +635,7 @@ export default function App() {
     };
 
     // Initialize genres mapping list first
-    setIsHomeLoading(true);
+    setHomeLoadError(false);
     initializeGenres()
       .then(() => {
         // Load Home feeds concurrent
@@ -644,11 +647,9 @@ export default function App() {
           fetchUpcoming().then(setUpcoming),
         ]);
       })
-      .then(() => {
-        setIsHomeLoading(false);
-      })
-      .catch(() => {
-        setIsHomeLoading(false);
+      .catch((error) => {
+        console.error('Initial home load failed:', error);
+        setHomeLoadError(true);
       });
 
     window.addEventListener('hashchange', handleHashRouting);
@@ -878,7 +879,7 @@ export default function App() {
           id: item.id, type: item.type, title: item.title,
           poster: item.poster, backdrop: item.backdrop, rating: item.rating,
           year: item.year, genres: item.genres,
-        } as any).catch((e) => console.error('Failed to add to cloud watchlist:', e));
+        }).catch((e) => console.error('Failed to add to cloud watchlist:', e));
       }
     }
   };
@@ -890,17 +891,6 @@ export default function App() {
   const handleOpenShare = (url: string) => {
     setShareUrl(url);
     setIsShareModalOpen(true);
-  };
-
-  // Category filter chips controllers
-  const toggleGenreChip = (id: number) => {
-    const next = new Set(selectedGenres);
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
-    setSelectedGenres(next);
   };
 
   const handleResetFilters = () => {
@@ -915,86 +905,37 @@ export default function App() {
   };
 
   if (!user) {
-    const col1Posters = [
-      'https://images.unsplash.com/photo-1542204172-e7052809a862?q=80&w=350&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=350&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?q=80&w=350&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=350&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=350&auto=format&fit=crop'
-    ];
-
-    const col2Posters = [
-      'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=350&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1574375927938-d5a98e8edd86?q=80&w=350&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=350&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=350&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1524985069026-dd2f4049773a?q=80&w=350&auto=format&fit=crop'
-    ];
-
-    const col1PostersReverse = [...col1Posters].reverse();
-
     return (
-      <div className="relative min-h-screen bg-[#070707] text-white flex items-center justify-center font-sans overflow-hidden p-3.5 sm:p-6 md:p-10 select-none">
+      <div className="relative min-h-screen bg-[#09090b] text-white flex items-center justify-center font-sans overflow-hidden p-4 sm:p-6 md:p-10">
         
         {/* Main Double-Pane Card Layout */}
-        <div className="relative z-10 w-full max-w-5xl bg-[#0d0d0d] border border-white/5 shadow-2xl rounded-3xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[660px] animate-pop-in" dir="ltr">
+        <div className="relative z-10 w-full max-w-5xl bg-[#111114] border border-white/[0.09] shadow-2xl rounded-[30px] overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[660px]" dir="ltr">
           
-          {/* LEFT COLUMN: Tilted & Scrolling Movie Covers Pattern */}
-          <div className="hidden lg:flex lg:col-span-5 relative flex-col justify-between p-12 overflow-hidden bg-black border-r border-white/5">
-            {/* Tilted Poster Grid container rotated 30 degrees */}
-            <div className="absolute inset-0 z-0 pointer-events-none select-none opacity-25">
-              <div className="absolute -inset-10 flex gap-4 rotate-[30deg] scale-125 justify-center">
-                {/* Column 1: Moves upward */}
-                <div className="flex flex-col gap-4 animate-marquee-up shrink-0">
-                  {[...col1Posters, ...col1Posters].map((url, index) => (
-                    <div key={`col1-${index}`} className="w-28 h-40 bg-stone-950 rounded-2xl overflow-hidden border border-white/10 shadow-lg shrink-0">
-                      <img src={url} alt="Cover" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Column 2: Moves downward */}
-                <div className="flex flex-col gap-4 animate-marquee-down shrink-0">
-                  {[...col2Posters, ...col2Posters].map((url, index) => (
-                    <div key={`col2-${index}`} className="w-28 h-40 bg-stone-950 rounded-2xl overflow-hidden border border-white/10 shadow-lg shrink-0">
-                      <img src={url} alt="Cover" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    </div>
-                  ))}
-                </div>
-
-                {/* Column 3: Moves upward */}
-                <div className="flex flex-col gap-4 animate-marquee-up shrink-0">
-                  {[...col1PostersReverse, ...col1PostersReverse].map((url, index) => (
-                    <div key={`col3-${index}`} className="w-28 h-40 bg-stone-950 rounded-2xl overflow-hidden border border-white/10 shadow-lg shrink-0">
-                      <img src={url} alt="Cover" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Dark gradient overlay over posters for text readability */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent z-1" />
-
-            {/* Content Top */}
+          <div className="hidden lg:flex lg:col-span-5 relative flex-col justify-between p-12 overflow-hidden bg-[radial-gradient(circle_at_75%_15%,rgba(255,69,58,0.22),transparent_42%),linear-gradient(160deg,#19191d,#08080a)] border-r border-white/[0.08]">
             <div className="relative z-10" dir="rtl">
-              <div className="flex items-center gap-2.5 mb-8 justify-end">
-                <span className="text-lg font-black tracking-tight text-white m-0">نوار <span className="text-red-500">سينما</span></span>
-                <div className="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center shadow-lg shadow-red-600/30">
-                  <LogoIcon className="w-5 h-5 text-white shrink-0" />
+              <div className="flex items-center gap-3 mb-14 justify-end">
+                <span className="text-xl font-bold tracking-tight text-white">نوار سينما</span>
+                <div className="w-11 h-11 rounded-[14px] bg-[#ff453a] flex items-center justify-center shadow-lg shadow-red-950/30">
+                  <LogoIcon className="w-5 h-5 text-white" />
                 </div>
               </div>
 
-              <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2 block">بكل بساطة وسرور</span>
-              <h2 className="text-2xl font-extrabold text-white leading-snug">بوابتك لمشاهدة الأفلام والعروض جماعياً مع أصدقائك بلمسة واحدة</h2>
+              <span className="noir-eyebrow block mb-3">سينما بلا ضوضاء</span>
+              <h2 className="font-display text-3xl font-bold text-white leading-tight">
+                مكان واحد لاكتشاف وحفظ ومتابعة ما تحب.
+              </h2>
+              <p className="text-white/45 text-sm leading-7 mt-4 max-w-sm">
+                واجهة عربية هادئة، قوائم واضحة، وتجربة مشاهدة تضع المحتوى أولاً.
+              </p>
             </div>
 
-            {/* Empty space at bottom layout to replace deleted tech stack footer */}
-            <div className="relative z-10" />
+            <p className="relative z-10 text-xs text-white/30" dir="rtl">
+              تقدر تتصفح كزائر بدون إنشاء حساب.
+            </p>
           </div>
 
           {/* RIGHT COLUMN: Stylish Login / Signup Input Form */}
-          <div className="col-span-1 lg:col-span-7 flex flex-col justify-center p-8 sm:p-12 md:p-16 select-none relative z-10 bg-[#0d0d0d]" dir="rtl">
+          <div className="col-span-1 lg:col-span-7 flex flex-col justify-center p-7 sm:p-12 md:p-16 relative z-10 bg-[#111114]" dir="rtl">
             
             {/* Form Header */}
             <div className="text-right mb-8">
@@ -1016,8 +957,9 @@ export default function App() {
               {/* Name Field (Sign up only) */}
               {authView === 'signup' && (
                 <div className="flex flex-col gap-1.5 text-right w-full">
-                  <label className="text-gray-400 text-xs font-bold mr-1">الاسم</label>
+                  <label htmlFor="auth-name" className="text-gray-400 text-xs font-bold mr-1">الاسم</label>
                   <input
+                    id="auth-name"
                     type="text"
                     value={authName}
                     onChange={(e) => setAuthName(e.target.value)}
@@ -1030,8 +972,9 @@ export default function App() {
 
               {/* Email address field */}
               <div className="flex flex-col gap-1.5 text-right w-full">
-                <label className="text-gray-400 text-xs font-bold mr-1">البريد الإلكتروني</label>
+                <label htmlFor="auth-email" className="text-gray-400 text-xs font-bold mr-1">البريد الإلكتروني</label>
                 <input
+                  id="auth-email"
                   type="email"
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
@@ -1045,7 +988,7 @@ export default function App() {
               {authView !== 'reset' && (
                 <div className="flex flex-col gap-1.5 w-full">
                   <div className="flex items-center justify-between mr-1 ml-1 text-xs">
-                    <label className="text-gray-400 font-bold block">كلمة السر</label>
+                    <label htmlFor="auth-password" className="text-gray-400 font-bold block">كلمة السر</label>
                     {authView === 'signin' && (
                       <button
                         onClick={() => { setAuthView('reset'); setAuthError(''); }}
@@ -1057,6 +1000,7 @@ export default function App() {
                   </div>
                   <div className="relative">
                     <input
+                      id="auth-password"
                       type={showPassword ? 'text' : 'password'}
                       value={authPassword}
                       onChange={(e) => setAuthPassword(e.target.value)}
@@ -1075,6 +1019,7 @@ export default function App() {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer p-1"
                       title={showPassword ? 'إخفاء' : 'إظهار'}
+                      aria-label={showPassword ? 'إخفاء كلمة السر' : 'إظهار كلمة السر'}
                     >
                       {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                     </button>
@@ -1086,10 +1031,11 @@ export default function App() {
               {authView === 'signup' && (
                 <div className="flex flex-col gap-1.5 w-full">
                   <div className="flex items-center justify-between mr-1 text-xs">
-                    <label className="text-gray-400 font-bold block">تأكيد كلمة السر</label>
+                    <label htmlFor="auth-password-confirm" className="text-gray-400 font-bold block">تأكيد كلمة السر</label>
                   </div>
                   <div className="relative">
                     <input
+                      id="auth-password-confirm"
                       type={showPasswordConfirm ? 'text' : 'password'}
                       value={authPasswordConfirm}
                       onChange={(e) => setAuthPasswordConfirm(e.target.value)}
@@ -1103,6 +1049,7 @@ export default function App() {
                       onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
                       className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer p-1"
                       title={showPasswordConfirm ? 'إخفاء' : 'إظهار'}
+                      aria-label={showPasswordConfirm ? 'إخفاء تأكيد كلمة السر' : 'إظهار تأكيد كلمة السر'}
                     >
                       {showPasswordConfirm ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                     </button>
@@ -1130,7 +1077,7 @@ export default function App() {
                   else if (authView === 'reset') handleResetPassword();
                 }}
                 disabled={isAuthLoading}
-                className="w-full flex items-center justify-center gap-2 bg-[#dc2626] hover:bg-red-500 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl transition-all cursor-pointer text-sm shadow-xl shadow-red-700/20 mt-2"
+                className="noir-button-primary w-full disabled:opacity-50 text-sm mt-2"
               >
                 {isAuthLoading && authMethod === 'email' ? (
                   <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -1191,7 +1138,7 @@ export default function App() {
                 <button
                   onClick={() => handleLogin('google')}
                   disabled={isAuthLoading}
-                  className="w-full flex items-center justify-center gap-2.5 bg-white hover:bg-[#eaeaea] disabled:opacity-50 text-gray-900 font-extrabold py-3.5 px-4 rounded-xl cursor-pointer transition-all text-xs shadow-md"
+                  className="noir-button-secondary w-full disabled:opacity-50 text-xs"
                 >
                   {isAuthLoading && authMethod === 'google' ? (
                     <div className="w-3.5 h-3.5 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" />
@@ -1204,6 +1151,16 @@ export default function App() {
                     </svg>
                   )}
                   <span>دخول بجوجل</span>
+                </button>
+              )}
+
+              {authView !== 'reset' && (
+                <button
+                  onClick={() => handleLogin('guest')}
+                  disabled={isAuthLoading}
+                  className="noir-button-primary w-full disabled:opacity-50 text-xs"
+                >
+                  متابعة التصفح بدون حساب
                 </button>
               )}
 
@@ -1232,17 +1189,7 @@ export default function App() {
             from { opacity: 0; transform: translateY(15px); }
             to { opacity: 1; transform: translateY(0); }
           }
-          @keyframes marqueeUp {
-            0% { transform: translateY(0); }
-            100% { transform: translateY(-50%); }
-          }
-          @keyframes marqueeDown {
-            0% { transform: translateY(-50%); }
-            100% { transform: translateY(0); }
-          }
           .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
-          .animate-marquee-up { animation: marqueeUp 24s linear infinite; }
-          .animate-marquee-down { animation: marqueeDown 24s linear infinite; }
         `}</style>
       </div>
     );
@@ -1378,7 +1325,7 @@ export default function App() {
   }, [trendingWeek, upcoming, nowPlaying, popularTV, popularMovies, customSections, manualBySection, genreSectionData, sectionOrder, applyHidden]);
 
   return (
-    <div className="min-h-screen bg-[#17171a] text-white flex flex-row font-sans relative tracking-normal antialiased">
+    <div className="min-h-screen bg-[#09090b] text-white flex flex-row font-sans relative tracking-normal antialiased">
       
       {/* Desktop Sidebar — Apple TV style */}
       <Sidebar
@@ -1393,7 +1340,7 @@ export default function App() {
       />
 
       {/* Mobile Top Header — only on small screens */}
-      <div className="md:hidden">
+      <div className="lg:hidden">
         <Header
           activeView={activeView}
           searchMode={searchMode}
@@ -1408,22 +1355,37 @@ export default function App() {
       </div>
 
       {/* Main content — shifts right on desktop to account for sidebar */}
-      <div className="flex-1 flex flex-col md:mr-52 min-w-0">
+      <div className="flex-1 flex flex-col lg:mr-56 min-w-0">
 
       {/* Main Orchestration Views Switcher */}
-      <main className="flex-grow md:pt-0 pt-14 selection:bg-red-500/30">
+      <main className="flex-grow lg:pt-0 pt-16 pb-20 lg:pb-0 selection:bg-red-500/30">
         {activeView ==='home' && (
           <PullToRefresh onRefresh={refreshHome}>
           <div className="animate-fade-in">
             {/* Display Hero slider */}
-            <Hero
-              trendingItems={heroItems}
-              onPlayClick={(item) => handleTitleClick(item)}
-              onInfoClick={(item) => handleTitleClick(item)}
-              onTrailerClick={(item) => handleTitleClick(item)}
-              isSaved={isInWatchlist}
-              onToggleSave={toggleWatchlistItem}
-            />
+            {homeLoadError && heroItems.length === 0 ? (
+              <div className="px-4 sm:px-6 lg:px-8 pt-5 mb-10">
+                <div className="noir-surface min-h-[360px] flex flex-col items-center justify-center text-center px-6">
+                  <WifiOff className="w-10 h-10 text-white/25 mb-4" />
+                  <h1 className="text-xl font-bold text-white">تعذّر تحميل المحتوى</h1>
+                  <p className="text-sm text-white/45 mt-2 max-w-md">
+                    تأكد من اتصال الإنترنت وإعداد مفتاح TMDB، ثم حاول مرة ثانية.
+                  </p>
+                  <button onClick={() => void refreshHome()} className="noir-button-primary mt-6 text-sm">
+                    إعادة المحاولة
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <Hero
+                trendingItems={heroItems}
+                onPlayClick={(item) => handleTitleClick(item)}
+                onInfoClick={(item) => handleTitleClick(item)}
+                onTrailerClick={(item) => handleTitleClick(item)}
+                isSaved={isInWatchlist}
+                onToggleSave={toggleWatchlistItem}
+              />
+            )}
 
             {/* Custom Horizontal Cinema Rows */}
             <div className="space-y-1 md:space-y-2">
@@ -1452,6 +1414,7 @@ export default function App() {
                       setContinueWatching(next);
                       localStorage.setItem('noir_continue_watching_list', JSON.stringify(next));
                       localStorage.removeItem(`noir_progress_${item.type}_${item.id}`);
+                      localStorage.removeItem(`noir_resume_${item.type}_${item.id}`);
                     }}
                   />
                 </div>
@@ -1476,7 +1439,12 @@ export default function App() {
                       onItemClick={handleTitleClick}
                     />
                     {/* شريط التصنيفات يظهر بعد أول قسم */}
-                    {i === 0 && <CategoryRow onSelect={(key) => { window.location.hash = `#category/${key}`; }} />}
+                    {i === 0 && (
+                      <>
+                        <CategoryRow onSelect={(key) => { window.location.hash = `#category/${key}`; }} />
+                        <StudiosRow onSelect={(key) => { window.location.hash = `#studio/${key}`; }} />
+                      </>
+                    )}
                   </div>
                 )
               ))}
@@ -1514,110 +1482,76 @@ export default function App() {
           return (
             <div className="max-w-7xl mx-auto px-6 md:px-12 py-8 animate-fade-in text-right">
               {/* Header section on Dedicated Watchlist View */}
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-6 mb-8 select-none">
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 mb-6 select-none">
                 <div className="space-y-2">
-                  <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight leading-none">
-                    قائمتي الخاصة 
-</h1>
-                  <p className="text-stone-400 text-sm font-medium">
-                    العناوين والأعمال المميزة التي قمت بحفظها لتشاهدها بكل سهولة لاحقاً.
-</p>
-</div>
+                  <span className="noir-eyebrow block">مكتبتك الشخصية</span>
+                  <h1 className="font-display text-3xl md:text-5xl font-bold text-white tracking-tight leading-none">
+                    قائمتي
+                  </h1>
+                  <p className="text-white/50 text-sm font-medium">
+                    كل الأعمال التي حفظتها بمكان واحد.
+                  </p>
+                </div>
                 
                 {watchlist.length > 0 && (
-                  <div className="flex flex-wrap gap-4 items-center justify-start md:justify-end">
-                    {/* Filter Segmented Control */}
-                    <div className="flex bg-stone-900 border border-white/5 p-1 rounded-xl">
-                      <button
-                        onClick={() => setWatchlistFilter('all')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          watchlistFilter ==='all' ?'bg-red-600 text-white shadow-md' :'text-gray-400 hover:text-white'
-                        }`}
+                  <div className="flex flex-wrap gap-2 items-center justify-start md:justify-end">
+                    <label className="glass min-h-11 px-3 rounded-full flex items-center gap-2 text-xs text-white/45">
+                      <span>النوع</span>
+                      <select
+                        value={watchlistFilter}
+                        onChange={(event) => setWatchlistFilter(event.target.value as 'all' | 'movie' | 'tv')}
+                        className="bg-transparent text-white font-semibold outline-none cursor-pointer"
                       >
-                        الكل
-</button>
-                      <button
-                        onClick={() => setWatchlistFilter('movie')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          watchlistFilter ==='movie' ?'bg-red-600 text-white shadow-md' :'text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        أفلام
-</button>
-                      <button
-                        onClick={() => setWatchlistFilter('tv')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          watchlistFilter ==='tv' ?'bg-red-600 text-white shadow-md' :'text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        مسلسلات
-</button>
-</div>
+                        <option value="all">الكل</option>
+                        <option value="movie">أفلام</option>
+                        <option value="tv">مسلسلات</option>
+                      </select>
+                    </label>
 
-                    {/* Sort Segmented Control + direction toggle */}
-                    <div className="flex items-center gap-2">
-                      <div className="flex bg-stone-900 border border-white/5 p-1 rounded-xl">
-                        <button
-                          onClick={() => setWatchlistSort('default')}
-                          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            watchlistSort ==='default' ?'bg-red-600 text-white shadow-md' :'text-gray-400 hover:text-white'
-                          }`}
-                        >
-                          الافتراضي
-</button>
-                        <button
-                          onClick={() => setWatchlistSort('rating')}
-                          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            watchlistSort ==='rating' ?'bg-red-600 text-white shadow-md' :'text-gray-400 hover:text-white'
-                          }`}
-                        >
-                          التقييم
-</button>
-                        <button
-                          onClick={() => setWatchlistSort('year')}
-                          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            watchlistSort ==='year' ?'bg-red-600 text-white shadow-md' :'text-gray-400 hover:text-white'
-                          }`}
-                        >
-                          السنة
-</button>
-</div>
+                    <label className="glass min-h-11 px-3 rounded-full flex items-center gap-2 text-xs text-white/45">
+                      <span>الترتيب</span>
+                      <select
+                        value={watchlistSort}
+                        onChange={(event) => setWatchlistSort(event.target.value as 'default' | 'rating' | 'year')}
+                        className="bg-transparent text-white font-semibold outline-none cursor-pointer"
+                      >
+                        <option value="default">الإضافة</option>
+                        <option value="rating">التقييم</option>
+                        <option value="year">السنة</option>
+                      </select>
+                    </label>
+
                       {watchlistSort !== 'default' && (
                         <button
                           onClick={() => setWatchlistSortDir(watchlistSortDir === 'desc' ? 'asc' : 'desc')}
-                          className="flex items-center gap-1 bg-stone-900 border border-white/5 hover:border-white/15 text-gray-300 hover:text-white px-3 py-2 rounded-xl text-[11px] font-bold transition-all cursor-pointer"
+                          className="noir-icon-button"
                           title={watchlistSortDir === 'desc' ? 'تنازلي (الأعلى أولاً)' : 'تصاعدي (الأدنى أولاً)'}
+                          aria-label={watchlistSortDir === 'desc' ? 'ترتيب تنازلي' : 'ترتيب تصاعدي'}
                         >
-                          <ArrowUpDown className="w-3.5 h-3.5" />
-                          <span>
-                            {watchlistSort === 'rating'
-                              ? (watchlistSortDir === 'desc' ? 'الأعلى' : 'الأدنى')
-                              : (watchlistSortDir === 'desc' ? 'الأحدث' : 'الأقدم')}
-                          </span>
+                          <ArrowUpDown className="w-4 h-4" />
                         </button>
                       )}
-                    </div>
-</div>
+                  </div>
                 )}
-</div>
+              </div>
 
               {watchlist.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-12 text-center bg-stone-950 border border-white/5 rounded-3xl mt-6 min-h-[300px]">
-                  <span className="text-5xl mb-4"></span>
+                <div className="noir-surface flex flex-col items-center justify-center p-12 text-center mt-6 min-h-[300px]">
+                  <Bookmark className="w-10 h-10 text-white/25 mb-4" />
                   <h3 className="text-lg font-bold text-white mb-2">قائمتك فارغة حالياً!</h3>
                   <p className="text-xs text-gray-400 max-w-sm leading-relaxed">
                     تصفّح العروض والمسلسلات في الصفحة الرئيسية وأضفها بالضغط على زر الحفظ في تفاصيل الفيلم.
 </p>
                   <button
                     onClick={navigateToHome}
-                    className="mt-6 bg-white hover:bg-white/90 text-black text-xs font-bold px-6 py-3 rounded-full cursor-pointer transition-all"
+                    className="noir-button-primary mt-6 text-sm"
                   >
                     الذهاب للرئيسية وتصفّح العروض 
 </button>
 </div>
               ) : processedItems.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-12 text-center bg-stone-950 border border-white/5 rounded-3xl mt-6 min-h-[250px]">
-                  <span className="text-4xl mb-3"></span>
+                <div className="noir-surface flex flex-col items-center justify-center p-12 text-center mt-6 min-h-[250px]">
+                  <Filter className="w-9 h-9 text-white/25 mb-3" />
                   <h3 className="text-base font-bold text-white mb-1">لا توجد نتائج مطابقة!</h3>
                   <p className="text-xs text-gray-400 max-w-sm">
                     لم نجد أي أعمال تطابق الفلاتر المختارة في قائمتك الخاصة.
@@ -1625,7 +1559,7 @@ export default function App() {
 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 mt-6">
-                  {processedItems.map((item, idx) => {
+                  {processedItems.map((item) => {
                     const hasScore = item.rating > 0;
                     const progressKey =`noir_progress_${item.type}_${item.id}`;
                     const storedProgress = localStorage.getItem(progressKey);
@@ -1635,19 +1569,29 @@ export default function App() {
                       <div
                         key={`${item.type}-${item.id}`}
                         onClick={() => handleTitleClick(item)}
-                        style={{ animationDelay: `${idx * 40}ms` }}
-                        className="group/card card-transition cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
+                        onKeyDown={(event) => {
+                          if (event.target !== event.currentTarget) return;
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            handleTitleClick(item);
+                          }
+                        }}
+                        role="link"
+                        tabIndex={0}
+                        aria-label={`${item.title}، ${item.type === 'movie' ? 'فيلم' : 'مسلسل'}`}
+                        className="group/card cursor-pointer rounded-[18px] p-1.5 pb-3 select-none"
                       >
                         {/* Poster Artwork container */}
-                        <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+                        <div className="noir-card relative aspect-[2/3]">
                           {/* Remove from watchlist button */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               removeFromWatchlist(item);
                             }}
-                            className="absolute top-2 left-2 z-10 w-8 h-8 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-all hover:bg-white/20 cursor-pointer"
+                            className="absolute top-2 left-2 z-10 w-10 h-10 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-100 lg:opacity-0 lg:group-hover/card:opacity-100 transition-opacity hover:bg-white/20 cursor-pointer"
                             title="إزالة من قائمتي"
+                            aria-label={`إزالة ${item.title} من قائمتي`}
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -1682,7 +1626,7 @@ export default function App() {
                           {progress > 0 && (
                             <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40">
                               <div 
-                                className="h-full bg-red-600 transition-all duration-300" 
+                                className="h-full bg-white transition-all duration-300"
                                 style={{ width: `${progress}%` }}
                               />
 </div>
@@ -1714,51 +1658,73 @@ export default function App() {
           <div className="max-w-7xl mx-auto px-6 md:px-12 py-8 animate-fade-in">
             {/* Header section on Dedicated Search View */}
             <div className="mb-8">
-              <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight leading-none mb-3">
-                {searchMode ==='tv' ?'دليل المسلسلات' :'دليل الأفلام'}
-</h1>
-              <p className="text-stone-400 text-sm font-medium">
-                اعثر على عملك القادم من خلال تصفية كامل المكتبة السينمائية بسرعة فائقة ومقاييس مخصصة.
-</p>
-</div>
+              <span className="noir-eyebrow block mb-2">استكشف المكتبة</span>
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5">
+                <div>
+                  <h1 className="font-display text-3xl md:text-5xl font-bold text-white tracking-tight leading-none mb-3">
+                    {searchMode ==='tv' ?'المسلسلات' :'الأفلام'}
+                  </h1>
+                  <p className="text-white/55 text-sm font-medium max-w-xl">
+                    اختيارات مرتبة، بحث سريع، وفلاتر عند الحاجة.
+                  </p>
+                </div>
+                <div className="inline-flex self-start bg-white/[0.07] border border-white/10 rounded-full p-1">
+                  <button
+                    onClick={() => handleSetSearchMode('movie')}
+                    className={`min-h-10 px-5 rounded-full text-sm font-semibold transition-colors ${
+                      searchMode === 'movie' ? 'bg-white text-black' : 'text-white/55 hover:text-white'
+                    }`}
+                  >
+                    أفلام
+                  </button>
+                  <button
+                    onClick={() => handleSetSearchMode('tv')}
+                    className={`min-h-10 px-5 rounded-full text-sm font-semibold transition-colors ${
+                      searchMode === 'tv' ? 'bg-white text-black' : 'text-white/55 hover:text-white'
+                    }`}
+                  >
+                    مسلسلات
+                  </button>
+                </div>
+              </div>
+            </div>
 
             {/* Direct Input Filter bar */}
-            <div className="flex gap-3 mb-6 relative z-10 select-none">
-              <div className="flex-1 flex items-center gap-3 bg-stone-900 border border-white/5 focus-within:border-white/15 px-4 py-3 rounded-2xl transition-all">
-                <Search className="w-5 h-5 text-gray-500 shrink-0" />
+            <div className="flex gap-3 mb-6 relative z-10">
+              <div className="glass-strong flex-1 flex items-center gap-3 px-4 py-3 rounded-[18px]">
+                <Search className="w-5 h-5 text-white/40 shrink-0" />
                 <input
                   type="text"
                   value={fQuery}
                   onChange={(e) => setFQuery(e.target.value)}
                   placeholder="ابحث بالعنوان، الكلمات المفتاحية..."
-                  className="flex-1 bg-transparent border-0 outline-none text-white text-sm md:text-base font-medium placeholder-gray-500 text-right"
+                  aria-label="البحث في المكتبة"
+                  className="flex-1 min-w-0 bg-transparent border-0 outline-none text-white text-sm md:text-base font-medium placeholder:text-white/30 text-right"
                 />
 </div>
 
-              {/* Mobile Filter Toggler Button */}
               <button
                 onClick={() => setIsFilterSidebarOpen(!isFilterSidebarOpen)}
-                className={`md:hidden flex items-center justify-center gap-2 px-4 rounded-2xl border text-xs font-semibold cursor-pointer transition-colors ${
+                className={`min-h-12 flex items-center justify-center gap-2 px-4 rounded-[18px] border text-xs font-semibold cursor-pointer transition-colors ${
                   isFilterSidebarOpen
-                    ?'bg-stone-800 text-white border-stone-700'
-                    :'bg-stone-900 text-gray-400 border-white/5'
+                    ?'bg-white text-black border-white'
+                    :'bg-white/[0.07] text-white/65 border-white/10 hover:text-white'
                 }`}
+                aria-expanded={isFilterSidebarOpen}
               >
                 <Filter className="w-4 h-4" />
                 <span>التصفية</span>
 </button>
 </div>
 
-            {/* Core Search View Layout Box (Grid map) */}
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_260px] gap-8">
+            <div>
               
-              {/* Left Side: Dynamic Grid items */}
-              <div className="order-2 md:order-1 min-w-0">
+              <div className="min-w-0">
                 
                 {/* Search Sorting Metrics controller */}
                 <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
                   <span className="text-xs text-stone-400 font-medium">
-                    {searchResults.length > 0 ?`تم العثور على ${searchResults.length} عنوان` :'لا توجد نتائج مناسبة'}
+                    {searchResults.length > 0 ?`${searchResults.length} عنوان ظاهر حالياً` :'لا توجد نتائج مناسبة'}
 </span>
                   
                   <div className="flex items-center gap-1.5 min-w-[140px]">
@@ -1766,7 +1732,7 @@ export default function App() {
                     <select
                       value={fSort}
                       onChange={(e) => setFSort(e.target.value)}
-                      className="bg-stone-900 text-white border border-white/5 hover:border-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-red-500 cursor-pointer"
+                      className="bg-white/[0.07] text-white border border-white/10 rounded-full px-4 py-2 text-xs font-semibold focus:outline-none cursor-pointer"
                     >
                       <option value="trend">الرائج عالمياً</option>
                       <option value="rating">الأعلى تقييماً</option>
@@ -1797,11 +1763,20 @@ export default function App() {
                         <div
                           key={`${item.type}-${item.id}`}
                           onClick={() => handleTitleClick(item)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              handleTitleClick(item);
+                            }
+                          }}
+                          role="link"
+                          tabIndex={0}
+                          aria-label={`${item.title}، ${item.type === 'movie' ? 'فيلم' : 'مسلسل'}`}
                           style={{ animationDelay: `${idx * 40}ms` }}
-                          className="group/card card-transition cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
+                          className="group/card cursor-pointer rounded-[18px] p-1.5 pb-3 select-none"
                         >
                           {/* Poster Artwork container */}
-                          <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+                          <div className="noir-card relative aspect-[2/3]">
                             {item.poster || item.backdrop ? (
                               <img
                                 src={item.poster || item.backdrop || undefined}
@@ -1851,7 +1826,7 @@ export default function App() {
                         <button
                           onClick={() => triggerSearchQuery(true)}
                           disabled={isLoadingMore}
-                          className="flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-gray-300 hover:text-white border border-white/5 hover:border-white/10 px-8 py-3 rounded-full text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                          className="noir-button-secondary flex items-center gap-2 text-xs disabled:opacity-50"
                         >
                           {isLoadingMore ? (
                             <>
@@ -1866,8 +1841,8 @@ export default function App() {
                     )}
 </div>
                 ) : (
-                  <div className="py-24 text-center flex flex-col items-center justify-center gap-4 border border-white/5 bg-stone-900/10 rounded-3xl">
-                    <span className="text-4xl text-stone-600">∅</span>
+                  <div className="noir-surface py-20 text-center flex flex-col items-center justify-center gap-4 px-6">
+                    <Search className="w-9 h-9 text-white/20" />
                     <h3 className="text-sm font-bold text-white">لم نجد أي عناوين مطابقة</h3>
                     <p className="text-xs text-gray-500 max-w-xs">
                       جرب تغيير عوامل التصفية المختارة، أو اختصر العناوين في مربع البحث للوصول لنتائج أفضل.
@@ -1876,40 +1851,35 @@ export default function App() {
                 )}
 </div>
 
-              {/* Right Side / Sidebar: Desktop Filter lists & Mobile panel */}
               <div
-                className={`order-1 md:order-2 ${
-                  isFilterSidebarOpen
-                    ?'fixed inset-0 z-40 bg-black/95 pt-20 px-6 overflow-y-auto block'
-                    :'hidden md:block'
-                }`}
+                className={isFilterSidebarOpen
+                  ? 'fixed inset-0 z-[450] bg-black/65 backdrop-blur-sm p-3 sm:p-6 flex justify-end'
+                  : 'hidden'}
+                onClick={(event) => {
+                  if (event.target === event.currentTarget) setIsFilterSidebarOpen(false);
+                }}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="filter-panel-title"
               >
-                <div className="space-y-6 text-right select-none">
-                  {/* Close button for mobile panel overlay */}
-                  <div className="flex justify-between items-center mb-2 md:hidden">
-                    <h3 className="text-lg font-extrabold text-white">خيارات التصفية</h3>
+                <div className="glass-strong h-full w-full max-w-sm rounded-[24px] p-5 sm:p-6 overflow-y-auto space-y-6 text-right">
+                  <div className="flex justify-between items-center border-b border-white/[0.08] pb-4">
+                    <h3 id="filter-panel-title" className="text-lg font-bold text-white">خيارات التصفية</h3>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={handleResetFilters}
+                        className="min-h-10 px-3 text-xs text-white/45 hover:text-white"
+                      >
+                        مسح الكل
+                      </button>
                     <button
                       onClick={() => setIsFilterSidebarOpen(false)}
-                      className="px-4 py-2 bg-stone-800 hover:bg-stone-700 text-white text-xs font-bold rounded-xl cursor-pointer"
+                      className="noir-icon-button !w-10 !min-w-10 !min-h-10"
+                      aria-label="إغلاق خيارات التصفية"
                     >
-                      إغلاق
+                      <X className="w-4 h-4" />
 </button>
-</div>
-
-                  {/* Header widget */}
-                  <div className="hidden md:flex justify-between items-baseline border-b border-white/5 pb-3">
-                    <h3 className="text-sm font-bold text-gray-300 flex items-center gap-1.5">
-                      <Filter className="w-4 h-4 text-gray-400" />
-                      <span>عوامل التصفية</span>
-</h3>
-                    <button
-                      onClick={handleResetFilters}
-                      className="bg-transparent text-gray-400 hover:text-white transition-colors cursor-pointer text-xs font-semibold flex items-center gap-1"
-                      title="مسح جميع فلاتر التصفية"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-stone-500" />
-                      <span>مسح الكل</span>
-</button>
+                    </div>
 </div>
 
                   {/* Select Dropdown: Genres */}
@@ -1924,7 +1894,7 @@ export default function App() {
                           setSelectedGenres(next);
                         }}
                         value={Array.from(selectedGenres)[0] ||""}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
+                        className="noir-select"
                       >
                         <option value="">كل التصنيفات</option>
                         {MOVIE_GENRES.map((g) => (
@@ -1941,7 +1911,7 @@ export default function App() {
                       <select
                         value={selectedYear ||""}
                         onChange={(e) => setSelectedYear(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
+                        className="noir-select"
                       >
                         <option value="">كل السنوات</option>
                         {YEARS.map((y) => (
@@ -1958,7 +1928,7 @@ export default function App() {
                       <select
                         value={selectedRating ||""}
                         onChange={(e) => setSelectedRating(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
+                        className="noir-select"
                       >
                         <option value="">كل التقييمات</option>
                         {RATINGS.map(([val, label]) => (
@@ -1975,7 +1945,7 @@ export default function App() {
                       <select
                         value={selectedCountry ||""}
                         onChange={(e) => setSelectedCountry(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
+                        className="noir-select"
                       >
                         <option value="">كل جهات الإنتاج</option>
                         {COUNTRIES.map(([val, label]) => (
@@ -1992,7 +1962,7 @@ export default function App() {
                       <select
                         value={selectedLanguage ||""}
                         onChange={(e) => setSelectedLanguage(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
+                        className="noir-select"
                       >
                         <option value="">كل اللغات</option>
                         {LANGS.map(([val, label]) => (
@@ -2009,7 +1979,7 @@ export default function App() {
                       <select
                         value={selectedRuntime ||""}
                         onChange={(e) => setSelectedRuntime(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
+                        className="noir-select"
                       >
                         <option value="">كل المدد</option>
                         {RUNTIMES.map(([val, label]) => (
@@ -2027,8 +1997,9 @@ export default function App() {
         )}
 
         {activeView ==='detail' && selectedTitle && (
-          <div className="animate-fade-in block">
-            <DetailView
+          <Suspense fallback={<ViewFallback />}>
+            <div className="animate-fade-in block">
+              <DetailView
               type={selectedTitle.type}
               id={selectedTitle.id}
               initialSeason={selectedEpisodeRoute?.season}
@@ -2053,44 +2024,52 @@ export default function App() {
                   country: m.country, language: m.language,
                 };
               })()}
-            />
-</div>
+              />
+            </div>
+          </Suspense>
         )}
 
         {activeView ==='category' && selectedCategoryKey && getCategoryByKey(selectedCategoryKey) && (
-          <CategoryPage
-            category={getCategoryByKey(selectedCategoryKey)!}
-            onItemClick={handleTitleClick}
-            onBack={navigateToHome}
-            showAllMode={categoryAllMode}
-            onOpenAll={(key) => { window.location.hash = `#category/${key}/all`; }}
-          />
+          <Suspense fallback={<ViewFallback />}>
+            <CategoryPage
+              category={getCategoryByKey(selectedCategoryKey)!}
+              onItemClick={handleTitleClick}
+              onBack={navigateToHome}
+              showAllMode={categoryAllMode}
+              onOpenAll={(key) => { window.location.hash = `#category/${key}/all`; }}
+            />
+          </Suspense>
         )}
 
         {activeView ==='studio' && selectedStudioKey && getStudioByKey(selectedStudioKey) && (
-          <StudioPage
-            studio={getStudioByKey(selectedStudioKey)!}
-            onItemClick={handleTitleClick}
-            onBack={navigateToHome}
-          />
+          <Suspense fallback={<ViewFallback />}>
+            <StudioPage
+              studio={getStudioByKey(selectedStudioKey)!}
+              onItemClick={handleTitleClick}
+              onBack={navigateToHome}
+            />
+          </Suspense>
         )}
 
         {activeView ==='admin' && (
-          <AdminDashboard
-            userEmail={user?.email}
-            onBack={navigateToHome}
-            siteSections={siteSectionsForAdmin}
-            hiddenIds={hiddenIds}
-            onToggleHidden={(type, id, hide) => { toggleHidden(type, id, hide); }}
-            heroItems={heroItemsAll}
-            heroHiddenIds={heroHiddenIds}
-            onToggleHeroHidden={(type, id, hide) => { toggleHeroHidden(type, id, hide); }}
-          />
+          <Suspense fallback={<ViewFallback />}>
+            <AdminDashboard
+              userEmail={user?.email}
+              onBack={navigateToHome}
+              siteSections={siteSectionsForAdmin}
+              hiddenIds={hiddenIds}
+              onToggleHidden={(type, id, hide) => { toggleHidden(type, id, hide); }}
+              heroItems={heroItemsAll}
+              heroHiddenIds={heroHiddenIds}
+              onToggleHeroHidden={(type, id, hide) => { toggleHeroHidden(type, id, hide); }}
+            />
+          </Suspense>
         )}
 </main>
 
-      {/* Global Minimalist Footer and disclaimer notes */}
-      
+      {activeView !== 'detail' && activeView !== 'admin' && (
+        <Footer goHome={navigateToHome} setSearchMode={handleSetSearchMode} />
+      )}
 
       </div>{/* end main content wrapper */}
 
@@ -2105,15 +2084,19 @@ export default function App() {
       />
 
       {/* Cmd+K QuickSearch predicting suggestions overlay */}
-      <SearchOverlay
-        isOpen={isSearchOverlayOpen}
-        onClose={() => setIsSearchOverlayOpen(false)}
-        onSelectTitle={handleQuickSelectTitle}
-        onBrowseCategory={(key) => {
-          setIsSearchOverlayOpen(false);
-          window.location.hash = `#category/${key}`;
-        }}
-      />
+      {isSearchOverlayOpen && (
+        <Suspense fallback={null}>
+          <SearchOverlay
+            isOpen
+            onClose={() => setIsSearchOverlayOpen(false)}
+            onSelectTitle={handleQuickSelectTitle}
+            onBrowseCategory={(key) => {
+              setIsSearchOverlayOpen(false);
+              window.location.hash = `#category/${key}`;
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* Browser URL Share Dialog */}
       <ShareModal
@@ -2125,7 +2108,7 @@ export default function App() {
 
       {/* Google Account Profile Details Dialog Modal */}
       {isProfileModalOpen && user && (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 text-right">
+        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 text-right" role="dialog" aria-modal="true" aria-labelledby="profile-dialog-title">
           {/* Backdrop */}
           <div 
             className="absolute inset-0 bg-black/85 backdrop-blur-md cursor-pointer animate-fade-in" 
@@ -2133,11 +2116,12 @@ export default function App() {
           />
 
           {/* Modal Container */}
-          <div className="relative z-10 w-full max-w-sm bg-stone-950 border border-white/5 rounded-3xl p-6 md:p-8 shadow-3xl text-center select-none animate-scale-in">
+          <div className="noir-surface relative z-10 w-full max-w-sm p-6 md:p-8 shadow-2xl text-center animate-scale-in">
             {/* Close Trigger Button */}
             <button
               onClick={() => setIsProfileModalOpen(false)}
-              className="absolute top-4 left-4 p-1.5 rounded-full text-gray-500 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+              className="noir-icon-button !w-10 !min-w-10 !min-h-10 absolute top-4 left-4"
+              aria-label="إغلاق الملف الشخصي"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
@@ -2164,7 +2148,7 @@ export default function App() {
 
               {/* User Bio Information */}
               <div className="space-y-1 text-center">
-                <h3 className="text-lg font-extrabold text-white leading-snug">{user.name}</h3>
+                <h3 id="profile-dialog-title" className="text-lg font-extrabold text-white leading-snug">{user.name}</h3>
                 {user.email && (
                   <p className="text-xs text-gray-400 font-medium font-mono select-text">{user.email}</p>
                 )}
@@ -2210,7 +2194,7 @@ export default function App() {
               <p className="text-[10px] text-gray-500 font-bold leading-normal">إحصائيات القائمة والنشاط</p>
               <div className="text-xs text-gray-300 font-semibold leading-relaxed">
                 {user.type ==='guest' ? (
-                  <span className="text-amber-500 font-bold block">حساب الزائر محدود ميزات الحفظ والمشاهدة الجماعية. سجل دخولك بجوجل لتفعيلهم!</span>
+                  <span className="text-white/55 block">محفوظاتك موجودة على هذا الجهاز. سجّل الدخول إذا تريد مزامنتها بين أجهزتك.</span>
                 ) : (
                   <span>مجموع العناوين المضافة لقائمتك الخاصة: <strong className="text-red-400">{watchlist.length} عنوان</strong></span>
                 )}
@@ -2225,21 +2209,22 @@ export default function App() {
                     setIsProfileModalOpen(false);
                     handleLogout();
                   }}
-                  className="w-full bg-white hover:bg-white/90 text-black font-bold py-3 rounded-xl transition-all cursor-pointer text-xs"
+                  className="noir-button-primary w-full text-xs"
                 >
-                  ربط تسجيل الدخول بجوجل 
+                  تسجيل الدخول أو إنشاء حساب
 </button>
               )}
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setIsProfileModalOpen(false);
-                }}
-                className="w-full bg-stone-900 border border-white/5 hover:border-white/10 text-red-400 hover:text-red-300 font-bold py-3 rounded-xl transition-all cursor-pointer text-xs flex items-center justify-center gap-2"
-              >
-                <span></span>
-                <span>تسجيل الخروج من الحساب</span>
-</button>
+              {user.type !== 'guest' && (
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsProfileModalOpen(false);
+                  }}
+                  className="noir-button-secondary w-full text-xs text-[#ff453a]"
+                >
+                  تسجيل الخروج من الحساب
+                </button>
+              )}
 </div>
 </div>
 </div>

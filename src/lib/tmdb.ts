@@ -5,13 +5,13 @@
 
 import { MovieOrShow, DetailedInfo } from '../types';
 
-const FALLBACK_KEY = 'ba9b34ad730f140e4c7de6c7491d0a90';
-const TMDB_KEY = (import.meta as any).env?.VITE_TMDB_API_KEY || FALLBACK_KEY;
+const TMDB_KEY = (import.meta as any).env?.VITE_TMDB_API_KEY;
 const API_BASE = 'https://api.themoviedb.org/3';
 const IMG_BASE = 'https://image.tmdb.org/t/p';
 
 // Local runtime caches to avoid multiple redundancy calls
 const responseCache = new Map<string, any>();
+const MAX_CACHE_ENTRIES = 250;
 export let GMAP: Record<number, string> = {};
 export let MOVIE_GENRES: { id: number; name: string }[] = [];
 
@@ -28,6 +28,9 @@ function isYearAllowed(item: MovieOrShow): boolean {
 
 // Base request tool
 async function tmdbFetch(path: string, params: Record<string, any> = {}): Promise<any> {
+  if (!TMDB_KEY) {
+    throw new Error('VITE_TMDB_API_KEY is not configured');
+  }
   const url = new URL(API_BASE + path);
   url.searchParams.set('api_key', TMDB_KEY);
   
@@ -51,6 +54,10 @@ async function tmdbFetch(path: string, params: Record<string, any> = {}): Promis
   }
 
   const data = await res.json();
+  if (responseCache.size >= MAX_CACHE_ENTRIES) {
+    const oldestKey = responseCache.keys().next().value;
+    if (oldestKey) responseCache.delete(oldestKey);
+  }
   responseCache.set(cacheKey, data);
   return data;
 }

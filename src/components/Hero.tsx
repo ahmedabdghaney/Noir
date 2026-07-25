@@ -1,13 +1,12 @@
 /**
- * @license
- * SPDX-License-Identifier: Apache-2.0
+ * Featured hero — calm Apple TV inspired presentation.
  */
 
-import { useState, useEffect, useRef } from 'react';
-import { Play, Plus, Check, ChevronRight, ChevronLeft, Star, Volume2, VolumeX } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { useEffect, useState } from 'react';
+import { Check, ChevronLeft, ChevronRight, Info, Play, Plus, Star } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { MovieOrShow } from '../types';
-import { fetchDetailedTitle, getTitleLogoUrl, getBackdropUrl } from '../lib/tmdb';
+import { getBackdropUrl } from '../lib/tmdb';
 
 interface HeroProps {
   trendingItems: MovieOrShow[];
@@ -22,305 +21,164 @@ export default function Hero({
   trendingItems,
   onPlayClick,
   onInfoClick,
-  onTrailerClick,
   isSaved,
   onToggleSave,
 }: HeroProps) {
+  const items = trendingItems.slice(0, 5);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [logoCache, setLogoCache] = useState<Record<string, string | null>>({});
-  // خريطة مفتاح التريلر لكل عنصر (من TMDB videos)
-  const [trailerCache, setTrailerCache] = useState<Record<string, string | null>>({});
-  // هل نعرض التريلر الآن (بعد ثانيتين من التبديل)
-  const [showTrailer, setShowTrailer] = useState(false);
-  // كتم صوت التريلر (مكتوم افتراضياً — تشغيل تلقائي يتطلب كتم)
-  const [muted, setMuted] = useState(true);
-  const trailerIframeRef = useRef<HTMLIFrameElement | null>(null);
-
-  const activePool = trendingItems.slice(0, 12);
-
-  // التبديل التلقائي: لو في تريلر شغّال، ننتظر انتهاءه (يتكفّل onTrailerEnd).
-  // لو ما في تريلر، نبدّل كل 8 ثواني.
-  const activeItemKey = activePool[currentIndex] ? `${activePool[currentIndex].type}-${activePool[currentIndex].id}` : '';
-  const activeTrailerKey = trailerCache[activeItemKey];
 
   useEffect(() => {
-    if (activePool.length <= 1) return;
-    // لو التريلر شغّال حالياً، لا نستخدم مؤقّت ثابت — ننتظر انتهاء التريلر
-    if (showTrailer && activeTrailerKey) return;
-    const timer = setTimeout(() => {
-      setCurrentIndex((prev) => (prev + 1) % activePool.length);
-    }, 8000);
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePool.length, currentIndex, showTrailer, activeTrailerKey]);
+    if (items.length <= 1) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const timer = window.setInterval(() => {
+      setCurrentIndex((index) => (index + 1) % items.length);
+    }, 10000);
+    return () => window.clearInterval(timer);
+  }, [items.length]);
 
-  // ينتقل للفلم التالي (يُستدعى عند انتهاء التريلر)
-  const goToNext = () => setCurrentIndex((prev) => (prev + 1) % activePool.length);
-
-  // بدل الاعتماد على أحداث يوتيوب (تسبب ظهور أيقونات الحالة)،
-  // نستخدم مدة قصوى للتريلر: 150 ثانية (أغلب التريلرات 1.5-2.5 دقيقة).
-  // بعدها ننتقل للفلم التالي تلقائياً.
   useEffect(() => {
-    if (!showTrailer || !activeTrailerKey) return;
-    const t = setTimeout(() => goToNext(), 150000);
-    return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showTrailer, activeTrailerKey]);
+    if (currentIndex >= items.length) setCurrentIndex(0);
+  }, [currentIndex, items.length]);
 
-  const activeItem = activePool[currentIndex];
-  useEffect(() => {
-    if (!activeItem || !activeItem.id || !activeItem.type) return;
-    const key = `${activeItem.type}-${activeItem.id}`;
-    // لو عندنا التريلر مخزّن من قبل، ما نعيد الجلب
-    if (key in trailerCache) return;
-    let cancelled = false;
-    fetchDetailedTitle(activeItem.type, activeItem.id)
-      .then((d) => {
-        if (cancelled) return;
-        if (!(key in logoCache)) setLogoCache((c) => ({ ...c, [key]: getTitleLogoUrl(d) }));
-        // استخرج مفتاح تريلر يوتيوب: نفضّل Trailer، وإلا Teaser، وإلا أي فيديو YouTube
-        const vids = ((d as any)?.videos?.results || []).filter((v: any) => v.site === 'YouTube');
-        const trailer = vids.find((v: any) => v.type === 'Trailer') || vids.find((v: any) => v.type === 'Teaser') || vids[0];
-        setTrailerCache((c) => ({ ...c, [key]: trailer ? trailer.key : null }));
-      })
-      .catch(() => {
-        if (cancelled) return;
-        if (!(key in logoCache)) setLogoCache((c) => ({ ...c, [key]: null }));
-        setTrailerCache((c) => ({ ...c, [key]: null }));
-      });
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeItem?.id, activeItem?.type]);
-
-  // مؤقّت التريلر: بعد ثانيتين من تبديل الفلم، شغّل التريلر (لو متوفر)
-  useEffect(() => {
-    setShowTrailer(false); // اخفِ التريلر فوراً عند التبديل
-    setMuted(true);        // ارجع للكتم الافتراضي مع كل فلم جديد
-    if (!activeItem) return;
-    const key = `${activeItem.type}-${activeItem.id}`;
-    const timer = setTimeout(() => setShowTrailer(true), 2000);
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeItem?.id, activeItem?.type]);
-
-  if (!activePool.length) {
+  if (!items.length) {
     return (
-      <div className="relative w-full mb-12 px-4 sm:px-8 pt-6">
-        <div className="w-full aspect-[16/10] sm:aspect-[2.2/1] rounded-[28px] bg-stone-900 animate-pulse" />
+      <div className="px-4 sm:px-6 lg:px-8 pt-3 sm:pt-6 mb-10">
+        <div className="w-full aspect-[4/5] sm:aspect-[16/9] lg:aspect-[2.25/1] min-h-[420px] sm:min-h-0 rounded-[24px] bg-white/[0.05] animate-pulse" />
       </div>
     );
   }
 
-  const goTo = (dir: number) => {
-    setCurrentIndex((prev) => (prev + dir + activePool.length) % activePool.length);
-  };
+  const activeItem = items[currentIndex];
+  const saved = isSaved?.(activeItem) ?? false;
+  const image =
+    getBackdropUrl((activeItem as any).backdrop_path) ||
+    activeItem.backdrop ||
+    activeItem.poster ||
+    '';
 
-  const wideImg = (it: MovieOrShow) =>
-    getBackdropUrl((it as any).backdrop_path) ||
-    it.backdrop ||
-    (it.poster || '').replace('/w342', '/w780').replace('/w500', '/w780');
-
-  const contentContainer = {
-    hidden: {},
-    show: { transition: { staggerChildren: 0.07, delayChildren: 0.15 } },
+  const goTo = (direction: number) => {
+    setCurrentIndex((index) => (index + direction + items.length) % items.length);
   };
-  const contentItem = {
-    hidden: { opacity: 0, y: 16 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
-  };
-
-  const activeLogo = logoCache[`${activeItem.type}-${activeItem.id}`];
-  const saved = isSaved ? isSaved(activeItem) : false;
 
   return (
-    <div className="relative w-full mb-12 sm:mb-16 select-none overflow-hidden">
-      {/* Full-bleed stack — البطاقة النشطة تظهر بـ fade (بدون انزلاق عبر البقية) */}
-      <div className="relative overflow-hidden group/hero">
-        <div dir="rtl" className="relative">
-          {activePool.map((item, i) => {
-            const isActive = i === currentIndex;
-            // نرندر بس النشطة والمجاورات (السابقة/الجاية) — الباقي ما ينحمل صوره إطلاقاً
-            const n = activePool.length;
-            const isNear = i === currentIndex || i === (currentIndex + 1) % n || i === (currentIndex - 1 + n) % n;
-            if (!isNear) return null;
-            return (
-              <div
-                key={`${item.type}-${item.id}`}
-                className={isActive ? 'relative z-10' : 'absolute inset-0 z-0 pointer-events-none'}
-              >
-                <motion.div
-                  animate={{ opacity: isActive ? 1 : 0 }}
-                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                  className="relative overflow-hidden"
-                >
-                  <div className="relative aspect-[4/5] sm:aspect-[16/9] lg:aspect-[2.4/1] min-h-[420px] sm:min-h-0">
-                    <img
-                      src={wideImg(item)}
-                      alt={item.title}
-                      referrerPolicy="no-referrer"
-                      loading={isActive ? 'eager' : 'lazy'}
-                      {...(isActive ? { fetchpriority: 'high' } : { fetchpriority: 'low' })}
-                      decoding="async"
-                      className="w-full h-full object-cover object-top"
-                    />
-
-                    {/* التريلر التلقائي — يظهر بعد ثانيتين، مكتوم افتراضياً، يغطي الصورة */}
-                    {isActive && showTrailer && trailerCache[`${item.type}-${item.id}`] && (
-                      <div className="absolute inset-0 overflow-hidden">
-                        <iframe
-                          ref={trailerIframeRef}
-                          key={`trailer-${item.id}`}
-                          src={`https://www.youtube-nocookie.com/embed/${trailerCache[`${item.type}-${item.id}`]}?autoplay=1&mute=1&controls=0&loop=0&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&playsinline=1&fs=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
-                          allow="autoplay; encrypted-media"
-                          title="trailer"
-                          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[177.77vh] h-[56.25vw] min-w-full min-h-full pointer-events-none"
-                          style={{ border: 0 }}
-                        />
-                        {/* طبقة تغطية شفافة كاملة — تحجب أزرار يوتيوب وتمنع التفاعل */}
-                        <div className="absolute inset-0 z-20 cursor-default" style={{ pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()} />
-                      </div>
-                    )}
-
-                    {/* Gradients — full-bleed زي Apple TV (تعتيم قوي من الأسفل) */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-                    <div className="absolute inset-0 bg-gradient-to-l from-black/70 via-transparent to-transparent" />
-                    <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0a0a0a] to-transparent" />
-
-                    {/* Details only on active card */}
-                    {isActive && (
-                      <motion.div
-                        key={`content-${item.id}`}
-                        variants={contentContainer}
-                        initial="hidden"
-                        animate="show"
-                        dir="rtl"
-                        className="absolute inset-x-0 bottom-0 flex flex-col items-start justify-end text-right px-6 sm:px-12 md:px-16 lg:px-20 pb-10 sm:pb-12 md:pb-16 max-w-2xl"
-                      >
-                        {/* Logo or title */}
-                        <motion.div variants={contentItem} className="flex justify-start w-full mb-3 sm:mb-4">
-                          {activeLogo ? (
-                            <img src={activeLogo} alt={item.title} referrerPolicy="no-referrer" className="max-h-16 sm:max-h-24 md:max-h-32 max-w-[80%] sm:max-w-[70%] object-contain object-right drop-shadow-2xl" />
-                          ) : (
-                            <h1 className="font-display text-3xl sm:text-5xl md:text-6xl font-black text-white leading-tight line-clamp-2 drop-shadow-2xl">{item.title}</h1>
-                          )}
-                        </motion.div>
-
-                        {/* Meta */}
-                        <motion.div variants={contentItem} className="flex items-center justify-start gap-2.5 text-[10px] sm:text-xs text-gray-200 font-semibold mb-2">
-                          <span className="text-stone-300">{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
-                          <span className="text-stone-400">{item.year || ''}</span>
-                          <span className="flex items-center gap-1 text-[#f5c518]">
-                            {item.rating > 0 ? item.rating.toFixed(1) : 'جديد'}
-                            <Star className="w-3 h-3 fill-current" />
-                          </span>
-                        </motion.div>
-
-                        {/* Genre chips */}
-                        {item.genres.length > 0 && (
-                          <motion.div variants={contentItem} className="flex items-center justify-start gap-1.5 mb-3">
-                            {item.genres.slice(0, 3).map((g, idx) => (
-                              <span key={idx} className="text-[9px] sm:text-[10px] font-semibold text-stone-200 glass px-2.5 py-1 rounded-lg">{g}</span>
-                            ))}
-                          </motion.div>
-                        )}
-
-                        {/* Overview — مخفي بالموبايل، يظهر بالأجهزة الأكبر */}
-                        {item.overview && (
-                          <motion.p variants={contentItem} className="hidden sm:block text-gray-300 text-[11px] sm:text-xs leading-relaxed line-clamp-3 mb-5 max-w-md">
-                            {item.overview}
-                          </motion.p>
-                        )}
-
-                        {/* Actions — Play rightmost */}
-                        <motion.div variants={contentItem} className="flex items-center justify-start gap-2 flex-wrap">
-                          <button
-                            onClick={() => onPlayClick(item)}
-                            className="flex items-center gap-1.5 sm:gap-2 bg-white text-black hover:bg-white/90 font-bold px-3.5 sm:px-7 py-1.5 sm:py-3 rounded-full transition-all cursor-pointer text-xs sm:text-sm shadow-lg"
-                          >
-                            <Play className="w-3 h-3 sm:w-4 sm:h-4 fill-black text-black" />
-                            <span>تشغيل</span>
-                          </button>
-
-                          {onTrailerClick && (
-                            <button
-                              onClick={() => onTrailerClick(item)}
-                              className="flex items-center gap-1.5 sm:gap-2 glass text-white hover:bg-white/15 font-bold px-3 sm:px-5 py-1.5 sm:py-3 rounded-full transition-all cursor-pointer text-xs sm:text-sm"
-                              title="الإعلان الرسمي"
-                            >
-                              <svg viewBox="0 0 28 20" className="w-4 h-[11px] sm:w-5 sm:h-[14px] shrink-0" xmlns="http://www.w3.org/2000/svg">
-                                <rect width="28" height="20" rx="5" fill="#FF0000" />
-                                <path d="M11 6 L19 10 L11 14 Z" fill="white" />
-                              </svg>
-                              <span>الإعلان الرسمي</span>
-                            </button>
-                          )}
-
-                          {onToggleSave && (
-                            <button
-                              onClick={() => onToggleSave(item)}
-                              className={`w-8 h-8 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all cursor-pointer ${saved ? 'bg-white text-black' : 'glass text-white hover:bg-white/15'}`}
-                              title={saved ? 'محفوظ في قائمتي' : 'إضافة لقائمتي'}
-                            >
-                              {saved ? <Check className="w-4 h-4 sm:w-5 sm:h-5 text-black" strokeWidth={3} /> : <Plus className="w-4 h-4 sm:w-5 sm:h-5" />}
-                            </button>
-                          )}
-                        </motion.div>
-                      </motion.div>
-                    )}
-                  </div>
-                </motion.div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Nav arrows — تظهر فقط عند hover على الهيرو */}
-        <button
-          onClick={() => goTo(-1)}
-          className="hidden sm:flex absolute right-4 md:right-6 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md text-white/90 hover:text-white items-center justify-center cursor-pointer transition-all z-30 opacity-0 group-hover/hero:opacity-100"
-          aria-label="السابق"
-        >
-          <ChevronRight className="w-5 h-5" strokeWidth={2.5} />
-        </button>
-        <button
-          onClick={() => goTo(1)}
-          className="hidden sm:flex absolute left-4 md:left-6 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md text-white/90 hover:text-white items-center justify-center cursor-pointer transition-all z-30 opacity-0 group-hover/hero:opacity-100"
-          aria-label="التالي"
-        >
-          <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
-        </button>
-
-        {/* زر كتم/تشغيل صوت التريلر — يظهر بس لما التريلر شغّال */}
-        {showTrailer && activeItem && trailerCache[`${activeItem.type}-${activeItem.id}`] && (
-          <button
-            onClick={() => {
-              const iframe = trailerIframeRef.current;
-              const cmd = muted ? 'unMute' : 'mute';
-              iframe?.contentWindow?.postMessage(
-                JSON.stringify({ event: 'command', func: cmd, args: [] }), '*'
-              );
-              setMuted((m) => !m);
-            }}
-            className="absolute left-4 md:left-6 bottom-6 md:bottom-8 z-40 w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/15 text-white flex items-center justify-center cursor-pointer transition-all"
-            aria-label={muted ? 'تشغيل الصوت' : 'كتم الصوت'}
-            title={muted ? 'تشغيل الصوت' : 'كتم الصوت'}
+    <section className="px-3 sm:px-5 lg:px-8 pt-2 sm:pt-5 mb-10 sm:mb-14 select-none" aria-label="العرض المميز">
+      <div className="group/hero relative overflow-hidden rounded-[24px] sm:rounded-[28px] border border-white/[0.08] bg-[#101013] shadow-[0_32px_90px_-45px_rgba(0,0,0,0.95)]">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`${activeItem.type}-${activeItem.id}`}
+            initial={{ opacity: 0.6 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            className="relative aspect-[4/5] sm:aspect-[16/9] lg:aspect-[2.25/1] min-h-[440px] sm:min-h-0"
           >
-            {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-          </button>
+            <img
+              src={image}
+              alt=""
+              referrerPolicy="no-referrer"
+              fetchPriority="high"
+              className="absolute inset-0 w-full h-full object-cover object-top"
+            />
+
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-black/5" />
+            <div className="absolute inset-0 bg-gradient-to-l from-black/80 via-black/20 to-transparent" />
+
+            <div
+              dir="rtl"
+              className="absolute inset-x-0 bottom-0 max-w-3xl px-6 sm:px-10 lg:px-14 pb-8 sm:pb-10 lg:pb-12 text-right"
+            >
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.38, delay: 0.08 }}
+              >
+                <span className="inline-flex items-center gap-2 text-xs font-semibold text-white/65 mb-3">
+                  <span>{activeItem.type === 'movie' ? 'فيلم مميز' : 'مسلسل مميز'}</span>
+                  {activeItem.year && <span>{activeItem.year}</span>}
+                  {activeItem.rating > 0 && (
+                    <span className="inline-flex items-center gap-1 text-[#ffd60a]">
+                      <Star className="w-3.5 h-3.5 fill-current" />
+                      {activeItem.rating.toFixed(1)}
+                    </span>
+                  )}
+                </span>
+
+                <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-[1.08] tracking-tight max-w-2xl line-clamp-2 drop-shadow-xl">
+                  {activeItem.title}
+                </h1>
+
+                {activeItem.overview && (
+                  <p className="hidden sm:block mt-4 text-sm lg:text-base text-white/68 leading-7 max-w-xl line-clamp-2">
+                    {activeItem.overview}
+                  </p>
+                )}
+
+                <div className="mt-5 sm:mt-6 flex flex-wrap items-center gap-2.5">
+                  <button
+                    onClick={() => onPlayClick(activeItem)}
+                    className="noir-button-primary inline-flex items-center gap-2"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    المشاهدة الآن
+                  </button>
+
+                  <button
+                    onClick={() => onInfoClick(activeItem)}
+                    className="noir-button-secondary inline-flex items-center gap-2"
+                  >
+                    <Info className="w-4 h-4" />
+                    التفاصيل
+                  </button>
+
+                  {onToggleSave && (
+                    <button
+                      onClick={() => onToggleSave(activeItem)}
+                      className={`noir-icon-button ${saved ? '!bg-white !text-black' : ''}`}
+                      aria-label={saved ? 'إزالة من قائمتي' : 'إضافة إلى قائمتي'}
+                      title={saved ? 'محفوظ في قائمتي' : 'إضافة إلى قائمتي'}
+                    >
+                      {saved ? <Check className="w-5 h-5" strokeWidth={3} /> : <Plus className="w-5 h-5" />}
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+
+        {items.length > 1 && (
+          <>
+            <button
+              onClick={() => goTo(-1)}
+              className="hidden sm:flex noir-icon-button absolute right-4 top-1/2 -translate-y-1/2 z-20 opacity-0 group-hover/hero:opacity-100"
+              aria-label="العرض السابق"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => goTo(1)}
+              className="hidden sm:flex noir-icon-button absolute left-4 top-1/2 -translate-y-1/2 z-20 opacity-0 group-hover/hero:opacity-100"
+              aria-label="العرض التالي"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-1.5 rounded-full bg-black/25 backdrop-blur-md p-2">
+              {items.map((item, index) => (
+                <button
+                  key={`${item.type}-${item.id}`}
+                  onClick={() => setCurrentIndex(index)}
+                  className={`h-1.5 rounded-full transition-[width,background-color] ${
+                    index === currentIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/35 hover:bg-white/65'
+                  }`}
+                  aria-label={`الانتقال إلى العرض ${index + 1}`}
+                  aria-current={index === currentIndex ? 'true' : undefined}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
-
-      {/* Dots */}
-      <div className="relative z-10 flex justify-center gap-2 mt-6">
-        {activePool.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrentIndex(i)}
-            className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${i === currentIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/30 hover:bg-white/50'}`}
-            aria-label={`شريحة ${i + 1}`}
-          />
-        ))}
-      </div>
-    </div>
+    </section>
   );
 }

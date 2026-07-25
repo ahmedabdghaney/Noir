@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Home, Film, Tv, Search, Bookmark } from 'lucide-react';
+import { Home, Compass, Search, Bookmark } from 'lucide-react';
 
 interface MobileNavProps {
-  activeView: 'home' | 'search' | 'detail' | 'watchlist';
+  activeView: 'home' | 'search' | 'detail' | 'watchlist' | 'category' | 'studio' | 'admin';
   searchMode: 'movie' | 'tv';
   setSearchMode: (mode: 'movie' | 'tv') => void;
   goHome: () => void;
@@ -23,63 +23,53 @@ export default function MobileNav({
   onViewWatchlist,
 }: MobileNavProps) {
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[200] h-16 bg-[#141417]/95 backdrop-blur-xl border-t border-white/5 flex items-center justify-around px-1 selection:bg-transparent safe-bottom">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[200] h-[68px] bg-[#0b0b0e]/88 backdrop-blur-2xl border-t border-white/[0.08] flex items-center justify-around px-2 selection:bg-transparent safe-bottom" aria-label="التنقل الرئيسي">
       
       {/* Home Button */}
       <button
         onClick={goHome}
-        className={`flex flex-col items-center justify-center gap-1 flex-1 h-full py-1 text-center transition-all cursor-pointer ${
-          activeView === 'home' ? 'text-white' : 'text-gray-500'
+        aria-current={activeView === 'home' ? 'page' : undefined}
+        className={`flex flex-col items-center justify-center gap-1 flex-1 h-full py-1 text-center transition-colors cursor-pointer ${
+          activeView === 'home' ? 'text-white' : 'text-white/35'
         }`}
       >
         <Home className="w-5 h-5 transition-transform" />
         <span className="text-[10px] font-bold leading-none">الرئيسية</span>
       </button>
 
-      {/* Movies Button */}
+      {/* Browse Button */}
       <button
         onClick={() => {
-          setSearchMode('movie');
+          setSearchMode(searchMode);
         }}
-        className={`flex flex-col items-center justify-center gap-1 flex-1 h-full py-1 text-center transition-all cursor-pointer ${
-          activeView === 'search' && searchMode === 'movie' ? 'text-white' : 'text-gray-500'
+        aria-current={activeView === 'search' ? 'page' : undefined}
+        className={`flex flex-col items-center justify-center gap-1 flex-1 h-full py-1 text-center transition-colors cursor-pointer ${
+          activeView === 'search' ? 'text-white' : 'text-white/35'
         }`}
       >
-        <Film className="w-5 h-5 transition-transform" />
-        <span className="text-[10px] font-bold leading-none">الأفلام</span>
-      </button>
-
-      {/* TV Series Button */}
-      <button
-        onClick={() => {
-          setSearchMode('tv');
-        }}
-        className={`flex flex-col items-center justify-center gap-1 flex-1 h-full py-1 text-center transition-all cursor-pointer ${
-          activeView === 'search' && searchMode === 'tv' ? 'text-white' : 'text-gray-500'
-        }`}
-      >
-        <Tv className="w-5 h-5 transition-transform" />
-        <span className="text-[10px] font-bold leading-none">المسلسلات</span>
-      </button>
-
-      {/* My List / Watchlist Button */}
-      <button
-        onClick={onViewWatchlist}
-        className={`flex flex-col items-center justify-center gap-1 flex-1 h-full py-1 text-center transition-all cursor-pointer ${
-          activeView === 'watchlist' ? 'text-white' : 'text-gray-500'
-        }`}
-      >
-        <Bookmark className="w-5 h-5 transition-transform" />
-        <span className="text-[10px] font-bold leading-none">قائمتي</span>
+        <Compass className="w-5 h-5 transition-transform" />
+        <span className="text-[11px] font-semibold leading-none">استكشف</span>
       </button>
 
       {/* Search Button */}
       <button
         onClick={openSearchOverlay}
-        className="flex flex-col items-center justify-center gap-1 flex-1 h-full py-1 text-center transition-all cursor-pointer text-gray-500 hover:text-white"
+        className="flex flex-col items-center justify-center gap-1 flex-1 h-full py-1 text-center transition-colors cursor-pointer text-white/35 hover:text-white"
       >
         <Search className="w-5 h-5 transition-transform" />
-        <span className="text-[10px] font-bold leading-none">البحث</span>
+        <span className="text-[11px] font-semibold leading-none">البحث</span>
+      </button>
+
+      {/* My List / Watchlist Button */}
+      <button
+        onClick={onViewWatchlist}
+        aria-current={activeView === 'watchlist' ? 'page' : undefined}
+        className={`flex flex-col items-center justify-center gap-1 flex-1 h-full py-1 text-center transition-colors cursor-pointer ${
+          activeView === 'watchlist' ? 'text-white' : 'text-white/35'
+        }`}
+      >
+        <Bookmark className="w-5 h-5 transition-transform" />
+        <span className="text-[11px] font-semibold leading-none">قائمتي</span>
       </button>
 
     </nav>
