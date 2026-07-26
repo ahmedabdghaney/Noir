@@ -249,7 +249,7 @@ export default function MovieRow({
                     <img
                       src={`/top10/${idx + 1}.svg`}
                       alt={`المرتبة ${idx + 1}`}
-                      className="absolute top-2 right-2 z-20 h-8 sm:h-9 w-auto max-w-[52px] object-contain object-right-top pointer-events-none select-none drop-shadow-[0_3px_8px_rgba(0,0,0,.7)]"
+                      className="absolute top-2 right-2 z-20 h-12 sm:h-14 md:h-16 w-auto max-w-[92px] object-contain object-right-top pointer-events-none select-none drop-shadow-[0_4px_10px_rgba(0,0,0,.75)]"
                     />
                   )}
                   {/* Subtle gradient at bottom of poster for depth */}
