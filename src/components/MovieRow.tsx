@@ -204,10 +204,29 @@ export default function MovieRow({
                 tabIndex={0}
                 aria-label={`فتح ${item.title}`}
                 style={{ animationDelay: `${idx * 45}ms` }}
-                className="group/card card-pop flex-none w-[112px] sm:w-[140px] md:w-[156px] lg:w-[168px] cursor-pointer rounded-2xl p-1.5 pb-3 select-none"
+                className={`group/card card-pop relative flex-none cursor-pointer rounded-2xl p-1.5 pb-3 select-none ${
+                  ranked
+                    ? 'w-[176px] sm:w-[220px] md:w-[244px] lg:w-[264px]'
+                    : 'w-[112px] sm:w-[140px] md:w-[156px] lg:w-[168px]'
+                }`}
               >
+                <div className={ranked ? 'relative h-[168px] sm:h-[210px] md:h-[234px] lg:h-[252px]' : ''}>
+                  {ranked && (
+                    <img
+                      src={`/top10/${idx + 1}.svg`}
+                      alt={`المرتبة ${idx + 1}`}
+                      className={`absolute bottom-0 left-0 z-0 w-auto max-w-none object-contain object-left-bottom pointer-events-none select-none drop-shadow-[0_8px_20px_rgba(0,0,0,.45)] ${
+                        idx === 9 ? 'h-[72%]' : 'h-[98%]'
+                      }`}
+                    />
+                  )}
+
                 {/* Poster Artwork container */}
-                <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/[0.08]">
+                <div className={`relative z-10 aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/[0.08] ${
+                  ranked
+                    ? 'ml-auto w-[112px] sm:w-[140px] md:w-[156px] lg:w-[168px]'
+                    : 'w-full'
+                }`}>
                   {onToggleSave && (
                     <WatchlistButton
                       saved={isSaved?.(item) ?? false}
@@ -245,16 +264,6 @@ export default function MovieRow({
                       </span>
                     </div>
                   )}
-                  {ranked && (
-                    <img
-                      src={`/top10/${idx + 1}.svg`}
-                      alt={`المرتبة ${idx + 1}`}
-                      className={`absolute bottom-0 left-0 z-10 h-[70%] w-auto max-w-[72%] object-contain object-left-bottom pointer-events-none select-none drop-shadow-[0_6px_16px_rgba(0,0,0,.55)] ${
-                        idx === 9 ? 'max-w-[88%]' : ''
-                      }`}
-                    />
-                  )}
-
                   {/* Subtle gradient at bottom of poster for depth */}
                   <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
@@ -276,9 +285,12 @@ export default function MovieRow({
                     </div>
                   )}
                 </div>
+                </div>
 
                 {/* Meta details */}
-                <div className="mt-2.5 px-1 text-right flex flex-col">
+                <div className={`mt-2.5 px-1 text-right flex flex-col ${
+                  ranked ? 'ml-auto w-[112px] sm:w-[140px] md:w-[156px] lg:w-[168px]' : ''
+                }`}>
                   <span className="text-white font-semibold text-sm line-clamp-1 leading-tight transition-colors">
                     {item.title}
                   </span>
