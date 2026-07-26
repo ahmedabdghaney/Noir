@@ -8,12 +8,15 @@ import { Search, X, Star, ChevronLeft, Loader, Trash2, Clock } from 'lucide-reac
 import { MovieOrShow } from '../types';
 import { searchMulti, fetchTrendingWeek, discoverTitles } from '../lib/tmdb';
 import { CATEGORIES } from '../lib/categories';
+import WatchlistButton from './WatchlistButton';
 
 interface SearchOverlayProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectTitle: (type: 'movie' | 'tv', id: number) => void;
   onBrowseCategory?: (key: string) => void;
+  isSaved?: (item: MovieOrShow) => boolean;
+  onToggleSave?: (item: MovieOrShow) => void;
 }
 
 // A recently opened title from search, with the time it was opened.
@@ -35,7 +38,14 @@ function timeAgo(ts: number): string {
   return `قبل ${Math.floor(day / 30)} شهر`;
 }
 
-export default function SearchOverlay({ isOpen, onClose, onSelectTitle, onBrowseCategory }: SearchOverlayProps) {
+export default function SearchOverlay({
+  isOpen,
+  onClose,
+  onSelectTitle,
+  onBrowseCategory,
+  isSaved,
+  onToggleSave,
+}: SearchOverlayProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<MovieOrShow[]>([]);
   const [trending, setTrending] = useState<MovieOrShow[]>([]);
@@ -194,6 +204,14 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle, onBrowse
                   className="flex-none w-[90px] sm:w-[110px] cursor-pointer select-none"
                 >
                   <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-stone-900 border border-white/8">
+                    {onToggleSave && (
+                      <WatchlistButton
+                        saved={isSaved?.(item) ?? false}
+                        onToggle={() => onToggleSave(item)}
+                        compact
+                        className="absolute top-1.5 right-1.5 z-20"
+                      />
+                    )}
                     {item.poster ? (
                       <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                     ) : (
@@ -283,7 +301,14 @@ export default function SearchOverlay({ isOpen, onClose, onSelectTitle, onBrowse
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      {onToggleSave && (
+                        <WatchlistButton
+                          saved={isSaved?.(item) ?? false}
+                          onToggle={() => onToggleSave(item)}
+                          compact
+                        />
+                      )}
                       {item.rating > 0 && (
                         <div className="flex items-center gap-1 text-[#f5c518] text-xs font-bold">
                           <Star className="w-3.5 h-3.5 fill-current" />

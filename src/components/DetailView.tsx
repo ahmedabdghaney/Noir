@@ -27,6 +27,7 @@ interface DetailViewProps {
   autoOpenWatchTogether?: string;
   onClearAutoOpenWatchTogether?: () => void;
   watchlist: MovieOrShow[];
+  onToggleWatchlistItem?: (item: MovieOrShow) => void;
   // بيانات عنصر يدوي محض (خارج TMDB). لو موجودة، نعرضها بدل جلب TMDB.
   manualData?: {
     title: string;
@@ -67,6 +68,7 @@ export default function DetailView({
   autoOpenWatchTogether = '',
   onClearAutoOpenWatchTogether,
   watchlist,
+  onToggleWatchlistItem,
   manualData = null,
 }: DetailViewProps) {
   const [data, setData] = useState<DetailedInfo | null>(null);
@@ -1099,7 +1101,7 @@ export default function DetailView({
                             )}
 
                             {/* Bottom blur + gradient so overlaid text stays readable */}
-                            <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/95 via-black/65 to-transparent backdrop-blur-[2px] [mask-image:linear-gradient(to_top,black_60%,transparent)]" />
+                            <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/95 via-black/65 to-transparent" />
 
                             {/* Hover play icon */}
                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/ep:opacity-100 transition-opacity">
@@ -1220,6 +1222,8 @@ export default function DetailView({
               title="عناوين وتوصيات مشابهة"
               items={recommendations}
               onItemClick={onItemClick}
+              isSaved={(item) => watchlist.some((savedItem) => savedItem.id === item.id && savedItem.type === item.type)}
+              onToggleSave={onToggleWatchlistItem}
               flush
             />
 </div>

@@ -61,7 +61,7 @@ export const getLargePosterUrl = (path: string | null) => path ? `${IMG_BASE}/w7
 export const getBackdropUrl = (path: string | null) => path ? `${IMG_BASE}/w1280${path}` : null;
 export const getOriginalBackdropUrl = (path: string | null) => path ? `${IMG_BASE}/w1280${path}` : null;
 export const getProfileUrl = (path: string | null) => path ? `${IMG_BASE}/w185${path}` : null;
-export const getStillUrl = (path: string | null) => path ? `${IMG_BASE}/w300${path}` : null;
+export const getStillUrl = (path: string | null) => path ? `${IMG_BASE}/original${path}` : null;
 
 // Normalize utility
 export function normalizeItem(item: any, customType?: 'movie' | 'tv'): MovieOrShow {

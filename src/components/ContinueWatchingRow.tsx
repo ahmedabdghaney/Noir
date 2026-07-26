@@ -6,15 +6,25 @@
 import { useRef, useState, useEffect } from 'react';
 import { Play, X, ChevronRight, ChevronLeft } from 'lucide-react';
 import { MovieOrShow } from '../types';
+import WatchlistButton from './WatchlistButton';
 
 interface ContinueWatchingRowProps {
   title: string;
   items: MovieOrShow[];
   onItemClick: (item: MovieOrShow) => void;
   onRemove?: (item: MovieOrShow) => void;
+  isSaved?: (item: MovieOrShow) => boolean;
+  onToggleSave?: (item: MovieOrShow) => void;
 }
 
-export default function ContinueWatchingRow({ title, items, onItemClick, onRemove }: ContinueWatchingRowProps) {
+export default function ContinueWatchingRow({
+  title,
+  items,
+  onItemClick,
+  onRemove,
+  isSaved,
+  onToggleSave,
+}: ContinueWatchingRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
@@ -107,6 +117,14 @@ export default function ContinueWatchingRow({ title, items, onItemClick, onRemov
                   )}
 
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+
+                  {onToggleSave && (
+                    <WatchlistButton
+                      saved={isSaved?.(item) ?? false}
+                      onToggle={() => onToggleSave(item)}
+                      className="absolute top-2.5 right-2.5 z-20"
+                    />
+                  )}
 
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/cw:opacity-100 transition-opacity">
                     <div className="w-14 h-14 rounded-full glass-strong flex items-center justify-center">

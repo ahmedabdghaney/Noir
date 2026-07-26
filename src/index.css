@@ -391,6 +391,9 @@ button, a {
   transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
               background-color 0.22s ease,
               color 0.22s ease;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .noir-button-primary {
@@ -430,4 +433,63 @@ button, a {
 .noir-icon-button:hover {
   background: rgba(255, 255, 255, 0.17);
   transform: scale(1.04);
+}
+
+.noir-button-primary:active,
+.noir-button-secondary:active,
+.noir-icon-button:active {
+  transform: scale(0.96);
+}
+
+.noir-button-primary:focus-visible,
+.noir-button-secondary:focus-visible,
+.noir-icon-button:focus-visible,
+.noir-save-button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.95);
+  outline-offset: 3px;
+}
+
+.noir-save-button {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(18, 18, 20, 0.58);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              background-color 0.22s ease,
+              color 0.22s ease,
+              border-color 0.22s ease;
+}
+
+.noir-save-button.is-saved {
+  color: #09090b;
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(255, 255, 255, 0.9);
+}
+
+.noir-save-button:hover {
+  color: #09090b;
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(255, 255, 255, 0.9);
+  transform: scale(1.06);
+}
+
+.noir-save-button:active,
+.noir-save-button.is-saved:active {
+  transform: scale(0.92);
+}
+
+.noir-save-button--compact {
+  width: 30px;
+  height: 30px;
 }

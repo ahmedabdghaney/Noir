@@ -9,6 +9,7 @@ import { MovieOrShow } from '../types';
 import { Category, buildSubsections, SubSection } from '../lib/categories';
 import { discoverTitles } from '../lib/tmdb';
 import MovieRow from './MovieRow';
+import WatchlistButton from './WatchlistButton';
 
 interface CategoryPageProps {
   category: Category;
@@ -16,6 +17,8 @@ interface CategoryPageProps {
   onBack: () => void;
   showAllMode?: boolean;             // when true, render only the full "All" grid page
   onOpenAll?: (key: string) => void; // open the dedicated All page
+  isSaved?: (item: MovieOrShow) => boolean;
+  onToggleSave?: (item: MovieOrShow) => void;
 }
 
 type SortKey = 'popularity' | 'rating' | 'year' | 'az';
@@ -27,8 +30,13 @@ const SORT_LABELS: Record<SortKey, string> = {
   az: 'أبجدياً',
 };
 
-function SubsectionRow(props: { sub: SubSection; onItemClick: (i: MovieOrShow) => void }) {
-  const { sub, onItemClick } = props;
+function SubsectionRow(props: {
+  sub: SubSection;
+  onItemClick: (i: MovieOrShow) => void;
+  isSaved?: (item: MovieOrShow) => boolean;
+  onToggleSave?: (item: MovieOrShow) => void;
+}) {
+  const { sub, onItemClick, isSaved, onToggleSave } = props;
   const [items, setItems] = useState<MovieOrShow[]>([]);
   useEffect(() => {
     let cancelled = false;
@@ -51,11 +59,29 @@ function SubsectionRow(props: { sub: SubSection; onItemClick: (i: MovieOrShow) =
   }, [sub.genreIds]);
 
   if (items.length === 0) return null;
-  return <MovieRow title={sub.title} items={items} onItemClick={onItemClick} />;
+  return (
+    <MovieRow
+      title={sub.title}
+      items={items}
+      onItemClick={onItemClick}
+      isSaved={isSaved}
+      onToggleSave={onToggleSave}
+    />
+  );
 }
 
 // Poster grid card matching the home cards style
-function GridCard({ item, onClick }: { item: MovieOrShow; onClick: () => void }) {
+function GridCard({
+  item,
+  onClick,
+  saved,
+  onToggleSave,
+}: {
+  item: MovieOrShow;
+  onClick: () => void;
+  saved: boolean;
+  onToggleSave?: () => void;
+}) {
   const hasScore = item.rating > 0;
   return (
     <div
@@ -63,13 +89,20 @@ function GridCard({ item, onClick }: { item: MovieOrShow; onClick: () => void })
       className="group/card card-transition cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
     >
       <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-white/[0.06]">
+        {onToggleSave && (
+          <WatchlistButton
+            saved={saved}
+            onToggle={onToggleSave}
+            className="absolute top-2 right-2 z-20"
+          />
+        )}
         {item.poster ? (
           <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover transition-transform duration-500" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-stone-600 text-xs">بدون صورة</div>
         )}
         {hasScore && (
-          <div className="absolute top-2 right-2 glass flex items-center gap-1 px-2 py-0.5 rounded-full">
+          <div className="absolute top-2 left-2 glass flex items-center gap-1 px-2 py-0.5 rounded-full">
             <Star className="w-3 h-3 fill-[#f5c518] text-[#f5c518]" />
             <span className="text-[10px] font-bold text-white">{item.rating.toFixed(1)}</span>
           </div>
@@ -84,7 +117,15 @@ function GridCard({ item, onClick }: { item: MovieOrShow; onClick: () => void })
   );
 }
 
-export default function CategoryPage({ category, onItemClick, onBack, showAllMode = false, onOpenAll }: CategoryPageProps) {
+export default function CategoryPage({
+  category,
+  onItemClick,
+  onBack,
+  showAllMode = false,
+  onOpenAll,
+  isSaved,
+  onToggleSave,
+}: CategoryPageProps) {
   const [allItems, setAllItems] = useState<MovieOrShow[]>([]);
   const [sortBy, setSortBy] = useState<SortKey>('popularity');
   const [page, setPage] = useState(1);
@@ -166,14 +207,24 @@ export default function CategoryPage({ category, onItemClick, onBack, showAllMod
           <>
             {/* Main section: the category itself (e.g. "رعب") */}
             <div className="mb-2">
-              <SubsectionRow sub={{ title: category.title, genreIds: String(category.primaryGenre) }} onItemClick={onItemClick} />
+              <SubsectionRow
+                sub={{ title: category.title, genreIds: String(category.primaryGenre) }}
+                onItemClick={onItemClick}
+                isSaved={isSaved}
+                onToggleSave={onToggleSave}
+              />
             </div>
 
             {/* Subsection rows (combinations) */}
             <div className="space-y-2 mb-10">
               {subsections.map((sub) => (
                 <div key={sub.genreIds}>
-                  <SubsectionRow sub={sub} onItemClick={onItemClick} />
+                  <SubsectionRow
+                    sub={sub}
+                    onItemClick={onItemClick}
+                    isSaved={isSaved}
+                    onToggleSave={onToggleSave}
+                  />
                 </div>
               ))}
             </div>
@@ -225,7 +276,12 @@ export default function CategoryPage({ category, onItemClick, onBack, showAllMod
             <div dir="rtl" className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1 sm:gap-2">
               {allItems.map((item) => (
                 <div key={`${item.type}-${item.id}`}>
-                  <GridCard item={item} onClick={() => onItemClick(item)} />
+                  <GridCard
+                    item={item}
+                    onClick={() => onItemClick(item)}
+                    saved={isSaved?.(item) ?? false}
+                    onToggleSave={onToggleSave ? () => onToggleSave(item) : undefined}
+                  />
                 </div>
               ))}
             </div>

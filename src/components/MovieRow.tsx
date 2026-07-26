@@ -6,6 +6,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { ChevronRight, ChevronLeft, Star, X } from 'lucide-react';
 import { MovieOrShow } from '../types';
+import WatchlistButton from './WatchlistButton';
 
 interface MovieRowProps {
   title: string;
@@ -15,9 +16,21 @@ interface MovieRowProps {
   viewAllHash?: string;
   flush?: boolean;
   onRemove?: (item: MovieOrShow) => void;
+  isSaved?: (item: MovieOrShow) => boolean;
+  onToggleSave?: (item: MovieOrShow) => void;
 }
 
-export default function MovieRow({ title, subtitle, items, onItemClick, viewAllHash, flush = false, onRemove }: MovieRowProps) {
+export default function MovieRow({
+  title,
+  subtitle,
+  items,
+  onItemClick,
+  viewAllHash,
+  flush = false,
+  onRemove,
+  isSaved,
+  onToggleSave,
+}: MovieRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
@@ -155,7 +168,14 @@ export default function MovieRow({ title, subtitle, items, onItemClick, viewAllH
               >
                 {/* Poster Artwork container */}
                 <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-white/[0.06]">
-                  {onRemove && (
+                  {onToggleSave && (
+                    <WatchlistButton
+                      saved={isSaved?.(item) ?? false}
+                      onToggle={() => onToggleSave(item)}
+                      className="absolute top-2 right-2 z-20"
+                    />
+                  )}
+                  {!onToggleSave && onRemove && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

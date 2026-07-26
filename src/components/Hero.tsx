@@ -115,16 +115,18 @@ export default function Hero({
 
                 <div className="mt-5 sm:mt-6 flex flex-wrap items-center gap-2.5">
                   <button
+                    type="button"
                     onClick={() => onPlayClick(activeItem)}
-                    className="noir-button-primary inline-flex items-center gap-2"
+                    className="noir-button-primary inline-flex items-center gap-2 cursor-pointer"
                   >
                     <Play className="w-4 h-4 fill-current" />
                     المشاهدة الآن
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => onInfoClick(activeItem)}
-                    className="noir-button-secondary inline-flex items-center gap-2"
+                    className="noir-button-secondary inline-flex items-center gap-2 cursor-pointer"
                   >
                     <Info className="w-4 h-4" />
                     التفاصيل
@@ -132,8 +134,9 @@ export default function Hero({
 
                   {onToggleSave && (
                     <button
+                      type="button"
                       onClick={() => onToggleSave(activeItem)}
-                      className={`noir-icon-button ${saved ? '!bg-white !text-black' : ''}`}
+                      className={`noir-icon-button cursor-pointer ${saved ? '!bg-white !text-black' : ''}`}
                       aria-label={saved ? 'إزالة من قائمتي' : 'إضافة إلى قائمتي'}
                       title={saved ? 'محفوظ في قائمتي' : 'إضافة إلى قائمتي'}
                     >
@@ -149,15 +152,17 @@ export default function Hero({
         {items.length > 1 && (
           <>
             <button
+              type="button"
               onClick={() => goTo(-1)}
-              className="hidden sm:flex noir-icon-button absolute right-4 top-1/2 -translate-y-1/2 z-20 opacity-0 group-hover/hero:opacity-100"
+              className="hidden sm:flex noir-icon-button cursor-pointer absolute right-4 top-1/2 -translate-y-1/2 z-20 opacity-0 pointer-events-none group-hover/hero:opacity-100 group-hover/hero:pointer-events-auto focus:opacity-100 focus:pointer-events-auto"
               aria-label="العرض السابق"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
             <button
+              type="button"
               onClick={() => goTo(1)}
-              className="hidden sm:flex noir-icon-button absolute left-4 top-1/2 -translate-y-1/2 z-20 opacity-0 group-hover/hero:opacity-100"
+              className="hidden sm:flex noir-icon-button cursor-pointer absolute left-4 top-1/2 -translate-y-1/2 z-20 opacity-0 pointer-events-none group-hover/hero:opacity-100 group-hover/hero:pointer-events-auto focus:opacity-100 focus:pointer-events-auto"
               aria-label="العرض التالي"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -166,9 +171,10 @@ export default function Hero({
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-1.5 rounded-full bg-black/25 backdrop-blur-md p-2">
               {items.map((item, index) => (
                 <button
+                  type="button"
                   key={`${item.type}-${item.id}`}
                   onClick={() => setCurrentIndex(index)}
-                  className={`h-1.5 rounded-full transition-[width,background-color] ${
+                  className={`h-1.5 rounded-full cursor-pointer transition-[width,background-color] ${
                     index === currentIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/35 hover:bg-white/65'
                   }`}
                   aria-label={`الانتقال إلى العرض ${index + 1}`}

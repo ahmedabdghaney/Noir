@@ -40,6 +40,7 @@ import SearchOverlay from './components/SearchOverlay';
 import ShareModal from './components/ShareModal';
 import MobileNav from './components/MobileNav';
 import AdminDashboard from './components/AdminDashboard';
+import WatchlistButton from './components/WatchlistButton';
 import {
   subscribeHidden, subscribeManualItems, subscribeCustomSections, subscribeSectionOrder,
   subscribeHeroHidden, toggleHeroHidden, subscribeHeroExtra, subscribeHeroOrder, HeroExtra,
@@ -1435,6 +1436,8 @@ export default function App() {
                     items={watchlist}
                     onItemClick={handleTitleClick}
                     onRemove={removeFromWatchlist}
+                    isSaved={isInWatchlist}
+                    onToggleSave={toggleWatchlistItem}
                   />
 </div>
               )}
@@ -1445,6 +1448,8 @@ export default function App() {
                     title="أكمل المشاهدة"
                     items={continueWatching}
                     onItemClick={handleTitleClick}
+                    isSaved={isInWatchlist}
+                    onToggleSave={toggleWatchlistItem}
                     onRemove={(item) => {
                       const next = continueWatching.filter(
                         (c) => !(c.id === item.id && c.type === item.type)
@@ -1463,6 +1468,8 @@ export default function App() {
                   title="حصري نوار"
                   items={manualBySection['manual']}
                   onItemClick={handleTitleClick}
+                  isSaved={isInWatchlist}
+                  onToggleSave={toggleWatchlistItem}
                 />
               )}
 
@@ -1474,6 +1481,8 @@ export default function App() {
                       title={sec.title}
                       items={sec.items}
                       onItemClick={handleTitleClick}
+                      isSaved={isInWatchlist}
+                      onToggleSave={toggleWatchlistItem}
                     />
                     {/* شريط التصنيفات يظهر بعد أول قسم */}
                     {i === 0 && <CategoryRow onSelect={(key) => { window.location.hash = `#category/${key}`; }} />}
@@ -1640,17 +1649,11 @@ export default function App() {
                       >
                         {/* Poster Artwork container */}
                         <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
-                          {/* Remove from watchlist button */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeFromWatchlist(item);
-                            }}
-                            className="absolute top-2 left-2 z-10 w-8 h-8 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-all hover:bg-white/20 cursor-pointer"
-                            title="إزالة من قائمتي"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
+                          <WatchlistButton
+                            saved
+                            onToggle={() => toggleWatchlistItem(item)}
+                            className="absolute top-2 right-2 z-20"
+                          />
                           {item.poster || item.backdrop ? (
                             <img
                               src={item.poster || item.backdrop || undefined}
@@ -1802,6 +1805,11 @@ export default function App() {
                         >
                           {/* Poster Artwork container */}
                           <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+                            <WatchlistButton
+                              saved={isInWatchlist(item)}
+                              onToggle={() => toggleWatchlistItem(item)}
+                              className="absolute top-2 right-2 z-20"
+                            />
                             {item.poster || item.backdrop ? (
                               <img
                                 src={item.poster || item.backdrop || undefined}
@@ -2042,6 +2050,7 @@ export default function App() {
               autoOpenWatchTogether={joinRoomCode}
               onClearAutoOpenWatchTogether={() => setJoinRoomCode('')}
               watchlist={watchlist}
+              onToggleWatchlistItem={toggleWatchlistItem}
               manualData={(() => {
                 // عنصر يدوي محض: id سالب. نلقاه ونمرّر بياناته
                 if (selectedTitle.id >= 0) return null;
@@ -2064,6 +2073,8 @@ export default function App() {
             onBack={navigateToHome}
             showAllMode={categoryAllMode}
             onOpenAll={(key) => { window.location.hash = `#category/${key}/all`; }}
+            isSaved={isInWatchlist}
+            onToggleSave={toggleWatchlistItem}
           />
         )}
 
@@ -2072,6 +2083,8 @@ export default function App() {
             studio={getStudioByKey(selectedStudioKey)!}
             onItemClick={handleTitleClick}
             onBack={navigateToHome}
+            isSaved={isInWatchlist}
+            onToggleSave={toggleWatchlistItem}
           />
         )}
 
@@ -2109,6 +2122,8 @@ export default function App() {
         isOpen={isSearchOverlayOpen}
         onClose={() => setIsSearchOverlayOpen(false)}
         onSelectTitle={handleQuickSelectTitle}
+        isSaved={isInWatchlist}
+        onToggleSave={toggleWatchlistItem}
         onBrowseCategory={(key) => {
           setIsSearchOverlayOpen(false);
           window.location.hash = `#category/${key}`;

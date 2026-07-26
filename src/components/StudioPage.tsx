@@ -8,11 +8,14 @@ import { ArrowRight, Star, ChevronDown } from 'lucide-react';
 import { MovieOrShow } from '../types';
 import { Studio } from '../lib/studios';
 import { discoverTitles } from '../lib/tmdb';
+import WatchlistButton from './WatchlistButton';
 
 interface StudioPageProps {
   studio: Studio;
   onItemClick: (item: MovieOrShow) => void;
   onBack: () => void;
+  isSaved?: (item: MovieOrShow) => boolean;
+  onToggleSave?: (item: MovieOrShow) => void;
 }
 
 type SortKey = 'popularity' | 'rating' | 'year' | 'az';
@@ -25,7 +28,17 @@ const SORT_LABELS: Record<SortKey, string> = {
 };
 
 // بطاقة بوستر مطابقة لقياس بطاقات الصفحة الرئيسية
-function GridCard({ item, onClick }: { item: MovieOrShow; onClick: () => void }) {
+function GridCard({
+  item,
+  onClick,
+  saved,
+  onToggleSave,
+}: {
+  item: MovieOrShow;
+  onClick: () => void;
+  saved: boolean;
+  onToggleSave?: () => void;
+}) {
   const hasScore = item.rating > 0;
   return (
     <div
@@ -33,13 +46,20 @@ function GridCard({ item, onClick }: { item: MovieOrShow; onClick: () => void })
       className="group/card card-transition cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
     >
       <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+        {onToggleSave && (
+          <WatchlistButton
+            saved={saved}
+            onToggle={onToggleSave}
+            className="absolute top-2 right-2 z-20"
+          />
+        )}
         {item.poster ? (
           <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover transition-transform duration-500" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-stone-600 text-xs">بدون صورة</div>
         )}
         {hasScore && (
-          <div className="absolute top-2 right-2 glass flex items-center gap-1 px-2 py-0.5 rounded-full">
+          <div className="absolute top-2 left-2 glass flex items-center gap-1 px-2 py-0.5 rounded-full">
             <Star className="w-3 h-3 fill-[#f5c518] text-[#f5c518]" />
             <span className="text-[10px] font-bold text-white">{item.rating.toFixed(1)}</span>
           </div>
@@ -54,7 +74,13 @@ function GridCard({ item, onClick }: { item: MovieOrShow; onClick: () => void })
   );
 }
 
-export default function StudioPage({ studio, onItemClick, onBack }: StudioPageProps) {
+export default function StudioPage({
+  studio,
+  onItemClick,
+  onBack,
+  isSaved,
+  onToggleSave,
+}: StudioPageProps) {
   const [allItems, setAllItems] = useState<MovieOrShow[]>([]);
   const [sortBy, setSortBy] = useState<SortKey>('popularity');
   const [page, setPage] = useState(1);
@@ -169,7 +195,12 @@ export default function StudioPage({ studio, onItemClick, onBack }: StudioPagePr
         <div dir="rtl" className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1 sm:gap-2">
           {allItems.map((item) => (
             <div key={`${item.type}-${item.id}`}>
-              <GridCard item={item} onClick={() => onItemClick(item)} />
+              <GridCard
+                item={item}
+                onClick={() => onItemClick(item)}
+                saved={isSaved?.(item) ?? false}
+                onToggleSave={onToggleSave ? () => onToggleSave(item) : undefined}
+              />
             </div>
           ))}
         </div>
