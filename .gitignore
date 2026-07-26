@@ -2,3 +2,6 @@ node_modules/
 dist/
 .DS_Store
 *.log
+postcss.config.js
+tsconfig.node.json
+vite.config.js
