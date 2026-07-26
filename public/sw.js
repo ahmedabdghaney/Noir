@@ -1,7 +1,7 @@
 // نوار سينما — Service Worker
 // يفعّل PWA mode على iOS ويتيح requestFullscreen الحقيقي على أي عنصر
 
-const CACHE_NAME = 'noir-v1';
+const CACHE_NAME = 'noir-rollback-v3';
 
 // ملفات نحفظها للتشغيل بدون إنترنت (الواجهة فقط، مو الفيديوهات)
 const PRECACHE = ['/', '/index.html', '/manifest.json'];
