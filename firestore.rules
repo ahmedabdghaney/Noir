@@ -44,11 +44,34 @@ service cloud.firestore {
         && data.addedAt is timestamp;
     }
 
+    function isValidContinueWatchingItem(data) {
+      return data.keys().hasAll(['id', 'type', 'title', 'poster', 'backdrop', 'rating', 'year', 'genres', 'progress', 'updatedAt'])
+        && data.keys().size() == 10
+        && data.id is int
+        && data.type is string && (data.type == 'movie' || data.type == 'tv')
+        && data.title is string && data.title.size() <= 200
+        && (data.poster == null || (data.poster is string && data.poster.size() <= 1000))
+        && (data.backdrop == null || (data.backdrop is string && data.backdrop.size() <= 1000))
+        && (data.rating is int || data.rating is float)
+        && data.year is string && data.year.size() <= 10
+        && data.genres is list
+        && data.genres.size() <= 20
+        && (data.progress is int || data.progress is float)
+        && data.progress >= 0 && data.progress <= 100
+        && data.updatedAt is timestamp;
+    }
+
     match /users/{userId} {
       allow read, write: if isOwner(userId);
 
       match /watchlist/{itemId} {
         allow read, write: if isOwner(userId);
+      }
+
+      match /continueWatching/{itemId} {
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && isValidContinueWatchingItem(incoming());
       }
     }
   }

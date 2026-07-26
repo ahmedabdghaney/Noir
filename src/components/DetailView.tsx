@@ -166,12 +166,22 @@ export default function DetailView({
 
   useEffect(() => {
     loadSavedProgress();
+    const handleProgressUpdated = () => loadSavedProgress();
+    window.addEventListener('progress_updated', handleProgressUpdated);
+    return () => {
+      window.removeEventListener('progress_updated', handleProgressUpdated);
+    };
   }, [type, id]);
 
   const handleStartFromBeginning = () => {
     const progressKey =`noir_progress_${type}_${id}`;
     localStorage.setItem(progressKey,'0');
     setSavedProgressPercent(0);
+    window.dispatchEvent(
+      new CustomEvent('progress_updated', {
+        detail: { type, id, progress: 0 },
+      }),
+    );
     // Open main movie stream
     handlePlayClick('movie');
   };
@@ -424,8 +434,17 @@ export default function DetailView({
           }
           localStorage.setItem('noir_continue_watching_list', JSON.stringify(cwList));
           
-          // Dispatch progression updated event to notify home page
-          window.dispatchEvent(new Event('progress_updated'));
+          // Notify the home page and sync this item to the signed-in user's cloud history.
+          const currentProgress =
+            Number(localStorage.getItem(`noir_progress_${type}_${id}`)) || 0;
+          window.dispatchEvent(
+            new CustomEvent('progress_updated', {
+              detail: {
+                item: itemToSave,
+                progress: currentProgress,
+              },
+            }),
+          );
         } catch (err) {
           console.error("Error saving to continue_watching_list: ", err);
         }

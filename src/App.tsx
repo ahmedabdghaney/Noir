@@ -8,7 +8,26 @@ import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, 
 import LogoIcon from './components/LogoIcon';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { auth, loginWithGoogle, logoutUser, signInWithEmail, signUpWithEmail, resetPassword, checkSignInMethods, translateAuthError, fetchFirestoreWatchlist, db, sendVerification, removeFromFirestoreWatchlist, addToFirestoreWatchlist } from './lib/firebase';
+import {
+  auth,
+  loginWithGoogle,
+  logoutUser,
+  signInWithEmail,
+  signUpWithEmail,
+  resetPassword,
+  checkSignInMethods,
+  translateAuthError,
+  fetchFirestoreWatchlist,
+  db,
+  sendVerification,
+  removeFromFirestoreWatchlist,
+  addToFirestoreWatchlist,
+  mergeLocalContinueWatchingIntoCloud,
+  removeFromFirestoreContinueWatching,
+  saveFirestoreContinueWatching,
+  subscribeFirestoreContinueWatching,
+  updateFirestoreContinueWatchingProgress,
+} from './lib/firebase';
 import { MovieOrShow } from './types';
 import {
   initializeGenres,
@@ -144,6 +163,66 @@ export default function App() {
   // Bookmark / Watchlist feeds
   const [watchlist, setWatchlist] = useState<MovieOrShow[]>([]);
   const [showSyncHelper, setShowSyncHelper] = useState(false);
+  const [continueWatching, setContinueWatching] = useState<MovieOrShow[]>([]);
+
+  // Continue Watching is cached locally for instant rendering, then reconciled
+  // with the signed-in user's Firestore collection.
+  const loadContinueWatching = () => {
+    try {
+      const listStr = localStorage.getItem('noir_continue_watching_list');
+      if (!listStr) {
+        setContinueWatching([]);
+        return;
+      }
+      const list: MovieOrShow[] = JSON.parse(listStr);
+      const validList = list.filter(
+        (item) =>
+          (item.type === 'movie' || item.type === 'tv') &&
+          item.id &&
+          ((item.title && item.title.trim() && item.title !== 'بدون عنوان') || (item as any).name),
+      );
+      if (validList.length !== list.length) {
+        localStorage.setItem('noir_continue_watching_list', JSON.stringify(validList));
+      }
+      setContinueWatching(
+        validList.filter((item) => {
+          const progress = Number(
+            localStorage.getItem(`noir_progress_${item.type}_${item.id}`),
+          ) || 0;
+          return progress < 95;
+        }),
+      );
+    } catch (error) {
+      console.error('Error loading continue watching list:', error);
+      setContinueWatching([]);
+    }
+  };
+
+  const readLocalContinueWatchingForMerge = (userId: string) => {
+    try {
+      const cacheOwner = localStorage.getItem('noir_continue_watching_owner');
+      if (cacheOwner && cacheOwner !== userId) return [];
+      const raw = localStorage.getItem('noir_continue_watching_list');
+      const items: MovieOrShow[] = raw ? JSON.parse(raw) : [];
+      return items
+        .filter(
+          (item) =>
+            item &&
+            item.id &&
+            (item.type === 'movie' || item.type === 'tv') &&
+            item.title &&
+            item.title !== 'بدون عنوان',
+        )
+        .map((item) => ({
+          item,
+          progress:
+            Number(localStorage.getItem(`noir_progress_${item.type}_${item.id}`)) || 0,
+        }))
+        .filter(({ progress }) => progress < 95);
+    } catch {
+      return [];
+    }
+  };
 
   // loadWatchlist checks cloud for authenticated users or local storage for guests
   const loadWatchlist = async () => {
@@ -171,6 +250,46 @@ export default function App() {
   // Synchronize authenticated identity with Firebase state-listener and real-time watchlist
   useEffect(() => {
     let unsubscribeWatchlist: (() => void) | null = null;
+    let unsubscribeContinueWatching: (() => void) | null = null;
+    let authEffectActive = true;
+
+    const startContinueWatchingSync = async (userId: string) => {
+      try {
+        await mergeLocalContinueWatchingIntoCloud(
+          userId,
+          readLocalContinueWatchingForMerge(userId),
+        );
+      } catch (error) {
+        console.error('Failed to merge local continue watching history:', error);
+      }
+
+      if (!authEffectActive || auth.currentUser?.uid !== userId) return;
+      unsubscribeContinueWatching?.();
+      unsubscribeContinueWatching = subscribeFirestoreContinueWatching(
+        userId,
+        (cloudItems) => {
+          const activeItems = cloudItems.filter((item) => item.progress < 95);
+          const normalizedItems: MovieOrShow[] = activeItems.map(
+            ({ progress, updatedAtMs, ...item }) => item,
+          );
+
+          activeItems.forEach((item) => {
+            localStorage.setItem(
+              `noir_progress_${item.type}_${item.id}`,
+              String(item.progress),
+            );
+          });
+          localStorage.setItem(
+            'noir_continue_watching_list',
+            JSON.stringify(normalizedItems),
+          );
+          localStorage.setItem('noir_continue_watching_owner', userId);
+          setContinueWatching(normalizedItems);
+          window.dispatchEvent(new Event('progress_updated'));
+        },
+        () => loadContinueWatching(),
+      );
+    };
 
     // Background auto-login for iframe environments where IndexedDB/Storage persistence is restricted
     const attemptAutoLogin = async () => {
@@ -198,6 +317,10 @@ export default function App() {
         unsubscribeWatchlist();
         unsubscribeWatchlist = null;
       }
+      if (unsubscribeContinueWatching) {
+        unsubscribeContinueWatching();
+        unsubscribeContinueWatching = null;
+      }
 
       if (firebaseUser) {
         const isEmailOnly = firebaseUser.providerData?.[0]?.providerId === 'password';
@@ -207,8 +330,15 @@ export default function App() {
           photoURL: firebaseUser.photoURL || undefined,
           type: (isEmailOnly ? 'email' : 'google') as 'email' | 'google',
         };
+        const continueWatchingOwner = localStorage.getItem('noir_continue_watching_owner');
+        if (continueWatchingOwner && continueWatchingOwner !== firebaseUser.uid) {
+          setContinueWatching([]);
+        }
         localStorage.setItem('noir_user', JSON.stringify(userData));
         setUser(userData);
+        setIsAuthLoading(false);
+        setAuthMethod(null);
+        void startContinueWatchingSync(firebaseUser.uid);
         
         // Subscribe to real-time watchlist changes in Firestore
         try {
@@ -249,6 +379,8 @@ export default function App() {
           loadWatchlist();
         }
       } else {
+        setIsAuthLoading(false);
+        setAuthMethod(null);
         // Skip immediate logout if we are in the middle of a background credentials auto-login
         const storedCreds = localStorage.getItem('noir_credentials');
         if (storedCreds) {
@@ -275,9 +407,13 @@ export default function App() {
     });
 
     return () => {
+      authEffectActive = false;
       unsubscribeAuth();
       if (unsubscribeWatchlist) {
         unsubscribeWatchlist();
+      }
+      if (unsubscribeContinueWatching) {
+        unsubscribeContinueWatching();
       }
     };
   }, []);
@@ -315,40 +451,6 @@ export default function App() {
       console.error('refreshHome failed:', e);
     }
   }, []);
-
-  // Continue Watching List State
-  const [continueWatching, setContinueWatching] = useState<MovieOrShow[]>([]);
-
-  // loadContinueWatching parses active sessions where progress is between 1% and 94%
-  const loadContinueWatching = () => {
-    try {
-      const listStr = localStorage.getItem('noir_continue_watching_list');
-      if (!listStr) {
-        setContinueWatching([]);
-        return;
-      }
-      const list: MovieOrShow[] = JSON.parse(listStr);
-      // Drop broken entries: invalid type, or missing title/name (legacy items saved before title fix)
-      const validList = list.filter(
-        (item) =>
-          (item.type === 'movie' || item.type === 'tv') &&
-          item.id &&
-          ((item.title && item.title.trim() && item.title !== 'بدون عنوان') || (item as any).name),
-      );
-      // If we removed broken entries, persist the cleaned list back
-      if (validList.length !== list.length) {
-        localStorage.setItem('noir_continue_watching_list', JSON.stringify(validList));
-      }
-      const activeItems = validList.filter((item) => {
-        const progressVal = Number(localStorage.getItem(`noir_progress_${item.type}_${item.id}`)) || 0;
-        // Keep anything that hasn't been (almost) finished — including freshly opened items at 0%.
-        return progressVal < 95;
-      });
-      setContinueWatching(activeItems);
-    } catch (err) {
-      console.error("Error loading continue watching list:", err);
-    }
-  };
 
   // Advanced Filters State (Dedicated Search Page)
   const [fQuery, setFQuery] = useState('');
@@ -390,7 +492,19 @@ export default function App() {
     
     if (type ==='google') {
       try {
-        await loginWithGoogle();
+        const firebaseUser = await loginWithGoogle();
+        const userData = {
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'مستخدم نوار',
+          email: firebaseUser.email || undefined,
+          photoURL: firebaseUser.photoURL || undefined,
+          type: 'google' as const,
+        };
+        const continueWatchingOwner = localStorage.getItem('noir_continue_watching_owner');
+        if (continueWatchingOwner && continueWatchingOwner !== firebaseUser.uid) {
+          setContinueWatching([]);
+        }
+        localStorage.setItem('noir_user', JSON.stringify(userData));
+        setUser(userData);
         showToast('تم تسجيل الدخول بجوجل بنجاح');
       } catch (error: any) {
         console.error("Google login failed: ", error);
@@ -400,12 +514,19 @@ export default function App() {
         } else {
           showToast(`فشل تسجيل الدخول بجوجل: ${errMsg}`);
         }
+      } finally {
         setIsAuthLoading(false);
         setAuthMethod(null);
       }
     } else {
       setTimeout(() => {
         const newUser = { name: 'زائر كريم', type: 'guest' as const };
+        const continueWatchingOwner = localStorage.getItem('noir_continue_watching_owner');
+        if (continueWatchingOwner && continueWatchingOwner !== 'guest') {
+          localStorage.removeItem('noir_continue_watching_list');
+          setContinueWatching([]);
+        }
+        localStorage.setItem('noir_continue_watching_owner', 'guest');
         localStorage.setItem('noir_user', JSON.stringify(newUser));
         setUser(newUser);
         setIsAuthLoading(false);
@@ -662,8 +783,43 @@ export default function App() {
 
     // Load initial continue watching feed and register sync listener
     loadContinueWatching();
-    const handleProgressUpdate = () => {
+    const handleProgressUpdate = (event: Event) => {
       loadContinueWatching();
+      const detail = (event as CustomEvent<{
+        item?: MovieOrShow;
+        type?: 'movie' | 'tv';
+        id?: number;
+        progress?: number;
+      }>).detail;
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser || !detail) return;
+
+      if (detail.item) {
+        const progress =
+          detail.progress ??
+          Number(
+            localStorage.getItem(
+              `noir_progress_${detail.item.type}_${detail.item.id}`,
+            ),
+          ) ??
+          0;
+        void saveFirestoreContinueWatching(
+          firebaseUser.uid,
+          detail.item,
+          progress,
+        ).catch((error) =>
+          console.error('Failed to save continue watching item:', error),
+        );
+      } else if (detail.type && detail.id != null && detail.progress != null) {
+        void updateFirestoreContinueWatchingProgress(
+          firebaseUser.uid,
+          detail.type,
+          detail.id,
+          detail.progress,
+        ).catch((error) =>
+          console.error('Failed to sync playback progress:', error),
+        );
+      }
     };
     window.addEventListener('progress_updated', handleProgressUpdate);
 
@@ -881,6 +1037,26 @@ export default function App() {
           year: item.year, genres: item.genres,
         } as any).catch((e) => console.error('Failed to add to cloud watchlist:', e));
       }
+    }
+  };
+
+  const removeContinueWatchingItem = (item: MovieOrShow) => {
+    const next = continueWatching.filter(
+      (current) => !(current.id === item.id && current.type === item.type),
+    );
+    setContinueWatching(next);
+    localStorage.setItem('noir_continue_watching_list', JSON.stringify(next));
+    localStorage.removeItem(`noir_progress_${item.type}_${item.id}`);
+
+    const firebaseUser = auth.currentUser;
+    if (firebaseUser) {
+      void removeFromFirestoreContinueWatching(
+        firebaseUser.uid,
+        item.type,
+        item.id,
+      ).catch((error) =>
+        console.error('Failed to remove continue watching item from cloud:', error),
+      );
     }
   };
 
@@ -1450,14 +1626,7 @@ export default function App() {
                     onItemClick={handleTitleClick}
                     isSaved={isInWatchlist}
                     onToggleSave={toggleWatchlistItem}
-                    onRemove={(item) => {
-                      const next = continueWatching.filter(
-                        (c) => !(c.id === item.id && c.type === item.type)
-                      );
-                      setContinueWatching(next);
-                      localStorage.setItem('noir_continue_watching_list', JSON.stringify(next));
-                      localStorage.removeItem(`noir_progress_${item.type}_${item.id}`);
-                    }}
+                    onRemove={removeContinueWatchingItem}
                   />
                 </div>
               )}

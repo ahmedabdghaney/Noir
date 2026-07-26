@@ -158,13 +158,22 @@ export default function VideoPlayer({
     const savedOnStart = Number(localStorage.getItem(progressKey)) || 0;
     if (savedOnStart === 0) {
       localStorage.setItem(progressKey, '8');
-      window.dispatchEvent(new Event('progress_updated'));
+      window.dispatchEvent(
+        new CustomEvent('progress_updated', {
+          detail: { type, id, progress: 8 },
+        }),
+      );
     }
     const timer = setInterval(() => {
       const cur = Number(localStorage.getItem(progressKey)) || 0;
       if (cur < 96) {
-        localStorage.setItem(progressKey, String(cur + 1));
-        window.dispatchEvent(new Event('progress_updated'));
+        const nextProgress = cur + 1;
+        localStorage.setItem(progressKey, String(nextProgress));
+        window.dispatchEvent(
+          new CustomEvent('progress_updated', {
+            detail: { type, id, progress: nextProgress },
+          }),
+        );
       }
     }, 10000);
 

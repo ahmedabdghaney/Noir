@@ -20,6 +20,7 @@ import {
   setDoc,
   deleteDoc,
   getDocs,
+  onSnapshot,
   query,
   orderBy,
   serverTimestamp,
@@ -303,3 +304,141 @@ export const removeFromFirestoreWatchlist = async (userId: string, type: 'movie'
   }
 };
 
+export interface ContinueWatchingCloudItem extends MovieOrShow {
+  progress: number;
+  updatedAtMs: number;
+}
+
+const normalizeContinueWatchingDoc = (data: any): ContinueWatchingCloudItem => ({
+  id: Number(data.id),
+  type: data.type as 'movie' | 'tv',
+  title: data.title || '',
+  overview: '',
+  poster: data.poster || null,
+  backdrop: data.backdrop || null,
+  rating: Number(data.rating || 0),
+  year: String(data.year || ''),
+  date: '',
+  genres: Array.isArray(data.genres) ? data.genres : [],
+  progress: Math.max(0, Math.min(100, Number(data.progress || 0))),
+  updatedAtMs:
+    typeof data.updatedAt?.toMillis === 'function'
+      ? data.updatedAt.toMillis()
+      : Number(data.updatedAt?.seconds || 0) * 1000,
+});
+
+export const fetchFirestoreContinueWatching = async (
+  userId: string,
+): Promise<ContinueWatchingCloudItem[]> => {
+  const pathSpec = `users/${userId}/continueWatching`;
+  try {
+    const snapshot = await getDocs(collection(db, 'users', userId, 'continueWatching'));
+    const items = snapshot.docs
+      .map((docSnap) => normalizeContinueWatchingDoc(docSnap.data()))
+      .filter((item) => item.id && (item.type === 'movie' || item.type === 'tv') && item.title);
+    return items.sort((a, b) => b.updatedAtMs - a.updatedAtMs);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, pathSpec);
+    return [];
+  }
+};
+
+export const saveFirestoreContinueWatching = async (
+  userId: string,
+  item: MovieOrShow,
+  progress: number,
+): Promise<void> => {
+  const itemId = `${item.type}_${item.id}`;
+  const pathSpec = `users/${userId}/continueWatching/${itemId}`;
+  try {
+    await setDoc(doc(db, 'users', userId, 'continueWatching', itemId), {
+      id: Number(item.id),
+      type: item.type,
+      title: item.title || '',
+      poster: item.poster || '',
+      backdrop: item.backdrop || '',
+      rating: Number(item.rating || 0),
+      year: String(item.year || ''),
+      genres: Array.isArray(item.genres) ? item.genres : [],
+      progress: Math.max(0, Math.min(100, Number(progress || 0))),
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, pathSpec);
+  }
+};
+
+export const updateFirestoreContinueWatchingProgress = async (
+  userId: string,
+  type: 'movie' | 'tv',
+  id: number,
+  progress: number,
+): Promise<void> => {
+  const itemId = `${type}_${id}`;
+  const pathSpec = `users/${userId}/continueWatching/${itemId}`;
+  try {
+    await setDoc(
+      doc(db, 'users', userId, 'continueWatching', itemId),
+      {
+        progress: Math.max(0, Math.min(100, Number(progress || 0))),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, pathSpec);
+  }
+};
+
+export const removeFromFirestoreContinueWatching = async (
+  userId: string,
+  type: 'movie' | 'tv',
+  id: number,
+): Promise<void> => {
+  const itemId = `${type}_${id}`;
+  const pathSpec = `users/${userId}/continueWatching/${itemId}`;
+  try {
+    await deleteDoc(doc(db, 'users', userId, 'continueWatching', itemId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, pathSpec);
+  }
+};
+
+export const subscribeFirestoreContinueWatching = (
+  userId: string,
+  onItems: (items: ContinueWatchingCloudItem[]) => void,
+  onError?: (error: unknown) => void,
+): (() => void) =>
+  onSnapshot(
+    collection(db, 'users', userId, 'continueWatching'),
+    (snapshot) => {
+      const items = snapshot.docs
+        .map((docSnap) => normalizeContinueWatchingDoc(docSnap.data()))
+        .filter((item) => item.id && (item.type === 'movie' || item.type === 'tv') && item.title)
+        .sort((a, b) => b.updatedAtMs - a.updatedAtMs);
+      onItems(items);
+    },
+    (error) => {
+      console.error('Continue watching snapshot subscription error:', error);
+      onError?.(error);
+    },
+  );
+
+export const mergeLocalContinueWatchingIntoCloud = async (
+  userId: string,
+  localItems: { item: MovieOrShow; progress: number }[],
+): Promise<void> => {
+  const cloudItems = await fetchFirestoreContinueWatching(userId);
+  const cloudByKey = new Map(
+    cloudItems.map((item) => [`${item.type}_${item.id}`, item] as const),
+  );
+
+  await Promise.all(
+    localItems.map(async ({ item, progress }) => {
+      const cloudItem = cloudByKey.get(`${item.type}_${item.id}`);
+      if (!cloudItem || progress > cloudItem.progress) {
+        await saveFirestoreContinueWatching(userId, item, progress);
+      }
+    }),
+  );
+};
