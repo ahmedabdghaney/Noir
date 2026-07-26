@@ -131,9 +131,6 @@ export default function VideoPlayer({
   const [seekHold, setSeekHold] = useState<'fwd' | 'back' | null>(null);
   // تسريع 2x مؤقت بالضغط المستمر على Space
   const [speedBoost, setSpeedBoost] = useState(false);
-  // مصدر الـ embed المختار: 0 = VidSrc (أساسي)، 1 = vidapi (احتياطي)
-  const [embedSource, setEmbedSource] = useState(0);
-
   /* ── URLs + native flag (معرّفة مبكراً عشان الـ effects تستخدمها) ── */
   // المسلسلات: TV/{اسم}/{tmdbId}/Season {n}/{episode}
   // الأفلام:   Movies/{اسم}/{tmdbId}/movie  — tmdbId يميّز الأفلام بنفس الاسم (Scream 1997 vs 2022)
@@ -152,7 +149,9 @@ export default function VideoPlayer({
   }
   const customMp4 = playMode === 'movie' ? mp4Url : undefined;
   const vttSrc    = vttUrl;
-  const isNative = Boolean(playMode === 'movie' && customMp4 && !customMp4Failed);
+  // وضع الفيلم يبقى دائماً على مشغل MP4. فشل الرابط يظهر كخطأ واضح
+  // ولا يحوّل المستخدم بصمت إلى مشغلات iframe خارجية.
+  const isNative = Boolean(playMode === 'movie' && customMp4);
 
   const reportNativeProgress = useCallback(
     (video: HTMLVideoElement | null, completed = false, force = false) => {
@@ -862,41 +861,10 @@ export default function VideoPlayer({
     if (videoRef.current) onSeek?.(videoRef.current.currentTime);
   };
 
-  /* ── URLs ── */
-  // قائمة مشغّلات الـ embed بالترتيب — لو وحدة ما اشتغلت، بدّل من الزر
-  const EMBED_SERVERS = [
-    {
-      name: 'مشغل 1',
-      movie: () => `https://vidsrc.cc/v2/embed/movie/${id}?autoPlay=true`,
-      tv: () => `https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}?autoPlay=true`,
-    },
-    {
-      name: 'مشغل 2',
-      movie: () => {
-        const params = new URLSearchParams({ primaryColor: 'ff453a', secondaryColor: '0a0a0a', iconColor: 'FFFFFF', icons: 'vid', title: 'true', poster: 'true', autoplay: 'true' });
-        if (startAt && startAt > 5) params.set('startAt', String(Math.floor(startAt)));
-        return `https://vidapi.qzz.io/movie/${id}?${params}`;
-      },
-      tv: () => {
-        const params = new URLSearchParams({ primaryColor: 'ff453a', secondaryColor: '0a0a0a', iconColor: 'FFFFFF', icons: 'vid', title: 'true', poster: 'true', autoplay: 'true', nextbutton: 'true' });
-        if (startAt && startAt > 5) params.set('startAt', String(Math.floor(startAt)));
-        return `https://vidapi.qzz.io/tv/${id}/${season}/${episode}?${params}`;
-      },
-    },
-    {
-      name: 'مشغل 3',
-      movie: () => `https://vidsrc-embed.ru/embed/movie?tmdb=${id}&autoplay=1`,
-      tv: () => `https://vidsrc-embed.ru/embed/tv?tmdb=${id}&season=${season}&episode=${episode}&autoplay=1&autonext=1`,
-    },
-  ];
-
-  const getEmbedUrl = () => {
-    if (playMode === 'trailer' && youtubeKey) {
-      return `https://www.youtube-nocookie.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&origin=${encodeURIComponent(window.location.origin)}`;
-    }
-    const srv = EMBED_SERVERS[embedSource] || EMBED_SERVERS[0];
-    return type === 'tv' ? srv.tv() : srv.movie();
-  };
+  /* ── Trailer URL ── */
+  const getTrailerUrl = () => youtubeKey
+    ? `https://www.youtube-nocookie.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&origin=${encodeURIComponent(window.location.origin)}`
+    : 'about:blank';
 
   const progressPct = duration > 0 ? Math.max(0, Math.min(100, (currentTime / duration) * 100)) : 0;
   const bufferedPct = duration > 0 ? Math.max(0, Math.min(100, (buffered / duration) * 100)) : 0;
@@ -949,7 +917,7 @@ export default function VideoPlayer({
 
           {/* trailer */}
           {playMode === 'trailer' ? (
-            <iframe src={getEmbedUrl()} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen className="w-full h-full border-0" onLoad={() => setIsLoading(false)} />
+            <iframe src={getTrailerUrl()} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen className="w-full h-full border-0" onLoad={() => setIsLoading(false)} />
 
           /* native mp4 */
           ) : isNative ? (
@@ -982,7 +950,18 @@ export default function VideoPlayer({
               }}
               onLoadedData={() => { setIsLoading(false); setDuration(videoRef.current?.duration || 0); }}
               onCanPlay={() => { setIsLoading(false); setIsBuffering(false); }}
-              onError={() => setCustomMp4Failed(true)}
+              onError={() => {
+                const mediaError = videoRef.current?.error;
+                console.error('MP4 playback failed', {
+                  url: customMp4,
+                  code: mediaError?.code,
+                  message: mediaError?.message,
+                });
+                setCustomMp4Failed(true);
+                setIsLoading(false);
+                setIsBuffering(false);
+                setControlsVisible(true);
+              }}
               onPlay={() => { setIsPlaying(true); resetHideTimer(); }}
               onPlaying={() => { setIsLoading(false); setIsBuffering(false); }}
               onWaiting={() => setIsBuffering(true)}
@@ -1042,26 +1021,51 @@ export default function VideoPlayer({
               />
             </video>
 
-          /* fallback iframe */
+          /* MP4 is the only movie source. No external-player fallback. */
           ) : (
-            <>
-              <iframe key={`player-${id}-${episode}-${embedSource}`} src={isPausedByHost ? 'about:blank' : getEmbedUrl()} allow="autoplay; encrypted-media; fullscreen; picture-in-picture" sandbox="allow-scripts allow-same-origin allow-presentation allow-forms" referrerPolicy="no-referrer" allowFullScreen className="w-full h-full border-0" onLoad={() => setIsLoading(false)} />
+            <div className="flex h-full w-full items-center justify-center bg-black text-sm text-white/55" dir="rtl">
+              ملف MP4 غير مهيأ لهذا العنوان
+            </div>
+          )}
 
-              {/* مبدّل المشغلات — يظهر بس بمشغلات الـ embed (مو المشغل الأصلي) */}
-              {playMode === 'movie' && !isPausedByHost && (
-                <div className="absolute top-3 left-3 z-30 flex items-center gap-1 bg-black/70 backdrop-blur-md rounded-full p-1 border border-white/10">
-                  {EMBED_SERVERS.map((srv, i) => (
-                    <button
-                      key={i}
-                      onClick={() => { setEmbedSource(i); setIsLoading(true); }}
-                      className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer transition-all ${embedSource === i ? 'bg-red-600 text-white' : 'text-white/60 hover:text-white'}`}
-                    >
-                      {srv.name}
-                    </button>
-                  ))}
+          {isNative && customMp4Failed && (
+            <div
+              className="absolute inset-0 z-40 flex items-center justify-center bg-black/90 px-5 backdrop-blur-sm"
+              dir="rtl"
+            >
+              <div className="w-full max-w-sm text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-red-500/25 bg-red-500/10">
+                  <X className="h-6 w-6 text-red-400" />
                 </div>
-              )}
-            </>
+                <h3 className="mt-4 text-lg font-bold text-white">ملف الفيديو غير متاح</h3>
+                <p className="mt-2 text-sm leading-6 text-white/55">
+                  رابط MP4 غير موجود أو أن التخزين يمنع الوصول إليه حالياً.
+                </p>
+                <div className="mt-5 flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const video = videoRef.current;
+                      if (!video) return;
+                      setCustomMp4Failed(false);
+                      setIsLoading(true);
+                      video.load();
+                      void video.play().catch(() => {});
+                    }}
+                    className="noir-button-primary min-w-28 cursor-pointer"
+                  >
+                    إعادة المحاولة
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="noir-button-secondary min-w-24 cursor-pointer"
+                  >
+                    إغلاق
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
 
           {!isNative && (
