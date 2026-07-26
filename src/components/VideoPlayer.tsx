@@ -25,6 +25,7 @@ interface VideoPlayerProps {
   season?: number;
   episode?: number;
   episodesCount?: number;
+  hasNextEpisode?: boolean;
   youtubeKey?: string | null;
   playMode: 'movie' | 'trailer';
   isPausedByHost?: boolean;
@@ -67,6 +68,7 @@ export default function VideoPlayer({
   posterPath = null,
   season = 1, episode = 1,
   episodesCount = 0,
+  hasNextEpisode,
   youtubeKey, playMode,
   isPausedByHost = false, hostPauseByName = '',
   isLiveHost = false, isLiveSession = false,
@@ -108,6 +110,10 @@ export default function VideoPlayer({
   const [showSpeedMenu,   setShowSpeedMenu]   = useState(false);
   const [isFullscreen,    setIsFullscreen]    = useState(false);
   const [iosNativeFs,     setIosNativeFs]     = useState(false); // iPhone native video fullscreen
+  const [autoplayNext, setAutoplayNext] = useState(
+    () => localStorage.getItem('noir_autoplay_next') !== 'false',
+  );
+  const [nextEpisodeCountdown, setNextEpisodeCountdown] = useState<number | null>(null);
 
   const [controlsVisible, setControlsVisible] = useState(true);
 
@@ -255,8 +261,23 @@ export default function VideoPlayer({
     setSubEnabled(true); setSpeed(1);
     setShowSettings(false); setShowSpeedMenu(false); setShowVolume(false);
     setIsPlaying(false); setCurrentTime(0); setDuration(0); setBuffered(0); setIsBuffering(false);
+    setNextEpisodeCountdown(null);
     return () => clearTimeout(timer);
   }, [type, id, season, episode, playMode]);
+
+  useEffect(() => {
+    if (nextEpisodeCountdown == null) return;
+    if (nextEpisodeCountdown <= 0) {
+      setNextEpisodeCountdown(null);
+      onNextEpisode?.();
+      return;
+    }
+    const timer = setTimeout(
+      () => setNextEpisodeCountdown((current) => current == null ? null : current - 1),
+      1000,
+    );
+    return () => clearTimeout(timer);
+  }, [nextEpisodeCountdown, onNextEpisode]);
 
   useEffect(() => () => {
     clearTimeout(hideTimer.current);
@@ -823,7 +844,9 @@ export default function VideoPlayer({
 
   const progressPct = duration > 0 ? Math.max(0, Math.min(100, (currentTime / duration) * 100)) : 0;
   const bufferedPct = duration > 0 ? Math.max(0, Math.min(100, (buffered / duration) * 100)) : 0;
-  const hasNextEp   = type === 'tv' && !!onNextEpisode && (episodesCount === 0 || episode < episodesCount);
+  const hasNextEp = type === 'tv' && !!onNextEpisode && (
+    hasNextEpisode ?? (episodesCount === 0 || episode < episodesCount)
+  );
 
   const VolumeIcon = isMuted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
 
@@ -922,7 +945,14 @@ export default function VideoPlayer({
                 onTimeUpdate?.(time);
                 reportNativeProgress(video);
               }}
-              onEnded={() => reportNativeProgress(videoRef.current, true, true)}
+              onEnded={() => {
+                reportNativeProgress(videoRef.current, true, true);
+                setIsPlaying(false);
+                setControlsVisible(true);
+                if (autoplayNext && hasNextEp) {
+                  setNextEpisodeCountdown(8);
+                }
+              }}
               onProgress={() => {
                 const v = videoRef.current;
                 if (v && v.buffered.length) setBuffered(v.buffered.end(v.buffered.length - 1));
@@ -1063,6 +1093,39 @@ export default function VideoPlayer({
             </div>
           )}
 
+          {isNative && nextEpisodeCountdown != null && (
+            <div
+              className="absolute inset-0 z-30 flex items-end justify-end bg-gradient-to-t from-black/90 via-black/20 to-transparent p-4 sm:p-7"
+              dir="rtl"
+            >
+              <div className="w-full sm:w-auto sm:min-w-[320px] rounded-[22px] border border-white/12 bg-black/70 backdrop-blur-2xl p-4 sm:p-5 shadow-2xl">
+                <p className="text-xs font-semibold text-white/55">الحلقة التالية</p>
+                <h3 className="mt-1 text-lg font-bold text-white">
+                  تبدأ خلال {nextEpisodeCountdown} ثواني
+                </h3>
+                <div className="mt-4 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNextEpisodeCountdown(null);
+                      onNextEpisode?.();
+                    }}
+                    className="noir-button-primary flex-1 cursor-pointer"
+                  >
+                    تشغيل الآن
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNextEpisodeCountdown(null)}
+                    className="noir-button-secondary flex-1 cursor-pointer"
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* host paused overlay */}
           {isPausedByHost && playMode === 'movie' && (
             <div className="absolute inset-0 z-20 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center gap-4 select-none" dir="rtl">
@@ -1142,7 +1205,7 @@ export default function VideoPlayer({
 
                   {/* next episode */}
                   {hasNextEp && (
-                    <Btn onClick={() => onNextEpisode?.()} label="الحلقة التالية">
+                    <Btn onClick={() => { setNextEpisodeCountdown(null); onNextEpisode?.(); }} label="الحلقة التالية">
                       <SkipForward className="w-5 h-5 fill-white" />
                     </Btn>
                   )}
@@ -1229,6 +1292,33 @@ export default function VideoPlayer({
                               </button>
                             ))}
                           </div>
+                        )}
+                        {type === 'tv' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAutoplayNext((current) => {
+                                const next = !current;
+                                localStorage.setItem('noir_autoplay_next', String(next));
+                                return next;
+                              });
+                            }}
+                            className="w-full border-t border-white/10 px-3.5 py-3 flex items-center justify-between text-sm text-white hover:bg-white/10"
+                            aria-pressed={autoplayNext}
+                          >
+                            <span
+                              className={`relative w-10 h-6 rounded-full transition-colors ${
+                                autoplayNext ? 'bg-red-500' : 'bg-white/15'
+                              }`}
+                            >
+                              <span
+                                className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                                  autoplayNext ? 'translate-x-5' : 'translate-x-1'
+                                } left-0`}
+                              />
+                            </span>
+                            <span>تشغيل الحلقة التالية</span>
+                          </button>
                         )}
                         {/* حجم الترجمة */}
                         <div className="border-t border-white/10 px-3.5 py-3 flex items-center justify-between">

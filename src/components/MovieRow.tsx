@@ -34,6 +34,7 @@ export default function MovieRow({
   compactSaveButton = false,
 }: MovieRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
+  const scrollSaveFrameRef = useRef<number | null>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
 
@@ -53,10 +54,32 @@ export default function MovieRow({
   };
 
   useEffect(() => {
-    checkScroll();
+    const saved = Number(localStorage.getItem(`noir_row_scroll_${title}`) || 0);
+    const restoreFrame = window.requestAnimationFrame(() => {
+      if (rowRef.current && Number.isFinite(saved)) rowRef.current.scrollLeft = saved;
+      checkScroll();
+    });
     window.addEventListener('resize', checkScroll);
-    return () => window.removeEventListener('resize', checkScroll);
-  }, [items]);
+    return () => {
+      window.cancelAnimationFrame(restoreFrame);
+      window.removeEventListener('resize', checkScroll);
+      if (scrollSaveFrameRef.current != null) {
+        window.cancelAnimationFrame(scrollSaveFrameRef.current);
+        scrollSaveFrameRef.current = null;
+      }
+    };
+  }, [items, title]);
+
+  const handleRowScroll = () => {
+    checkScroll();
+    if (scrollSaveFrameRef.current != null) return;
+    scrollSaveFrameRef.current = window.requestAnimationFrame(() => {
+      scrollSaveFrameRef.current = null;
+      if (rowRef.current) {
+        localStorage.setItem(`noir_row_scroll_${title}`, String(rowRef.current.scrollLeft));
+      }
+    });
+  };
 
   const handleScroll = (direction: 'left' | 'right') => {
     if (rowRef.current) {
@@ -111,9 +134,12 @@ export default function MovieRow({
                 <ChevronLeft className="w-5 h-5 text-white/40 group-hover/title:text-white group-hover/title:-translate-x-0.5 transition-all" />
               </a>
             ) : (
-              <h2 id={`row-${title.replace(/\s+/g, '-')}`} className="text-xl md:text-2xl font-bold text-white flex items-center">
-                <span>{title}</span>
-              </h2>
+              <>
+                <h2 id={`row-${title.replace(/\s+/g, '-')}`} className="text-xl md:text-2xl font-bold text-white flex items-center">
+                  <span>{title}</span>
+                </h2>
+                {subtitle && <p className="mt-1 text-xs sm:text-sm text-white/45">{subtitle}</p>}
+              </>
             )}
           </div>
         </div>
@@ -152,7 +178,7 @@ export default function MovieRow({
         {/* Dynamic Carousel Area */}
         <div
           ref={rowRef}
-          onScroll={checkScroll}
+          onScroll={handleRowScroll}
           dir="rtl"
           className="flex flex-row gap-2.5 md:gap-3 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none"
         >
@@ -205,9 +231,10 @@ export default function MovieRow({
                     <img
                       src={item.poster || item.backdrop || undefined}
                       alt={item.title}
-                      loading="lazy"
+                      loading={idx < 6 ? 'eager' : 'lazy'}
+                      fetchPriority={idx < 4 ? 'high' : 'auto'}
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover select-none transition-transform duration-500"
+                      className="w-full h-full object-cover select-none transition-transform duration-300 md:group-hover/card:scale-[1.04]"
                     />
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center p-3 text-stone-600 bg-stone-950">

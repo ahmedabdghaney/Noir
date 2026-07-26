@@ -3,31 +3,30 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Home, Film, Tv, Search, Bookmark } from 'lucide-react';
+import { Home, Search, Bookmark, CircleUserRound } from 'lucide-react';
 
 interface MobileNavProps {
-  activeView: 'home' | 'search' | 'detail' | 'watchlist';
-  searchMode: 'movie' | 'tv';
-  setSearchMode: (mode: 'movie' | 'tv') => void;
+  activeView: string;
   goHome: () => void;
   openSearchOverlay: () => void;
   onViewWatchlist: () => void;
   isSearchOpen: boolean;
+  onOpenProfile: () => void;
 }
 
 export default function MobileNav({
   activeView,
-  searchMode,
-  setSearchMode,
   goHome,
   openSearchOverlay,
   onViewWatchlist,
   isSearchOpen,
+  onOpenProfile,
 }: MobileNavProps) {
   return (
     <nav
       aria-label="التنقل الرئيسي"
       className="lg:hidden fixed bottom-0 left-0 right-0 z-[200] bg-[#141417]/95 backdrop-blur-xl border-t border-white/8 flex items-start justify-around px-1 selection:bg-transparent noir-mobile-nav"
+      dir="rtl"
     >
       
       {/* Home Button */}
@@ -42,32 +41,16 @@ export default function MobileNav({
         <span className="text-[11px] font-semibold leading-none">الرئيسية</span>
       </button>
 
-      {/* Movies Button */}
+      {/* Search Button */}
       <button
-        onClick={() => {
-          setSearchMode('movie');
-        }}
+        onClick={openSearchOverlay}
         className={`flex flex-col items-center justify-center gap-1 flex-1 h-16 py-1 text-center transition-all cursor-pointer ${
-          activeView === 'search' && searchMode === 'movie' ? 'text-white' : 'text-gray-500'
+          isSearchOpen ? 'text-white' : 'text-gray-500 hover:text-white'
         }`}
-        aria-current={activeView === 'search' && searchMode === 'movie' ? 'page' : undefined}
+        aria-current={isSearchOpen ? 'page' : undefined}
       >
-        <Film className="w-5 h-5 transition-transform" />
-        <span className="text-[11px] font-semibold leading-none">الأفلام</span>
-      </button>
-
-      {/* TV Series Button */}
-      <button
-        onClick={() => {
-          setSearchMode('tv');
-        }}
-        className={`flex flex-col items-center justify-center gap-1 flex-1 h-16 py-1 text-center transition-all cursor-pointer ${
-          activeView === 'search' && searchMode === 'tv' ? 'text-white' : 'text-gray-500'
-        }`}
-        aria-current={activeView === 'search' && searchMode === 'tv' ? 'page' : undefined}
-      >
-        <Tv className="w-5 h-5 transition-transform" />
-        <span className="text-[11px] font-semibold leading-none">المسلسلات</span>
+        <Search className="w-5 h-5 transition-transform" />
+        <span className="text-[11px] font-semibold leading-none">البحث</span>
       </button>
 
       {/* My List / Watchlist Button */}
@@ -82,16 +65,13 @@ export default function MobileNav({
         <span className="text-[11px] font-semibold leading-none">قائمتي</span>
       </button>
 
-      {/* Search Button */}
+      {/* Profile Button */}
       <button
-        onClick={openSearchOverlay}
-        className={`flex flex-col items-center justify-center gap-1 flex-1 h-16 py-1 text-center transition-all cursor-pointer ${
-          isSearchOpen ? 'text-white' : 'text-gray-500 hover:text-white'
-        }`}
-        aria-current={isSearchOpen ? 'page' : undefined}
+        onClick={onOpenProfile}
+        className="flex flex-col items-center justify-center gap-1 flex-1 h-16 py-1 text-center transition-all cursor-pointer text-gray-500 hover:text-white"
       >
-        <Search className="w-5 h-5 transition-transform" />
-        <span className="text-[11px] font-semibold leading-none">البحث</span>
+        <CircleUserRound className="w-5 h-5 transition-transform" />
+        <span className="text-[11px] font-semibold leading-none">حسابي</span>
       </button>
 
     </nav>

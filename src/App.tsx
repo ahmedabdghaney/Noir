@@ -59,6 +59,7 @@ import ShareModal from './components/ShareModal';
 import MobileNav from './components/MobileNav';
 import AdminDashboard from './components/AdminDashboard';
 import WatchlistButton from './components/WatchlistButton';
+import QuickView from './components/QuickView';
 import {
   subscribeHidden, subscribeManualItems, subscribeCustomSections, subscribeSectionOrder,
   subscribeHeroHidden, toggleHeroHidden, subscribeHeroExtra, subscribeHeroOrder, HeroExtra,
@@ -108,6 +109,36 @@ const YEARS = (() => {
   return Array.from({ length: 15 }, (_, i) => String(current - i));
 })();
 
+const GENRE_ALIASES: Record<string, string> = {
+  action: 'أكشن',
+  adventure: 'مغامرة',
+  animation: 'رسوم متحركة',
+  comedy: 'كوميديا',
+  crime: 'جريمة',
+  documentary: 'وثائقي',
+  drama: 'دراما',
+  family: 'عائلي',
+  fantasy: 'فانتازيا',
+  history: 'تاريخ',
+  horror: 'رعب',
+  music: 'موسيقى',
+  mystery: 'غموض',
+  romance: 'رومانسية',
+  'science fiction': 'خيال علمي',
+  thriller: 'إثارة',
+  war: 'حرب',
+  western: 'غربي',
+  'action & adventure': 'أكشن ومغامرة',
+  'sci-fi & fantasy': 'خيال علمي وفانتازيا',
+  kids: 'أطفال',
+  reality: 'واقع',
+};
+
+function normalizeGenreName(name: string) {
+  const normalized = name.trim().toLowerCase();
+  return GENRE_ALIASES[normalized] || name.trim();
+}
+
 export default function App() {
   // Navigation & View State
   const [activeView, setActiveView] = useState<'home' | 'search' | 'detail' | 'watchlist' | 'category' | 'studio' | 'admin'>('home');
@@ -119,13 +150,18 @@ export default function App() {
   // الموسم/الحلقة المقروءة من الـ URL (تُمرَّر لـ DetailView كقيمة ابتدائية)
   const [selectedEpisodeRoute, setSelectedEpisodeRoute] = useState<{ season: number; episode: number } | null>(null);
   const [joinRoomCode, setJoinRoomCode] = useState<string>('');
+  const [quickViewItem, setQuickViewItem] = useState<MovieOrShow | null>(null);
+  const [autoPlayRequested, setAutoPlayRequested] = useState(false);
+  const homeScrollRef = useRef(Number(localStorage.getItem('noir_home_scroll') || 0));
+  const scrollSaveFrameRef = useRef<number | null>(null);
+  const previousViewRef = useRef(activeView);
 
   // User Profile Modal active state
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isSendingVerification, setIsSendingVerification] = useState(false);
 
   // Watchlist custom filter & sorting options
-  const [watchlistFilter, setWatchlistFilter] = useState<'all' | 'movie' | 'tv'>('all');
+  const [watchlistFilter, setWatchlistFilter] = useState<'all' | 'movie' | 'tv' | 'started' | 'unstarted'>('all');
   const [watchlistSort, setWatchlistSort] = useState<'default' | 'rating' | 'year'>('default');
   const [watchlistSortDir, setWatchlistSortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -655,8 +691,17 @@ export default function App() {
     }
   };
 
+  const rememberHomeScroll = () => {
+    if (activeView !== 'home') return;
+    const position = Math.max(0, window.scrollY);
+    homeScrollRef.current = position;
+    localStorage.setItem('noir_home_scroll', String(position));
+  };
+
   const handleViewWatchlist = () => {
+    rememberHomeScroll();
     setIsSearchOverlayOpen(false);
+    setQuickViewItem(null);
     setActiveView('watchlist');
     setSelectedTitle(null);
     window.location.hash ='#watchlist';
@@ -878,19 +923,39 @@ export default function App() {
     activeView,
   ]);
 
-  // Automatically scroll to the top of the viewport whenever the active view or selected title changes
+  // Keep the home browsing position, like a streaming app, while other views start at the top.
   useEffect(() => {
-    window.scrollTo(0, 0);
-    document.documentElement.scrollTop = 0;
-    if (document.body) document.body.scrollTop = 0;
-    
+    const saveHomePosition = () => {
+      if (activeView !== 'home' || scrollSaveFrameRef.current != null) return;
+      scrollSaveFrameRef.current = window.requestAnimationFrame(() => {
+        scrollSaveFrameRef.current = null;
+        const position = Math.max(0, window.scrollY);
+        homeScrollRef.current = position;
+        localStorage.setItem('noir_home_scroll', String(position));
+      });
+    };
+    window.addEventListener('scroll', saveHomePosition, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', saveHomePosition);
+      if (scrollSaveFrameRef.current != null) {
+        window.cancelAnimationFrame(scrollSaveFrameRef.current);
+        scrollSaveFrameRef.current = null;
+      }
+    };
+  }, [activeView]);
+
+  useEffect(() => {
+    const previousView = previousViewRef.current;
+    previousViewRef.current = activeView;
     const t = setTimeout(() => {
-      window.scrollTo(0, 0);
-      document.documentElement.scrollTop = 0;
-      if (document.body) document.body.scrollTop = 0;
-    }, 60);
+      if (activeView === 'home') {
+        window.scrollTo({ top: homeScrollRef.current, behavior: 'auto' });
+      } else if (previousView !== activeView || selectedTitle) {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+      }
+    }, activeView === 'home' ? 120 : 0);
     return () => clearTimeout(t);
-  }, [activeView, selectedTitle]);
+  }, [activeView, selectedTitle, isHomeLoading]);
 
   // Master Query search resolver (handles discover vs search parameters)
   const triggerSearchQuery = async (append = false) => {
@@ -960,6 +1025,14 @@ export default function App() {
   // Global redirection tool
   const navigateToHome = () => {
     setIsSearchOverlayOpen(false);
+    setQuickViewItem(null);
+    setAutoPlayRequested(false);
+    if (activeView === 'home') {
+      homeScrollRef.current = 0;
+      localStorage.setItem('noir_home_scroll', '0');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     setActiveView('home');
     setSelectedTitle(null);
     window.location.hash ='#home';
@@ -979,7 +1052,9 @@ export default function App() {
   }, []);
 
   const handleSetSearchMode = (mode: 'movie' | 'tv') => {
+    rememberHomeScroll();
     setIsSearchOverlayOpen(false);
+    setQuickViewItem(null);
     setSearchMode(mode);
     setActiveView('search');
     setSelectedTitle(null);
@@ -987,11 +1062,29 @@ export default function App() {
   };
 
   const handleTitleClick = (item: MovieOrShow) => {
+    rememberHomeScroll();
+    setQuickViewItem(null);
     setAutoResumeRequested(false);
+    setAutoPlayRequested(false);
     window.location.hash =`#${item.type}/${item.id}`;
   };
 
+  const handleOpenQuickView = (item: MovieOrShow) => {
+    setQuickViewItem(item);
+  };
+
+  const handlePlayTitle = (item: MovieOrShow) => {
+    rememberHomeScroll();
+    setQuickViewItem(null);
+    setAutoResumeRequested(false);
+    setAutoPlayRequested(true);
+    window.location.hash = `#${item.type}/${item.id}`;
+  };
+
   const handleContinueWatchingClick = (item: ContinueWatchingItem) => {
+    rememberHomeScroll();
+    setQuickViewItem(null);
+    setAutoPlayRequested(false);
     setAutoResumeRequested(true);
     if (item.type === 'tv' && item.season > 0 && item.episode > 0) {
       window.location.hash = `#tv/${item.id}/s${item.season}/e${item.episode}`;
@@ -1053,7 +1146,14 @@ export default function App() {
     }
   };
 
+  const restartContinueWatchingItem = (item: ContinueWatchingItem) => {
+    removeContinueWatchingItem(item);
+    handlePlayTitle(item);
+  };
+
   const handleQuickSelectTitle = (type: 'movie' | 'tv', id: number) => {
+    rememberHomeScroll();
+    setAutoPlayRequested(false);
     window.location.hash =`#${type}/${id}`;
   };
 
@@ -1547,6 +1647,40 @@ export default function App() {
     return all.sort((a, b) => idx(a.key) - idx(b.key));
   }, [trendingWeek, upcoming, nowPlaying, popularTV, popularMovies, customSections, manualBySection, genreSectionData, sectionOrder, applyHidden]);
 
+  const personalizedSection = useMemo(() => {
+    const seed = continueWatching[0] || watchlist[0] || null;
+    if (!seed?.genres?.length) return null;
+
+    const preferredGenres = new Set(seed.genres.map(normalizeGenreName));
+    const seen = new Set<string>();
+    const scored = renderableSections
+      .flatMap((section) => section.items)
+      .filter((item) => {
+        const key = `${item.type}_${item.id}`;
+        if (seen.has(key) || (item.type === seed.type && item.id === seed.id)) return false;
+        seen.add(key);
+        return true;
+      })
+      .map((item) => {
+        const overlap = item.genres
+          .map(normalizeGenreName)
+          .filter((genre) => preferredGenres.has(genre)).length;
+        return { item, score: overlap * 100 + item.rating };
+      })
+      .filter(({ score }) => score >= 100)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 20)
+      .map(({ item }) => item);
+
+    if (scored.length < 4) return null;
+    return {
+      title: continueWatching[0]
+        ? `لأنك شاهدت ${seed.title}`
+        : 'مقترحات تناسب قائمتك',
+      items: scored,
+    };
+  }, [continueWatching, renderableSections, watchlist]);
+
   if (authScreen) {
     return authScreen;
   }
@@ -1587,7 +1721,7 @@ export default function App() {
             {/* Display Hero slider */}
             <Hero
               trendingItems={heroItems}
-              onPlayClick={(item) => handleTitleClick(item)}
+              onPlayClick={handlePlayTitle}
               onInfoClick={(item) => handleTitleClick(item)}
               onTrailerClick={(item) => handleTitleClick(item)}
               isSaved={isInWatchlist}
@@ -1606,8 +1740,21 @@ export default function App() {
                     onToggleSave={toggleWatchlistItem}
                     compactSaveButton
                     onRemove={removeContinueWatchingItem}
+                    onRestart={restartContinueWatchingItem}
                   />
                 </div>
+              )}
+
+              {personalizedSection && (
+                <MovieRow
+                  title={personalizedSection.title}
+                  subtitle="مختارة حسب مشاهداتك وقائمتك"
+                  items={personalizedSection.items}
+                  onItemClick={handleOpenQuickView}
+                  isSaved={isInWatchlist}
+                  onToggleSave={toggleWatchlistItem}
+                  compactSaveButton
+                />
               )}
 
               {/* حصري نوار — العناصر المضافة يدوياً بلا قسم مخصص (يظهر أول دائماً) */}
@@ -1615,7 +1762,7 @@ export default function App() {
                 <MovieRow
                   title="حصري نوار"
                   items={manualBySection['manual']}
-                  onItemClick={handleTitleClick}
+                  onItemClick={handleOpenQuickView}
                   isSaved={isInWatchlist}
                   onToggleSave={toggleWatchlistItem}
                   compactSaveButton
@@ -1629,7 +1776,7 @@ export default function App() {
                     <MovieRow
                       title={sec.title}
                       items={sec.items}
-                      onItemClick={handleTitleClick}
+                      onItemClick={handleOpenQuickView}
                       isSaved={isInWatchlist}
                       onToggleSave={toggleWatchlistItem}
                       compactSaveButton
@@ -1639,6 +1786,13 @@ export default function App() {
                   </div>
                 )
               ))}
+
+              {isHomeLoading && (
+                <>
+                  <MovieRow title="جاري تجهيز اقتراحاتك" items={[]} onItemClick={handleOpenQuickView} />
+                  <MovieRow title="الأكثر مشاهدة" items={[]} onItemClick={handleOpenQuickView} />
+                </>
+              )}
 </div>
 </div>
           </PullToRefresh>
@@ -1648,8 +1802,16 @@ export default function App() {
         {activeView ==='watchlist' && (() => {
           // Process current watchlist items with filter & sort states
           let processedItems = [...watchlist];
-          if (watchlistFilter !=='all') {
+          if (watchlistFilter === 'movie' || watchlistFilter === 'tv') {
             processedItems = processedItems.filter(item => item.type === watchlistFilter);
+          } else if (watchlistFilter === 'started') {
+            processedItems = processedItems.filter((item) =>
+              continueWatching.some((current) => current.type === item.type && current.id === item.id),
+            );
+          } else if (watchlistFilter === 'unstarted') {
+            processedItems = processedItems.filter((item) =>
+              !continueWatching.some((current) => current.type === item.type && current.id === item.id),
+            );
           }
           if (watchlistSort ==='rating') {
             processedItems.sort((a, b) =>
@@ -1686,7 +1848,7 @@ export default function App() {
                 {watchlist.length > 0 && (
                   <div className="flex flex-wrap gap-4 items-center justify-start md:justify-end">
                     {/* Filter Segmented Control */}
-                    <div className="flex bg-stone-900 border border-white/5 p-1 rounded-xl">
+                    <div className="flex flex-wrap bg-stone-900 border border-white/5 p-1 rounded-xl">
                       <button
                         onClick={() => setWatchlistFilter('all')}
                         className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -1710,6 +1872,22 @@ export default function App() {
                         }`}
                       >
                         مسلسلات
+</button>
+                      <button
+                        onClick={() => setWatchlistFilter('started')}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          watchlistFilter === 'started' ? 'bg-red-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        بدأتها
+</button>
+                      <button
+                        onClick={() => setWatchlistFilter('unstarted')}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          watchlistFilter === 'unstarted' ? 'bg-red-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        لم أبدأها
 </button>
 </div>
 
@@ -2219,6 +2397,8 @@ export default function App() {
               onClearAutoOpenWatchTogether={() => setJoinRoomCode('')}
               autoResume={autoResumeRequested}
               onAutoResumeConsumed={() => setAutoResumeRequested(false)}
+              autoStart={autoPlayRequested}
+              onAutoStartConsumed={() => setAutoPlayRequested(false)}
               watchlist={watchlist}
               onToggleWatchlistItem={toggleWatchlistItem}
               manualData={(() => {
@@ -2280,12 +2460,11 @@ export default function App() {
       {/* iOS/Android style bottom navigation bar on touchscreens */}
       <MobileNav
         activeView={activeView}
-        searchMode={searchMode}
-        setSearchMode={handleSetSearchMode}
         goHome={navigateToHome}
         openSearchOverlay={() => setIsSearchOverlayOpen(true)}
         onViewWatchlist={handleViewWatchlist}
         isSearchOpen={isSearchOverlayOpen}
+        onOpenProfile={() => setIsProfileModalOpen(true)}
       />
 
       {/* Cmd+K QuickSearch predicting suggestions overlay */}
@@ -2299,6 +2478,15 @@ export default function App() {
           setIsSearchOverlayOpen(false);
           window.location.hash = `#category/${key}`;
         }}
+      />
+
+      <QuickView
+        item={quickViewItem}
+        saved={quickViewItem ? isInWatchlist(quickViewItem) : false}
+        onClose={() => setQuickViewItem(null)}
+        onPlay={handlePlayTitle}
+        onDetails={handleTitleClick}
+        onToggleSave={toggleWatchlistItem}
       />
 
       {/* Browser URL Share Dialog */}

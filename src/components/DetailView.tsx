@@ -28,6 +28,8 @@ interface DetailViewProps {
   onClearAutoOpenWatchTogether?: () => void;
   autoResume?: boolean;
   onAutoResumeConsumed?: () => void;
+  autoStart?: boolean;
+  onAutoStartConsumed?: () => void;
   watchlist: MovieOrShow[];
   onToggleWatchlistItem?: (item: MovieOrShow) => void;
   // بيانات عنصر يدوي محض (خارج TMDB). لو موجودة، نعرضها بدل جلب TMDB.
@@ -71,6 +73,8 @@ export default function DetailView({
   onClearAutoOpenWatchTogether,
   autoResume = false,
   onAutoResumeConsumed,
+  autoStart = false,
+  onAutoStartConsumed,
   watchlist,
   onToggleWatchlistItem,
   manualData = null,
@@ -288,7 +292,7 @@ export default function DetailView({
   );
 
   useEffect(() => {
-    if (!autoResume || isLoading || !data) return;
+    if ((!autoResume && !autoStart) || isLoading || !data) return;
     try {
       const raw = localStorage.getItem('noir_continue_watching_list');
       const list: ContinueWatchingItem[] = raw ? JSON.parse(raw) : [];
@@ -301,11 +305,25 @@ export default function DetailView({
         setStartAtSnapshot(saved.positionSeconds);
         setPlayerMode('movie');
         setIsPlayerOpen(true);
+      } else if (autoStart) {
+        setStartAtSnapshot(0);
+        setPlayerMode('movie');
+        setIsPlayerOpen(true);
       }
     } finally {
-      onAutoResumeConsumed?.();
+      if (autoResume) onAutoResumeConsumed?.();
+      if (autoStart) onAutoStartConsumed?.();
     }
-  }, [autoResume, data, id, isLoading, onAutoResumeConsumed, type]);
+  }, [
+    autoResume,
+    autoStart,
+    data,
+    id,
+    isLoading,
+    onAutoResumeConsumed,
+    onAutoStartConsumed,
+    type,
+  ]);
 
   // Auto-join a room from a shared link
   useEffect(() => {
@@ -579,6 +597,27 @@ export default function DetailView({
     if (!wtConnected || !wtIsHost) return;
     lastTimeBroadcastRef.current = Date.now();
     wtSendPlayer('seek', Math.floor(seconds));
+  };
+
+  const nextSeason = type === 'tv'
+    ? [...(data?.seasons || [])]
+        .filter((season) => season.season_number > selectedSeason && season.episode_count > 0)
+        .sort((a, b) => a.season_number - b.season_number)[0]
+    : undefined;
+  const hasNextEpisode =
+    type === 'tv' && (selectedEpisode < episodesCount || !!nextSeason);
+
+  const handleNextEpisode = () => {
+    setStartAtSnapshot(0);
+    if (selectedEpisode < episodesCount) {
+      setSelectedEpisode((current) => current + 1);
+      return;
+    }
+    if (nextSeason) {
+      setSelectedSeason(nextSeason.season_number);
+      setEpisodesCount(nextSeason.episode_count || 1);
+      setSelectedEpisode(1);
+    }
   };
 
   if (isLoading) {
@@ -1277,6 +1316,7 @@ export default function DetailView({
             season={selectedSeason}
             episode={selectedEpisode}
             episodesCount={episodesCount}
+            hasNextEpisode={hasNextEpisode}
             youtubeKey={youtubeKey}
             playMode={playerMode}
             isPausedByHost={isPausedByHost}
@@ -1291,12 +1331,7 @@ export default function DetailView({
             onHostResume={handleHostResume}
             onClose={() => setIsPlayerOpen(false)}
             onSwitchMode={(mode) => setPlayerMode(mode)}
-            onNextEpisode={() => {
-              if (selectedEpisode < episodesCount) {
-                setStartAtSnapshot(0);
-                setSelectedEpisode((prev) => prev + 1);
-              }
-            }}
+            onNextEpisode={handleNextEpisode}
           />
         )}
 
