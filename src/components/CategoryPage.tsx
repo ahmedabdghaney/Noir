@@ -60,20 +60,11 @@ function GridCard({ item, onClick }: { item: MovieOrShow; onClick: () => void })
   return (
     <div
       onClick={onClick}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onClick();
-        }
-      }}
-      role="link"
-      tabIndex={0}
-      aria-label={`${item.title}، ${item.type === 'movie' ? 'فيلم' : 'مسلسل'}`}
       className="group/card card-transition cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
     >
       <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-white/[0.06]">
         {item.poster ? (
-          <img src={item.poster} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover transition-transform duration-500" />
+          <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover transition-transform duration-500" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-stone-600 text-xs">بدون صورة</div>
         )}
@@ -231,7 +222,7 @@ export default function CategoryPage({ category, onItemClick, onBack, showAllMod
             </div>
 
             {/* Grid */}
-            <div dir="rtl" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
+            <div dir="rtl" className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1 sm:gap-2">
               {allItems.map((item) => (
                 <div key={`${item.type}-${item.id}`}>
                   <GridCard item={item} onClick={() => onItemClick(item)} />

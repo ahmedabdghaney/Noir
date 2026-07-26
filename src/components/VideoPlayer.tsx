@@ -4,7 +4,6 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import {
   Loader, Pause, Play, Lock,
   Subtitles, Settings, Maximize2, Minimize2,
@@ -112,29 +111,6 @@ export default function VideoPlayer({
   const [embedSource, setEmbedSource] = useState(0);
 
   const progressKey = `noir_progress_${type}_${id}`;
-  const resumeKey = `noir_resume_${type}_${id}`;
-  const lastProgressSaveRef = useRef(0);
-
-  const persistProgress = useCallback((time: number, total: number) => {
-    if (!Number.isFinite(time) || time < 0) return;
-    const now = Date.now();
-    if (now - lastProgressSaveRef.current < 3000 && time < total - 2) return;
-    lastProgressSaveRef.current = now;
-
-    const percent = total > 0
-      ? Math.max(0, Math.min(100, Math.round((time / total) * 100)))
-      : Number(localStorage.getItem(progressKey)) || 0;
-
-    localStorage.setItem(progressKey, String(percent));
-    localStorage.setItem(resumeKey, JSON.stringify({
-      time: Math.max(0, Math.floor(time)),
-      percent,
-      season: type === 'tv' ? season : undefined,
-      episode: type === 'tv' ? episode : undefined,
-      updatedAt: now,
-    }));
-    window.dispatchEvent(new Event('progress_updated'));
-  }, [episode, progressKey, resumeKey, season, type]);
 
   /* ── URLs + native flag (معرّفة مبكراً عشان الـ effects تستخدمها) ── */
   // المسلسلات: TV/{اسم}/{tmdbId}/Season {n}/{episode}
@@ -176,6 +152,25 @@ export default function VideoPlayer({
     } catch (_) { /* MediaMetadata غير مدعوم */ }
   }, [title, posterPath, type, season, episode, playMode]);
 
+  /* ── progress tracker ── */
+  useEffect(() => {
+    if (playMode !== 'movie') return;
+    const savedOnStart = Number(localStorage.getItem(progressKey)) || 0;
+    if (savedOnStart === 0) {
+      localStorage.setItem(progressKey, '8');
+      window.dispatchEvent(new Event('progress_updated'));
+    }
+    const timer = setInterval(() => {
+      const cur = Number(localStorage.getItem(progressKey)) || 0;
+      if (cur < 96) {
+        localStorage.setItem(progressKey, String(cur + 1));
+        window.dispatchEvent(new Event('progress_updated'));
+      }
+    }, 10000);
+
+    return () => clearInterval(timer);
+  }, [type, id, playMode, progressKey]);
+
   /* ── postMessage ── */
   const lastWatchedRef   = useRef(0);
   const lastWatchedAtRef = useRef(0);
@@ -183,13 +178,6 @@ export default function VideoPlayer({
     if (playMode !== 'movie') return;
     lastWatchedRef.current = lastWatchedAtRef.current = 0;
     const handler = (event: MessageEvent) => {
-      const allowedOrigins = new Set([
-        window.location.origin,
-        'https://vidsrc.cc',
-        'https://vidapi.qzz.io',
-        'https://vidsrc-embed.ru',
-      ]);
-      if (!allowedOrigins.has(event.origin)) return;
       const d: any = event?.data;
       if (!d || typeof d !== 'object') return;
       let w: number | null = null;
@@ -201,14 +189,13 @@ export default function VideoPlayer({
       if (w == null || isNaN(w) || w < 0) return;
       const now = Date.now(), prev = lastWatchedRef.current, prevAt = lastWatchedAtRef.current;
       lastWatchedRef.current = w; lastWatchedAtRef.current = now;
-      persistProgress(w, 0);
       if (!prev || !prevAt) { onTimeUpdate?.(w); return; }
       const isSeek = (w - prev - (now - prevAt) / 1000) > 5 || (w - prev) < -3;
       isSeek ? onSeek?.(w) : onTimeUpdate?.(w);
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [playMode, type, id, season, episode, startAt, onTimeUpdate, onSeek, persistProgress]);
+  }, [playMode, type, id, season, episode, startAt, onTimeUpdate, onSeek]);
 
   /* ── reset ── */
   useEffect(() => {
@@ -556,7 +543,7 @@ export default function VideoPlayer({
   };
 
   /* ── tap: ضغطة = play/pause، ضغطتين على الجوانب = seek، الوسط = fullscreen ── */
-  const handleVideoClick = (e: ReactMouseEvent) => {
+  const handleVideoClick = (e: React.MouseEvent) => {
     if (!isNative) return;
     e.stopPropagation();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -586,16 +573,16 @@ export default function VideoPlayer({
     return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
   };
 
-  const handleProgressClick = (e: ReactMouseEvent<HTMLDivElement>) => {
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!videoRef.current || !duration) return;
     videoRef.current.currentTime = pctFromEvent(e.clientX) * duration;
   };
 
-  const handleProgressMove = (e: ReactMouseEvent<HTMLDivElement>) => {
+  const handleProgressMove = (e: React.MouseEvent<HTMLDivElement>) => {
     setHoverPct(pctFromEvent(e.clientX) * 100);
   };
 
-  const startScrub = (e: ReactMouseEvent<HTMLDivElement>) => {
+  const startScrub = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!videoRef.current || !duration) return;
     setIsScrubbing(true);
     videoRef.current.currentTime = pctFromEvent(e.clientX) * duration;
@@ -705,27 +692,12 @@ export default function VideoPlayer({
               crossOrigin="anonymous"
               className={`w-full h-full bg-black ${controlsVisible ? 'cursor-default' : 'cursor-none'}`}
               onClick={handleVideoClick}
-              onLoadedData={() => {
-                const video = videoRef.current;
-                if (!video) return;
-                setIsLoading(false);
-                setDuration(video.duration || 0);
-                if (startAt > 0 && startAt < video.duration - 2) {
-                  video.currentTime = startAt;
-                }
-              }}
+              onLoadedData={() => { setIsLoading(false); setDuration(videoRef.current?.duration || 0); }}
               onCanPlay={() => setIsLoading(false)}
               onError={() => setCustomMp4Failed(true)}
               onPlay={() => { setIsPlaying(true); resetHideTimer(); }}
               onPause={() => { setIsPlaying(false); setControlsVisible(true); clearTimeout(hideTimer.current); }}
-              onTimeUpdate={() => {
-                const video = videoRef.current;
-                if (!video) return;
-                setCurrentTime(video.currentTime || 0);
-                persistProgress(video.currentTime || 0, video.duration || 0);
-                onTimeUpdate?.(video.currentTime || 0);
-              }}
-              onEnded={() => persistProgress(videoRef.current?.duration || 0, videoRef.current?.duration || 0)}
+              onTimeUpdate={() => setCurrentTime(videoRef.current?.currentTime || 0)}
               onProgress={() => {
                 const v = videoRef.current;
                 if (v && v.buffered.length) setBuffered(v.buffered.end(v.buffered.length - 1));
@@ -1049,7 +1021,7 @@ export default function VideoPlayer({
 }
 
 function Btn({ onClick, label, children, active = false, small = false, big = false }: {
-  onClick: () => void; label: string; children: ReactNode; active?: boolean; small?: boolean; big?: boolean;
+  onClick: () => void; label: string; children: React.ReactNode; active?: boolean; small?: boolean; big?: boolean;
 }) {
   return (
     <button onClick={onClick} title={label} aria-label={label}

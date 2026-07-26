@@ -1,7 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
-import { Loader, Search, Star, Trash2, X } from 'lucide-react';
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useState, useEffect, useRef } from 'react';
+import { Search, X, Star, ChevronLeft, Loader, Trash2, Clock } from 'lucide-react';
 import { MovieOrShow } from '../types';
-import { searchMulti } from '../lib/tmdb';
+import { searchMulti, fetchTrendingWeek, discoverTitles } from '../lib/tmdb';
 import { CATEGORIES } from '../lib/categories';
 
 interface SearchOverlayProps {
@@ -11,210 +16,295 @@ interface SearchOverlayProps {
   onBrowseCategory?: (key: string) => void;
 }
 
+// A recently opened title from search, with the time it was opened.
 type RecentTitle = MovieOrShow & { openedAt: number };
 
-export default function SearchOverlay({
-  isOpen,
-  onClose,
-  onSelectTitle,
-  onBrowseCategory,
-}: SearchOverlayProps) {
+// Format a timestamp into a short relative Arabic label.
+function timeAgo(ts: number): string {
+  const diff = Date.now() - ts;
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'الآن';
+  if (min < 60) return `قبل ${min} دقيقة`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `قبل ${hr} ساعة`;
+  const day = Math.floor(hr / 24);
+  if (day === 1) return 'أمس';
+  if (day < 7) return `قبل ${day} أيام`;
+  const wk = Math.floor(day / 7);
+  if (wk < 4) return `قبل ${wk} أسبوع`;
+  return `قبل ${Math.floor(day / 30)} شهر`;
+}
+
+export default function SearchOverlay({ isOpen, onClose, onSelectTitle, onBrowseCategory }: SearchOverlayProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<MovieOrShow[]>([]);
-  const [recentTitles, setRecentTitles] = useState<RecentTitle[]>([]);
+  const [trending, setTrending] = useState<MovieOrShow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [recentTitles, setRecentTitles] = useState<RecentTitle[]>([]);
+  const [catImages, setCatImages] = useState<Record<string, string>>({});
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // جلب صورة ممثّلة لكل تصنيف (أشهر فلم) — بدون تكرار نفس الصورة بين التصنيفات
   useEffect(() => {
     if (!isOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const focusTimer = window.setTimeout(() => inputRef.current?.focus(), 60);
+    let cancelled = false;
+    (async () => {
+      const entries = await Promise.all(
+        CATEGORIES.map(async (cat) => {
+          try {
+            const res = await discoverTitles('movie', { genreIds: String(cat.primaryGenre), sortBy: 'popularity', page: 1 });
+            const posters = res.results.filter((r) => r.poster).map((r) => r.poster as string);
+            return [cat.key, posters] as [string, string[]];
+          } catch {
+            return [cat.key, []] as [string, string[]];
+          }
+        })
+      );
+      if (!cancelled) {
+        // كل تصنيف ياخذ أول صورة غير مستعملة من قائمته — يمنع التكرار
+        const used = new Set<string>();
+        const map: Record<string, string> = {};
+        entries.forEach(([k, posters]) => {
+          const pick = posters.find((p) => !used.has(p)) || posters[0] || '';
+          if (pick) { map[k] = pick; used.add(pick); }
+        });
+        setCatImages(map);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isOpen]);
 
-    try {
-      const saved = localStorage.getItem('noir_recent_titles');
-      setRecentTitles(saved ? JSON.parse(saved) : []);
-    } catch {
-      setRecentTitles([]);
-    }
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.clearTimeout(focusTimer);
-      window.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [isOpen, onClose]);
-
+  // Focus on entry & load history/trending
   useEffect(() => {
-    const cleanQuery = query.trim();
-    if (!cleanQuery) {
+    if (isOpen) {
+      setTimeout(() => inputRef.current?.focus(), 80);
+
+      // Load recently opened titles from Local Storage
+      try {
+        const saved = localStorage.getItem('noir_recent_titles');
+        if (saved) {
+          setRecentTitles(JSON.parse(saved));
+        }
+      } catch (err) {
+        console.error("Error loading recent titles: ", err);
+      }
+
+      // Load trending queries list if empty
+      if (trending.length === 0) {
+        fetchTrendingWeek().then(setTrending).catch(() => {});
+      }
+    }
+  }, [isOpen]);
+
+  // Query Debounce effect
+  useEffect(() => {
+    if (!query.trim()) {
       setResults([]);
       setIsLoading(false);
       return;
     }
 
-    let cancelled = false;
     setIsLoading(true);
-    const timer = window.setTimeout(async () => {
+    const delayDebounceRaw = setTimeout(async () => {
       try {
-        const matches = await searchMulti(cleanQuery);
-        if (!cancelled) setResults(matches.slice(0, 12));
-      } catch {
-        if (!cancelled) setResults([]);
+        const matching = await searchMulti(query);
+        setResults(matching);
+      } catch (err) {
+        setResults([]);
       } finally {
-        if (!cancelled) setIsLoading(false);
+        setIsLoading(false);
       }
     }, 300);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
+
+    return () => clearTimeout(delayDebounceRaw);
   }, [query]);
 
-  const openTitle = (item: MovieOrShow) => {
-    const next: RecentTitle[] = [
-      { ...item, openedAt: Date.now() },
-      ...recentTitles.filter((title) => !(title.id === item.id && title.type === item.type)),
-    ].slice(0, 8);
-    setRecentTitles(next);
-    localStorage.setItem('noir_recent_titles', JSON.stringify(next));
-    onSelectTitle(item.type, item.id);
-    onClose();
+  // Save an opened title into recent history (most recent first, max 8)
+  const addToRecentTitles = (item: MovieOrShow) => {
+    if (!item) return;
+    try {
+      const saved = localStorage.getItem('noir_recent_titles');
+      let list: RecentTitle[] = saved ? JSON.parse(saved) : [];
+      list = list.filter((t) => !(t.id === item.id && t.type === item.type));
+      list = [{ ...item, openedAt: Date.now() }, ...list].slice(0, 8);
+      setRecentTitles(list);
+      localStorage.setItem('noir_recent_titles', JSON.stringify(list));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const clearRecentTitles = () => {
+    setRecentTitles([]);
+    localStorage.removeItem('noir_recent_titles');
   };
 
   if (!isOpen) return null;
 
   return (
     <div
-      className="fixed inset-0 z-[500] bg-[#09090b]/96 backdrop-blur-2xl overflow-y-auto"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="search-title"
+      className="fixed inset-y-0 left-0 right-0 md:right-52 bg-[#17171a] z-[170] pt-20 md:pt-24 px-4 sm:px-6 md:px-10 selection:bg-red-500/30 overflow-y-auto"
     >
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-5 sm:pt-10 pb-24">
-        <div className="flex items-center justify-between gap-4 mb-7">
-          <div>
-            <span className="noir-eyebrow block mb-1">نوار سينما</span>
-            <h1 id="search-title" className="font-display text-2xl sm:text-3xl font-bold text-white">
-              البحث
-            </h1>
-          </div>
-          <button onClick={onClose} className="noir-icon-button" aria-label="إغلاق البحث">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+      <div className="w-full">
 
-        <div className="glass-strong min-h-14 flex items-center gap-3 px-4 sm:px-5 rounded-[18px] mb-8">
-          <Search className="w-5 h-5 text-white/45 shrink-0" />
+        {/* Input area — bar بحث كبير */}
+        <div className="flex items-center gap-3 px-5 py-4 bg-stone-900/80 border border-white/8 rounded-2xl mb-6 backdrop-blur-xl">
+          <Search className="w-5 h-5 text-gray-400 shrink-0" />
           <input
             ref={inputRef}
+            type="text"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="ابحث عن فيلم أو مسلسل"
-            aria-label="ابحث عن فيلم أو مسلسل"
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder=""
+            className="flex-1 bg-transparent border-0 outline-none text-white text-base md:text-lg font-medium placeholder-gray-500 text-right font-sans"
             autoComplete="off"
-            className="flex-1 min-w-0 bg-transparent border-0 outline-none text-white text-base sm:text-lg placeholder:text-white/30"
           />
           {isLoading ? (
-            <Loader className="w-5 h-5 text-white/55 animate-spin" />
-          ) : query ? (
-            <button onClick={() => setQuery('')} className="w-9 h-9 rounded-full bg-white/[0.07] flex items-center justify-center text-white/55 hover:text-white" aria-label="مسح البحث">
-              <X className="w-4 h-4" />
-            </button>
-          ) : null}
+            <Loader className="w-4 h-4 text-red-500 animate-spin shrink-0" />
+          ) : (
+            query && (
+              <button
+                onClick={() => setQuery('')}
+                className="w-5 h-5 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )
+          )}
         </div>
 
-        {query.trim() ? (
-          <section aria-live="polite">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-white">النتائج</h2>
-              {!isLoading && <span className="text-xs text-white/40">{results.length} عنوان</span>}
+        {/* آخر ما شاهدته من البحث — أفقي تحت الـ bar */}
+        {!query.trim() && recentTitles.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-3 select-none" dir="rtl">
+              <span className="text-[11px] font-bold text-gray-500 uppercase">آخر ما شاهدته من البحث</span>
+              <button
+                onClick={clearRecentTitles}
+                className="text-red-500 hover:text-red-400 flex items-center gap-1 transition-colors text-[10px] font-bold cursor-pointer"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>مسح السجل</span>
+              </button>
             </div>
-
-            {!isLoading && results.length === 0 ? (
-              <div className="noir-surface py-14 px-6 text-center">
-                <h3 className="text-white font-semibold mb-2">ما لكينا نتيجة مطابقة</h3>
-                <p className="text-sm text-white/45">جرّب اسم أقصر أو تأكد من الكتابة.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {results.map((item) => (
-                  <button
-                    key={`${item.type}-${item.id}`}
-                    onClick={() => openTitle(item)}
-                    className="min-h-[82px] flex items-center gap-4 p-3 rounded-[16px] text-right hover:bg-white/[0.07] border border-transparent hover:border-white/[0.08]"
-                  >
-                    <div className="w-11 h-16 rounded-[10px] overflow-hidden bg-white/[0.06] shrink-0">
-                      {item.poster && <img src={item.poster} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-white truncate">{item.title}</h3>
-                      <p className="text-xs text-white/45 mt-1">
-                        {item.type === 'movie' ? 'فيلم' : 'مسلسل'} {item.year ? `· ${item.year}` : ''}
-                      </p>
-                    </div>
-                    {item.rating > 0 && (
-                      <span className="inline-flex items-center gap-1 text-xs text-[#ffd60a] font-semibold">
-                        <Star className="w-3.5 h-3.5 fill-current" />
-                        {item.rating.toFixed(1)}
-                      </span>
+            <div className="flex flex-row gap-2.5 md:gap-3 overflow-x-auto no-scrollbar pb-2" dir="rtl">
+              {recentTitles.map((item) => (
+                <div
+                  key={`recent-${item.type}-${item.id}`}
+                  onClick={() => { addToRecentTitles(item); onSelectTitle(item.type, item.id); onClose(); }}
+                  className="flex-none w-[90px] sm:w-[110px] cursor-pointer select-none"
+                >
+                  <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-stone-900 border border-white/8">
+                    {item.poster ? (
+                      <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-stone-600">{item.title.slice(0, 2)}</div>
                     )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </section>
-        ) : (
-          <div className="space-y-9">
-            {recentTitles.length > 0 && (
-              <section>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-white">شاهدتها مؤخراً</h2>
-                  <button
-                    onClick={() => {
-                      setRecentTitles([]);
-                      localStorage.removeItem('noir_recent_titles');
-                    }}
-                    className="min-h-10 px-3 inline-flex items-center gap-1.5 text-xs text-white/45 hover:text-white"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    مسح
-                  </button>
+                  </div>
+                  <p className="text-white/85 text-[11px] font-semibold truncate mt-1.5 text-right">{item.title}</p>
                 </div>
-                <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-                  {recentTitles.map((item) => (
-                    <button key={`${item.type}-${item.id}`} onClick={() => openTitle(item)} className="flex-none w-[108px] text-right">
-                      <div className="noir-card aspect-[2/3]">
-                        {item.poster && <img src={item.poster} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
-                      </div>
-                      <span className="block text-[13px] text-white font-medium truncate mt-2">{item.title}</span>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            <section>
-              <h2 className="text-lg font-bold text-white mb-4">تصفح حسب التصنيف</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {CATEGORIES.slice(0, 12).map((category) => (
-                  <button
-                    key={category.key}
-                    onClick={() => onBrowseCategory?.(category.key)}
-                    className="relative min-h-24 rounded-[18px] overflow-hidden border border-white/[0.08] text-right p-4 flex items-end hover:-translate-y-0.5 transition-transform"
-                    style={{ background: `linear-gradient(145deg, ${category.overlay}, #19191d)` }}
-                  >
-                    <span className="text-white text-base font-bold">{category.title}</span>
-                  </button>
-                ))}
-              </div>
-            </section>
+              ))}
+            </div>
           </div>
         )}
+
+        {/* Body */}
+        <div className="pb-20">
+          {/* قسم التصفح بالتصنيفات — يظهر لما ماكو بحث */}
+          {!query.trim() && (
+            <div className="mb-10">
+              <h2 className="font-display text-xl sm:text-2xl font-black text-white mb-4 text-right">تصفّح حسب التصنيف</h2>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1 sm:gap-2" dir="rtl">
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.key}
+                    onClick={() => onBrowseCategory?.(cat.key)}
+                    className="group relative aspect-[2/3] rounded-xl overflow-hidden cursor-pointer border border-white/[0.06] hover:border-white/20 transition-all hover:scale-[1.03]"
+                  >
+                    {catImages[cat.key] && (
+                      <img
+                        src={catImages[cat.key]}
+                        alt={cat.title}
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    )}
+                    <div className="absolute inset-0" style={{ background: cat.overlay }} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                    <div className="absolute inset-0 flex items-center justify-center p-2">
+                      <span className="font-display text-sm sm:text-base font-black text-white text-center drop-shadow-lg leading-tight">{cat.title}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+        {/* Suggestion Lists Body */}
+        <div className="overflow-y-auto py-2">
+          {query.trim() ? (
+            results.length > 0 ? (
+              <div className="space-y-0.5">
+                <div className="text-[10px] font-bold text-gray-500 px-5 py-1.5 text-right select-none uppercase">
+                   نتائج البحث ({results.length})
+                </div>
+                {results.slice(0, 8).map((item) => (
+                  <div
+                    key={`${item.type}-${item.id}`}
+                    onClick={() => {
+                      addToRecentTitles(item);
+                      onSelectTitle(item.type, item.id);
+                      onClose();
+                    }}
+                    className="flex items-center gap-4 px-5 py-3 hover:bg-white/5 cursor-pointer transition-colors text-right"
+                  >
+                    <div className="w-10 h-14 bg-stone-800 rounded-lg overflow-hidden shrink-0 select-none">
+                      {item.poster ? (
+                        <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-stone-600">
+                          {item.title.slice(0, 2)}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0 pr-1">
+                      <h5 className="text-white font-semibold text-sm truncate">{item.title}</h5>
+                      <p className="text-gray-400 text-xs mt-1 font-medium flex items-center gap-1.5">
+                        <span>{item.year || '—'}</span>
+                        <span className="w-1 h-1 bg-stone-700 rounded-full" />
+                        <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
+                        {item.genres.length > 0 && (
+                          <>
+                            <span className="w-1 h-1 bg-stone-700 rounded-full" />
+                            <span className="truncate">{item.genres[0]}</span>
+                          </>
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      {item.rating > 0 && (
+                        <div className="flex items-center gap-1 text-[#f5c518] text-xs font-bold">
+                          <Star className="w-3.5 h-3.5 fill-current" />
+                          <span>{item.rating.toFixed(1)}</span>
+                        </div>
+                      )}
+                      <ChevronLeft className="w-4 h-4 text-gray-500" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-12 text-center text-gray-500 text-xs">
+                لا توجد نتائج مطابقة لـ "{query}"، تأكد من صحة الكلمة.
+              </div>
+            )
+          ) : (
+            null
+          )}
+        </div>
+        </div>
       </div>
     </div>
   );

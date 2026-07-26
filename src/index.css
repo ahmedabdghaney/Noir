@@ -1,44 +1,26 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Rubik:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Rubik:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Arabic", "IBM Plex Sans Arabic", "Segoe UI", sans-serif;
-  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Arabic", "Rubik", "IBM Plex Sans Arabic", sans-serif;
-}
-
-:root {
-  --noir-bg: #09090b;
-  --noir-bg-elevated: #111114;
-  --noir-surface: rgba(36, 36, 40, 0.72);
-  --noir-surface-strong: rgba(24, 24, 27, 0.94);
-  --noir-surface-hover: rgba(255, 255, 255, 0.12);
-  --noir-hairline: rgba(255, 255, 255, 0.10);
-  --noir-text: #f5f5f7;
-  --noir-muted: #a1a1aa;
-  --noir-subtle: #71717a;
-  --noir-accent: #ff453a;
-  --noir-radius-sm: 12px;
-  --noir-radius-md: 16px;
-  --noir-radius-lg: 24px;
-  --noir-radius-xl: 30px;
-  --noir-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --font-sans: "IBM Plex Sans Arabic", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Rubik", "IBM Plex Sans Arabic", sans-serif;
 }
 
 body {
-  margin: 0;
-  background: var(--noir-bg);
-  color: var(--noir-text);
+  background-color: #17171a;
+  color: #ffffff;
   overflow-x: hidden;
-  font-family: var(--font-sans);
+  font-family: "IBM Plex Sans Arabic", "Inter", sans-serif;
   direction: rtl;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   letter-spacing: -0.01em;
-  min-width: 320px;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* خلفية Apple TV هادئة: عمق خفيف بلا حركة مستمرة أو ألوان متنافسة. */
+/* خلفية سينمائية حيّة — طبقات gradient ملوّنة تتحرك ببطء شديد لإحساس عمق.
+   ثلاث بقع لونية (أحمر نوار خافت + أزرق بارد + بنفسجي) فوق قاعدة شبه سوداء. */
 body::before {
   content: "";
   position: fixed;
@@ -46,9 +28,23 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(60% 40% at 80% -10%, rgba(255, 69, 58, 0.08), transparent 70%),
-    linear-gradient(180deg, #101012 0%, var(--noir-bg) 42%, #070709 100%);
+    radial-gradient(60% 50% at 85% 8%, rgba(227, 36, 26, 0.10), transparent 60%),
+    radial-gradient(55% 45% at 12% 12%, rgba(60, 84, 140, 0.14), transparent 62%),
+    radial-gradient(70% 55% at 50% 100%, rgba(90, 60, 130, 0.12), transparent 65%),
+    linear-gradient(180deg, #141416 0%, #111113 45%, #0d0d0f 100%);
   background-attachment: fixed;
+  animation: ambientDrift 26s ease-in-out infinite alternate;
+}
+
+/* حركة خفيفة جداً للبقع اللونية — تعطي حياة بدون تشتيت */
+@keyframes ambientDrift {
+  0%   { background-position: 0% 0%, 0% 0%, 0% 0%, 0% 0%; filter: saturate(1); }
+  50%  { background-position: 3% 2%, -2% 3%, 2% -2%, 0% 0%; filter: saturate(1.15); }
+  100% { background-position: -2% 3%, 3% -2%, -3% 2%, 0% 0%; filter: saturate(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
 }
 
 #root {
@@ -71,43 +67,131 @@ body::before {
 /* Glass surface — the signature Apple-TV material.
    Softer, more translucent, very subtle hairline border. */
 .glass {
-  background: var(--noir-surface);
-  border: 1px solid var(--noir-hairline);
-  backdrop-filter: saturate(140%) blur(20px);
-  -webkit-backdrop-filter: saturate(140%) blur(20px);
+  background: rgba(40, 40, 44, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.07);
 }
 .glass-strong {
-  background: var(--noir-surface-strong);
-  border: 1px solid var(--noir-hairline);
-  backdrop-filter: saturate(140%) blur(24px);
-  -webkit-backdrop-filter: saturate(140%) blur(24px);
+  background: rgba(28, 28, 32, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.07);
 }
 /* Translucent floating panel — more see-through, for search/modals.
    Lets the blurred page show through the panel itself (true Apple glass). */
 .glass-panel {
-  background: rgba(18, 18, 21, 0.92);
-  border: 1px solid var(--noir-hairline);
-  backdrop-filter: saturate(150%) blur(30px);
-  -webkit-backdrop-filter: saturate(150%) blur(30px);
+  background: rgba(22, 22, 26, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 /* Subtle hover-able glass for interactive chips/buttons */
 .glass-hover {
-  background: rgba(255, 255, 255, 0.055);
-  border: 1px solid var(--noir-hairline);
-  transition: background 0.22s var(--noir-ease), border-color 0.22s ease, transform 0.22s var(--noir-ease);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 .glass-hover:hover {
-  background: var(--noir-surface-hover);
-  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+/* Day Mode / Light Mode styling overrides */
+.light-theme {
+  background-color: #f7f8fa !important;
+  color: #0f172a !important;
+}
+
+.light-theme body {
+  background-color: #f7f8fa !important;
+  color: #0f172a !important;
+}
+
+.light-theme .bg-[#0a0a0a],
+.light-theme .bg-[#060606],
+.light-theme .min-h-screen {
+  background-color: #f7f8fa !important;
+}
+
+.light-theme .bg-black,
+.light-theme .bg-black\/80 {
+  background-color: rgba(247, 248, 250, 0.95) !important;
+}
+
+.light-theme .text-white {
+  color: #0f172a !important;
+}
+
+.light-theme .text-gray-300 {
+  color: #334155 !important;
+}
+
+.light-theme .text-gray-400 {
+  color: #475569 !important;
+}
+
+.light-theme .text-stone-400 {
+  color: #475569 !important;
+}
+
+.light-theme .bg-stone-950,
+.light-theme .bg-[#0a0a0abf],
+.light-theme .bg-[#0a0a0a] {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.light-theme .bg-stone-900,
+.light-theme .bg-stone-900\/80,
+.light-theme .bg-stone-900\/50 {
+  background-color: #f1f5f9 !important;
+  border-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+.light-theme .bg-stone-800,
+.light-theme .bg-white\/5,
+.light-theme .bg-white\/10 {
+  background-color: #e2e8f0 !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.light-theme .border-white\/5,
+.light-theme .border-white\/10 {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.light-theme .hover\:bg-white\/5:hover,
+.light-theme .hover\:bg-white\/10:hover,
+.light-theme .hover\:bg-white\/8:hover {
+  background-color: #cbd5e1 !important;
+}
+
+.light-theme .text-gray-500 {
+  color: #64748b !important;
+}
+
+.light-theme .text-gray-400 {
+  color: #475569 !important;
+}
+
+.light-theme .shimmer-bg {
+  background-color: #e2e8f0 !important;
+}
+
+/* Left to right entrance animation */
+@keyframes slideInLeftToRight {
+  0% {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .card-transition {
-  transition: transform 0.28s var(--noir-ease), box-shadow 0.28s ease, filter 0.28s ease;
+  opacity: 0;
+  animation: slideInLeftToRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s ease;
 }
 .card-transition:hover {
-  transform: translateY(-3px) scale(1.025);
-  filter: brightness(1.045);
-  box-shadow: 0 18px 48px -24px rgba(0, 0, 0, 0.95);
+  transform: scale(1.04);
   z-index: 5;
 }
 
@@ -135,6 +219,9 @@ body::before {
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 99px;
+}
+.light-theme ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25);
@@ -188,9 +275,9 @@ body::before {
   animation: noir-fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.88);
-  outline-offset: 3px;
+button:focus-visible, a:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
 }
 
 button, a {
@@ -205,7 +292,7 @@ button, a {
   to { transform: scale(1) translateY(0); }
 }
 .detail-enter {
-  animation: detail-enter 0.36s var(--noir-ease) both;
+  animation: detail-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* Slow ken-burns zoom for hero/backdrop imagery */
@@ -214,7 +301,7 @@ button, a {
   to { transform: scale(1.13); }
 }
 .ken-burns {
-  transform: scale(1.02);
+  animation: ken-burns 20s ease-out forwards;
 }
 
 /* Card press feedback removed */
@@ -229,7 +316,7 @@ button, a {
   to   { opacity: 1; transform: translateY(0); }
 }
 .row-rise {
-  animation: rowRise 0.4s var(--noir-ease) both;
+  animation: rowRise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* دخول متسلسل للبطاقات داخل الصف (كل بطاقة تتأخر شوية عن اللي قبلها) */
@@ -238,8 +325,17 @@ button, a {
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 .card-pop {
-  animation: cardPop 0.34s var(--noir-ease) both;
+  animation: cardPop 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+/* تأخير متدرّج — يعطي إحساس التتابع (stagger) */
+.card-pop:nth-child(1)  { animation-delay: 0.02s; }
+.card-pop:nth-child(2)  { animation-delay: 0.06s; }
+.card-pop:nth-child(3)  { animation-delay: 0.10s; }
+.card-pop:nth-child(4)  { animation-delay: 0.14s; }
+.card-pop:nth-child(5)  { animation-delay: 0.18s; }
+.card-pop:nth-child(6)  { animation-delay: 0.22s; }
+.card-pop:nth-child(7)  { animation-delay: 0.26s; }
+.card-pop:nth-child(8)  { animation-delay: 0.30s; }
 
 /* hover سينمائي للبطاقات — رفعة ناعمة + توهّج خفيف + تكبير لطيف.
    استخدمها بإضافة class="card-cinematic" على غلاف البطاقة. */
@@ -250,11 +346,11 @@ button, a {
   will-change: transform;
 }
 .card-cinematic:hover {
-  transform: translateY(-4px) scale(1.025);
+  transform: translateY(-6px) scale(1.035);
   box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.7),
               0 0 0 1px rgba(255, 255, 255, 0.08),
-              0 8px 30px -12px rgba(255, 69, 58, 0.16);
-  filter: brightness(1.05);
+              0 8px 30px -8px rgba(227, 36, 26, 0.25);
+  filter: brightness(1.08);
   z-index: 5;
 }
 
@@ -281,30 +377,20 @@ button, a {
 .gentle-in { animation: gentleIn 0.4s ease-out both; }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    scroll-behavior: auto !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
+  .row-rise, .card-pop, .gentle-in, .soft-pulse { animation: none; }
+  .card-cinematic { transition: none; }
 }
 
-/* مكونات نظام نوار — مواد Apple TV موحّدة */
-.noir-surface {
-  background: var(--noir-surface);
-  border: 1px solid var(--noir-hairline);
-  border-radius: var(--noir-radius-lg);
-  backdrop-filter: blur(24px) saturate(140%);
-  -webkit-backdrop-filter: blur(24px) saturate(140%);
-}
-
+/* ستايلات الهيرو الجديد فقط — بقية نظام التصميم بقي كما كان. */
 .noir-button-primary,
 .noir-button-secondary,
 .noir-icon-button {
   min-height: 44px;
   border-radius: 999px;
   font-weight: 700;
-  transition: transform 0.22s var(--noir-ease), background-color 0.22s ease, color 0.22s ease;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              background-color 0.22s ease,
+              color 0.22s ease;
 }
 
 .noir-button-primary {
@@ -314,14 +400,14 @@ button, a {
 }
 
 .noir-button-primary:hover {
-  background: #ffffff;
+  background: #fff;
   transform: scale(1.025);
 }
 
 .noir-button-secondary {
-  color: var(--noir-text);
+  color: #f5f5f7;
   background: rgba(255, 255, 255, 0.09);
-  border: 1px solid var(--noir-hairline);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0.7rem 1.15rem;
   backdrop-filter: blur(18px);
 }
@@ -336,50 +422,12 @@ button, a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--noir-text);
+  color: #f5f5f7;
   background: rgba(255, 255, 255, 0.09);
-  border: 1px solid var(--noir-hairline);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .noir-icon-button:hover {
   background: rgba(255, 255, 255, 0.17);
   transform: scale(1.04);
-}
-
-.noir-card {
-  border-radius: var(--noir-radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-  background: var(--noir-bg-elevated);
-  transition: transform 0.28s var(--noir-ease), border-color 0.28s ease, box-shadow 0.28s ease;
-}
-
-.noir-card:hover {
-  transform: translateY(-3px) scale(1.02);
-  border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: 0 22px 50px -28px rgba(0, 0, 0, 0.95);
-}
-
-.noir-eyebrow {
-  color: var(--noir-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.noir-select {
-  width: 100%;
-  min-height: 44px;
-  padding: 0.65rem 0.8rem;
-  color: var(--noir-text);
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid var(--noir-hairline);
-  border-radius: var(--noir-radius-sm);
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  outline: none;
-}
-
-.noir-select:hover {
-  background: rgba(255, 255, 255, 0.1);
 }

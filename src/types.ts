@@ -14,8 +14,6 @@ export interface MovieOrShow {
   year: string;
   date: string;
   genres: string[];
-  season?: number;
-  episode?: number;
 }
 
 export interface CastMember {

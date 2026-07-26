@@ -70,7 +70,7 @@ export function buildSubsections(cat: Category): SubSection[] {
       title: `${cat.title} و${p.name}`,
       genreIds: `${cat.primaryGenre},${p.id}`,
     });
-    if (subs.length >= 3) break;
+    if (subs.length >= 5) break;
   }
   return subs;
 }

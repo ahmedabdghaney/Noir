@@ -198,7 +198,6 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
   };
 
   const handleDelete = async (it: ManualItem) => {
-    if (!window.confirm(`حذف «${it.title}» نهائياً من مكتبة نوار؟`)) return;
     await removeManualItem(manualKey(it));
   };
 
@@ -524,16 +523,8 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                         {isHidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                       {isExtra && (
-                        <button
-                          onClick={() => {
-                            if (window.confirm(`إزالة «${item.title}» من الواجهة الرئيسية؟`)) {
-                              void removeHeroExtra(item.type, item.id);
-                            }
-                          }}
-                          className="w-9 h-9 rounded-full bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center text-red-400 cursor-pointer"
-                          title="إلغاء من الهيرو"
-                          aria-label={`إزالة ${item.title} من الواجهة الرئيسية`}
-                        >
+                        <button onClick={() => removeHeroExtra(item.type, item.id)}
+                          className="w-9 h-9 rounded-full bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center text-red-400 cursor-pointer" title="إلغاء من الهيرو">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       )}
@@ -947,16 +938,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                           <button onClick={() => openSectionEditor((s as any).data)} className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-300 cursor-pointer" title="تعديل">
                             <Edit3 className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => {
-                              if (window.confirm(`حذف قسم «${s.title}» نهائياً؟`)) {
-                                void removeCustomSection(s.key);
-                              }
-                            }}
-                            className="w-9 h-9 rounded-full bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center text-red-400 cursor-pointer"
-                            title="حذف"
-                            aria-label={`حذف قسم ${s.title}`}
-                          >
+                          <button onClick={() => removeCustomSection(s.key)} className="w-9 h-9 rounded-full bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center text-red-400 cursor-pointer" title="حذف">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>

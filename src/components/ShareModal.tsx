@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { X, Copy, Check } from 'lucide-react';
 
 interface ShareModalProps {
@@ -15,20 +15,6 @@ interface ShareModalProps {
 
 export default function ShareModal({ isOpen, url, onClose, onToast }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -61,38 +47,34 @@ export default function ShareModal({ isOpen, url, onClose, onToast }: ShareModal
     <div
       onClick={(e) => e.target === e.currentTarget && onClose()}
       className="fixed inset-0 bg-black/80 backdrop-blur-md z-[600] flex items-center justify-center p-4 selection:bg-red-500/30"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="share-dialog-title"
     >
-      <div className="noir-surface w-full max-w-sm shadow-2xl p-6 relative animate-pop-in text-right">
+      <div className="w-full max-w-sm bg-stone-900 border border-white/10 rounded-3xl shadow-2xl p-6 relative animate-pop-in text-right">
         <button
           onClick={onClose}
-          className="noir-icon-button !w-10 !min-w-10 !min-h-10 absolute left-4 top-4"
-          aria-label="إغلاق نافذة المشاركة"
+          className="absolute left-4 top-4 w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
 
-        <h3 id="share-dialog-title" className="text-base font-bold text-white mb-2 ml-6">مشاركة العمل</h3>
+        <h3 className="text-base font-bold text-white mb-2 ml-6">مشاركة العمل</h3>
         <p className="text-gray-400 text-xs mb-4 leading-relaxed">
           انسخ رابط الصفحة الحالي المسجل بالأسفل حتى تتمكن من إرساله للأصدقاء أو تشغيله لاحقاً بضغطة زر.
         </p>
 
-        <div className="bg-black/30 border border-white/[0.08] rounded-[14px] p-3 text-xs text-white/50 font-mono select-all break-all overflow-hidden text-left mb-4">
+        <div className="bg-stone-950 border border-white/5 rounded-xl p-3 text-xs text-gray-400 font-mono select-all break-all overflow-hidden text-left mb-4 select-none">
           {url}
         </div>
 
         <div className="flex gap-2 justify-end">
           <button
             onClick={onClose}
-            className="noir-button-secondary text-xs"
+            className="px-4 py-2 bg-stone-800 text-gray-300 hover:text-white hover:bg-stone-700 font-medium rounded-full text-xs cursor-pointer transition-colors"
           >
             إلغاء
           </button>
           <button
             onClick={handleCopy}
-            className="noir-button-primary flex items-center gap-1.5 text-xs"
+            className="flex items-center gap-1.5 px-5 py-2 bg-white hover:bg-stone-150 text-black font-bold rounded-full text-xs cursor-pointer transition-colors shadow-lg"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
             <span>{copied ? 'تم النسخ' : 'نسخ الرابط'}</span>

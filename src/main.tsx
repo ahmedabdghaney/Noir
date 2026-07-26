@@ -3,8 +3,9 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-// Keep development free of stale cached assets; register the PWA worker in production only.
-if ((import.meta as any).env?.PROD && 'serviceWorker' in navigator) {
+// تسجيل Service Worker — ضروري لتفعيل PWA mode على iOS
+// (يتيح requestFullscreen الحقيقي على أي عنصر لما يكون الموقع مثبّت بـ Add to Home Screen)
+if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   });

@@ -2,8 +2,7 @@
  * Sidebar — Apple TV style
  */
 
-import type { ReactNode } from 'react';
-import { Home, Compass, Bookmark, Search, ChevronLeft } from 'lucide-react';
+import { Home, Film, Tv, Bookmark, Search, ChevronLeft } from 'lucide-react';
 import LogoIcon from './LogoIcon';
 
 interface SidebarProps {
@@ -20,7 +19,7 @@ interface SidebarProps {
 interface NavItem {
   id: string;
   label: string;
-  icon: ReactNode;
+  icon: React.ReactNode;
   onClick: () => void;
   active: boolean;
 }
@@ -38,6 +37,13 @@ export default function Sidebar({
 
   const navItems: NavItem[] = [
     {
+      id: 'search',
+      label: 'البحث',
+      icon: <Search className="w-[18px] h-[18px]" />,
+      onClick: openSearchOverlay,
+      active: false,
+    },
+    {
       id: 'home',
       label: 'الرئيسية',
       icon: <Home className="w-[18px] h-[18px]" />,
@@ -45,11 +51,18 @@ export default function Sidebar({
       active: activeView === 'home',
     },
     {
-      id: 'browse',
-      label: 'استكشف',
-      icon: <Compass className="w-[18px] h-[18px]" />,
-      onClick: () => setSearchMode(searchMode),
-      active: activeView === 'search',
+      id: 'movies',
+      label: 'الأفلام',
+      icon: <Film className="w-[18px] h-[18px]" />,
+      onClick: () => setSearchMode('movie'),
+      active: activeView === 'search' && searchMode === 'movie',
+    },
+    {
+      id: 'tv',
+      label: 'المسلسلات',
+      icon: <Tv className="w-[18px] h-[18px]" />,
+      onClick: () => setSearchMode('tv'),
+      active: activeView === 'search' && searchMode === 'tv',
     },
     {
       id: 'watchlist',
@@ -58,56 +71,45 @@ export default function Sidebar({
       onClick: onViewWatchlist,
       active: activeView === 'watchlist',
     },
-    {
-      id: 'search',
-      label: 'البحث',
-      icon: <Search className="w-[18px] h-[18px]" />,
-      onClick: openSearchOverlay,
-      active: false,
-    },
   ];
 
   return (
-    <aside className="hidden lg:flex flex-col fixed right-0 top-0 bottom-0 w-56 z-[180] border-l border-white/[0.08] bg-[#0d0d10]/88 backdrop-blur-2xl"
+    <aside className="hidden md:flex flex-col fixed right-0 top-0 bottom-0 w-52 z-[180] border-l border-white/[0.06] bg-[#141417]"
       style={{ direction: 'rtl' }}
     >
       {/* Logo */}
-      <button
+      <div
         onClick={goHome}
-        className="flex items-center gap-3 px-5 py-5 cursor-pointer select-none text-right"
-        aria-label="نوار سينما — الرئيسية"
+        className="flex items-center gap-2.5 px-5 py-5 cursor-pointer select-none"
       >
-        <span className="w-9 h-9 rounded-xl bg-[#ff453a] flex items-center justify-center shadow-[0_10px_28px_-12px_rgba(255,69,58,0.9)]">
-          <LogoIcon className="w-5 h-5 text-white shrink-0" />
-        </span>
-        <span>
-          <span className="block text-white font-bold text-base tracking-tight">نوار</span>
-          <span className="block text-white/40 font-medium text-[11px]">سينما</span>
-        </span>
-      </button>
+        <LogoIcon className="w-5 h-5 text-red-500 shrink-0" />
+        <span className="text-white font-bold text-base tracking-tight">نوار</span>
+        <span className="text-stone-500 font-normal text-[10px] bg-white/5 px-1.5 py-0.5 rounded mr-auto">سينما</span>
+      </div>
 
       {/* Divider */}
       <div className="h-px bg-white/[0.06] mx-4" />
 
       {/* Nav Items */}
-      <nav className="flex flex-col gap-1 px-3 pt-4 flex-1" aria-label="التنقل الرئيسي">
+      <nav className="flex flex-col gap-0.5 px-2.5 pt-3 flex-1">
         {navItems.map((item) => (
           <button
             key={item.id}
             onClick={item.onClick}
-            aria-current={item.active ? 'page' : undefined}
-            className={`flex min-h-11 items-center gap-3 px-3.5 py-2.5 rounded-[14px] text-sm font-semibold transition-colors cursor-pointer w-full text-right ${
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer w-full text-right ${
               item.active
-                ? 'bg-white text-black shadow-[0_10px_30px_-16px_rgba(255,255,255,0.85)]'
-                : 'text-white/55 hover:text-white hover:bg-white/[0.08]'
+                ? 'bg-white/10 text-white'
+                : item.id === 'search'
+                ? 'text-stone-400 hover:text-white hover:bg-white/5'
+                : 'text-stone-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            <span className={item.active ? 'text-black' : 'text-white/45'}>
+            <span className={item.active ? 'text-white' : 'text-stone-500'}>
               {item.icon}
             </span>
             <span>{item.label}</span>
             {item.id === 'search' && (
-              <span className="mr-auto text-[10px] text-white/35 bg-white/[0.06] px-1.5 py-0.5 rounded-md font-mono">⌘K</span>
+              <span className="mr-auto text-[10px] text-stone-600 bg-white/5 px-1.5 py-0.5 rounded font-mono">⌘K</span>
             )}
           </button>
         ))}
@@ -120,7 +122,7 @@ export default function Sidebar({
       {user && (
         <button
           onClick={onOpenProfile}
-          className="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-white/[0.06] transition-colors text-right"
+          className="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-white/5 transition-colors"
         >
           <div className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center bg-indigo-600 shrink-0">
             {user.photoURL ? (
@@ -131,7 +133,7 @@ export default function Sidebar({
           </div>
           <div className="flex-1 min-w-0 text-right">
             <p className="text-xs text-white font-medium truncate">{user.name}</p>
-            <p className="text-xs text-white/40 truncate">{user.type === 'guest' ? 'تصفح كضيف' : 'الملف الشخصي'}</p>
+            <p className="text-[10px] text-stone-500 truncate">الملف الشخصي</p>
           </div>
           <ChevronLeft className="w-3.5 h-3.5 text-stone-600 shrink-0" />
         </button>

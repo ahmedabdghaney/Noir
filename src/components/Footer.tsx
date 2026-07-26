@@ -1,3 +1,9 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { Youtube, Github, Mail } from 'lucide-react';
 import LogoIcon from './LogoIcon';
 
 interface FooterProps {
@@ -7,29 +13,81 @@ interface FooterProps {
 
 export default function Footer({ goHome, setSearchMode }: FooterProps) {
   return (
-    <footer className="mt-10 border-t border-white/[0.07] text-white/40">
-      <div className="max-w-7xl mx-auto px-6 md:px-12 py-9 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <div className="flex items-center gap-3">
-          <span className="w-9 h-9 rounded-[12px] bg-[#ff453a] flex items-center justify-center text-white">
-            <LogoIcon className="w-4 h-4" />
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-white/85">نوار سينما</p>
-            <p className="text-[11px] mt-0.5">بيانات العناوين والصور مقدّمة من TMDB.</p>
+    <footer className="border-t border-white/5 bg-stone-950/40 text-stone-500 py-12 md:py-16 mt-16 select-none leading-relaxed">
+      <div className="max-w-6xl mx-auto px-6 md:px-12">
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 text-right">
+          
+          {/* Brand Info */}
+          <div className="space-y-4">
+            <div
+              onClick={goHome}
+              className="inline-flex items-center gap-2 cursor-pointer text-white font-bold text-lg tracking-tight"
+            >
+              <LogoIcon className="w-5 h-5 text-red-500" />
+              <span>نوار</span>
+              <span className="text-gray-500 font-normal text-xs mr-1 bg-white/5 px-1.5 py-0.5 rounded">سينما</span>
+            </div>
+            <p className="text-xs text-stone-400 font-medium max-w-sm">
+              تجربة بثّ راقية صُمّمت لمحبّي السينما وعائلاتهم. مجموعات منسّقة، استعراض فائق السرعة، ومستوى راقٍ خالٍ من الفوضى والإعلانات المزعجة.
+            </p>
+            <div className="flex gap-2.5">
+              <a
+                href="https://youtube.com"
+                target="_blank"
+                rel="noreferrer"
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all text-stone-400"
+                aria-label="YouTube Channel"
+              >
+                <Youtube className="w-4 h-4" />
+              </a>
+              <a
+                href="https://github.com"
+                target="_blank"
+                rel="noreferrer"
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all text-stone-400"
+                aria-label="Github Repo"
+              >
+                <Github className="w-4 h-4" />
+              </a>
+              <a
+                href="mailto:support@noir.cinema"
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all text-stone-400"
+                aria-label="Email support"
+              >
+                <Mail className="w-4 h-4" />
+              </a>
+            </div>
           </div>
+
+          {/* Quick links */}
+          <div className="space-y-3">
+            <h5 className="text-xs font-bold text-white uppercase tracking-wider">تصفّح العناوين</h5>
+            <div className="flex flex-col gap-2 text-xs">
+              <button onClick={goHome} className="text-right hover:text-white transition-colors cursor-pointer">
+                الرئيسية
+              </button>
+              <button onClick={() => setSearchMode('movie')} className="text-right hover:text-white transition-colors cursor-pointer">
+                أحدث الأفلام
+              </button>
+              <button onClick={() => setSearchMode('tv')} className="text-right hover:text-white transition-colors cursor-pointer">
+                المسلسلات التلفزيونية
+              </button>
+            </div>
+          </div>
+
         </div>
 
-        <nav className="flex items-center gap-1 text-xs" aria-label="روابط التذييل">
-          <button onClick={goHome} className="min-h-10 px-3 rounded-full hover:bg-white/[0.06] hover:text-white">
-            الرئيسية
-          </button>
-          <button onClick={() => setSearchMode('movie')} className="min-h-10 px-3 rounded-full hover:bg-white/[0.06] hover:text-white">
-            الأفلام
-          </button>
-          <button onClick={() => setSearchMode('tv')} className="min-h-10 px-3 rounded-full hover:bg-white/[0.06] hover:text-white">
-            المسلسلات
-          </button>
-        </nav>
+        {/* Footer Bottom copyright notes */}
+        <div className="border-t border-white/5 pt-6 flex flex-wrap justify-between items-center text-[11px] text-stone-600 gap-4">
+          <span>
+            © 2026 نوار سينما — للاستخدام العائلي والترفيه الشخصي التجريبي. كافة الحقوق محفوظة.
+          </span>
+          <span className="font-medium tracking-wide">
+            صُنع برزانة وبلغة جمالية رمادية هادئة للعين.
+          </span>
+        </div>
+
       </div>
     </footer>
   );
