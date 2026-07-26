@@ -4,9 +4,9 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, X, Star, ChevronLeft, Loader, Trash2, Clock } from 'lucide-react';
+import { Search, X, Star, ChevronLeft, Loader } from 'lucide-react';
 import { MovieOrShow } from '../types';
-import { searchMulti, fetchTrendingWeek, discoverTitles } from '../lib/tmdb';
+import { searchMulti, discoverTitles } from '../lib/tmdb';
 import { CATEGORIES } from '../lib/categories';
 import WatchlistButton from './WatchlistButton';
 
@@ -19,25 +19,6 @@ interface SearchOverlayProps {
   onToggleSave?: (item: MovieOrShow) => void;
 }
 
-// A recently opened title from search, with the time it was opened.
-type RecentTitle = MovieOrShow & { openedAt: number };
-
-// Format a timestamp into a short relative Arabic label.
-function timeAgo(ts: number): string {
-  const diff = Date.now() - ts;
-  const min = Math.floor(diff / 60000);
-  if (min < 1) return 'الآن';
-  if (min < 60) return `قبل ${min} دقيقة`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `قبل ${hr} ساعة`;
-  const day = Math.floor(hr / 24);
-  if (day === 1) return 'أمس';
-  if (day < 7) return `قبل ${day} أيام`;
-  const wk = Math.floor(day / 7);
-  if (wk < 4) return `قبل ${wk} أسبوع`;
-  return `قبل ${Math.floor(day / 30)} شهر`;
-}
-
 export default function SearchOverlay({
   isOpen,
   onClose,
@@ -48,9 +29,7 @@ export default function SearchOverlay({
 }: SearchOverlayProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<MovieOrShow[]>([]);
-  const [trending, setTrending] = useState<MovieOrShow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [recentTitles, setRecentTitles] = useState<RecentTitle[]>([]);
   const [catImages, setCatImages] = useState<Record<string, string>>({});
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -93,25 +72,11 @@ export default function SearchOverlay({
     return () => { cancelled = true; };
   }, [isOpen]);
 
-  // Focus on entry & load history/trending
+  // Focus on entry and remove data left by the deleted search-history feature.
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 80);
-
-      // Load recently opened titles from Local Storage
-      try {
-        const saved = localStorage.getItem('noir_recent_titles');
-        if (saved) {
-          setRecentTitles(JSON.parse(saved));
-        }
-      } catch (err) {
-        console.error("Error loading recent titles: ", err);
-      }
-
-      // Load trending queries list if empty
-      if (trending.length === 0) {
-        fetchTrendingWeek().then(setTrending).catch(() => {});
-      }
+      localStorage.removeItem('noir_recent_titles');
     }
   }, [isOpen]);
 
@@ -137,26 +102,6 @@ export default function SearchOverlay({
 
     return () => clearTimeout(delayDebounceRaw);
   }, [query]);
-
-  // Save an opened title into recent history (most recent first, max 8)
-  const addToRecentTitles = (item: MovieOrShow) => {
-    if (!item) return;
-    try {
-      const saved = localStorage.getItem('noir_recent_titles');
-      let list: RecentTitle[] = saved ? JSON.parse(saved) : [];
-      list = list.filter((t) => !(t.id === item.id && t.type === item.type));
-      list = [{ ...item, openedAt: Date.now() }, ...list].slice(0, 8);
-      setRecentTitles(list);
-      localStorage.setItem('noir_recent_titles', JSON.stringify(list));
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const clearRecentTitles = () => {
-    setRecentTitles([]);
-    localStorage.removeItem('noir_recent_titles');
-  };
 
   if (!isOpen) return null;
 
@@ -213,59 +158,6 @@ export default function SearchOverlay({
           )}
         </div>
 
-        {/* آخر ما شاهدته من البحث — أفقي تحت الـ bar */}
-        {!query.trim() && recentTitles.length > 0 && (
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-3 select-none" dir="rtl">
-              <span className="text-[11px] font-bold text-gray-500 uppercase">آخر ما شاهدته من البحث</span>
-              <button
-                onClick={clearRecentTitles}
-                className="text-red-500 hover:text-red-400 flex items-center gap-1 transition-colors text-[10px] font-bold cursor-pointer"
-              >
-                <Trash2 className="w-3 h-3" />
-                <span>مسح السجل</span>
-              </button>
-            </div>
-            <div className="flex flex-row gap-2.5 md:gap-3 overflow-x-auto no-scrollbar pb-2" dir="rtl">
-              {recentTitles.map((item) => (
-                <div
-                  key={`recent-${item.type}-${item.id}`}
-                  onClick={() => { addToRecentTitles(item); onSelectTitle(item.type, item.id); onClose(); }}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      addToRecentTitles(item);
-                      onSelectTitle(item.type, item.id);
-                      onClose();
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`فتح ${item.title}`}
-                  className="flex-none w-[90px] sm:w-[110px] cursor-pointer select-none"
-                >
-                  <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-stone-900 border border-white/8">
-                    {onToggleSave && (
-                      <WatchlistButton
-                        saved={isSaved?.(item) ?? false}
-                        onToggle={() => onToggleSave(item)}
-                        compact
-                        className="absolute top-1.5 right-1.5 z-20"
-                      />
-                    )}
-                    {item.poster ? (
-                      <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-stone-600">{item.title.slice(0, 2)}</div>
-                    )}
-                  </div>
-                  <p className="text-white/85 text-[11px] font-semibold truncate mt-1.5 text-right">{item.title}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Body */}
         <div className="pb-20">
           {/* قسم التصفح بالتصنيفات — يظهر لما ماكو بحث */}
@@ -312,14 +204,12 @@ export default function SearchOverlay({
                   <div
                     key={`${item.type}-${item.id}`}
                     onClick={() => {
-                      addToRecentTitles(item);
                       onSelectTitle(item.type, item.id);
                       onClose();
                     }}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
-                        addToRecentTitles(item);
                         onSelectTitle(item.type, item.id);
                         onClose();
                       }

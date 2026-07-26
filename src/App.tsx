@@ -1603,21 +1603,6 @@ export default function App() {
 
             {/* Custom Horizontal Cinema Rows */}
             <div className="space-y-1 md:space-y-2">
-              {watchlist.length > 0 && (
-                <div id="watchlist-section" className="scroll-mt-20">
-                  <MovieRow
-                    title="قائمتي"
-                    viewAllHash="#watchlist"
-                    items={watchlist}
-                    onItemClick={handleTitleClick}
-                    onRemove={removeFromWatchlist}
-                    isSaved={isInWatchlist}
-                    onToggleSave={toggleWatchlistItem}
-                    compactSaveButton
-                  />
-</div>
-              )}
-
               {continueWatching.length > 0 && (
                 <div id="continue-watching-section" className="scroll-mt-20">
                   <ContinueWatchingRow

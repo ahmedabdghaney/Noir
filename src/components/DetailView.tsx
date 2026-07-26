@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Dot, Star, Clock, Calendar, Globe, Languages, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, Star, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DetailedInfo, MovieOrShow, CastMember } from '../types';
 import { fetchDetailedTitle, getPosterUrl, getLargePosterUrl, getBackdropUrl, getOriginalBackdropUrl } from '../lib/tmdb';
 import VideoPlayer from './VideoPlayer';
@@ -707,22 +707,41 @@ export default function DetailView({
 
 
 
-            {/* Row Meta Metrics — clean Apple TV style */}
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs sm:text-sm text-gray-300 font-semibold mb-3 sm:mb-4 leading-none">
+            {/* معلومات العمل كنصوص متتابعة قبل كبسولات التصنيف */}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-2 text-xs sm:text-sm text-stone-300 font-medium mb-3 leading-relaxed">
               <span className="flex items-center gap-1.5 text-[#f5c518]">
                 <Star className="w-4 h-4 fill-current" />
                 {data.vote_average ? data.vote_average.toFixed(1) :'غ/م'}
-</span>
-              <span className="text-stone-300">{year ||'—'}</span>
+              </span>
+              <span aria-hidden="true" className="text-stone-600">•</span>
+              <span>{year ||'—'}</span>
               {runtime > 0 && (
-                <span className="text-stone-300">{runtime} دقيقة</span>
+                <>
+                  <span aria-hidden="true" className="text-stone-600">•</span>
+                  <span>{runtime} دقيقة</span>
+                </>
               )}
-              <span className="glass text-stone-200 px-2.5 py-1 rounded-full text-[10px] sm:text-xs">
-                {type ==='movie' ?'فيلم' :'مسلسل'}
-</span>
-
-
-</div>
+              <span aria-hidden="true" className="text-stone-600">•</span>
+              <span>{type ==='movie' ?'فيلم' :'مسلسل'}</span>
+              {director && director !== 'غير محدد' && (
+                <>
+                  <span aria-hidden="true" className="text-stone-600">•</span>
+                  <span>إخراج: {director}</span>
+                </>
+              )}
+              {country && country !== 'غير معروف' && (
+                <>
+                  <span aria-hidden="true" className="text-stone-600">•</span>
+                  <span>{country}</span>
+                </>
+              )}
+              {mainLang && mainLang !== 'الأصلية' && (
+                <>
+                  <span aria-hidden="true" className="text-stone-600">•</span>
+                  <span>{mainLang}</span>
+                </>
+              )}
+            </div>
 
             {/* Genre Tags List */}
             {genres.length > 0 && (
@@ -947,48 +966,6 @@ export default function DetailView({
 </div>
         )}
 
-        {/* المعلومات الثانوية تبقى متاحة بدون مزاحمة قرار المشاهدة */}
-        <details className="group/details noir-surface my-10 md:my-14 overflow-hidden">
-          <summary className="min-h-14 px-5 sm:px-6 flex items-center justify-between gap-4 cursor-pointer list-none text-white font-bold">
-            <span>معلومات العمل</span>
-            <ChevronLeft className="w-4 h-4 text-stone-400 group-open/details:-rotate-90" />
-          </summary>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-white/[0.06] border-t border-white/[0.08]">
-            <div className="flex flex-col gap-1.5 bg-[#1b1b1f] px-5 py-4">
-              <span className="text-xs text-white/60 font-medium flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5" />
-                عام الإصدار
-              </span>
-              <span className="text-white text-lg font-semibold">{year || 'غ/م'}</span>
-            </div>
-
-            <div className="flex flex-col gap-1.5 bg-[#1b1b1f] px-5 py-4">
-              <span className="text-xs text-white/60 font-medium flex items-center gap-1.5">
-                <RotateCcw className="w-3.5 h-3.5" />
-                الإخراج
-              </span>
-              <span className="text-white text-base font-semibold truncate" title={director}>{director}</span>
-            </div>
-
-            <div className="flex flex-col gap-1.5 bg-[#1b1b1f] px-5 py-4">
-              <span className="text-xs text-white/60 font-medium flex items-center gap-1.5">
-                <Globe className="w-3.5 h-3.5" />
-                دولة الإنتاج
-              </span>
-              <span className="text-white text-base font-semibold truncate" title={country}>{country}</span>
-            </div>
-
-            <div className="flex flex-col gap-1.5 bg-[#1b1b1f] px-5 py-4">
-              <span className="text-xs text-white/60 font-medium flex items-center gap-1.5">
-                <Languages className="w-3.5 h-3.5" />
-                اللغة الأصلية
-              </span>
-              <span className="text-white text-base font-semibold truncate">{mainLang}</span>
-            </div>
-          </div>
-        </details>
-
-
         {/* TV Episodes section - full width below info cards */}
             {/* TV Series: season selector + Apple-TV style episode cards */}
             {type ==='tv' && data.seasons && data.seasons.length > 0 && (
@@ -1093,10 +1070,10 @@ export default function DetailView({
                             setSelectedEpisode(ep.episode_number);
                             handlePlayClick('movie');
                           }}
-                          className="group/ep flex-none w-[280px] sm:w-[360px] text-right snap-start cursor-pointer"
+                          className="group/ep flex-none w-[300px] sm:w-[380px] text-right snap-start cursor-pointer"
                         >
                           {/* Card with image + overlaid text */}
-                          <div className={`relative aspect-video rounded-2xl overflow-hidden bg-stone-900 ${selectedEpisode === ep.episode_number ? 'ring-2 ring-inset ring-white/90' : 'border border-white/[0.08]'}`}>
+                          <div className={`relative h-[280px] sm:h-[320px] rounded-2xl overflow-hidden bg-stone-900 ${selectedEpisode === ep.episode_number ? 'ring-2 ring-inset ring-white/90' : 'border border-white/[0.08]'}`}>
                             {still ? (
                               <img
                                 src={still}
