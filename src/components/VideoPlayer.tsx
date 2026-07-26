@@ -408,16 +408,41 @@ export default function VideoPlayer({
   }, [showSettings]);
 
   /* ── helpers ── */
+  const syncSubtitleTrackMode = useCallback((
+    enabled = subEnabled,
+    nativeFullscreen = iosNativeFs,
+  ) => {
+    const v = videoRef.current;
+    if (!v?.textTracks?.length) return;
+    v.textTracks[0].mode = !enabled
+      ? 'disabled'
+      : nativeFullscreen
+        ? 'showing'
+        : 'hidden';
+  }, [subEnabled, iosNativeFs]);
+
   const toggleSubs = () => {
     const v = videoRef.current;
     if (!v?.textTracks?.length) return;
     const next = !subEnabled;
-    // metadata track: نبقيه hidden دايماً عشان نقرأ الـ cues بأنفسنا
-    // تعطيل = disabled (ما يبعث cuechange events)
-    v.textTracks[0].mode = next ? 'hidden' : 'disabled';
+    syncSubtitleTrackMode(next);
     if (!next) setCueText('');
     setSubEnabled(next);
   };
+
+  /* Safari قد يفعّل track افتراضياً قبل اكتمال تحميله.
+     ثبّت الوضع بعد تحميل الفيديو والـ VTT حتى يبقى العرض المخصص وحده. */
+  useEffect(() => {
+    if (!isNative) return;
+    const v = videoRef.current;
+    if (!v) return;
+
+    const sync = () => syncSubtitleTrackMode();
+    const trackElement = v.querySelector('track');
+    sync();
+    trackElement?.addEventListener('load', sync);
+    return () => trackElement?.removeEventListener('load', sync);
+  }, [isNative, customMp4, vttSrc, syncSubtitleTrackMode]);
 
   /* ── custom subtitle rendering: اقرأ الـ cue الحالي وارسمه بنفسنا ── */
   useEffect(() => {
@@ -733,6 +758,7 @@ export default function VideoPlayer({
               onLoadedMetadata={() => {
                 const video = videoRef.current;
                 if (!video) return;
+                syncSubtitleTrackMode();
                 const videoDuration = Number(video.duration || 0);
                 setDuration(videoDuration);
                 if (
@@ -775,7 +801,13 @@ export default function VideoPlayer({
               }}
             >
               <source src={customMp4} type="video/mp4" />
-              <track kind="subtitles" srcLang="ar" label="العربية" src={vttSrc} default />
+              <track
+                kind="subtitles"
+                srcLang="ar"
+                label="العربية"
+                src={vttSrc}
+                onLoad={() => syncSubtitleTrackMode()}
+              />
             </video>
 
           /* fallback iframe */
