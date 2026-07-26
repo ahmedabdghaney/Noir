@@ -1,7 +1,7 @@
 // نوار سينما — Service Worker
 // يفعّل PWA mode على iOS ويتيح requestFullscreen الحقيقي على أي عنصر
 
-const CACHE_NAME = 'noir-auth-fix-v4';
+const CACHE_NAME = 'noir-auto-update-v5';
 
 // ملفات نحفظها للتشغيل بدون إنترنت (الواجهة فقط، مو الفيديوهات)
 const PRECACHE = ['/', '/index.html', '/manifest.json'];
@@ -31,6 +31,23 @@ self.addEventListener('fetch', (e) => {
     url.hostname.includes('railway.app') ||
     url.pathname.startsWith('/api/')
   ) {
+    return;
+  }
+
+  // صفحات التنقل دائماً من الشبكة أولاً وبدون HTTP cache.
+  // نخزن آخر index صالح فقط كنسخة احتياطية عند انقطاع الإنترنت.
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request, { cache: 'no-store' })
+        .then((res) => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', clone));
+          }
+          return res;
+        })
+        .catch(() => caches.match('/index.html').then((cached) => cached || Response.error()))
+    );
     return;
   }
 
