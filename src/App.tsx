@@ -1091,7 +1091,7 @@ export default function App() {
     showToast('تم مسح جميع فلاتر التصفية');
   };
 
-  if (!user) {
+  const authScreen = !user ? (() => {
     const col1Posters = [
       'https://images.unsplash.com/photo-1542204172-e7052809a862?q=80&w=350&auto=format&fit=crop',
       'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=350&auto=format&fit=crop',
@@ -1423,7 +1423,7 @@ export default function App() {
         `}</style>
       </div>
     );
-  }
+  })() : null;
 
   // ── فلترة الإخفاء ودمج العناصر اليدوية (بيانات الإدارة) ──
   const hiddenSet = useMemo(() => new Set(hiddenIds), [hiddenIds]);
@@ -1553,6 +1553,10 @@ export default function App() {
     };
     return all.sort((a, b) => idx(a.key) - idx(b.key));
   }, [trendingWeek, upcoming, nowPlaying, popularTV, popularMovies, customSections, manualBySection, genreSectionData, sectionOrder, applyHidden]);
+
+  if (authScreen) {
+    return authScreen;
+  }
 
   return (
     <div className="min-h-screen bg-[#17171a] text-white flex flex-row font-sans relative tracking-normal antialiased">
