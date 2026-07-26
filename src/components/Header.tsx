@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import LogoIcon from './LogoIcon';
 
 interface HeaderProps {
@@ -12,7 +12,6 @@ interface HeaderProps {
   searchMode: 'movie' | 'tv';
   setSearchMode: (mode: 'movie' | 'tv') => void;
   goHome: () => void;
-  openSearchOverlay: () => void;
   user: { name: string; email?: string; photoURL?: string; type: 'guest' | 'google' | 'email' } | null;
   onLogout: () => void;
   onOpenProfile: () => void;
@@ -24,7 +23,6 @@ export default function Header({
   searchMode,
   setSearchMode,
   goHome,
-  openSearchOverlay,
   user,
   onLogout,
   onOpenProfile,
@@ -73,7 +71,7 @@ export default function Header({
             :'backdrop-blur-xl bg-gradient-to-b from-black/50 to-transparent border-b border-transparent'
         }`}
       >
-        <div className="w-full px-4 md:px-12 grid grid-cols-3 items-center">
+        <div className="w-full px-4 md:px-12 grid grid-cols-2 items-center">
           {/* Left Column: Brand Logo & Desktop Nav Links */}
           <div className="flex items-center gap-6 justify-start text-right">
             <div
@@ -123,17 +121,6 @@ export default function Header({
                 قائمتي
 </button>
 </div>
-</div>
-
-          {/* Center Column: Centered Search bar trigger */}
-          <div className="flex justify-center px-2">
-            <button
-              onClick={openSearchOverlay}
-              className="glass flex items-center gap-2 hover:bg-white/10 px-3.5 py-2 rounded-full transition-all text-gray-300 hover:text-white text-xs cursor-pointer group w-full max-w-[300px]"
-            >
-              <Search className="w-3.5 h-3.5 text-gray-400 group-hover:text-white transition-colors shrink-0" />
-              <span className="truncate text-[10px] sm:text-xs">ابحث عن عروض وأفلام...</span>
-            </button>
 </div>
 
           {/* Right Column: User profile avatar with dropdown & mobile menu trigger */}

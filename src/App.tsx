@@ -1580,7 +1580,6 @@ export default function App() {
           searchMode={searchMode}
           setSearchMode={handleSetSearchMode}
           goHome={navigateToHome}
-          openSearchOverlay={() => setIsSearchOverlayOpen(true)}
           user={user}
           onLogout={handleLogout}
           onOpenProfile={() => setIsProfileModalOpen(true)}
@@ -1618,6 +1617,7 @@ export default function App() {
                     onRemove={removeFromWatchlist}
                     isSaved={isInWatchlist}
                     onToggleSave={toggleWatchlistItem}
+                    compactSaveButton
                   />
 </div>
               )}
@@ -1630,6 +1630,7 @@ export default function App() {
                     onItemClick={handleTitleClick}
                     isSaved={isInWatchlist}
                     onToggleSave={toggleWatchlistItem}
+                    compactSaveButton
                     onRemove={removeContinueWatchingItem}
                   />
                 </div>
@@ -1643,6 +1644,7 @@ export default function App() {
                   onItemClick={handleTitleClick}
                   isSaved={isInWatchlist}
                   onToggleSave={toggleWatchlistItem}
+                  compactSaveButton
                 />
               )}
 
@@ -1656,6 +1658,7 @@ export default function App() {
                       onItemClick={handleTitleClick}
                       isSaved={isInWatchlist}
                       onToggleSave={toggleWatchlistItem}
+                      compactSaveButton
                     />
                     {/* شريط التصنيفات يظهر بعد أول قسم */}
                     {i === 0 && <CategoryRow onSelect={(key) => { window.location.hash = `#category/${key}`; }} />}

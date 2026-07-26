@@ -15,6 +15,7 @@ interface ContinueWatchingRowProps {
   onRemove?: (item: MovieOrShow) => void;
   isSaved?: (item: MovieOrShow) => boolean;
   onToggleSave?: (item: MovieOrShow) => void;
+  compactSaveButton?: boolean;
 }
 
 export default function ContinueWatchingRow({
@@ -24,6 +25,7 @@ export default function ContinueWatchingRow({
   onRemove,
   isSaved,
   onToggleSave,
+  compactSaveButton = false,
 }: ContinueWatchingRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
@@ -122,6 +124,7 @@ export default function ContinueWatchingRow({
                     <WatchlistButton
                       saved={isSaved?.(item) ?? false}
                       onToggle={() => onToggleSave(item)}
+                      compact={compactSaveButton}
                       className="absolute top-2.5 right-2.5 z-20"
                     />
                   )}

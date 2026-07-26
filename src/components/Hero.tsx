@@ -136,7 +136,7 @@ export default function Hero({
                     <button
                       type="button"
                       onClick={() => onToggleSave(activeItem)}
-                      className={`noir-icon-button cursor-pointer ${saved ? '!bg-white !text-black' : ''}`}
+                      className={`noir-icon-button noir-icon-button--mobile-compact cursor-pointer ${saved ? '!bg-white !text-black' : ''}`}
                       aria-label={saved ? 'إزالة من قائمتي' : 'إضافة إلى قائمتي'}
                       title={saved ? 'محفوظ في قائمتي' : 'إضافة إلى قائمتي'}
                     >
@@ -154,7 +154,7 @@ export default function Hero({
             <button
               type="button"
               onClick={() => goTo(-1)}
-              className="hidden sm:flex noir-icon-button cursor-pointer absolute right-4 top-1/2 -translate-y-1/2 z-20 opacity-0 pointer-events-none group-hover/hero:opacity-100 group-hover/hero:pointer-events-auto focus:opacity-100 focus:pointer-events-auto"
+              className="flex noir-icon-button noir-hero-arrow cursor-pointer absolute right-2.5 sm:right-4 top-1/2 -translate-y-1/2 z-20"
               aria-label="العرض السابق"
             >
               <ChevronRight className="w-5 h-5" />
@@ -162,7 +162,7 @@ export default function Hero({
             <button
               type="button"
               onClick={() => goTo(1)}
-              className="hidden sm:flex noir-icon-button cursor-pointer absolute left-4 top-1/2 -translate-y-1/2 z-20 opacity-0 pointer-events-none group-hover/hero:opacity-100 group-hover/hero:pointer-events-auto focus:opacity-100 focus:pointer-events-auto"
+              className="flex noir-icon-button noir-hero-arrow cursor-pointer absolute left-2.5 sm:left-4 top-1/2 -translate-y-1/2 z-20"
               aria-label="العرض التالي"
             >
               <ChevronLeft className="w-5 h-5" />

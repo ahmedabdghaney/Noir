@@ -18,6 +18,7 @@ interface MovieRowProps {
   onRemove?: (item: MovieOrShow) => void;
   isSaved?: (item: MovieOrShow) => boolean;
   onToggleSave?: (item: MovieOrShow) => void;
+  compactSaveButton?: boolean;
 }
 
 export default function MovieRow({
@@ -30,6 +31,7 @@ export default function MovieRow({
   onRemove,
   isSaved,
   onToggleSave,
+  compactSaveButton = false,
 }: MovieRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
@@ -172,6 +174,7 @@ export default function MovieRow({
                     <WatchlistButton
                       saved={isSaved?.(item) ?? false}
                       onToggle={() => onToggleSave(item)}
+                      compact={compactSaveButton}
                       className="absolute top-2 right-2 z-20"
                     />
                   )}

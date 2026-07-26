@@ -493,3 +493,19 @@ button, a {
   width: 30px;
   height: 30px;
 }
+
+@media (max-width: 639px) {
+  .noir-icon-button--mobile-compact,
+  .noir-hero-arrow {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
+  }
+
+  .noir-hero-arrow {
+    background: rgba(10, 10, 12, 0.55);
+    border-color: rgba(255, 255, 255, 0.16);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  }
+}
