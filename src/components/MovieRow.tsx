@@ -204,35 +204,16 @@ export default function MovieRow({
                 tabIndex={0}
                 aria-label={`فتح ${item.title}`}
                 style={{ animationDelay: `${idx * 45}ms` }}
-                className={`group/card card-pop relative flex-none cursor-pointer rounded-2xl p-1.5 pb-3 select-none ${
-                  ranked
-                    ? 'w-[176px] sm:w-[220px] md:w-[244px] lg:w-[264px]'
-                    : 'w-[112px] sm:w-[140px] md:w-[156px] lg:w-[168px]'
-                }`}
+                className="group/card card-pop relative flex-none w-[112px] sm:w-[140px] md:w-[156px] lg:w-[168px] cursor-pointer rounded-2xl p-1.5 pb-3 select-none"
               >
-                <div className={ranked ? 'relative h-[168px] sm:h-[210px] md:h-[234px] lg:h-[252px]' : ''}>
-                  {ranked && (
-                    <img
-                      src={`/top10/${idx + 1}.svg`}
-                      alt={`المرتبة ${idx + 1}`}
-                      className={`absolute bottom-0 left-0 z-0 w-auto max-w-none object-contain object-left-bottom pointer-events-none select-none drop-shadow-[0_8px_20px_rgba(0,0,0,.45)] ${
-                        idx === 9 ? 'h-[72%]' : 'h-[98%]'
-                      }`}
-                    />
-                  )}
-
                 {/* Poster Artwork container */}
-                <div className={`relative z-10 aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/[0.08] ${
-                  ranked
-                    ? 'ml-auto w-[112px] sm:w-[140px] md:w-[156px] lg:w-[168px]'
-                    : 'w-full'
-                }`}>
+                <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/[0.08]">
                   {onToggleSave && (
                     <WatchlistButton
                       saved={isSaved?.(item) ?? false}
                       onToggle={() => onToggleSave(item)}
                       compact={compactSaveButton}
-                      className="absolute top-2 right-2 z-20"
+                      className={`absolute top-2 z-30 ${ranked ? 'left-2' : 'right-2'}`}
                     />
                   )}
                   {!onToggleSave && onRemove && (
@@ -264,12 +245,21 @@ export default function MovieRow({
                       </span>
                     </div>
                   )}
+                  {ranked && (
+                    <img
+                      src={`/top10/${idx + 1}.svg`}
+                      alt={`المرتبة ${idx + 1}`}
+                      className="absolute top-2 right-2 z-20 h-8 sm:h-9 w-auto max-w-[52px] object-contain object-right-top pointer-events-none select-none drop-shadow-[0_3px_8px_rgba(0,0,0,.7)]"
+                    />
+                  )}
                   {/* Subtle gradient at bottom of poster for depth */}
                   <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
                   {/* Rating stamp — ثابت في الجهة المقابلة لزر الحفظ */}
                   {hasScore && (
-                    <div className="absolute top-2 left-2 glass text-[#f5c518] text-[11px] font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5">
+                    <div className={`absolute left-2 glass text-[#f5c518] text-[11px] font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5 ${
+                      ranked ? 'bottom-2' : 'top-2'
+                    }`}>
                       <Star className="w-2.5 h-2.5 fill-current" />
                       <span>{item.rating.toFixed(1)}</span>
                     </div>
@@ -285,12 +275,9 @@ export default function MovieRow({
                     </div>
                   )}
                 </div>
-                </div>
 
                 {/* Meta details */}
-                <div className={`mt-2.5 px-1 text-right flex flex-col ${
-                  ranked ? 'ml-auto w-[112px] sm:w-[140px] md:w-[156px] lg:w-[168px]' : ''
-                }`}>
+                <div className="mt-2.5 px-1 text-right flex flex-col">
                   <span className="text-white font-semibold text-sm line-clamp-1 leading-tight transition-colors">
                     {item.title}
                   </span>
