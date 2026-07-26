@@ -488,8 +488,29 @@ export async function searchMulti(query: string): Promise<MovieOrShow[]> {
     language: 'en-US',
   });
 
-  const items = (res.results || [])
-    .filter((x: any) => x.media_type === 'movie' || x.media_type === 'tv')
+  const directResults = (res.results || []).filter(
+    (item: any) => item.media_type === 'movie' || item.media_type === 'tv',
+  );
+  const personKnownFor = (res.results || [])
+    .filter((item: any) => item.media_type === 'person')
+    .flatMap((person: any) =>
+      (person.known_for || []).map((title: any) => ({
+        ...title,
+        _matchedPerson: person.name || '',
+      })),
+    )
+    .filter((item: any) => item.media_type === 'movie' || item.media_type === 'tv');
+
+  const deduplicated = new Map<string, any>();
+  [...directResults, ...personKnownFor].forEach((item: any) => {
+    const key = `${item.media_type}_${item.id}`;
+    const existing = deduplicated.get(key);
+    if (!existing || (!existing._matchedPerson && item._matchedPerson)) {
+      deduplicated.set(key, item);
+    }
+  });
+
+  const items = [...deduplicated.values()]
     .map((m: any) => ({ raw: m, item: normalizeItem(m) }))
     .filter(({ item }: any) => item.poster && isYearAllowed(item));
 
@@ -500,7 +521,11 @@ export async function searchMulti(query: string): Promise<MovieOrShow[]> {
     const altB = b.raw.title || b.raw.name || '';
     const scoreA = Math.max(relevanceScore(query, a.item.title), relevanceScore(query, altA));
     const scoreB = Math.max(relevanceScore(query, b.item.title), relevanceScore(query, altB));
-    if (scoreA !== scoreB) return scoreB - scoreA;
+    const personScoreA = relevanceScore(query, a.raw._matchedPerson || '') > 0 ? 50 : 0;
+    const personScoreB = relevanceScore(query, b.raw._matchedPerson || '') > 0 ? 50 : 0;
+    if (scoreA + personScoreA !== scoreB + personScoreB) {
+      return (scoreB + personScoreB) - (scoreA + personScoreA);
+    }
     return (b.raw.popularity || 0) - (a.raw.popularity || 0);
   });
 

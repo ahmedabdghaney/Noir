@@ -26,8 +26,21 @@ import {
   removeFromFirestoreContinueWatching,
   saveFirestoreContinueWatching,
   subscribeFirestoreContinueWatching,
+  mergeLocalViewingHistoryIntoCloud,
+  removeFromFirestoreViewingHistory,
+  saveFirestorePlaybackSettings,
+  saveFirestoreTitlePreference,
+  saveFirestoreViewingHistory,
+  subscribeFirestorePlaybackSettings,
+  subscribeFirestoreTitlePreferences,
+  subscribeFirestoreViewingHistory,
 } from './lib/firebase';
-import { ContinueWatchingItem, MovieOrShow } from './types';
+import {
+  ContinueWatchingItem,
+  MovieOrShow,
+  TitlePreference,
+  ViewingHistoryItem,
+} from './types';
 import {
   initializeGenres,
   fetchTrendingWeek,
@@ -60,6 +73,7 @@ import MobileNav from './components/MobileNav';
 import AdminDashboard from './components/AdminDashboard';
 import WatchlistButton from './components/WatchlistButton';
 import QuickView from './components/QuickView';
+import ViewingHistoryPage from './components/ViewingHistoryPage';
 import {
   subscribeHidden, subscribeManualItems, subscribeCustomSections, subscribeSectionOrder,
   subscribeHeroHidden, toggleHeroHidden, subscribeHeroExtra, subscribeHeroOrder, HeroExtra,
@@ -141,7 +155,7 @@ function normalizeGenreName(name: string) {
 
 export default function App() {
   // Navigation & View State
-  const [activeView, setActiveView] = useState<'home' | 'search' | 'detail' | 'watchlist' | 'category' | 'studio' | 'admin'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'search' | 'detail' | 'watchlist' | 'history' | 'category' | 'studio' | 'admin'>('home');
   const [selectedCategoryKey, setSelectedCategoryKey] = useState<string | null>(null);
   const [categoryAllMode, setCategoryAllMode] = useState(false);
   const [selectedStudioKey, setSelectedStudioKey] = useState<string | null>(null);
@@ -199,6 +213,20 @@ export default function App() {
   const [watchlist, setWatchlist] = useState<MovieOrShow[]>([]);
   const [showSyncHelper, setShowSyncHelper] = useState(false);
   const [continueWatching, setContinueWatching] = useState<ContinueWatchingItem[]>([]);
+  const [viewingHistory, setViewingHistory] = useState<ViewingHistoryItem[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('noir_viewing_history') || '[]');
+    } catch {
+      return [];
+    }
+  });
+  const [titlePreferences, setTitlePreferences] = useState<Record<string, TitlePreference>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('noir_title_preferences') || '{}');
+    } catch {
+      return {};
+    }
+  });
   const [autoResumeRequested, setAutoResumeRequested] = useState(false);
 
   // Continue Watching is cached locally for instant rendering, then reconciled
@@ -283,6 +311,9 @@ export default function App() {
   useEffect(() => {
     let unsubscribeWatchlist: (() => void) | null = null;
     let unsubscribeContinueWatching: (() => void) | null = null;
+    let unsubscribeViewingHistory: (() => void) | null = null;
+    let unsubscribeTitlePreferences: (() => void) | null = null;
+    let unsubscribePlaybackSettings: (() => void) | null = null;
     let authEffectActive = true;
 
     const startContinueWatchingSync = async (userId: string) => {
@@ -320,6 +351,75 @@ export default function App() {
       );
     };
 
+    const startPersonalizationSync = async (userId: string) => {
+      let localHistory: ViewingHistoryItem[] = [];
+      let localPreferences: Record<string, TitlePreference> = {};
+      try {
+        const historyOwner = localStorage.getItem('noir_viewing_history_owner');
+        const preferencesOwner = localStorage.getItem('noir_title_preferences_owner');
+        localHistory = historyOwner && historyOwner !== userId
+          ? []
+          : JSON.parse(localStorage.getItem('noir_viewing_history') || '[]');
+        localPreferences = preferencesOwner && preferencesOwner !== userId
+          ? {}
+          : JSON.parse(localStorage.getItem('noir_title_preferences') || '{}');
+      } catch {
+        localHistory = [];
+        localPreferences = {};
+      }
+
+      try {
+        await mergeLocalViewingHistoryIntoCloud(userId, localHistory);
+        await Promise.all(
+          Object.entries(localPreferences).map(([key, value]) => {
+            const [type, rawId] = key.split('_');
+            const id = Number(rawId);
+            if ((type !== 'movie' && type !== 'tv') || !Number.isFinite(id)) {
+              return Promise.resolve();
+            }
+            return saveFirestoreTitlePreference(userId, type, id, value);
+          }),
+        );
+      } catch (error) {
+        console.error('Failed to merge personalization data:', error);
+      }
+
+      if (!authEffectActive || auth.currentUser?.uid !== userId) return;
+      unsubscribeViewingHistory?.();
+      unsubscribeTitlePreferences?.();
+      unsubscribePlaybackSettings?.();
+
+      unsubscribeViewingHistory = subscribeFirestoreViewingHistory(
+        userId,
+        (items) => {
+          const limited = items.slice(0, 100);
+          localStorage.setItem('noir_viewing_history', JSON.stringify(limited));
+          localStorage.setItem('noir_viewing_history_owner', userId);
+          setViewingHistory(limited);
+        },
+        (error) => console.error('Viewing history sync failed:', error),
+      );
+      unsubscribeTitlePreferences = subscribeFirestoreTitlePreferences(
+        userId,
+        (preferences) => {
+          localStorage.setItem('noir_title_preferences', JSON.stringify(preferences));
+          localStorage.setItem('noir_title_preferences_owner', userId);
+          setTitlePreferences(preferences);
+        },
+      );
+      unsubscribePlaybackSettings = subscribeFirestorePlaybackSettings(
+        userId,
+        (settings) => {
+          localStorage.setItem('noir_autoplay_next', String(settings.autoplayNext));
+          localStorage.setItem('noir_sub_size', String(settings.subtitleSize));
+          localStorage.setItem('noir_sub_offset', String(settings.subtitleOffset));
+          window.dispatchEvent(
+            new CustomEvent('noir_playback_settings_sync', { detail: settings }),
+          );
+        },
+      );
+    };
+
     // Background auto-login for iframe environments where IndexedDB/Storage persistence is restricted
     const attemptAutoLogin = async () => {
       const storedCreds = localStorage.getItem('noir_credentials');
@@ -350,6 +450,12 @@ export default function App() {
         unsubscribeContinueWatching();
         unsubscribeContinueWatching = null;
       }
+      unsubscribeViewingHistory?.();
+      unsubscribeViewingHistory = null;
+      unsubscribeTitlePreferences?.();
+      unsubscribeTitlePreferences = null;
+      unsubscribePlaybackSettings?.();
+      unsubscribePlaybackSettings = null;
 
       if (firebaseUser) {
         const isEmailOnly = firebaseUser.providerData?.[0]?.providerId === 'password';
@@ -363,11 +469,20 @@ export default function App() {
         if (continueWatchingOwner && continueWatchingOwner !== firebaseUser.uid) {
           setContinueWatching([]);
         }
+        const viewingHistoryOwner = localStorage.getItem('noir_viewing_history_owner');
+        if (viewingHistoryOwner && viewingHistoryOwner !== firebaseUser.uid) {
+          setViewingHistory([]);
+        }
+        const titlePreferencesOwner = localStorage.getItem('noir_title_preferences_owner');
+        if (titlePreferencesOwner && titlePreferencesOwner !== firebaseUser.uid) {
+          setTitlePreferences({});
+        }
         localStorage.setItem('noir_user', JSON.stringify(userData));
         setUser(userData);
         setIsAuthLoading(false);
         setAuthMethod(null);
         void startContinueWatchingSync(firebaseUser.uid);
+        void startPersonalizationSync(firebaseUser.uid);
         
         // Subscribe to real-time watchlist changes in Firestore
         try {
@@ -444,6 +559,9 @@ export default function App() {
       if (unsubscribeContinueWatching) {
         unsubscribeContinueWatching();
       }
+      unsubscribeViewingHistory?.();
+      unsubscribeTitlePreferences?.();
+      unsubscribePlaybackSettings?.();
     };
   }, []);
 
@@ -707,6 +825,16 @@ export default function App() {
     window.location.hash ='#watchlist';
   };
 
+  const handleViewHistory = () => {
+    rememberHomeScroll();
+    setIsSearchOverlayOpen(false);
+    setQuickViewItem(null);
+    setIsProfileModalOpen(false);
+    setActiveView('history');
+    setSelectedTitle(null);
+    window.location.hash = '#history';
+  };
+
   // loadWatchlist definition was moved to the state section above for better initialization.
 
   // Setup Dynamic URL Hash routing system
@@ -726,6 +854,9 @@ export default function App() {
         setSelectedTitle(null);
       } else if (hash ==='#watchlist') {
         setActiveView('watchlist');
+        setSelectedTitle(null);
+      } else if (hash === '#history') {
+        setActiveView('history');
         setSelectedTitle(null);
       } else if (hash ==='#noir-control') {
         setActiveView('admin');
@@ -850,11 +981,64 @@ export default function App() {
       }
     };
     window.addEventListener('progress_updated', handleProgressUpdate);
+    const handleViewingHistoryUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        item?: ViewingHistoryItem;
+        type?: 'movie' | 'tv';
+        id?: number;
+        remove?: boolean;
+      }>).detail;
+      if (!detail) return;
+      if (detail.item) {
+        if (auth.currentUser) {
+          localStorage.setItem('noir_viewing_history_owner', auth.currentUser.uid);
+        }
+        setViewingHistory((current) => [
+          detail.item!,
+          ...current.filter(
+            (item) => !(item.type === detail.item!.type && item.id === detail.item!.id),
+          ),
+        ].slice(0, 100));
+      } else if (detail.remove && detail.type && detail.id != null) {
+        setViewingHistory((current) =>
+          current.filter((item) => !(item.type === detail.type && item.id === detail.id)),
+        );
+      }
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) return;
+      if (detail.item) {
+        void saveFirestoreViewingHistory(firebaseUser.uid, detail.item).catch((error) =>
+          console.error('Failed to save viewing history:', error),
+        );
+      } else if (detail.remove && detail.type && detail.id != null) {
+        void removeFromFirestoreViewingHistory(
+          firebaseUser.uid,
+          detail.type,
+          detail.id,
+        ).catch((error) => console.error('Failed to remove viewing history:', error));
+      }
+    };
+    const handlePlaybackSettingsUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        autoplayNext: boolean;
+        subtitleSize: number;
+        subtitleOffset: number;
+      }>).detail;
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser || !detail) return;
+      void saveFirestorePlaybackSettings(firebaseUser.uid, detail).catch((error) =>
+        console.error('Failed to save playback settings:', error),
+      );
+    };
+    window.addEventListener('viewing_history_updated', handleViewingHistoryUpdate);
+    window.addEventListener('noir_playback_settings_updated', handlePlaybackSettingsUpdate);
 
     return () => {
       window.removeEventListener('hashchange', handleHashRouting);
       window.removeEventListener('watchlist_updated', loadWatchlist);
       window.removeEventListener('progress_updated', handleProgressUpdate);
+      window.removeEventListener('viewing_history_updated', handleViewingHistoryUpdate);
+      window.removeEventListener('noir_playback_settings_updated', handlePlaybackSettingsUpdate);
       if (toastTimer.current) clearTimeout(toastTimer.current);
     };
   }, []);
@@ -1073,6 +1257,29 @@ export default function App() {
     setQuickViewItem(item);
   };
 
+  const handleTitlePreference = (
+    item: MovieOrShow,
+    preference: TitlePreference,
+  ) => {
+    const key = `${item.type}_${item.id}`;
+    const nextPreference = titlePreferences[key] === preference ? null : preference;
+    const next = { ...titlePreferences };
+    if (nextPreference) next[key] = nextPreference;
+    else delete next[key];
+
+    setTitlePreferences(next);
+    localStorage.setItem('noir_title_preferences', JSON.stringify(next));
+    if (auth.currentUser) {
+      localStorage.setItem('noir_title_preferences_owner', auth.currentUser.uid);
+      void saveFirestoreTitlePreference(
+        auth.currentUser.uid,
+        item.type,
+        item.id,
+        nextPreference,
+      ).catch((error) => console.error('Failed to save title preference:', error));
+    }
+  };
+
   const handlePlayTitle = (item: MovieOrShow) => {
     rememberHomeScroll();
     setQuickViewItem(null);
@@ -1144,6 +1351,17 @@ export default function App() {
         console.error('Failed to remove continue watching item from cloud:', error),
       );
     }
+  };
+
+  const removeViewingHistoryItem = (item: ViewingHistoryItem) => {
+    const next = viewingHistory.filter(
+      (current) => !(current.id === item.id && current.type === item.type),
+    );
+    setViewingHistory(next);
+    localStorage.setItem('noir_viewing_history', JSON.stringify(next));
+    window.dispatchEvent(new CustomEvent('viewing_history_updated', {
+      detail: { type: item.type, id: item.id, remove: true },
+    }));
   };
 
   const restartContinueWatchingItem = (item: ContinueWatchingItem) => {
@@ -1552,6 +1770,15 @@ export default function App() {
     };
   }, []);
 
+  const selectedManualItem = useMemo(() => {
+    if (!selectedTitle) return null;
+    return manualItems.find((item) => {
+      if (item.type !== selectedTitle.type) return false;
+      if (item.tmdbId) return item.tmdbId === selectedTitle.id;
+      return manualToMovie(item).id === selectedTitle.id;
+    }) || null;
+  }, [manualItems, manualToMovie, selectedTitle]);
+
   // خريطة القسم -> عناصره المضافة يدوياً (بترتيب الإضافة)، مع تجاهل المخفي
   const manualBySection = useMemo(() => {
     const map: Record<string, MovieOrShow[]> = {};
@@ -1647,39 +1874,109 @@ export default function App() {
     return all.sort((a, b) => idx(a.key) - idx(b.key));
   }, [trendingWeek, upcoming, nowPlaying, popularTV, popularMovies, customSections, manualBySection, genreSectionData, sectionOrder, applyHidden]);
 
-  const personalizedSection = useMemo(() => {
-    const seed = continueWatching[0] || watchlist[0] || null;
-    if (!seed?.genres?.length) return null;
+  const preferenceGenreScores = useMemo(() => {
+    const scores = new Map<string, number>();
+    const addGenres = (item: MovieOrShow, weight: number) => {
+      item.genres.forEach((genre) => {
+        const normalized = normalizeGenreName(genre);
+        scores.set(normalized, (scores.get(normalized) || 0) + weight);
+      });
+    };
 
-    const preferredGenres = new Set(seed.genres.map(normalizeGenreName));
+    viewingHistory.slice(0, 20).forEach((item, index) => {
+      addGenres(item, Math.max(1, 5 - Math.floor(index / 5)));
+    });
+    continueWatching.slice(0, 10).forEach((item) => addGenres(item, 3));
+    watchlist.slice(0, 15).forEach((item) => addGenres(item, 2));
+
+    const candidateItems = [
+      ...viewingHistory,
+      ...continueWatching,
+      ...watchlist,
+      ...renderableSections.flatMap((section) => section.items),
+    ];
+    const uniqueCandidates = new Map(
+      candidateItems.map((item) => [`${item.type}_${item.id}`, item] as const),
+    );
+    uniqueCandidates.forEach((item, key) => {
+      const preference = titlePreferences[key];
+      if (preference === 'like') addGenres(item, 8);
+      if (preference === 'dislike') addGenres(item, -8);
+    });
+    return scores;
+  }, [continueWatching, renderableSections, titlePreferences, viewingHistory, watchlist]);
+
+  const personalizedSection = useMemo(() => {
+    const seed = viewingHistory[0] || continueWatching[0] || watchlist[0] || null;
+    if (!seed || preferenceGenreScores.size === 0) return null;
+
     const seen = new Set<string>();
     const scored = renderableSections
       .flatMap((section) => section.items)
       .filter((item) => {
         const key = `${item.type}_${item.id}`;
-        if (seen.has(key) || (item.type === seed.type && item.id === seed.id)) return false;
+        if (
+          seen.has(key) ||
+          titlePreferences[key] === 'dislike' ||
+          (item.type === seed.type && item.id === seed.id)
+        ) return false;
         seen.add(key);
         return true;
       })
       .map((item) => {
-        const overlap = item.genres
-          .map(normalizeGenreName)
-          .filter((genre) => preferredGenres.has(genre)).length;
-        return { item, score: overlap * 100 + item.rating };
+        const genreScore = item.genres.reduce(
+          (total, genre) => total + (preferenceGenreScores.get(normalizeGenreName(genre)) || 0),
+          0,
+        );
+        const likedBoost = titlePreferences[`${item.type}_${item.id}`] === 'like' ? 25 : 0;
+        return { item, score: genreScore * 10 + likedBoost + item.rating };
       })
-      .filter(({ score }) => score >= 100)
+      .filter(({ score }) => score > 10)
       .sort((a, b) => b.score - a.score)
       .slice(0, 20)
       .map(({ item }) => item);
 
     if (scored.length < 4) return null;
     return {
-      title: continueWatching[0]
+      title: viewingHistory[0] || continueWatching[0]
         ? `لأنك شاهدت ${seed.title}`
         : 'مقترحات تناسب قائمتك',
       items: scored,
     };
-  }, [continueWatching, renderableSections, watchlist]);
+  }, [
+    continueWatching,
+    preferenceGenreScores,
+    renderableSections,
+    titlePreferences,
+    viewingHistory,
+    watchlist,
+  ]);
+
+  const topTenItems = useMemo(() => {
+    const seen = new Set<string>();
+    return [...trendingWeek, ...popularMovies, ...popularTV]
+      .filter((item) => {
+        const key = `${item.type}_${item.id}`;
+        if (seen.has(key) || titlePreferences[key] === 'dislike') return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => b.rating - a.rating)
+      .slice(0, 10);
+  }, [popularMovies, popularTV, titlePreferences, trendingWeek]);
+
+  const personalizedRenderableSections = useMemo(() => {
+    if (preferenceGenreScores.size === 0) return renderableSections;
+    const affinity = (items: MovieOrShow[]) => items.slice(0, 12).reduce(
+      (total, item) => total + item.genres.reduce(
+        (genreTotal, genre) =>
+          genreTotal + Math.max(0, preferenceGenreScores.get(normalizeGenreName(genre)) || 0),
+        0,
+      ),
+      0,
+    );
+    return [...renderableSections].sort((a, b) => affinity(b.items) - affinity(a.items));
+  }, [preferenceGenreScores, renderableSections]);
 
   if (authScreen) {
     return authScreen;
@@ -1757,6 +2054,19 @@ export default function App() {
                 />
               )}
 
+              {topTenItems.length > 0 && (
+                <MovieRow
+                  title="أفضل 10 اليوم"
+                  subtitle="الأكثر رواجاً ومشاهدة الآن"
+                  items={topTenItems}
+                  ranked
+                  onItemClick={handleOpenQuickView}
+                  isSaved={isInWatchlist}
+                  onToggleSave={toggleWatchlistItem}
+                  compactSaveButton
+                />
+              )}
+
               {/* حصري نوار — العناصر المضافة يدوياً بلا قسم مخصص (يظهر أول دائماً) */}
               {(manualBySection['manual']?.length ?? 0) > 0 && (
                 <MovieRow
@@ -1770,7 +2080,7 @@ export default function App() {
               )}
 
               {/* كل الأقسام مرتّبة حسب الداشبورد (أصلية + مخصصة)، الفاضية تُحذف */}
-              {renderableSections.map((sec, i) => (
+              {personalizedRenderableSections.map((sec, i) => (
                 sec.items.length > 0 && (
                   <div key={sec.key}>
                     <MovieRow
@@ -2048,6 +2358,15 @@ export default function App() {
 </div>
           );
         })()}
+
+        {activeView === 'history' && (
+          <ViewingHistoryPage
+            items={viewingHistory}
+            onItemClick={handleTitleClick}
+            onRemove={removeViewingHistoryItem}
+            onBack={navigateToHome}
+          />
+        )}
 
 
         {activeView ==='search' && (
@@ -2401,11 +2720,11 @@ export default function App() {
               onAutoStartConsumed={() => setAutoPlayRequested(false)}
               watchlist={watchlist}
               onToggleWatchlistItem={toggleWatchlistItem}
+              introEndSeconds={selectedManualItem?.introEndSeconds || 0}
               manualData={(() => {
-                // عنصر يدوي محض: id سالب. نلقاه ونمرّر بياناته
-                if (selectedTitle.id >= 0) return null;
-                const m = manualItems.find((mi) => !mi.tmdbId && manualToMovie(mi).id === selectedTitle.id);
-                if (!m) return null;
+                // عنصر يدوي محض: نمرّر بياناته بدل طلب TMDB.
+                const m = selectedManualItem;
+                if (!m || m.tmdbId) return null;
                 return {
                   title: m.title, overview: m.overview, poster: m.poster, backdrop: m.backdrop,
                   rating: m.rating, year: m.year, genres: m.genres, director: m.director,
@@ -2483,10 +2802,12 @@ export default function App() {
       <QuickView
         item={quickViewItem}
         saved={quickViewItem ? isInWatchlist(quickViewItem) : false}
+        preference={quickViewItem ? titlePreferences[`${quickViewItem.type}_${quickViewItem.id}`] : undefined}
         onClose={() => setQuickViewItem(null)}
         onPlay={handlePlayTitle}
         onDetails={handleTitleClick}
         onToggleSave={toggleWatchlistItem}
+        onPreference={handleTitlePreference}
       />
 
       {/* Browser URL Share Dialog */}
@@ -2593,6 +2914,13 @@ export default function App() {
 
             {/* Action buttons */}
             <div className="mt-6 flex flex-col gap-2">
+              <button
+                onClick={handleViewHistory}
+                className="w-full bg-white/5 border border-white/8 hover:bg-white/10 text-white font-bold py-3 rounded-xl transition-colors cursor-pointer text-xs flex items-center justify-center gap-2"
+              >
+                <span>سجل المشاهدة</span>
+                <span className="text-white/45">({viewingHistory.length})</span>
+              </button>
               {user.type ==='guest' && (
                 <button
                   onClick={() => {

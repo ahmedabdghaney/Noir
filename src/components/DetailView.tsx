@@ -5,7 +5,14 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Star, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
-import { CastMember, ContinueWatchingItem, DetailedInfo, MovieOrShow, NativePlaybackProgress } from '../types';
+import {
+  CastMember,
+  ContinueWatchingItem,
+  DetailedInfo,
+  MovieOrShow,
+  NativePlaybackProgress,
+  ViewingHistoryItem,
+} from '../types';
 import { fetchDetailedTitle, getPosterUrl, getLargePosterUrl, getBackdropUrl, getOriginalBackdropUrl } from '../lib/tmdb';
 import VideoPlayer from './VideoPlayer';
 import MovieRow from './MovieRow';
@@ -32,6 +39,7 @@ interface DetailViewProps {
   onAutoStartConsumed?: () => void;
   watchlist: MovieOrShow[];
   onToggleWatchlistItem?: (item: MovieOrShow) => void;
+  introEndSeconds?: number;
   // بيانات عنصر يدوي محض (خارج TMDB). لو موجودة، نعرضها بدل جلب TMDB.
   manualData?: {
     title: string;
@@ -77,6 +85,7 @@ export default function DetailView({
   onAutoStartConsumed,
   watchlist,
   onToggleWatchlistItem,
+  introEndSeconds = 0,
   manualData = null,
 }: DetailViewProps) {
   const [data, setData] = useState<DetailedInfo | null>(null);
@@ -226,6 +235,52 @@ export default function DetailView({
       const withoutCurrent = list.filter(
         (item) => !(item.type === type && item.id === id),
       );
+
+      if (playback.positionSeconds >= 5 || playback.completed) {
+        let history: ViewingHistoryItem[] = [];
+        try {
+          history = JSON.parse(localStorage.getItem('noir_viewing_history') || '[]');
+        } catch {
+          history = [];
+        }
+        const previousHistory = history.find(
+          (item) => item.type === type && item.id === id,
+        );
+        const historyItem: ViewingHistoryItem = {
+          id,
+          type,
+          title: data.title || (data as any).name || 'بدون عنوان',
+          overview: data.overview || '',
+          poster:
+            (data as any)._manualPoster ||
+            (data.poster_path ? getPosterUrl(data.poster_path) : null),
+          backdrop:
+            (data as any)._manualBackdrop ||
+            (data.backdrop_path ? getBackdropUrl(data.backdrop_path) : null),
+          rating: data.vote_average || 0,
+          year: (data.release_date || data.first_air_date || '').slice(0, 4),
+          date: data.release_date || data.first_air_date || '',
+          genres: data.genres ? data.genres.map((genre) => genre.name) : [],
+          progress: playback.completed ? 100 : playback.progress,
+          positionSeconds: playback.positionSeconds,
+          durationSeconds: playback.durationSeconds,
+          season: playback.season,
+          episode: playback.episode,
+          completed: playback.completed || playback.progress >= 95,
+          watchCount:
+            Math.max(1, previousHistory?.watchCount || 1) +
+            (playback.completed && previousHistory && !previousHistory.completed ? 1 : 0),
+          lastWatchedAtMs: Date.now(),
+        };
+        const nextHistory = [
+          historyItem,
+          ...history.filter((item) => !(item.type === type && item.id === id)),
+        ].slice(0, 100);
+        localStorage.setItem('noir_viewing_history', JSON.stringify(nextHistory));
+        window.dispatchEvent(
+          new CustomEvent('viewing_history_updated', { detail: { item: historyItem } }),
+        );
+      }
 
       if (playback.completed || playback.progress >= 95) {
         localStorage.setItem(
@@ -1317,6 +1372,7 @@ export default function DetailView({
             episode={selectedEpisode}
             episodesCount={episodesCount}
             hasNextEpisode={hasNextEpisode}
+            introEndSeconds={introEndSeconds}
             youtubeKey={youtubeKey}
             playMode={playerMode}
             isPausedByHost={isPausedByHost}

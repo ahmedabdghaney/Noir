@@ -25,6 +25,26 @@ export interface ContinueWatchingItem extends MovieOrShow {
   updatedAtMs: number;
 }
 
+export interface ViewingHistoryItem extends MovieOrShow {
+  progress: number;
+  positionSeconds: number;
+  durationSeconds: number;
+  season: number;
+  episode: number;
+  completed: boolean;
+  watchCount: number;
+  lastWatchedAtMs: number;
+}
+
+export type TitlePreference = 'like' | 'dislike';
+
+export interface PlaybackSettings {
+  autoplayNext: boolean;
+  subtitleSize: number;
+  subtitleOffset: number;
+  updatedAtMs: number;
+}
+
 export interface NativePlaybackProgress {
   positionSeconds: number;
   durationSeconds: number;

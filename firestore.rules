@@ -63,7 +63,56 @@ service cloud.firestore {
             && data.season is int && data.season >= 0
             && data.episode is int && data.episode >= 0
           )
-        );
+      );
+    }
+
+    function isValidViewingHistoryItem(data) {
+      return data.keys().hasAll([
+          'id', 'type', 'title', 'poster', 'backdrop', 'rating', 'year', 'genres',
+          'progress', 'positionSeconds', 'durationSeconds', 'season', 'episode',
+          'completed', 'watchCount', 'lastWatchedAt'
+        ])
+        && data.keys().size() == 16
+        && data.id is int
+        && data.type is string && (data.type == 'movie' || data.type == 'tv')
+        && data.title is string && data.title.size() <= 200
+        && data.poster is string && data.poster.size() <= 1000
+        && data.backdrop is string && data.backdrop.size() <= 1000
+        && (data.rating is int || data.rating is float)
+        && data.year is string && data.year.size() <= 10
+        && data.genres is list && data.genres.size() <= 20
+        && (data.progress is int || data.progress is float)
+        && data.progress >= 0 && data.progress <= 100
+        && (data.positionSeconds is int || data.positionSeconds is float)
+        && data.positionSeconds >= 0
+        && (data.durationSeconds is int || data.durationSeconds is float)
+        && data.durationSeconds > 0
+        && data.positionSeconds <= data.durationSeconds
+        && data.season is int && data.season >= 0
+        && data.episode is int && data.episode >= 0
+        && data.completed is bool
+        && data.watchCount is int && data.watchCount >= 1
+        && data.lastWatchedAt is timestamp;
+    }
+
+    function isValidTitlePreference(data) {
+      return data.keys().hasAll(['id', 'type', 'value', 'updatedAt'])
+        && data.keys().size() == 4
+        && data.id is int
+        && data.type is string && (data.type == 'movie' || data.type == 'tv')
+        && data.value is string && (data.value == 'like' || data.value == 'dislike')
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPlaybackSettings(data) {
+      return data.keys().hasAll(['autoplayNext', 'subtitleSize', 'subtitleOffset', 'updatedAt'])
+        && data.keys().size() == 4
+        && data.autoplayNext is bool
+        && (data.subtitleSize is int || data.subtitleSize is float)
+        && data.subtitleSize >= 50 && data.subtitleSize <= 250
+        && (data.subtitleOffset is int || data.subtitleOffset is float)
+        && data.subtitleOffset >= -10 && data.subtitleOffset <= 10
+        && data.updatedAt is timestamp;
     }
 
     match /users/{userId} {
@@ -79,6 +128,26 @@ service cloud.firestore {
         allow read, delete: if isOwner(userId);
         allow create, update: if isOwner(userId)
           && isValidContinueWatchingItem(incoming());
+      }
+
+      match /viewingHistory/{itemId} {
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && isValidViewingHistoryItem(incoming());
+      }
+
+      match /titlePreferences/{itemId} {
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && isValidTitlePreference(incoming());
+      }
+
+      match /settings/{settingsId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && settingsId == 'playback'
+          && isValidPlaybackSettings(incoming());
+        allow delete: if isOwner(userId);
       }
     }
 

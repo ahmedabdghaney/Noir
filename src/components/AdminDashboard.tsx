@@ -65,6 +65,7 @@ const emptyForm = (): ManualItem => ({
   director: '',
   country: '',
   language: '',
+  introEndSeconds: 0,
   section: 'manual',
   inHero: false,
   addedAt: Date.now(),
@@ -742,6 +743,23 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                   <div className="grid grid-cols-2 gap-3">
                     <Field label="دولة الإنتاج" value={form.country} onChange={(v) => setF('country', v)} />
                     <Field label="اللغة الأصلية" value={form.language} onChange={(v) => setF('language', v)} />
+                  </div>
+                  <div>
+                    <label className="text-white text-xs font-bold mb-1.5 block">
+                      نهاية المقدمة بالثواني
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={form.introEndSeconds || 0}
+                      onChange={(e) => setF('introEndSeconds', Math.max(0, Number(e.target.value) || 0))}
+                      className="w-full bg-stone-900 border border-white/10 focus:border-red-500/60 outline-none text-white text-sm py-2.5 px-3 rounded-lg"
+                      dir="ltr"
+                    />
+                    <p className="mt-1 text-[10px] text-white/35">
+                      اكتب 0 لإخفاء زر تخطي المقدمة.
+                    </p>
                   </div>
                   <Field label="التصنيفات (افصل بفاصلة)" value={form.genres.join('، ')}
                     onChange={(v) => setF('genres', v.split(/[،,]/).map((s) => s.trim()).filter(Boolean))} />

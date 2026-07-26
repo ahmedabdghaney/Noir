@@ -39,6 +39,7 @@ export interface ManualItem {
   director: string;            // المخرج
   country: string;             // دولة الإنتاج
   language: string;            // اللغة الأصلية
+  introEndSeconds?: number;    // نهاية المقدمة بالثواني (0 = بدون زر تخطي)
 
   section: string;             // key القسم اللي يروح له
   inHero: boolean;             // يظهر بالكاروسيل الكبير فوق؟

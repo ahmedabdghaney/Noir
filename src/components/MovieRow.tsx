@@ -19,6 +19,7 @@ interface MovieRowProps {
   isSaved?: (item: MovieOrShow) => boolean;
   onToggleSave?: (item: MovieOrShow) => void;
   compactSaveButton?: boolean;
+  ranked?: boolean;
 }
 
 export default function MovieRow({
@@ -32,6 +33,7 @@ export default function MovieRow({
   isSaved,
   onToggleSave,
   compactSaveButton = false,
+  ranked = false,
 }: MovieRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const scrollSaveFrameRef = useRef<number | null>(null);
@@ -242,6 +244,14 @@ export default function MovieRow({
                         {item.title}
                       </span>
                     </div>
+                  )}
+                  {ranked && (
+                    <span
+                      className="absolute bottom-0 left-1 z-10 text-[3.75rem] sm:text-[4.5rem] font-black leading-none tracking-[-0.12em] text-black/80 [-webkit-text-stroke:2px_white] drop-shadow-[0_4px_12px_rgba(0,0,0,.75)]"
+                      aria-label={`المرتبة ${idx + 1}`}
+                    >
+                      {idx + 1}
+                    </span>
                   )}
 
                   {/* Subtle gradient at bottom of poster for depth */}

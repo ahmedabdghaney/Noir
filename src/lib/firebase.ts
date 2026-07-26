@@ -26,7 +26,13 @@ import {
   serverTimestamp,
   getDocFromServer,
 } from 'firebase/firestore';
-import { ContinueWatchingItem, MovieOrShow } from '../types';
+import {
+  ContinueWatchingItem,
+  MovieOrShow,
+  PlaybackSettings,
+  TitlePreference,
+  ViewingHistoryItem,
+} from '../types';
 
 const firebaseConfig = {
   projectId: "ios-app-498810",
@@ -437,4 +443,166 @@ export const mergeLocalContinueWatchingIntoCloud = async (
       }
     }),
   );
+};
+
+const normalizeViewingHistoryDoc = (data: any): ViewingHistoryItem => ({
+  id: Number(data.id),
+  type: data.type as 'movie' | 'tv',
+  title: data.title || '',
+  overview: '',
+  poster: data.poster || null,
+  backdrop: data.backdrop || null,
+  rating: Number(data.rating || 0),
+  year: String(data.year || ''),
+  date: '',
+  genres: Array.isArray(data.genres) ? data.genres : [],
+  progress: Math.max(0, Math.min(100, Number(data.progress || 0))),
+  positionSeconds: Math.max(0, Number(data.positionSeconds || 0)),
+  durationSeconds: Math.max(0, Number(data.durationSeconds || 0)),
+  season: Math.max(0, Number(data.season || 0)),
+  episode: Math.max(0, Number(data.episode || 0)),
+  completed: Boolean(data.completed),
+  watchCount: Math.max(1, Number(data.watchCount || 1)),
+  lastWatchedAtMs:
+    typeof data.lastWatchedAt?.toMillis === 'function'
+      ? data.lastWatchedAt.toMillis()
+      : Number(data.lastWatchedAt?.seconds || 0) * 1000,
+});
+
+export const fetchFirestoreViewingHistory = async (
+  userId: string,
+): Promise<ViewingHistoryItem[]> => {
+  const snapshot = await getDocs(collection(db, 'users', userId, 'viewingHistory'));
+  return snapshot.docs
+    .map((item) => normalizeViewingHistoryDoc(item.data()))
+    .filter((item) => item.id && item.title)
+    .sort((a, b) => b.lastWatchedAtMs - a.lastWatchedAtMs);
+};
+
+export const saveFirestoreViewingHistory = async (
+  userId: string,
+  item: ViewingHistoryItem,
+): Promise<void> => {
+  const itemId = `${item.type}_${item.id}`;
+  await setDoc(doc(db, 'users', userId, 'viewingHistory', itemId), {
+    id: Number(item.id),
+    type: item.type,
+    title: item.title || '',
+    poster: item.poster || '',
+    backdrop: item.backdrop || '',
+    rating: Number(item.rating || 0),
+    year: String(item.year || ''),
+    genres: Array.isArray(item.genres) ? item.genres : [],
+    progress: Math.max(0, Math.min(100, Number(item.progress || 0))),
+    positionSeconds: Math.max(0, Number(item.positionSeconds || 0)),
+    durationSeconds: Math.max(0, Number(item.durationSeconds || 0)),
+    season: Math.max(0, Number(item.season || 0)),
+    episode: Math.max(0, Number(item.episode || 0)),
+    completed: Boolean(item.completed),
+    watchCount: Math.max(1, Math.floor(Number(item.watchCount || 1))),
+    lastWatchedAt: serverTimestamp(),
+  });
+};
+
+export const removeFromFirestoreViewingHistory = async (
+  userId: string,
+  type: 'movie' | 'tv',
+  id: number,
+): Promise<void> => {
+  await deleteDoc(doc(db, 'users', userId, 'viewingHistory', `${type}_${id}`));
+};
+
+export const subscribeFirestoreViewingHistory = (
+  userId: string,
+  onItems: (items: ViewingHistoryItem[]) => void,
+  onError?: (error: unknown) => void,
+): (() => void) =>
+  onSnapshot(
+    collection(db, 'users', userId, 'viewingHistory'),
+    (snapshot) => {
+      onItems(
+        snapshot.docs
+          .map((item) => normalizeViewingHistoryDoc(item.data()))
+          .filter((item) => item.id && item.title)
+          .sort((a, b) => b.lastWatchedAtMs - a.lastWatchedAtMs),
+      );
+    },
+    (error) => onError?.(error),
+  );
+
+export const mergeLocalViewingHistoryIntoCloud = async (
+  userId: string,
+  localItems: ViewingHistoryItem[],
+): Promise<void> => {
+  const cloud = await fetchFirestoreViewingHistory(userId);
+  const cloudByKey = new Map(cloud.map((item) => [`${item.type}_${item.id}`, item] as const));
+  await Promise.all(
+    localItems.map(async (item) => {
+      const cloudItem = cloudByKey.get(`${item.type}_${item.id}`);
+      if (!cloudItem || item.lastWatchedAtMs > cloudItem.lastWatchedAtMs) {
+        await saveFirestoreViewingHistory(userId, item);
+      }
+    }),
+  );
+};
+
+export const subscribeFirestoreTitlePreferences = (
+  userId: string,
+  onPreferences: (preferences: Record<string, TitlePreference>) => void,
+): (() => void) =>
+  onSnapshot(collection(db, 'users', userId, 'titlePreferences'), (snapshot) => {
+    const preferences: Record<string, TitlePreference> = {};
+    snapshot.docs.forEach((item) => {
+      const value = item.data().value;
+      if (value === 'like' || value === 'dislike') preferences[item.id] = value;
+    });
+    onPreferences(preferences);
+  });
+
+export const saveFirestoreTitlePreference = async (
+  userId: string,
+  type: 'movie' | 'tv',
+  id: number,
+  value: TitlePreference | null,
+): Promise<void> => {
+  const itemId = `${type}_${id}`;
+  const ref = doc(db, 'users', userId, 'titlePreferences', itemId);
+  if (!value) {
+    await deleteDoc(ref);
+    return;
+  }
+  await setDoc(ref, {
+    id: Number(id),
+    type,
+    value,
+    updatedAt: serverTimestamp(),
+  });
+};
+
+export const subscribeFirestorePlaybackSettings = (
+  userId: string,
+  onSettings: (settings: PlaybackSettings) => void,
+): (() => void) =>
+  onSnapshot(doc(db, 'users', userId, 'settings', 'playback'), (snapshot) => {
+    if (!snapshot.exists()) return;
+    const data = snapshot.data();
+    onSettings({
+      autoplayNext: data.autoplayNext !== false,
+      subtitleSize: Math.max(50, Math.min(250, Number(data.subtitleSize || 50))),
+      subtitleOffset: Math.max(-10, Math.min(10, Number(data.subtitleOffset || 0))),
+      updatedAtMs:
+        typeof data.updatedAt?.toMillis === 'function' ? data.updatedAt.toMillis() : 0,
+    });
+  });
+
+export const saveFirestorePlaybackSettings = async (
+  userId: string,
+  settings: Omit<PlaybackSettings, 'updatedAtMs'>,
+): Promise<void> => {
+  await setDoc(doc(db, 'users', userId, 'settings', 'playback'), {
+    autoplayNext: Boolean(settings.autoplayNext),
+    subtitleSize: Math.max(50, Math.min(250, Number(settings.subtitleSize || 50))),
+    subtitleOffset: Math.max(-10, Math.min(10, Number(settings.subtitleOffset || 0))),
+    updatedAt: serverTimestamp(),
+  });
 };

@@ -26,6 +26,7 @@ interface VideoPlayerProps {
   episode?: number;
   episodesCount?: number;
   hasNextEpisode?: boolean;
+  introEndSeconds?: number;
   youtubeKey?: string | null;
   playMode: 'movie' | 'trailer';
   isPausedByHost?: boolean;
@@ -69,6 +70,7 @@ export default function VideoPlayer({
   season = 1, episode = 1,
   episodesCount = 0,
   hasNextEpisode,
+  introEndSeconds = 0,
   youtubeKey, playMode,
   isPausedByHost = false, hostPauseByName = '',
   isLiveHost = false, isLiveSession = false,
@@ -114,6 +116,7 @@ export default function VideoPlayer({
     () => localStorage.getItem('noir_autoplay_next') !== 'false',
   );
   const [nextEpisodeCountdown, setNextEpisodeCountdown] = useState<number | null>(null);
+  const [showStillWatching, setShowStillWatching] = useState(false);
 
   const [controlsVisible, setControlsVisible] = useState(true);
 
@@ -262,6 +265,7 @@ export default function VideoPlayer({
     setShowSettings(false); setShowSpeedMenu(false); setShowVolume(false);
     setIsPlaying(false); setCurrentTime(0); setDuration(0); setBuffered(0); setIsBuffering(false);
     setNextEpisodeCountdown(null);
+    setShowStillWatching(false);
     return () => clearTimeout(timer);
   }, [type, id, season, episode, playMode]);
 
@@ -286,20 +290,69 @@ export default function VideoPlayer({
     clearTimeout(touchHoldTimer.current);
   }, []);
 
-  /* ── load saved subtitle size ── */
+  /* ── load and cloud-sync playback preferences ── */
   useEffect(() => {
-    const saved = Number(localStorage.getItem('noir_sub_size'));
-    if (saved && saved >= 50 && saved <= 250) setSubSize(saved);
+    const applySavedSettings = () => {
+      const savedSize = Number(localStorage.getItem('noir_sub_size'));
+      const savedOffset = Number(localStorage.getItem('noir_sub_offset'));
+      setAutoplayNext(localStorage.getItem('noir_autoplay_next') !== 'false');
+      if (savedSize >= 50 && savedSize <= 250) setSubSize(savedSize);
+      if (savedOffset >= -10 && savedOffset <= 10) setSubOffset(savedOffset);
+    };
+    const handleCloudSync = (event: Event) => {
+      const settings = (event as CustomEvent<{
+        autoplayNext: boolean;
+        subtitleSize: number;
+        subtitleOffset: number;
+      }>).detail;
+      if (!settings) return;
+      setAutoplayNext(settings.autoplayNext);
+      setSubSize(settings.subtitleSize);
+      setSubOffset(settings.subtitleOffset);
+    };
+    applySavedSettings();
+    window.addEventListener('noir_playback_settings_sync', handleCloudSync);
+    return () => window.removeEventListener('noir_playback_settings_sync', handleCloudSync);
   }, []);
 
   /* ملاحظة: إغلاق الإعدادات يتم عبر الـ overlay (onPointerDown) — يشتغل ماوس ولمس */
 
+  const persistPlaybackSettings = (
+    nextAutoplay: boolean,
+    nextSize: number,
+    nextOffset: number,
+  ) => {
+    localStorage.setItem('noir_autoplay_next', String(nextAutoplay));
+    localStorage.setItem('noir_sub_size', String(nextSize));
+    localStorage.setItem('noir_sub_offset', String(nextOffset));
+    window.dispatchEvent(new CustomEvent('noir_playback_settings_updated', {
+      detail: {
+        autoplayNext: nextAutoplay,
+        subtitleSize: nextSize,
+        subtitleOffset: nextOffset,
+      },
+    }));
+  };
+
   const changeSubSize = (delta: number) => {
     setSubSize(prev => {
       const next = Math.max(50, Math.min(250, prev + delta));
-      localStorage.setItem('noir_sub_size', String(next));
+      persistPlaybackSettings(autoplayNext, next, subOffset);
       return next;
     });
+  };
+
+  const changeSubOffset = (delta: number) => {
+    setSubOffset((previous) => {
+      const next = Math.max(-10, Math.min(10, previous + delta));
+      persistPlaybackSettings(autoplayNext, subSize, next);
+      return next;
+    });
+  };
+
+  const markUserActive = () => {
+    localStorage.setItem('noir_consecutive_autoplay_count', '0');
+    setShowStillWatching(false);
   };
 
   /* ── fullscreen event (native only) ── */
@@ -568,6 +621,7 @@ export default function VideoPlayer({
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
+    markUserActive();
     clearTimeout(playPulseTimer.current);
     if (v.paused) {
       void v.play().catch(() => {});
@@ -605,6 +659,7 @@ export default function VideoPlayer({
 
   const seekBy = (s: number) => {
     if (!videoRef.current) return;
+    markUserActive();
     videoRef.current.currentTime = Math.max(0, Math.min(duration || Infinity, videoRef.current.currentTime + s));
     onSeek?.(videoRef.current.currentTime);
     setSeekFlash({ dir: s > 0 ? 'fwd' : 'back', amount: Math.abs(s) });
@@ -784,6 +839,7 @@ export default function VideoPlayer({
   const startScrub = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (!videoRef.current || !duration) return;
     e.preventDefault();
+    markUserActive();
     activeScrubPointerRef.current = e.pointerId;
     e.currentTarget.setPointerCapture(e.pointerId);
     setIsScrubbing(true);
@@ -950,7 +1006,18 @@ export default function VideoPlayer({
                 setIsPlaying(false);
                 setControlsVisible(true);
                 if (autoplayNext && hasNextEp) {
-                  setNextEpisodeCountdown(8);
+                  const consecutive = Number(
+                    localStorage.getItem('noir_consecutive_autoplay_count') || 0,
+                  );
+                  if (consecutive >= 2) {
+                    setShowStillWatching(true);
+                  } else {
+                    localStorage.setItem(
+                      'noir_consecutive_autoplay_count',
+                      String(consecutive + 1),
+                    );
+                    setNextEpisodeCountdown(8);
+                  }
                 }
               }}
               onProgress={() => {
@@ -1093,6 +1160,25 @@ export default function VideoPlayer({
             </div>
           )}
 
+          {isNative && introEndSeconds > 0 && currentTime >= 2 && currentTime < introEndSeconds && (
+            <button
+              type="button"
+              onClick={() => {
+                const video = videoRef.current;
+                if (!video) return;
+                markUserActive();
+                video.currentTime = Math.min(introEndSeconds, duration || introEndSeconds);
+                setCurrentTime(video.currentTime);
+                onSeek?.(video.currentTime);
+              }}
+              className="absolute bottom-24 right-4 sm:right-7 z-30 inline-flex items-center gap-2 rounded-lg border border-white/70 bg-black/70 px-4 py-2.5 text-sm font-bold text-white backdrop-blur-lg hover:bg-white hover:text-black transition-colors cursor-pointer"
+              dir="rtl"
+            >
+              <SkipForward className="w-4 h-4" />
+              تخطي المقدمة
+            </button>
+          )}
+
           {isNative && nextEpisodeCountdown != null && (
             <div
               className="absolute inset-0 z-30 flex items-end justify-end bg-gradient-to-t from-black/90 via-black/20 to-transparent p-4 sm:p-7"
@@ -1107,6 +1193,7 @@ export default function VideoPlayer({
                   <button
                     type="button"
                     onClick={() => {
+                      markUserActive();
                       setNextEpisodeCountdown(null);
                       onNextEpisode?.();
                     }}
@@ -1116,10 +1203,50 @@ export default function VideoPlayer({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setNextEpisodeCountdown(null)}
+                    onClick={() => {
+                      markUserActive();
+                      setNextEpisodeCountdown(null);
+                    }}
                     className="noir-button-secondary flex-1 cursor-pointer"
                   >
                     إلغاء
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isNative && showStillWatching && (
+            <div
+              className="absolute inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-sm p-5"
+              dir="rtl"
+            >
+              <div className="w-full max-w-sm rounded-[24px] border border-white/12 bg-[#151518] p-6 text-center shadow-2xl">
+                <h3 className="text-xl font-bold text-white">بعدك تشاهد؟</h3>
+                <p className="mt-2 text-sm leading-6 text-white/55">
+                  أوقفنا التشغيل التلقائي حتى ما تستمر الحلقات بدونك.
+                </p>
+                <div className="mt-5 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      localStorage.setItem('noir_consecutive_autoplay_count', '0');
+                      setShowStillWatching(false);
+                      onNextEpisode?.();
+                    }}
+                    className="noir-button-primary flex-1 cursor-pointer"
+                  >
+                    نعم، أكمل
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      localStorage.setItem('noir_consecutive_autoplay_count', '0');
+                      setShowStillWatching(false);
+                    }}
+                    className="noir-button-secondary flex-1 cursor-pointer"
+                  >
+                    توقف
                   </button>
                 </div>
               </div>
@@ -1205,7 +1332,7 @@ export default function VideoPlayer({
 
                   {/* next episode */}
                   {hasNextEp && (
-                    <Btn onClick={() => { setNextEpisodeCountdown(null); onNextEpisode?.(); }} label="الحلقة التالية">
+                    <Btn onClick={() => { markUserActive(); setNextEpisodeCountdown(null); onNextEpisode?.(); }} label="الحلقة التالية">
                       <SkipForward className="w-5 h-5 fill-white" />
                     </Btn>
                   )}
@@ -1299,7 +1426,7 @@ export default function VideoPlayer({
                             onClick={() => {
                               setAutoplayNext((current) => {
                                 const next = !current;
-                                localStorage.setItem('noir_autoplay_next', String(next));
+                                persistPlaybackSettings(next, subSize, subOffset);
                                 return next;
                               });
                             }}
@@ -1336,13 +1463,13 @@ export default function VideoPlayer({
                         {/* تأخير الترجمة */}
                         <div className="border-t border-white/10 px-3.5 py-3 flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
-                            <button onClick={() => setSubOffset(o => Math.min(o + 0.5, 10))} className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="+0.5s">
+                            <button onClick={() => changeSubOffset(0.5)} className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="+0.5s">
                               <Plus className="w-3 h-3" />
                             </button>
                             <span className={`text-xs font-semibold w-14 text-center tabular-nums select-none ${subOffset === 0 ? 'text-white/40' : subOffset > 0 ? 'text-red-400' : 'text-blue-400'}`}>
                               {subOffset === 0 ? '0.0s' : `${subOffset > 0 ? '+' : ''}${subOffset.toFixed(1)}s`}
                             </span>
-                            <button onClick={() => setSubOffset(o => Math.max(o - 0.5, -10))} className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="-0.5s">
+                            <button onClick={() => changeSubOffset(-0.5)} className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="-0.5s">
                               <Minus className="w-3 h-3" />
                             </button>
                           </div>

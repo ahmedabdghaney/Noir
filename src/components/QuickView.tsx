@@ -1,23 +1,27 @@
 import { useEffect } from 'react';
-import { Check, Info, Play, Plus, Star, X } from 'lucide-react';
-import { MovieOrShow } from '../types';
+import { Check, Info, Play, Plus, Star, ThumbsDown, ThumbsUp, X } from 'lucide-react';
+import { MovieOrShow, TitlePreference } from '../types';
 
 interface QuickViewProps {
   item: MovieOrShow | null;
   saved: boolean;
+  preference?: TitlePreference;
   onClose: () => void;
   onPlay: (item: MovieOrShow) => void;
   onDetails: (item: MovieOrShow) => void;
   onToggleSave: (item: MovieOrShow) => void;
+  onPreference: (item: MovieOrShow, preference: TitlePreference) => void;
 }
 
 export default function QuickView({
   item,
   saved,
+  preference,
   onClose,
   onPlay,
   onDetails,
   onToggleSave,
+  onPreference,
 }: QuickViewProps) {
   useEffect(() => {
     if (!item) return;
@@ -132,6 +136,31 @@ export default function QuickView({
             >
               {saved ? <Check className="w-5 h-5" strokeWidth={3} /> : <Plus className="w-5 h-5" />}
             </button>
+
+            <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1">
+              <button
+                type="button"
+                onClick={() => onPreference(item, 'like')}
+                className={`noir-icon-button !w-9 !h-9 cursor-pointer ${
+                  preference === 'like' ? '!bg-white !text-black' : ''
+                }`}
+                aria-label="أعجبني"
+                aria-pressed={preference === 'like'}
+              >
+                <ThumbsUp className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onPreference(item, 'dislike')}
+                className={`noir-icon-button !w-9 !h-9 cursor-pointer ${
+                  preference === 'dislike' ? '!bg-white !text-black' : ''
+                }`}
+                aria-label="غير مناسب لي"
+                aria-pressed={preference === 'dislike'}
+              >
+                <ThumbsDown className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

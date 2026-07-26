@@ -10,6 +10,27 @@ import { searchMulti, discoverTitles } from '../lib/tmdb';
 import { CATEGORIES } from '../lib/categories';
 import WatchlistButton from './WatchlistButton';
 
+const LANGUAGE_SEARCH_TERMS: Record<string, string> = {
+  عربي: 'ar',
+  عربية: 'ar',
+  العربية: 'ar',
+  انكليزي: 'en',
+  انجليزي: 'en',
+  إنجليزي: 'en',
+  كوري: 'ko',
+  كورية: 'ko',
+  ياباني: 'ja',
+  يابانية: 'ja',
+  هندي: 'hi',
+  هندية: 'hi',
+  فرنسي: 'fr',
+  فرنسية: 'fr',
+  اسباني: 'es',
+  إسباني: 'es',
+  تركي: 'tr',
+  تركية: 'tr',
+};
+
 interface SearchOverlayProps {
   isOpen: boolean;
   onClose: () => void;
@@ -91,8 +112,22 @@ export default function SearchOverlay({
     setIsLoading(true);
     const delayDebounceRaw = setTimeout(async () => {
       try {
-        const matching = await searchMulti(query);
-        setResults(matching);
+        const normalizedQuery = query.trim();
+        const language = LANGUAGE_SEARCH_TERMS[normalizedQuery];
+        const [matching, languageMovies, languageShows] = await Promise.all([
+          searchMulti(normalizedQuery),
+          language
+            ? discoverTitles('movie', { originalLanguage: language, sortBy: 'popularity', page: 1 })
+            : Promise.resolve({ results: [], totalPages: 1 }),
+          language
+            ? discoverTitles('tv', { originalLanguage: language, sortBy: 'popularity', page: 1 })
+            : Promise.resolve({ results: [], totalPages: 1 }),
+        ]);
+        const unique = new Map<string, MovieOrShow>();
+        [...languageMovies.results, ...languageShows.results, ...matching].forEach((item) => {
+          unique.set(`${item.type}_${item.id}`, item);
+        });
+        setResults([...unique.values()].slice(0, 24));
       } catch (err) {
         setResults([]);
       } finally {
