@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Star, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
-import { DetailedInfo, MovieOrShow, CastMember } from '../types';
+import { CastMember, ContinueWatchingItem, DetailedInfo, MovieOrShow, NativePlaybackProgress } from '../types';
 import { fetchDetailedTitle, getPosterUrl, getLargePosterUrl, getBackdropUrl, getOriginalBackdropUrl } from '../lib/tmdb';
 import VideoPlayer from './VideoPlayer';
 import MovieRow from './MovieRow';
@@ -26,6 +26,8 @@ interface DetailViewProps {
   showToast: (message: string) => void;
   autoOpenWatchTogether?: string;
   onClearAutoOpenWatchTogether?: () => void;
+  autoResume?: boolean;
+  onAutoResumeConsumed?: () => void;
   watchlist: MovieOrShow[];
   onToggleWatchlistItem?: (item: MovieOrShow) => void;
   // بيانات عنصر يدوي محض (خارج TMDB). لو موجودة، نعرضها بدل جلب TMDB.
@@ -67,6 +69,8 @@ export default function DetailView({
   showToast,
   autoOpenWatchTogether = '',
   onClearAutoOpenWatchTogether,
+  autoResume = false,
+  onAutoResumeConsumed,
   watchlist,
   onToggleWatchlistItem,
   manualData = null,
@@ -101,6 +105,7 @@ export default function DetailView({
 
   // Saved Progress Percentage
   const [savedProgressPercent, setSavedProgressPercent] = useState<number>(0);
+  const [savedPlayback, setSavedPlayback] = useState<ContinueWatchingItem | null>(null);
 
   // Watch Together - Live (real WebSocket connection)
   const [isWatchTogetherOpen, setIsWatchTogetherOpen] = useState(false);
@@ -159,9 +164,21 @@ export default function DetailView({
   });
 
   const loadSavedProgress = () => {
-    const progressKey =`noir_progress_${type}_${id}`;
-    const stored = localStorage.getItem(progressKey);
-    setSavedProgressPercent(stored ? Number(stored) : 0);
+    try {
+      const raw = localStorage.getItem('noir_continue_watching_list');
+      const list: ContinueWatchingItem[] = raw ? JSON.parse(raw) : [];
+      const saved = list.find((item) => item.type === type && item.id === id) || null;
+      const matchesEpisode =
+        !saved ||
+        type === 'movie' ||
+        (saved.season === selectedSeason && saved.episode === selectedEpisode);
+      const current = saved && matchesEpisode ? saved : null;
+      setSavedPlayback(current);
+      setSavedProgressPercent(current ? Math.round(Number(current.progress || 0)) : 0);
+    } catch {
+      setSavedPlayback(null);
+      setSavedProgressPercent(0);
+    }
   };
 
   useEffect(() => {
@@ -171,20 +188,124 @@ export default function DetailView({
     return () => {
       window.removeEventListener('progress_updated', handleProgressUpdated);
     };
-  }, [type, id]);
+  }, [type, id, selectedSeason, selectedEpisode]);
 
   const handleStartFromBeginning = () => {
-    const progressKey =`noir_progress_${type}_${id}`;
-    localStorage.setItem(progressKey,'0');
+    const raw = localStorage.getItem('noir_continue_watching_list');
+    const list: ContinueWatchingItem[] = raw ? JSON.parse(raw) : [];
+    const next = list.filter((item) => !(item.type === type && item.id === id));
+    localStorage.setItem('noir_continue_watching_list', JSON.stringify(next));
+    localStorage.removeItem(`noir_progress_${type}_${id}`);
+    setSavedPlayback(null);
     setSavedProgressPercent(0);
     window.dispatchEvent(
       new CustomEvent('progress_updated', {
-        detail: { type, id, progress: 0 },
+        detail: { type, id, remove: true },
       }),
     );
     // Open main movie stream
-    handlePlayClick('movie');
+    handlePlayClick('movie', 0);
   };
+
+  const handleNativePlaybackProgress = useCallback(
+    (playback: NativePlaybackProgress) => {
+      if (!data || playback.durationSeconds <= 0) return;
+
+      let list: ContinueWatchingItem[] = [];
+      try {
+        const raw = localStorage.getItem('noir_continue_watching_list');
+        list = raw ? JSON.parse(raw) : [];
+      } catch {
+        list = [];
+      }
+
+      const withoutCurrent = list.filter(
+        (item) => !(item.type === type && item.id === id),
+      );
+
+      if (playback.completed || playback.progress >= 95) {
+        localStorage.setItem(
+          'noir_continue_watching_list',
+          JSON.stringify(withoutCurrent),
+        );
+        localStorage.removeItem(`noir_progress_${type}_${id}`);
+        setSavedPlayback(null);
+        setSavedProgressPercent(0);
+        window.dispatchEvent(
+          new CustomEvent('progress_updated', {
+            detail: { type, id, remove: true },
+          }),
+        );
+        return;
+      }
+
+      if (playback.positionSeconds < 5) return;
+
+      const item: ContinueWatchingItem = {
+        id,
+        type,
+        title: data.title || (data as any).name || 'بدون عنوان',
+        overview: data.overview || '',
+        poster:
+          (data as any)._manualPoster ||
+          (data.poster_path ? getPosterUrl(data.poster_path) : null),
+        backdrop:
+          (data as any)._manualBackdrop ||
+          (data.backdrop_path ? getBackdropUrl(data.backdrop_path) : null),
+        rating: data.vote_average || 0,
+        year: (data.release_date || data.first_air_date || '').slice(0, 4),
+        date: data.release_date || data.first_air_date || '',
+        genres: data.genres ? data.genres.map((genre) => genre.name) : [],
+        progress: playback.progress,
+        positionSeconds: playback.positionSeconds,
+        durationSeconds: playback.durationSeconds,
+        season: playback.season,
+        episode: playback.episode,
+        updatedAtMs: Date.now(),
+      };
+
+      const next = [item, ...withoutCurrent]
+        .sort((a, b) => b.updatedAtMs - a.updatedAtMs)
+        .slice(0, 20);
+      localStorage.setItem('noir_continue_watching_list', JSON.stringify(next));
+      localStorage.setItem(
+        'noir_continue_watching_owner',
+        auth.currentUser?.uid || 'guest',
+      );
+      localStorage.setItem(
+        `noir_progress_${type}_${id}`,
+        String(playback.progress),
+      );
+      setSavedPlayback(item);
+      setSavedProgressPercent(Math.round(playback.progress));
+      window.dispatchEvent(
+        new CustomEvent('progress_updated', {
+          detail: { item },
+        }),
+      );
+    },
+    [data, id, type],
+  );
+
+  useEffect(() => {
+    if (!autoResume || isLoading || !data) return;
+    try {
+      const raw = localStorage.getItem('noir_continue_watching_list');
+      const list: ContinueWatchingItem[] = raw ? JSON.parse(raw) : [];
+      const saved = list.find((item) => item.type === type && item.id === id);
+      if (saved?.positionSeconds && saved.durationSeconds > 0) {
+        if (type === 'tv' && saved.season > 0 && saved.episode > 0) {
+          setSelectedSeason(saved.season);
+          setSelectedEpisode(saved.episode);
+        }
+        setStartAtSnapshot(saved.positionSeconds);
+        setPlayerMode('movie');
+        setIsPlayerOpen(true);
+      }
+    } finally {
+      onAutoResumeConsumed?.();
+    }
+  }, [autoResume, data, id, isLoading, onAutoResumeConsumed, type]);
 
   // Auto-join a room from a shared link
   useEffect(() => {
@@ -395,60 +516,26 @@ export default function DetailView({
     }
   };
 
-  const handlePlayClick = (mode: 'movie' | 'trailer') => {
+  const handlePlayClick = (mode: 'movie' | 'trailer', startOverride?: number) => {
     setPlayerMode(mode);
     setIsPlayerOpen(true);
     setIsPausedByHost(false);
     setHostPauseByName('');
     if (mode === 'movie') {
       // Host starts fresh; a late-joining viewer should boot from the host's current time.
-      const startFrom = wtConnected && !wtIsHost ? Math.max(0, Math.floor(wtHostTime)) : 0;
+      const savedPosition =
+        savedPlayback &&
+        (type === 'movie' ||
+          (savedPlayback.season === selectedSeason &&
+            savedPlayback.episode === selectedEpisode))
+          ? savedPlayback.positionSeconds
+          : 0;
+      const startFrom =
+        wtConnected && !wtIsHost
+          ? Math.max(0, Math.floor(wtHostTime))
+          : Math.max(0, startOverride ?? savedPosition);
       setStartAtSnapshot(startFrom);
       localTimeRef.current = startFrom;
-
-      // Save to Continue Watching List
-      if (data) {
-        try {
-          const listStr = localStorage.getItem('noir_continue_watching_list') || '[]';
-          let cwList: MovieOrShow[] = JSON.parse(listStr);
-          
-          // Filter out existing to avoid duplicates, then unshift
-          cwList = cwList.filter((x) => !(x.id === id && x.type === type));
-          
-          const itemToSave: MovieOrShow = {
-            id: id,
-            type: type,
-            title: data.title || (data as any).name || 'بدون عنوان',
-            overview: data.overview || '',
-            poster: data.poster_path ? getPosterUrl(data.poster_path) : null,
-            backdrop: data.backdrop_path ? getBackdropUrl(data.backdrop_path) : null,
-            rating: data.vote_average || 0,
-            year: (data.release_date || data.first_air_date || '').substring(0, 4) || '—',
-            date: data.release_date || data.first_air_date || '',
-            genres: data.genres ? data.genres.map((g: any) => g.name) : []
-          };
-          
-          cwList.unshift(itemToSave);
-          if (cwList.length > 20) {
-            cwList = cwList.slice(0, 20);
-          }
-          localStorage.setItem('noir_continue_watching_list', JSON.stringify(cwList));
-          
-          // Notify the home page and sync this item to the signed-in user's cloud history.
-          const currentProgress =
-            Number(localStorage.getItem(`noir_progress_${type}_${id}`)) || 0;
-          window.dispatchEvent(
-            new CustomEvent('progress_updated', {
-              detail: {
-                item: itemToSave,
-                progress: currentProgress,
-              },
-            }),
-          );
-        } catch (err) {
-          console.error("Error saving to continue_watching_list: ", err);
-        }
-      }
     }
     // If host in a live session, tell everyone to open the stream too
     if (isWatchTogetherOpen && wtConnected && wtIsHost && mode === 'movie') {
@@ -1198,6 +1285,7 @@ export default function DetailView({
             isLiveSession={isWatchTogetherOpen && wtConnected}
             startAt={startAtSnapshot}
             onTimeUpdate={handleTimeUpdate}
+            onPlaybackProgress={handleNativePlaybackProgress}
             onSeek={handleSeek}
             onHostPause={handleHostPause}
             onHostResume={handleHostResume}
@@ -1205,6 +1293,7 @@ export default function DetailView({
             onSwitchMode={(mode) => setPlayerMode(mode)}
             onNextEpisode={() => {
               if (selectedEpisode < episodesCount) {
+                setStartAtSnapshot(0);
                 setSelectedEpisode((prev) => prev + 1);
               }
             }}

@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
+import type { NativePlaybackProgress } from '../types';
 import {
   Loader, Pause, Play, Lock,
   Subtitles, Settings, Maximize2, Minimize2,
@@ -28,6 +29,7 @@ interface VideoPlayerProps {
   isLiveSession?: boolean;
   startAt?: number;
   onTimeUpdate?: (seconds: number) => void;
+  onPlaybackProgress?: (progress: NativePlaybackProgress) => void;
   onSeek?: (seconds: number) => void;
   onHostPause?: () => void;
   onHostResume?: () => void;
@@ -65,7 +67,7 @@ export default function VideoPlayer({
   isPausedByHost = false, hostPauseByName = '',
   isLiveHost = false, isLiveSession = false,
   startAt = 0,
-  onTimeUpdate, onSeek,
+  onTimeUpdate, onPlaybackProgress, onSeek,
   onClose, onSwitchMode, onNextEpisode,
 }: VideoPlayerProps) {
 
@@ -75,6 +77,7 @@ export default function VideoPlayer({
   const hideTimer     = useRef<ReturnType<typeof setTimeout>>();
   const dblClickTimer = useRef<ReturnType<typeof setTimeout>>();
   const seekFlashTimer = useRef<ReturnType<typeof setTimeout>>();
+  const lastProgressReportAtRef = useRef(0);
 
   const [isLoading,       setIsLoading]       = useState(true);
   const [customMp4Failed, setCustomMp4Failed] = useState(false);
@@ -111,8 +114,6 @@ export default function VideoPlayer({
   // مصدر الـ embed المختار: 0 = VidSrc (أساسي)، 1 = vidapi (احتياطي)
   const [embedSource, setEmbedSource] = useState(0);
 
-  const progressKey = `noir_progress_${type}_${id}`;
-
   /* ── URLs + native flag (معرّفة مبكراً عشان الـ effects تستخدمها) ── */
   // المسلسلات: TV/{اسم}/{tmdbId}/Season {n}/{episode}
   // الأفلام:   Movies/{اسم}/{tmdbId}/movie  — tmdbId يميّز الأفلام بنفس الاسم (Scream 1997 vs 2022)
@@ -131,7 +132,36 @@ export default function VideoPlayer({
   }
   const customMp4 = playMode === 'movie' ? mp4Url : undefined;
   const vttSrc    = vttUrl;
-  const isNative  = playMode === 'movie' && customMp4 && !customMp4Failed;
+  const isNative = Boolean(playMode === 'movie' && customMp4 && !customMp4Failed);
+
+  const reportNativeProgress = useCallback(
+    (video: HTMLVideoElement | null, completed = false, force = false) => {
+      if (!video || playMode !== 'movie' || customMp4Failed) return;
+      const durationSeconds = Math.max(0, Number(video.duration || 0));
+      if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) return;
+      const positionSeconds = Math.min(
+        durationSeconds,
+        Math.max(0, Number(video.currentTime || 0)),
+      );
+
+      const now = Date.now();
+      if (!force && now - lastProgressReportAtRef.current < 10000) return;
+      lastProgressReportAtRef.current = now;
+
+      const progress = completed
+        ? 100
+        : Math.max(0, Math.min(100, (positionSeconds / durationSeconds) * 100));
+      onPlaybackProgress?.({
+        positionSeconds,
+        durationSeconds,
+        progress,
+        completed: completed || progress >= 95,
+        season: type === 'tv' ? season : 0,
+        episode: type === 'tv' ? episode : 0,
+      });
+    },
+    [customMp4Failed, episode, onPlaybackProgress, playMode, season, type],
+  );
 
   /* ── MediaSession: يعرض اسم الفلم + صورته بشاشة قفل iPhone (بدل اسم نوار) ── */
   useEffect(() => {
@@ -153,33 +183,31 @@ export default function VideoPlayer({
     } catch (_) { /* MediaMetadata غير مدعوم */ }
   }, [title, posterPath, type, season, episode, playMode]);
 
-  /* ── progress tracker ── */
   useEffect(() => {
-    if (playMode !== 'movie') return;
-    const savedOnStart = Number(localStorage.getItem(progressKey)) || 0;
-    if (savedOnStart === 0) {
-      localStorage.setItem(progressKey, '8');
-      window.dispatchEvent(
-        new CustomEvent('progress_updated', {
-          detail: { type, id, progress: 8 },
-        }),
-      );
-    }
-    const timer = setInterval(() => {
-      const cur = Number(localStorage.getItem(progressKey)) || 0;
-      if (cur < 96) {
-        const nextProgress = cur + 1;
-        localStorage.setItem(progressKey, String(nextProgress));
-        window.dispatchEvent(
-          new CustomEvent('progress_updated', {
-            detail: { type, id, progress: nextProgress },
-          }),
-        );
-      }
-    }, 10000);
+    if (!isNative) return;
+    const flushProgress = () => reportNativeProgress(videoRef.current, false, true);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') flushProgress();
+    };
+    window.addEventListener('pagehide', flushProgress);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      flushProgress();
+      window.removeEventListener('pagehide', flushProgress);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [isNative, reportNativeProgress]);
 
-    return () => clearInterval(timer);
-  }, [type, id, playMode, progressKey]);
+  useEffect(() => {
+    if (!isNative) return;
+    const video = videoRef.current;
+    if (!video || !Number.isFinite(video.duration) || video.duration <= 0) return;
+    const target = Math.max(0, Math.min(startAt, Math.max(0, video.duration - 3)));
+    if (Math.abs(video.currentTime - target) > 2) {
+      video.currentTime = target;
+      setCurrentTime(target);
+    }
+  }, [id, isNative, episode, season, startAt, type]);
 
   /* ── postMessage ── */
   const lastWatchedRef   = useRef(0);
@@ -702,12 +730,38 @@ export default function VideoPlayer({
               crossOrigin="anonymous"
               className={`w-full h-full bg-black ${controlsVisible ? 'cursor-default' : 'cursor-none'}`}
               onClick={handleVideoClick}
+              onLoadedMetadata={() => {
+                const video = videoRef.current;
+                if (!video) return;
+                const videoDuration = Number(video.duration || 0);
+                setDuration(videoDuration);
+                if (
+                  startAt > 5 &&
+                  Number.isFinite(videoDuration) &&
+                  startAt < videoDuration - 3
+                ) {
+                  video.currentTime = startAt;
+                  setCurrentTime(startAt);
+                }
+              }}
               onLoadedData={() => { setIsLoading(false); setDuration(videoRef.current?.duration || 0); }}
               onCanPlay={() => setIsLoading(false)}
               onError={() => setCustomMp4Failed(true)}
               onPlay={() => { setIsPlaying(true); resetHideTimer(); }}
-              onPause={() => { setIsPlaying(false); setControlsVisible(true); clearTimeout(hideTimer.current); }}
-              onTimeUpdate={() => setCurrentTime(videoRef.current?.currentTime || 0)}
+              onPause={() => {
+                setIsPlaying(false);
+                setControlsVisible(true);
+                clearTimeout(hideTimer.current);
+                reportNativeProgress(videoRef.current, false, true);
+              }}
+              onTimeUpdate={() => {
+                const video = videoRef.current;
+                const time = video?.currentTime || 0;
+                setCurrentTime(time);
+                onTimeUpdate?.(time);
+                reportNativeProgress(video);
+              }}
+              onEnded={() => reportNativeProgress(videoRef.current, true, true)}
               onProgress={() => {
                 const v = videoRef.current;
                 if (v && v.buffered.length) setBuffered(v.buffered.end(v.buffered.length - 1));

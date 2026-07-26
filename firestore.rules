@@ -38,7 +38,6 @@ service cloud.firestore {
 
     function isValidContinueWatchingItem(data) {
       return data.keys().hasAll(['id', 'type', 'title', 'poster', 'backdrop', 'rating', 'year', 'genres', 'progress', 'updatedAt'])
-        && data.keys().size() == 10
         && data.id is int
         && data.type is string && (data.type == 'movie' || data.type == 'tv')
         && data.title is string && data.title.size() <= 200
@@ -50,7 +49,21 @@ service cloud.firestore {
         && data.genres.size() <= 20
         && (data.progress is int || data.progress is float)
         && data.progress >= 0 && data.progress <= 100
-        && data.updatedAt is timestamp;
+        && data.updatedAt is timestamp
+        && (
+          data.keys().size() == 10
+          || (
+            data.keys().size() == 14
+            && data.keys().hasAll(['positionSeconds', 'durationSeconds', 'season', 'episode'])
+            && (data.positionSeconds is int || data.positionSeconds is float)
+            && data.positionSeconds >= 0
+            && (data.durationSeconds is int || data.durationSeconds is float)
+            && data.durationSeconds > 0
+            && data.positionSeconds <= data.durationSeconds
+            && data.season is int && data.season >= 0
+            && data.episode is int && data.episode >= 0
+          )
+        );
     }
 
     match /users/{userId} {

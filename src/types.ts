@@ -16,6 +16,24 @@ export interface MovieOrShow {
   genres: string[];
 }
 
+export interface ContinueWatchingItem extends MovieOrShow {
+  progress: number;
+  positionSeconds: number;
+  durationSeconds: number;
+  season: number;
+  episode: number;
+  updatedAtMs: number;
+}
+
+export interface NativePlaybackProgress {
+  positionSeconds: number;
+  durationSeconds: number;
+  progress: number;
+  completed: boolean;
+  season: number;
+  episode: number;
+}
+
 export interface CastMember {
   id: number;
   name: string;

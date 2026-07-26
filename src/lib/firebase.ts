@@ -26,7 +26,7 @@ import {
   serverTimestamp,
   getDocFromServer,
 } from 'firebase/firestore';
-import { MovieOrShow } from '../types';
+import { ContinueWatchingItem, MovieOrShow } from '../types';
 
 const firebaseConfig = {
   projectId: "ios-app-498810",
@@ -304,10 +304,7 @@ export const removeFromFirestoreWatchlist = async (userId: string, type: 'movie'
   }
 };
 
-export interface ContinueWatchingCloudItem extends MovieOrShow {
-  progress: number;
-  updatedAtMs: number;
-}
+export interface ContinueWatchingCloudItem extends ContinueWatchingItem {}
 
 const normalizeContinueWatchingDoc = (data: any): ContinueWatchingCloudItem => ({
   id: Number(data.id),
@@ -321,6 +318,10 @@ const normalizeContinueWatchingDoc = (data: any): ContinueWatchingCloudItem => (
   date: '',
   genres: Array.isArray(data.genres) ? data.genres : [],
   progress: Math.max(0, Math.min(100, Number(data.progress || 0))),
+  positionSeconds: Math.max(0, Number(data.positionSeconds || 0)),
+  durationSeconds: Math.max(0, Number(data.durationSeconds || 0)),
+  season: Math.max(0, Number(data.season || 0)),
+  episode: Math.max(0, Number(data.episode || 0)),
   updatedAtMs:
     typeof data.updatedAt?.toMillis === 'function'
       ? data.updatedAt.toMillis()
@@ -335,7 +336,14 @@ export const fetchFirestoreContinueWatching = async (
     const snapshot = await getDocs(collection(db, 'users', userId, 'continueWatching'));
     const items = snapshot.docs
       .map((docSnap) => normalizeContinueWatchingDoc(docSnap.data()))
-      .filter((item) => item.id && (item.type === 'movie' || item.type === 'tv') && item.title);
+      .filter(
+        (item) =>
+          item.id &&
+          (item.type === 'movie' || item.type === 'tv') &&
+          item.title &&
+          item.positionSeconds > 0 &&
+          item.durationSeconds > 0,
+      );
     return items.sort((a, b) => b.updatedAtMs - a.updatedAtMs);
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, pathSpec);
@@ -345,8 +353,7 @@ export const fetchFirestoreContinueWatching = async (
 
 export const saveFirestoreContinueWatching = async (
   userId: string,
-  item: MovieOrShow,
-  progress: number,
+  item: ContinueWatchingItem,
 ): Promise<void> => {
   const itemId = `${item.type}_${item.id}`;
   const pathSpec = `users/${userId}/continueWatching/${itemId}`;
@@ -360,33 +367,15 @@ export const saveFirestoreContinueWatching = async (
       rating: Number(item.rating || 0),
       year: String(item.year || ''),
       genres: Array.isArray(item.genres) ? item.genres : [],
-      progress: Math.max(0, Math.min(100, Number(progress || 0))),
+      progress: Math.max(0, Math.min(100, Number(item.progress || 0))),
+      positionSeconds: Math.max(0, Number(item.positionSeconds || 0)),
+      durationSeconds: Math.max(0, Number(item.durationSeconds || 0)),
+      season: Math.max(0, Number(item.season || 0)),
+      episode: Math.max(0, Number(item.episode || 0)),
       updatedAt: serverTimestamp(),
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, pathSpec);
-  }
-};
-
-export const updateFirestoreContinueWatchingProgress = async (
-  userId: string,
-  type: 'movie' | 'tv',
-  id: number,
-  progress: number,
-): Promise<void> => {
-  const itemId = `${type}_${id}`;
-  const pathSpec = `users/${userId}/continueWatching/${itemId}`;
-  try {
-    await setDoc(
-      doc(db, 'users', userId, 'continueWatching', itemId),
-      {
-        progress: Math.max(0, Math.min(100, Number(progress || 0))),
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true },
-    );
-  } catch (error) {
-    handleFirestoreError(error, OperationType.UPDATE, pathSpec);
   }
 };
 
@@ -414,7 +403,14 @@ export const subscribeFirestoreContinueWatching = (
     (snapshot) => {
       const items = snapshot.docs
         .map((docSnap) => normalizeContinueWatchingDoc(docSnap.data()))
-        .filter((item) => item.id && (item.type === 'movie' || item.type === 'tv') && item.title)
+        .filter(
+          (item) =>
+            item.id &&
+            (item.type === 'movie' || item.type === 'tv') &&
+            item.title &&
+            item.positionSeconds > 0 &&
+            item.durationSeconds > 0,
+        )
         .sort((a, b) => b.updatedAtMs - a.updatedAtMs);
       onItems(items);
     },
@@ -426,7 +422,7 @@ export const subscribeFirestoreContinueWatching = (
 
 export const mergeLocalContinueWatchingIntoCloud = async (
   userId: string,
-  localItems: { item: MovieOrShow; progress: number }[],
+  localItems: ContinueWatchingItem[],
 ): Promise<void> => {
   const cloudItems = await fetchFirestoreContinueWatching(userId);
   const cloudByKey = new Map(
@@ -434,10 +430,10 @@ export const mergeLocalContinueWatchingIntoCloud = async (
   );
 
   await Promise.all(
-    localItems.map(async ({ item, progress }) => {
+    localItems.map(async (item) => {
       const cloudItem = cloudByKey.get(`${item.type}_${item.id}`);
-      if (!cloudItem || progress > cloudItem.progress) {
-        await saveFirestoreContinueWatching(userId, item, progress);
+      if (!cloudItem || item.updatedAtMs > cloudItem.updatedAtMs) {
+        await saveFirestoreContinueWatching(userId, item);
       }
     }),
   );

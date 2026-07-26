@@ -5,14 +5,14 @@
 
 import { useRef, useState, useEffect } from 'react';
 import { Play, X, ChevronRight, ChevronLeft } from 'lucide-react';
-import { MovieOrShow } from '../types';
+import { ContinueWatchingItem, MovieOrShow } from '../types';
 import WatchlistButton from './WatchlistButton';
 
 interface ContinueWatchingRowProps {
   title: string;
-  items: MovieOrShow[];
-  onItemClick: (item: MovieOrShow) => void;
-  onRemove?: (item: MovieOrShow) => void;
+  items: ContinueWatchingItem[];
+  onItemClick: (item: ContinueWatchingItem) => void;
+  onRemove?: (item: ContinueWatchingItem) => void;
   isSaved?: (item: MovieOrShow) => boolean;
   onToggleSave?: (item: MovieOrShow) => void;
   compactSaveButton?: boolean;
@@ -92,9 +92,7 @@ export default function ContinueWatchingRow({
           className="flex flex-row gap-2.5 md:gap-3 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none"
         >
           {items.map((item) => {
-            const progressKey = `noir_progress_${item.type}_${item.id}`;
-            const stored = typeof localStorage !== 'undefined' ? localStorage.getItem(progressKey) : null;
-            const progress = stored ? Number(stored) : 0;
+            const progress = Math.max(0, Math.min(100, Number(item.progress || 0)));
             const img = item.backdrop || item.poster;
 
             return (
@@ -159,6 +157,11 @@ export default function ContinueWatchingRow({
 
                   <div className="absolute inset-x-0 bottom-0 p-3.5">
                     <h3 className="text-white font-semibold text-base leading-tight line-clamp-1 mb-2">{item.title || (item as any).name || 'بدون عنوان'}</h3>
+                    {item.type === 'tv' && item.season > 0 && item.episode > 0 && (
+                      <p className="text-white/65 text-xs font-medium mb-2">
+                        الموسم {item.season} • الحلقة {item.episode}
+                      </p>
+                    )}
                     <div className="h-1 w-full bg-white/20 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-red-500 rounded-full"

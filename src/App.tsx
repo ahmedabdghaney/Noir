@@ -26,9 +26,8 @@ import {
   removeFromFirestoreContinueWatching,
   saveFirestoreContinueWatching,
   subscribeFirestoreContinueWatching,
-  updateFirestoreContinueWatchingProgress,
 } from './lib/firebase';
-import { MovieOrShow } from './types';
+import { ContinueWatchingItem, MovieOrShow } from './types';
 import {
   initializeGenres,
   fetchTrendingWeek,
@@ -163,7 +162,8 @@ export default function App() {
   // Bookmark / Watchlist feeds
   const [watchlist, setWatchlist] = useState<MovieOrShow[]>([]);
   const [showSyncHelper, setShowSyncHelper] = useState(false);
-  const [continueWatching, setContinueWatching] = useState<MovieOrShow[]>([]);
+  const [continueWatching, setContinueWatching] = useState<ContinueWatchingItem[]>([]);
+  const [autoResumeRequested, setAutoResumeRequested] = useState(false);
 
   // Continue Watching is cached locally for instant rendering, then reconciled
   // with the signed-in user's Firestore collection.
@@ -174,24 +174,22 @@ export default function App() {
         setContinueWatching([]);
         return;
       }
-      const list: MovieOrShow[] = JSON.parse(listStr);
+      const list: ContinueWatchingItem[] = JSON.parse(listStr);
       const validList = list.filter(
         (item) =>
           (item.type === 'movie' || item.type === 'tv') &&
           item.id &&
-          ((item.title && item.title.trim() && item.title !== 'بدون عنوان') || (item as any).name),
+          item.title &&
+          item.title.trim() &&
+          item.title !== 'بدون عنوان' &&
+          Number(item.positionSeconds) > 0 &&
+          Number(item.durationSeconds) > 0 &&
+          Number(item.progress) < 95,
       );
       if (validList.length !== list.length) {
         localStorage.setItem('noir_continue_watching_list', JSON.stringify(validList));
       }
-      setContinueWatching(
-        validList.filter((item) => {
-          const progress = Number(
-            localStorage.getItem(`noir_progress_${item.type}_${item.id}`),
-          ) || 0;
-          return progress < 95;
-        }),
-      );
+      setContinueWatching(validList.sort((a, b) => b.updatedAtMs - a.updatedAtMs));
     } catch (error) {
       console.error('Error loading continue watching list:', error);
       setContinueWatching([]);
@@ -203,7 +201,7 @@ export default function App() {
       const cacheOwner = localStorage.getItem('noir_continue_watching_owner');
       if (cacheOwner && cacheOwner !== userId) return [];
       const raw = localStorage.getItem('noir_continue_watching_list');
-      const items: MovieOrShow[] = raw ? JSON.parse(raw) : [];
+      const items: ContinueWatchingItem[] = raw ? JSON.parse(raw) : [];
       return items
         .filter(
           (item) =>
@@ -211,14 +209,12 @@ export default function App() {
             item.id &&
             (item.type === 'movie' || item.type === 'tv') &&
             item.title &&
-            item.title !== 'بدون عنوان',
+            item.title !== 'بدون عنوان' &&
+            Number(item.positionSeconds) > 0 &&
+            Number(item.durationSeconds) > 0 &&
+            Number(item.progress) < 95,
         )
-        .map((item) => ({
-          item,
-          progress:
-            Number(localStorage.getItem(`noir_progress_${item.type}_${item.id}`)) || 0,
-        }))
-        .filter(({ progress }) => progress < 95);
+        .sort((a, b) => b.updatedAtMs - a.updatedAtMs);
     } catch {
       return [];
     }
@@ -269,9 +265,6 @@ export default function App() {
         userId,
         (cloudItems) => {
           const activeItems = cloudItems.filter((item) => item.progress < 95);
-          const normalizedItems: MovieOrShow[] = activeItems.map(
-            ({ progress, updatedAtMs, ...item }) => item,
-          );
 
           activeItems.forEach((item) => {
             localStorage.setItem(
@@ -281,10 +274,10 @@ export default function App() {
           });
           localStorage.setItem(
             'noir_continue_watching_list',
-            JSON.stringify(normalizedItems),
+            JSON.stringify(activeItems),
           );
           localStorage.setItem('noir_continue_watching_owner', userId);
-          setContinueWatching(normalizedItems);
+          setContinueWatching(activeItems);
           window.dispatchEvent(new Event('progress_updated'));
         },
         () => loadContinueWatching(),
@@ -786,38 +779,28 @@ export default function App() {
     const handleProgressUpdate = (event: Event) => {
       loadContinueWatching();
       const detail = (event as CustomEvent<{
-        item?: MovieOrShow;
+        item?: ContinueWatchingItem;
         type?: 'movie' | 'tv';
         id?: number;
-        progress?: number;
+        remove?: boolean;
       }>).detail;
       const firebaseUser = auth.currentUser;
       if (!firebaseUser || !detail) return;
 
       if (detail.item) {
-        const progress =
-          detail.progress ??
-          Number(
-            localStorage.getItem(
-              `noir_progress_${detail.item.type}_${detail.item.id}`,
-            ),
-          ) ??
-          0;
         void saveFirestoreContinueWatching(
           firebaseUser.uid,
           detail.item,
-          progress,
         ).catch((error) =>
           console.error('Failed to save continue watching item:', error),
         );
-      } else if (detail.type && detail.id != null && detail.progress != null) {
-        void updateFirestoreContinueWatchingProgress(
+      } else if (detail.remove && detail.type && detail.id != null) {
+        void removeFromFirestoreContinueWatching(
           firebaseUser.uid,
           detail.type,
           detail.id,
-          detail.progress,
         ).catch((error) =>
-          console.error('Failed to sync playback progress:', error),
+          console.error('Failed to remove completed playback progress:', error),
         );
       }
     };
@@ -1004,7 +987,17 @@ export default function App() {
   };
 
   const handleTitleClick = (item: MovieOrShow) => {
+    setAutoResumeRequested(false);
     window.location.hash =`#${item.type}/${item.id}`;
+  };
+
+  const handleContinueWatchingClick = (item: ContinueWatchingItem) => {
+    setAutoResumeRequested(true);
+    if (item.type === 'tv' && item.season > 0 && item.episode > 0) {
+      window.location.hash = `#tv/${item.id}/s${item.season}/e${item.episode}`;
+      return;
+    }
+    window.location.hash = `#${item.type}/${item.id}`;
   };
 
   const removeFromWatchlist = (item: MovieOrShow) => {
@@ -1608,7 +1601,7 @@ export default function App() {
                   <ContinueWatchingRow
                     title="أكمل المشاهدة"
                     items={continueWatching}
-                    onItemClick={handleTitleClick}
+                    onItemClick={handleContinueWatchingClick}
                     isSaved={isInWatchlist}
                     onToggleSave={toggleWatchlistItem}
                     compactSaveButton
@@ -2224,6 +2217,8 @@ export default function App() {
               showToast={showToast}
               autoOpenWatchTogether={joinRoomCode}
               onClearAutoOpenWatchTogether={() => setJoinRoomCode('')}
+              autoResume={autoResumeRequested}
+              onAutoResumeConsumed={() => setAutoResumeRequested(false)}
               watchlist={watchlist}
               onToggleWatchlistItem={toggleWatchlistItem}
               manualData={(() => {
