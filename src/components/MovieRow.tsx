@@ -246,12 +246,13 @@ export default function MovieRow({
                     </div>
                   )}
                   {ranked && (
-                    <span
-                      className="absolute bottom-0 left-1 z-10 text-[3.75rem] sm:text-[4.5rem] font-black leading-none tracking-[-0.12em] text-black/80 [-webkit-text-stroke:2px_white] drop-shadow-[0_4px_12px_rgba(0,0,0,.75)]"
-                      aria-label={`المرتبة ${idx + 1}`}
-                    >
-                      {idx + 1}
-                    </span>
+                    <img
+                      src={`/top10/${idx + 1}.svg`}
+                      alt={`المرتبة ${idx + 1}`}
+                      className={`absolute bottom-0 left-0 z-10 h-[70%] w-auto max-w-[72%] object-contain object-left-bottom pointer-events-none select-none drop-shadow-[0_6px_16px_rgba(0,0,0,.55)] ${
+                        idx === 9 ? 'max-w-[88%]' : ''
+                      }`}
+                    />
                   )}
 
                   {/* Subtle gradient at bottom of poster for depth */}
