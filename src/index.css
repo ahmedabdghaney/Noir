@@ -70,6 +70,37 @@ body::before {
   z-index: 1;
 }
 
+/* Android TV density without zooming the root (zoom breaks fixed positioning). */
+@media (orientation: landscape) and (min-width: 900px) {
+  html.noir-tv-layout {
+    font-size: 13px;
+  }
+
+  html.noir-tv-layout .noir-hero-frame {
+    aspect-ratio: 2.55 / 1;
+    min-height: 0;
+    max-height: 68vh;
+  }
+}
+
+/* A remote has no hover cursor, so focus must always be unmistakable. */
+html.noir-tv-layout :where(
+  button,
+  a[href],
+  input,
+  select,
+  textarea,
+  [role="button"],
+  [data-tv-focusable],
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.96);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 7px rgba(220, 38, 38, 0.5), 0 12px 34px rgba(0, 0, 0, 0.5);
+  filter: brightness(1.12);
+  z-index: 60;
+}
+
 /* Display headings */
 .font-display {
   font-family: var(--font-display);

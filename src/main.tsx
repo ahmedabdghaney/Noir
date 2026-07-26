@@ -5,6 +5,123 @@ import {App as CapacitorApp} from '@capacitor/app';
 import App from './App.tsx';
 import './index.css';
 
+const isAndroidApp = Capacitor.getPlatform() === 'android';
+
+if (isAndroidApp) {
+  document.documentElement.classList.add('noir-android-app');
+
+  const updateTvLayout = () => {
+    document.documentElement.classList.toggle(
+      'noir-tv-layout',
+      window.innerWidth >= 900 && window.innerWidth > window.innerHeight,
+    );
+  };
+
+  const tvFocusableSelector = [
+    'button:not(:disabled)',
+    'a[href]',
+    'input:not(:disabled)',
+    'select:not(:disabled)',
+    'textarea:not(:disabled)',
+    '[data-tv-focusable]',
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(',');
+
+  const isVisible = (element: HTMLElement) => {
+    const rect = element.getBoundingClientRect();
+    const style = window.getComputedStyle(element);
+    return (
+      rect.width > 0 &&
+      rect.height > 0 &&
+      style.display !== 'none' &&
+      style.visibility !== 'hidden' &&
+      style.opacity !== '0'
+    );
+  };
+
+  const tvCandidates = () => {
+    const dialogs = Array.from(
+      document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'),
+    ).filter(isVisible);
+    const scope: ParentNode = dialogs.at(-1) || document;
+    return Array.from(scope.querySelectorAll<HTMLElement>(tvFocusableSelector)).filter(isVisible);
+  };
+
+  const focusInDirection = (direction: 'left' | 'right' | 'up' | 'down') => {
+    const candidates = tvCandidates();
+    if (!candidates.length) return;
+
+    const current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    if (!current || !candidates.includes(current)) {
+      candidates[0].focus({ preventScroll: true });
+      candidates[0].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      return;
+    }
+
+    const currentRect = current.getBoundingClientRect();
+    const currentX = currentRect.left + currentRect.width / 2;
+    const currentY = currentRect.top + currentRect.height / 2;
+
+    const ranked = candidates
+      .filter((candidate) => candidate !== current)
+      .map((candidate) => {
+        const rect = candidate.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        const dx = x - currentX;
+        const dy = y - currentY;
+        const primary =
+          direction === 'left' ? -dx :
+          direction === 'right' ? dx :
+          direction === 'up' ? -dy : dy;
+        if (primary <= 1) return null;
+        const secondary = direction === 'left' || direction === 'right'
+          ? Math.abs(dy)
+          : Math.abs(dx);
+        return { candidate, score: primary + secondary * 2.4 };
+      })
+      .filter((entry): entry is { candidate: HTMLElement; score: number } => Boolean(entry))
+      .sort((a, b) => a.score - b.score);
+
+    const next = ranked[0]?.candidate;
+    if (!next) return;
+    next.focus({ preventScroll: true });
+    next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+  };
+
+  window.addEventListener('resize', updateTvLayout);
+  updateTvLayout();
+
+  document.addEventListener('keydown', (event) => {
+    if (!document.documentElement.classList.contains('noir-tv-layout')) return;
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    if (target?.closest('input, textarea, select, [data-tv-player]')) return;
+
+    const direction = {
+      ArrowLeft: 'left',
+      ArrowRight: 'right',
+      ArrowUp: 'up',
+      ArrowDown: 'down',
+    }[event.key] as 'left' | 'right' | 'up' | 'down' | undefined;
+
+    if (direction) {
+      event.preventDefault();
+      focusInDirection(direction);
+      return;
+    }
+
+    if (event.key === 'Enter' && document.activeElement instanceof HTMLElement) {
+      const active = document.activeElement;
+      if (active.matches('[data-tv-focusable]') && active.tagName !== 'BUTTON' && active.tagName !== 'A') {
+        event.preventDefault();
+        active.click();
+      }
+    }
+  });
+}
+
 // Safari على iOS قد يحتفظ بالتبويب القديم حياً حتى بعد نشر نسخة جديدة.
 // نقارن ملف JavaScript المحمّل بآخر index.html عند فتح/استعادة التبويب،
 // وإذا تغيّر نعمل reload واحد تلقائياً.

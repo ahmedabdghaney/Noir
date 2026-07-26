@@ -70,7 +70,7 @@ export default function Hero({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            className="relative aspect-[4/5] sm:aspect-[16/9] lg:aspect-[2.25/1] min-h-[440px] sm:min-h-0"
+            className="noir-hero-frame relative aspect-[4/5] sm:aspect-[16/9] lg:aspect-[2.25/1] min-h-[440px] sm:min-h-0"
           >
             <img
               src={image}

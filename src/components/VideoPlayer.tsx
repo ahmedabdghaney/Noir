@@ -86,6 +86,8 @@ export default function VideoPlayer({
   const dblClickTimer = useRef<ReturnType<typeof setTimeout>>();
   const seekFlashTimer = useRef<ReturnType<typeof setTimeout>>();
   const touchHoldTimer = useRef<ReturnType<typeof setTimeout>>();
+  const mediaRetryTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const mediaRetryCountRef = useRef(0);
   const lastProgressReportAtRef = useRef(0);
   const activeScrubPointerRef = useRef<number | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -259,6 +261,8 @@ export default function VideoPlayer({
     const timer = setTimeout(() => {
       containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 100);
+    clearTimeout(mediaRetryTimerRef.current);
+    mediaRetryCountRef.current = 0;
     setIsLoading(true); setCustomMp4Failed(false);
     setSubEnabled(true); setSpeed(1);
     setShowSettings(false); setShowSpeedMenu(false); setShowVolume(false);
@@ -287,6 +291,7 @@ export default function VideoPlayer({
     clearTimeout(dblClickTimer.current);
     clearTimeout(seekFlashTimer.current);
     clearTimeout(touchHoldTimer.current);
+    clearTimeout(mediaRetryTimerRef.current);
   }, []);
 
   /* ── load and cloud-sync playback preferences ── */
@@ -898,6 +903,7 @@ export default function VideoPlayer({
       <style>{sliderStyle}</style>
       <style>{hideCueStyle}</style>
       <div
+        data-tv-player
         className={`group/player relative bg-black overflow-hidden shadow-[0_24px_64px_-12px_rgba(0,0,0,0.95)] ${isFullscreen ? 'w-full h-full rounded-none border-0' : 'rounded-2xl border border-white/10'}`}
         dir="ltr"
         onMouseMove={resetHideTimer}
@@ -948,8 +954,18 @@ export default function VideoPlayer({
                   setCurrentTime(startAt);
                 }
               }}
-              onLoadedData={() => { setIsLoading(false); setDuration(videoRef.current?.duration || 0); }}
-              onCanPlay={() => { setIsLoading(false); setIsBuffering(false); }}
+              onLoadedData={() => {
+                mediaRetryCountRef.current = 0;
+                setCustomMp4Failed(false);
+                setIsLoading(false);
+                setDuration(videoRef.current?.duration || 0);
+              }}
+              onCanPlay={() => {
+                mediaRetryCountRef.current = 0;
+                setCustomMp4Failed(false);
+                setIsLoading(false);
+                setIsBuffering(false);
+              }}
               onError={() => {
                 const mediaError = videoRef.current?.error;
                 console.error('MP4 playback failed', {
@@ -957,6 +973,20 @@ export default function VideoPlayer({
                   code: mediaError?.code,
                   message: mediaError?.message,
                 });
+                if (mediaRetryCountRef.current < 2) {
+                  mediaRetryCountRef.current += 1;
+                  const retryDelay = mediaRetryCountRef.current * 700;
+                  setIsLoading(true);
+                  setIsBuffering(false);
+                  clearTimeout(mediaRetryTimerRef.current);
+                  mediaRetryTimerRef.current = setTimeout(() => {
+                    const video = videoRef.current;
+                    if (!video) return;
+                    video.load();
+                    void video.play().catch(() => {});
+                  }, retryDelay);
+                  return;
+                }
                 setCustomMp4Failed(true);
                 setIsLoading(false);
                 setIsBuffering(false);
@@ -1047,6 +1077,7 @@ export default function VideoPlayer({
                     onClick={() => {
                       const video = videoRef.current;
                       if (!video) return;
+                      mediaRetryCountRef.current = 0;
                       setCustomMp4Failed(false);
                       setIsLoading(true);
                       video.load();
