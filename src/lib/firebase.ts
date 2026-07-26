@@ -1,7 +1,12 @@
 import { initializeApp } from 'firebase/app';
+import { Capacitor } from '@capacitor/core';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import {
   getAuth,
   GoogleAuthProvider,
+  indexedDBLocalPersistence,
+  initializeAuth,
+  signInWithCredential,
   signInWithPopup,
   signOut,
   createUserWithEmailAndPassword,
@@ -47,7 +52,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase Auth with persistent standard configs
-export const auth = getAuth(app);
+export const auth = Capacitor.isNativePlatform()
+  ? initializeAuth(app, { persistence: indexedDBLocalPersistence })
+  : getAuth(app);
 
 // Firestore with persistent local cache (IndexedDB) so the watchlist shows
 // instantly from cache on load, then syncs from the cloud in the background.
@@ -85,6 +92,18 @@ googleProvider.setCustomParameters({
  */
 export const loginWithGoogle = async () => {
   try {
+    if (Capacitor.isNativePlatform()) {
+      const nativeResult = await FirebaseAuthentication.signInWithGoogle({
+        skipNativeAuth: true,
+      });
+      const idToken = nativeResult.credential?.idToken;
+      if (!idToken) {
+        throw new Error('لم يرجع Google رمز تسجيل الدخول المطلوب');
+      }
+      const credential = GoogleAuthProvider.credential(idToken);
+      const result = await signInWithCredential(auth, credential);
+      return result.user;
+    }
     const result = await signInWithPopup(auth, googleProvider);
     return result.user;
   } catch (error) {
@@ -98,6 +117,9 @@ export const loginWithGoogle = async () => {
  */
 export const logoutUser = async () => {
   try {
+    if (Capacitor.isNativePlatform()) {
+      await FirebaseAuthentication.signOut().catch(() => {});
+    }
     await signOut(auth);
   } catch (error) {
     console.error("Error during logout:", error);

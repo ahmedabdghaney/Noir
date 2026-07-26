@@ -1,5 +1,7 @@
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
+import {Capacitor} from '@capacitor/core';
+import {App as CapacitorApp} from '@capacitor/app';
 import App from './App.tsx';
 import './index.css';
 
@@ -10,7 +12,7 @@ let lastUpdateCheck = 0;
 let updateReloadStarted = false;
 
 async function checkForAppUpdate() {
-  if (import.meta.env.DEV || updateReloadStarted) return;
+  if (Capacitor.isNativePlatform() || import.meta.env.DEV || updateReloadStarted) return;
   const now = Date.now();
   if (now - lastUpdateCheck < 15_000) return;
   lastUpdateCheck = now;
@@ -47,8 +49,30 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') void checkForAppUpdate();
 });
 
+if (Capacitor.isNativePlatform()) {
+  void CapacitorApp.addListener('appUrlOpen', ({url}) => {
+    try {
+      const incomingUrl = new URL(url);
+      if (incomingUrl.hash) {
+        window.location.hash = incomingUrl.hash;
+      }
+    } catch {
+      // Ignore malformed external links and keep the current screen open.
+    }
+  });
+
+  void CapacitorApp.addListener('backButton', ({canGoBack}) => {
+    const hash = window.location.hash;
+    if (canGoBack || (hash && hash !== '#home')) {
+      window.history.back();
+      return;
+    }
+    void CapacitorApp.exitApp();
+  });
+}
+
 // تسجيل وتحديث Service Worker مع تجاوز HTTP cache الخاص بـ Safari.
-if ('serviceWorker' in navigator) {
+if (!Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
   const hadController = Boolean(navigator.serviceWorker.controller);
   let workerReloadStarted = false;
 
