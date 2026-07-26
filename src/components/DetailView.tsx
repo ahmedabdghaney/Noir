@@ -526,7 +526,7 @@ export default function DetailView({
   // للعناصر اليدوية: نفضّل الروابط الجاهزة اللي مرّرناها
   const manualPoster = (data as any)._manualPoster as string | null | undefined;
   const manualBackdrop = (data as any)._manualBackdrop as string | null | undefined;
-  const posterSrc = manualPoster || getPosterUrl(data.poster_path);
+  const posterSrc = manualPoster || getLargePosterUrl(data.poster_path);
   const backdropSrc = manualBackdrop || getOriginalBackdropUrl(data.backdrop_path) || getLargePosterUrl(data.poster_path);
 
 
@@ -753,7 +753,7 @@ export default function DetailView({
                 <>
                   <button
                     onClick={() => handlePlayClick('movie')}
-                    className="flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-white/90 text-black font-bold px-4 sm:px-8 py-2 md:py-3 rounded-full transition-all cursor-pointer text-xs sm:text-sm"
+                    className="noir-button-primary flex items-center gap-2 text-sm"
                   >
                     <Play className="w-3.5 h-3.5 fill-black text-black" />
                     <span>إكمال المشاهدة ({savedProgressPercent}%)</span>
@@ -761,7 +761,7 @@ export default function DetailView({
 
                   <button
                     onClick={handleStartFromBeginning}
-                    className="flex items-center gap-1.5 sm:gap-2 glass hover:bg-white/15 text-white font-bold px-4 sm:px-6 py-2 md:py-3 rounded-full transition-all cursor-pointer text-xs sm:text-sm"
+                    className="noir-button-secondary flex items-center gap-2 text-sm"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>البدء من البداية</span>
@@ -770,7 +770,7 @@ export default function DetailView({
               ) : (
                 <button
                   onClick={() => handlePlayClick('movie')}
-                  className="flex items-center gap-1.5 sm:gap-2 bg-white hover:bg-white/90 text-black font-bold px-4 sm:px-8 py-2 md:py-3 rounded-full transition-all cursor-pointer text-xs sm:text-sm"
+                  className="noir-button-primary flex items-center gap-2 text-sm"
                 >
                   <Play className="w-3.5 h-3.5 fill-black text-black" />
                   <span>المشاهدة الآن</span>
@@ -780,7 +780,7 @@ export default function DetailView({
               {youtubeKey && (
                 <button
                   onClick={() => handlePlayClick('trailer')}
-                  className="flex items-center gap-1.5 sm:gap-2 glass hover:bg-white/15 text-white px-4 sm:px-5 py-2 md:py-3 rounded-full transition-all cursor-pointer text-xs sm:text-sm font-bold"
+                  className="noir-button-secondary flex items-center gap-2 text-sm"
                 >
                   <svg viewBox="0 0 28 20" className="w-6 h-[18px] shrink-0" xmlns="http://www.w3.org/2000/svg">
                     <rect width="28" height="20" rx="5" fill="#FF0000" />
@@ -793,10 +793,11 @@ export default function DetailView({
               <button
                 onClick={handleToggleSave}
                 title={isSaved ? 'محفوظ في قائمتي' : 'حفظ في قائمتي'}
-                className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+                aria-label={isSaved ? 'إزالة من قائمتي' : 'إضافة إلى قائمتي'}
+                className={`noir-icon-button shrink-0 ${
                   isSaved 
-                    ?'bg-white text-black' 
-                    :'glass text-white hover:bg-white/15'
+                    ?'!bg-white !text-black'
+                    :''
                 }`}
               >
                 {isSaved ? <Check className="w-5 h-5 text-black" strokeWidth={3} /> : <Plus className="w-5 h-5" />}
@@ -804,8 +805,9 @@ export default function DetailView({
 
               <button
                 onClick={() => onOpenShare(window.location.href)}
-                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full glass flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/15 transition-colors cursor-pointer shrink-0"
+                className="noir-icon-button shrink-0"
                 title="مشاركة الرابط الحالي"
+                aria-label="مشاركة الرابط الحالي"
               >
                 <Share2 className="w-4 h-4" />
 </button>
@@ -945,48 +947,46 @@ export default function DetailView({
 </div>
         )}
 
-        {/* Specs Factors Panel - Technical Details cards matrix */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 my-14 md:my-20">
-          <div className="flex flex-col gap-1.5 glass rounded-2xl px-5 py-4">
-            <span className="text-[11px] text-white/45 font-medium uppercase tracking-wide flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5" />
-              عام الإصدار
-            </span>
-            <span className="text-white text-lg md:text-2xl font-semibold">
-              {year || 'غ/م'}
-            </span>
-          </div>
+        {/* المعلومات الثانوية تبقى متاحة بدون مزاحمة قرار المشاهدة */}
+        <details className="group/details noir-surface my-10 md:my-14 overflow-hidden">
+          <summary className="min-h-14 px-5 sm:px-6 flex items-center justify-between gap-4 cursor-pointer list-none text-white font-bold">
+            <span>معلومات العمل</span>
+            <ChevronLeft className="w-4 h-4 text-stone-400 group-open/details:-rotate-90" />
+          </summary>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-white/[0.06] border-t border-white/[0.08]">
+            <div className="flex flex-col gap-1.5 bg-[#1b1b1f] px-5 py-4">
+              <span className="text-xs text-white/60 font-medium flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5" />
+                عام الإصدار
+              </span>
+              <span className="text-white text-lg font-semibold">{year || 'غ/م'}</span>
+            </div>
 
-          <div className="flex flex-col gap-1.5 glass rounded-2xl px-5 py-4">
-            <span className="text-[11px] text-white/45 font-medium uppercase tracking-wide flex items-center gap-1.5">
-              <RotateCcw className="w-3.5 h-3.5" />
-              الإخراج
-            </span>
-            <span className="text-white text-sm md:text-lg font-semibold truncate" title={director}>
-              {director}
-            </span>
-          </div>
+            <div className="flex flex-col gap-1.5 bg-[#1b1b1f] px-5 py-4">
+              <span className="text-xs text-white/60 font-medium flex items-center gap-1.5">
+                <RotateCcw className="w-3.5 h-3.5" />
+                الإخراج
+              </span>
+              <span className="text-white text-base font-semibold truncate" title={director}>{director}</span>
+            </div>
 
-          <div className="flex flex-col gap-1.5 glass rounded-2xl px-5 py-4">
-            <span className="text-[11px] text-white/45 font-medium uppercase tracking-wide flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5" />
-              دولة الإنتاج
-            </span>
-            <span className="text-white text-sm md:text-lg font-semibold truncate" title={country}>
-              {country}
-            </span>
-          </div>
+            <div className="flex flex-col gap-1.5 bg-[#1b1b1f] px-5 py-4">
+              <span className="text-xs text-white/60 font-medium flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5" />
+                دولة الإنتاج
+              </span>
+              <span className="text-white text-base font-semibold truncate" title={country}>{country}</span>
+            </div>
 
-          <div className="flex flex-col gap-1.5 glass rounded-2xl px-5 py-4">
-            <span className="text-[11px] text-white/45 font-medium uppercase tracking-wide flex items-center gap-1.5">
-              <Languages className="w-3.5 h-3.5" />
-              اللغة الأصلية
-            </span>
-            <span className="text-white text-sm md:text-lg font-semibold truncate">
-              {mainLang}
-            </span>
+            <div className="flex flex-col gap-1.5 bg-[#1b1b1f] px-5 py-4">
+              <span className="text-xs text-white/60 font-medium flex items-center gap-1.5">
+                <Languages className="w-3.5 h-3.5" />
+                اللغة الأصلية
+              </span>
+              <span className="text-white text-base font-semibold truncate">{mainLang}</span>
+            </div>
           </div>
-        </div>
+        </details>
 
 
         {/* TV Episodes section - full width below info cards */}
@@ -1093,10 +1093,10 @@ export default function DetailView({
                             setSelectedEpisode(ep.episode_number);
                             handlePlayClick('movie');
                           }}
-                          className="group/ep flex-none w-[300px] sm:w-[380px] text-right snap-start cursor-pointer"
+                          className="group/ep flex-none w-[280px] sm:w-[360px] text-right snap-start cursor-pointer"
                         >
                           {/* Card with image + overlaid text */}
-                          <div className={`relative h-[280px] sm:h-[320px] rounded-xl overflow-hidden bg-stone-900 ${selectedEpisode === ep.episode_number ? 'ring-2 ring-inset ring-red-500/90' : 'border border-white/[0.06]'}`}>
+                          <div className={`relative aspect-video rounded-2xl overflow-hidden bg-stone-900 ${selectedEpisode === ep.episode_number ? 'ring-2 ring-inset ring-white/90' : 'border border-white/[0.08]'}`}>
                             {still ? (
                               <img
                                 src={still}
@@ -1120,7 +1120,7 @@ export default function DetailView({
                             )}
 
                             {/* Bottom blur + gradient so overlaid text stays readable */}
-                            <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/95 via-black/65 to-transparent" />
+                            <div className="absolute inset-x-0 bottom-0 h-4/5 bg-gradient-to-t from-black/95 via-black/55 to-transparent" />
 
                             {/* Hover play icon */}
                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/ep:opacity-100 transition-opacity">
@@ -1131,13 +1131,13 @@ export default function DetailView({
 
                             {/* Overlaid text content */}
                             <div className="absolute inset-x-0 bottom-0 p-4 text-right">
-                              <span className="text-[11px] font-bold text-white/60 uppercase tracking-wider block mb-1">
+                              <span className="text-xs font-semibold text-white/65 block mb-1">
                                 الحلقة {ep.episode_number}
                               </span>
-                              <h4 className="text-white font-bold text-base leading-tight line-clamp-1 mb-1">{ep.name}</h4>
+                              <h4 className="text-white font-bold text-sm sm:text-base leading-tight line-clamp-1 mb-1">{ep.name}</h4>
                               {ep.overview ? (
-                                <p className="text-white/65 text-[11px] leading-relaxed line-clamp-3 mb-2.5">{ep.overview}</p>
-                              ) : <p className="text-white/35 text-[11px] leading-relaxed mb-2.5">لا يوجد وصف.</p>}
+                                <p className="hidden sm:block text-white/70 text-xs leading-relaxed line-clamp-2 mb-2">{ep.overview}</p>
+                              ) : <p className="hidden sm:block text-white/50 text-xs leading-relaxed mb-2">لا يوجد وصف.</p>}
 
                               {/* Footer: runtime */}
                               <div className="flex items-center justify-between">

@@ -61,12 +61,12 @@ export default function ContinueWatchingRow({
   if (!items || items.length === 0) return null;
 
   return (
-    <div className="mb-16 md:mb-24 relative flex flex-col group/row">
-      <div className="px-6 md:px-12 mb-4 md:mb-5">
-        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">{title}</h2>
+    <section className="mb-8 md:mb-10 relative flex flex-col group/row" aria-labelledby="continue-watching-title">
+      <div className="px-4 sm:px-6 lg:px-8 mb-3 md:mb-4">
+        <h2 id="continue-watching-title" className="text-xl md:text-2xl font-bold text-white">{title}</h2>
       </div>
 
-      <div className="relative px-6 md:px-12">
+      <div className="relative px-4 sm:px-6 lg:px-8">
         {showRightArrow && (
           <button
             onClick={() => handleScroll('right')}
@@ -101,9 +101,18 @@ export default function ContinueWatchingRow({
               <div
                 key={`${item.type}-${item.id}`}
                 onClick={() => onItemClick(item)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onItemClick(item);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={`متابعة مشاهدة ${item.title}`}
                 className="group/cw flex-none w-[240px] sm:w-[300px] md:w-[330px] cursor-pointer"
               >
-                <div className="relative aspect-video rounded-xl overflow-hidden bg-stone-900 border border-white/[0.06]">
+                <div className="relative aspect-video rounded-2xl overflow-hidden bg-stone-900 border border-white/[0.08]">
                   {img ? (
                     <img
                       src={img}
@@ -149,7 +158,7 @@ export default function ContinueWatchingRow({
                   )}
 
                   <div className="absolute inset-x-0 bottom-0 p-3.5">
-                    <h3 className="text-white font-semibold text-sm leading-tight line-clamp-1 mb-2">{item.title || (item as any).name || 'بدون عنوان'}</h3>
+                    <h3 className="text-white font-semibold text-base leading-tight line-clamp-1 mb-2">{item.title || (item as any).name || 'بدون عنوان'}</h3>
                     <div className="h-1 w-full bg-white/20 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-red-500 rounded-full"
@@ -163,6 +172,6 @@ export default function ContinueWatchingRow({
           })}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

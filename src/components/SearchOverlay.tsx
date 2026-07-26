@@ -54,6 +54,15 @@ export default function SearchOverlay({
   const [catImages, setCatImages] = useState<Record<string, string>>({});
   const inputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
   // جلب صورة ممثّلة لكل تصنيف (أشهر فلم) — بدون تكرار نفس الصورة بين التصنيفات
   useEffect(() => {
     if (!isOpen) return;
@@ -153,19 +162,38 @@ export default function SearchOverlay({
 
   return (
     <div
-      className="fixed inset-y-0 left-0 right-0 md:right-52 bg-[#17171a] z-[170] pt-20 md:pt-24 px-4 sm:px-6 md:px-10 selection:bg-red-500/30 overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="search-overlay-title"
+      className="fixed inset-y-0 left-0 right-0 lg:right-52 bg-[#111113] z-[170] pt-16 lg:pt-8 px-4 sm:px-6 lg:px-8 selection:bg-red-500/30 overflow-y-auto"
     >
-      <div className="w-full">
+      <div className="w-full max-w-7xl mx-auto">
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <div>
+            <h1 id="search-overlay-title" className="text-xl sm:text-2xl font-bold text-white">البحث</h1>
+            <p className="text-sm text-stone-400 mt-1">ابحث عن فيلم أو مسلسل، أو تصفّح حسب التصنيف.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="noir-icon-button shrink-0"
+            aria-label="إغلاق البحث"
+            title="إغلاق البحث"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
         {/* Input area — bar بحث كبير */}
-        <div className="flex items-center gap-3 px-5 py-4 bg-stone-900/80 border border-white/8 rounded-2xl mb-6 backdrop-blur-xl">
+        <div className="flex items-center gap-3 px-4 sm:px-5 min-h-14 noir-surface mb-7 backdrop-blur-xl">
           <Search className="w-5 h-5 text-gray-400 shrink-0" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder=""
+            placeholder="ابحث عن فيلم أو مسلسل..."
+            aria-label="ابحث عن فيلم أو مسلسل"
             className="flex-1 bg-transparent border-0 outline-none text-white text-base md:text-lg font-medium placeholder-gray-500 text-right font-sans"
             autoComplete="off"
           />
@@ -174,8 +202,10 @@ export default function SearchOverlay({
           ) : (
             query && (
               <button
+                type="button"
                 onClick={() => setQuery('')}
-                className="w-5 h-5 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center cursor-pointer"
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center cursor-pointer"
+                aria-label="مسح البحث"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -201,6 +231,17 @@ export default function SearchOverlay({
                 <div
                   key={`recent-${item.type}-${item.id}`}
                   onClick={() => { addToRecentTitles(item); onSelectTitle(item.type, item.id); onClose(); }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      addToRecentTitles(item);
+                      onSelectTitle(item.type, item.id);
+                      onClose();
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`فتح ${item.title}`}
                   className="flex-none w-[90px] sm:w-[110px] cursor-pointer select-none"
                 >
                   <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-stone-900 border border-white/8">
@@ -230,13 +271,14 @@ export default function SearchOverlay({
           {/* قسم التصفح بالتصنيفات — يظهر لما ماكو بحث */}
           {!query.trim() && (
             <div className="mb-10">
-              <h2 className="font-display text-xl sm:text-2xl font-black text-white mb-4 text-right">تصفّح حسب التصنيف</h2>
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1 sm:gap-2" dir="rtl">
+              <h2 className="font-display text-xl sm:text-2xl font-bold text-white mb-4 text-right">تصفّح حسب التصنيف</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3" dir="rtl">
                 {CATEGORIES.map((cat) => (
                   <button
+                    type="button"
                     key={cat.key}
                     onClick={() => onBrowseCategory?.(cat.key)}
-                    className="group relative aspect-[2/3] rounded-xl overflow-hidden cursor-pointer border border-white/[0.06] hover:border-white/20 transition-all hover:scale-[1.03]"
+                    className="group relative aspect-[16/10] rounded-2xl overflow-hidden cursor-pointer border border-white/[0.08] hover:border-white/20 transition-all hover:scale-[1.03]"
                   >
                     {catImages[cat.key] && (
                       <img
@@ -250,7 +292,7 @@ export default function SearchOverlay({
                     <div className="absolute inset-0" style={{ background: cat.overlay }} />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                     <div className="absolute inset-0 flex items-center justify-center p-2">
-                      <span className="font-display text-sm sm:text-base font-black text-white text-center drop-shadow-lg leading-tight">{cat.title}</span>
+                      <span className="font-display text-base sm:text-lg font-bold text-white text-center drop-shadow-lg leading-tight">{cat.title}</span>
                     </div>
                   </button>
                 ))}
@@ -274,7 +316,18 @@ export default function SearchOverlay({
                       onSelectTitle(item.type, item.id);
                       onClose();
                     }}
-                    className="flex items-center gap-4 px-5 py-3 hover:bg-white/5 cursor-pointer transition-colors text-right"
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        addToRecentTitles(item);
+                        onSelectTitle(item.type, item.id);
+                        onClose();
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`فتح ${item.title}`}
+                    className="flex items-center gap-4 px-4 sm:px-5 py-3 rounded-xl hover:bg-white/5 cursor-pointer transition-colors text-right"
                   >
                     <div className="w-10 h-14 bg-stone-800 rounded-lg overflow-hidden shrink-0 select-none">
                       {item.poster ? (

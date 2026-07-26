@@ -43,6 +43,15 @@ function GridCard({
   return (
     <div
       onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`فتح ${item.title}`}
       className="group/card card-transition cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
     >
       <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
@@ -152,7 +161,7 @@ export default function StudioPage({
       {/* Full-width colored header (لون هوية الشركة) */}
       <div className="relative w-full" style={{ backgroundColor: studio.color }}>
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
-        <div dir="rtl" className="relative w-full px-6 md:px-12 pt-8 pb-10 sm:pt-10 sm:pb-14">
+        <div dir="rtl" className="relative w-full px-4 sm:px-6 lg:px-8 pt-8 pb-10 sm:pt-10 sm:pb-14">
           <button onClick={onBack} className="flex items-center gap-2 text-white/90 hover:text-white text-sm font-semibold mb-5 cursor-pointer transition-colors">
             <ArrowRight className="w-4 h-4" />
             <span>الرئيسية</span>
@@ -163,7 +172,7 @@ export default function StudioPage({
         </div>
       </div>
 
-      <div className="w-full py-8 sm:py-10 px-6 md:px-12">
+      <div className="w-full py-8 sm:py-10 px-4 sm:px-6 lg:px-8">
         {/* Sort control */}
         <div dir="rtl" className="flex items-center justify-between mb-6">
           <h2 className="text-xl sm:text-2xl font-bold text-white">كل أعمال {studio.title}</h2>
@@ -192,7 +201,7 @@ export default function StudioPage({
         </div>
 
         {/* Grid */}
-        <div dir="rtl" className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1 sm:gap-2">
+        <div dir="rtl" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-3">
           {allItems.map((item) => (
             <div key={`${item.type}-${item.id}`}>
               <GridCard

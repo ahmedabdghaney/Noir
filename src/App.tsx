@@ -1111,13 +1111,13 @@ export default function App() {
     const col1PostersReverse = [...col1Posters].reverse();
 
     return (
-      <div className="relative min-h-screen bg-[#070707] text-white flex items-center justify-center font-sans overflow-hidden p-3.5 sm:p-6 md:p-10 select-none">
+      <div className="relative min-h-screen bg-[#111113] text-white flex items-center justify-center font-sans overflow-hidden p-3.5 sm:p-6 md:p-10 select-none">
         
         {/* Main Double-Pane Card Layout */}
-        <div className="relative z-10 w-full max-w-5xl bg-[#0d0d0d] border border-white/5 shadow-2xl rounded-3xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[660px] animate-pop-in" dir="ltr">
+        <div className="relative z-10 w-full max-w-5xl bg-[#17171a] border border-white/[0.08] shadow-2xl rounded-[24px] overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[620px] animate-pop-in" dir="ltr">
           
           {/* LEFT COLUMN: Tilted & Scrolling Movie Covers Pattern */}
-          <div className="hidden lg:flex lg:col-span-5 relative flex-col justify-between p-12 overflow-hidden bg-black border-r border-white/5">
+          <div className="hidden lg:flex lg:col-span-5 relative flex-col justify-between p-12 overflow-hidden bg-[#101012] border-r border-white/[0.08]">
             {/* Tilted Poster Grid container rotated 30 degrees */}
             <div className="absolute inset-0 z-0 pointer-events-none select-none opacity-25">
               <div className="absolute -inset-10 flex gap-4 rotate-[30deg] scale-125 justify-center">
@@ -1171,16 +1171,16 @@ export default function App() {
           </div>
 
           {/* RIGHT COLUMN: Stylish Login / Signup Input Form */}
-          <div className="col-span-1 lg:col-span-7 flex flex-col justify-center p-8 sm:p-12 md:p-16 select-none relative z-10 bg-[#0d0d0d]" dir="rtl">
+          <div className="col-span-1 lg:col-span-7 flex flex-col justify-center p-7 sm:p-12 md:p-16 select-none relative z-10 bg-[#17171a]" dir="rtl">
             
             {/* Form Header */}
             <div className="text-right mb-8">
-              <h1 className="text-2xl font-black text-white leading-tight">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
                 {authView === 'signin' && 'سجل الدخول الآن'}
                 {authView === 'signup' && 'ابدأ حسابك الآن'}
                 {authView === 'reset' && 'استعادة كلمة السر'}
               </h1>
-              <p className="text-gray-500 text-xs mt-1.5 leading-relaxed font-semibold">
+              <p className="text-gray-400 text-sm mt-2 leading-relaxed font-medium">
                 {authView === 'signin' && 'من فضلك قم بتسجيل الدخول إلى حسابك للاستمرار.'}
                 {authView === 'signup' && 'قم بملء البيانات التالية لتسجيل حسابك الجديد.'}
                 {authView === 'reset' && 'أدخل بريدك الإلكتروني وسنقوم بإرسال رابط الاستعادة.'}
@@ -1199,7 +1199,7 @@ export default function App() {
                     value={authName}
                     onChange={(e) => setAuthName(e.target.value)}
                     placeholder="ادخل اسمك الكامل..."
-                    className="w-full bg-[#141414] border border-white/10 hover:border-white/20 focus:border-red-500/60 focus:bg-[#181818] outline-none text-white text-sm font-semibold py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-600 focus:ring-1 focus:ring-red-500/20"
+                    className="w-full bg-[#202024] border border-white/10 hover:border-white/20 focus:border-white/40 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-2xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-white/10"
                     dir="rtl"
                   />
                 </div>
@@ -1213,7 +1213,7 @@ export default function App() {
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="w-full bg-[#141414] border border-white/10 hover:border-white/20 focus:border-red-500/60 focus:bg-[#181818] outline-none text-white text-sm font-semibold py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-600 focus:ring-1 focus:ring-red-500/20"
+                  className="w-full bg-[#202024] border border-white/10 hover:border-white/20 focus:border-white/40 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-2xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-white/10"
                   dir="ltr"
                 />
               </div>
@@ -1238,7 +1238,7 @@ export default function App() {
                       value={authPassword}
                       onChange={(e) => setAuthPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-[#141414] border border-white/10 hover:border-white/20 focus:border-red-500/60 focus:bg-[#181818] outline-none text-white text-sm font-semibold py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-600"
+                      className="w-full bg-[#202024] border border-white/10 hover:border-white/20 focus:border-white/40 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-2xl transition-all text-right placeholder-gray-500"
                       dir="rtl"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
@@ -1271,7 +1271,7 @@ export default function App() {
                       value={authPasswordConfirm}
                       onChange={(e) => setAuthPasswordConfirm(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-[#141414] border border-white/10 hover:border-white/20 focus:border-red-500/60 focus:bg-[#181818] outline-none text-white text-sm font-semibold py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-600"
+                      className="w-full bg-[#202024] border border-white/10 hover:border-white/20 focus:border-white/40 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-2xl transition-all text-right placeholder-gray-500"
                       dir="rtl"
                       onKeyDown={(e) => { if (e.key === 'Enter') handleEmailSignUp(); }}
                     />
@@ -1307,7 +1307,7 @@ export default function App() {
                   else if (authView === 'reset') handleResetPassword();
                 }}
                 disabled={isAuthLoading}
-                className="w-full flex items-center justify-center gap-2 bg-[#dc2626] hover:bg-red-500 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl transition-all cursor-pointer text-sm shadow-xl shadow-red-700/20 mt-2"
+                  className="w-full flex items-center justify-center gap-2 bg-white hover:bg-white/90 disabled:opacity-50 text-black font-bold py-3.5 px-6 rounded-2xl transition-all cursor-pointer text-sm mt-2"
               >
                 {isAuthLoading && authMethod === 'email' ? (
                   <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -1368,7 +1368,7 @@ export default function App() {
                 <button
                   onClick={() => handleLogin('google')}
                   disabled={isAuthLoading}
-                  className="w-full flex items-center justify-center gap-2.5 bg-white hover:bg-[#eaeaea] disabled:opacity-50 text-gray-900 font-extrabold py-3.5 px-4 rounded-xl cursor-pointer transition-all text-xs shadow-md"
+                  className="w-full flex items-center justify-center gap-2.5 bg-white/[0.07] hover:bg-white/[0.12] border border-white/10 disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-2xl cursor-pointer transition-all text-sm"
                 >
                   {isAuthLoading && authMethod === 'google' ? (
                     <div className="w-3.5 h-3.5 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" />
@@ -1387,7 +1387,7 @@ export default function App() {
             </div>
 
             {/* Bottom mini disclaimer footer */}
-            <div className="mt-14 pt-4 border-t border-white/5 flex items-center justify-center gap-1.5 text-[9px] text-gray-600">
+            <div className="mt-10 pt-4 border-t border-white/5 flex items-center justify-center gap-1.5 text-[11px] text-gray-500">
               <span>تطبق شروط الاستخدام والأمان الكاملة © {new Date().getFullYear()} نوار سينما</span>
             </div>
           </div>
@@ -1573,25 +1573,21 @@ export default function App() {
         onOpenProfile={() => setIsProfileModalOpen(true)}
       />
 
-      {/* Mobile Top Header — only on small screens */}
-      <div className="md:hidden">
+      {/* Compact top header — mobile and tablet */}
+      <div className="lg:hidden">
         <Header
-          activeView={activeView}
-          searchMode={searchMode}
-          setSearchMode={handleSetSearchMode}
           goHome={navigateToHome}
           user={user}
           onLogout={handleLogout}
           onOpenProfile={() => setIsProfileModalOpen(true)}
-          onViewWatchlist={handleViewWatchlist}
         />
       </div>
 
       {/* Main content — shifts right on desktop to account for sidebar */}
-      <div className="flex-1 flex flex-col md:mr-52 min-w-0">
+      <div className="flex-1 flex flex-col lg:mr-52 min-w-0">
 
       {/* Main Orchestration Views Switcher */}
-      <main className="flex-grow md:pt-0 pt-14 selection:bg-red-500/30">
+      <main className="flex-grow lg:pt-0 pt-14 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 selection:bg-red-500/30">
         {activeView ==='home' && (
           <PullToRefresh onRefresh={refreshHome}>
           <div className="animate-fade-in">
@@ -1697,7 +1693,7 @@ export default function App() {
           }
 
           return (
-            <div className="max-w-7xl mx-auto px-6 md:px-12 py-8 animate-fade-in text-right">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in text-right">
               {/* Header section on Dedicated Watchlist View */}
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-6 mb-8 select-none">
                 <div className="space-y-2">
@@ -1809,7 +1805,7 @@ export default function App() {
 </p>
 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 mt-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-3 mt-6">
                   {processedItems.map((item, idx) => {
                     const hasScore = item.rating > 0;
                     const progressKey =`noir_progress_${item.type}_${item.id}`;
@@ -1820,6 +1816,15 @@ export default function App() {
                       <div
                         key={`${item.type}-${item.id}`}
                         onClick={() => handleTitleClick(item)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            handleTitleClick(item);
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`فتح ${item.title}`}
                         style={{ animationDelay: `${idx * 40}ms` }}
                         className="group/card card-transition cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
                       >
@@ -1851,7 +1856,7 @@ export default function App() {
 
                           {/* Rating stamp */}
                           {hasScore && (
-                            <div className="absolute bottom-2 right-2 glass text-[#f5c518] text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5">
+                            <div className="absolute top-2 left-2 glass text-[#f5c518] text-[11px] font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5">
                               <Star className="w-2.5 h-2.5 fill-current" />
                               <span>{item.rating.toFixed(1)}</span>
 </div>
@@ -1873,7 +1878,7 @@ export default function App() {
                           <span className="text-white font-bold text-xs sm:text-sm line-clamp-1 leading-tight transition-colors">
                             {item.title}
 </span>
-                          <span className="text-stone-500 font-semibold text-[10px] sm:text-xs mt-1 flex items-center gap-1 justify-start">
+                          <span className="text-stone-400 font-medium text-[11px] sm:text-xs mt-1 flex items-center gap-1 justify-start">
                             <span>{item.year ||'—'}</span>
                             <span className="w-1 h-1 bg-stone-800 rounded-full" />
                             <span>{item.type ==='movie' ?'فيلم' :'مسلسل'}</span>
@@ -1890,7 +1895,7 @@ export default function App() {
 
 
         {activeView ==='search' && (
-          <div className="max-w-7xl mx-auto px-6 md:px-12 py-8 animate-fade-in">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
             {/* Header section on Dedicated Search View */}
             <div className="mb-8">
               <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight leading-none mb-3">
@@ -1903,7 +1908,7 @@ export default function App() {
 
             {/* Direct Input Filter bar */}
             <div className="flex gap-3 mb-6 relative z-10 select-none">
-              <div className="flex-1 flex items-center gap-3 bg-stone-900 border border-white/5 focus-within:border-white/15 px-4 py-3 rounded-2xl transition-all">
+              <div className="flex-1 flex items-center gap-3 noir-surface focus-within:border-white/20 px-4 min-h-14 transition-all">
                 <Search className="w-5 h-5 text-gray-500 shrink-0" />
                 <input
                   type="text"
@@ -1917,7 +1922,7 @@ export default function App() {
               {/* Mobile Filter Toggler Button */}
               <button
                 onClick={() => setIsFilterSidebarOpen(!isFilterSidebarOpen)}
-                className={`md:hidden flex items-center justify-center gap-2 px-4 rounded-2xl border text-xs font-semibold cursor-pointer transition-colors ${
+                className={`lg:hidden flex items-center justify-center gap-2 px-4 rounded-2xl border text-sm font-semibold cursor-pointer transition-colors ${
                   isFilterSidebarOpen
                     ?'bg-stone-800 text-white border-stone-700'
                     :'bg-stone-900 text-gray-400 border-white/5'
@@ -1929,10 +1934,10 @@ export default function App() {
 </div>
 
             {/* Core Search View Layout Box (Grid map) */}
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_260px] gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-8">
               
               {/* Left Side: Dynamic Grid items */}
-              <div className="order-2 md:order-1 min-w-0">
+              <div className="order-2 lg:order-1 min-w-0">
                 
                 {/* Search Sorting Metrics controller */}
                 <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
@@ -1976,6 +1981,15 @@ export default function App() {
                         <div
                           key={`${item.type}-${item.id}`}
                           onClick={() => handleTitleClick(item)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              handleTitleClick(item);
+                            }
+                          }}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`فتح ${item.title}`}
                           style={{ animationDelay: `${idx * 40}ms` }}
                           className="group/card card-transition cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
                         >
@@ -2007,7 +2021,7 @@ export default function App() {
 
                             {/* Rating stamp */}
                             {item.rating > 0 && (
-                              <div className="absolute bottom-2 right-2 glass text-[#f5c518] text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5">
+                              <div className="absolute top-2 left-2 glass text-[#f5c518] text-[11px] font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5">
                                 <span>★</span>
                                 <span>{item.rating.toFixed(1)}</span>
 </div>
@@ -2019,7 +2033,7 @@ export default function App() {
                             <span className="text-white font-bold text-xs sm:text-sm line-clamp-1 leading-tight transition-colors">
                               {item.title}
 </span>
-                            <span className="text-stone-500 font-semibold text-[10px] sm:text-xs mt-1 flex items-center gap-1 justify-start">
+                            <span className="text-stone-400 font-medium text-[11px] sm:text-xs mt-1 flex items-center gap-1 justify-start">
                               <span>{item.year ||'—'}</span>
                               <span className="w-1 h-1 bg-stone-800 rounded-full" />
                               <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
@@ -2062,15 +2076,15 @@ export default function App() {
 
               {/* Right Side / Sidebar: Desktop Filter lists & Mobile panel */}
               <div
-                className={`order-1 md:order-2 ${
+                className={`order-1 lg:order-2 ${
                   isFilterSidebarOpen
                     ?'fixed inset-0 z-40 bg-black/95 pt-20 px-6 overflow-y-auto block'
-                    :'hidden md:block'
+                    :'hidden lg:block'
                 }`}
               >
                 <div className="space-y-6 text-right select-none">
                   {/* Close button for mobile panel overlay */}
-                  <div className="flex justify-between items-center mb-2 md:hidden">
+                  <div className="flex justify-between items-center mb-2 lg:hidden">
                     <h3 className="text-lg font-extrabold text-white">خيارات التصفية</h3>
                     <button
                       onClick={() => setIsFilterSidebarOpen(false)}
@@ -2081,7 +2095,7 @@ export default function App() {
 </div>
 
                   {/* Header widget */}
-                  <div className="hidden md:flex justify-between items-baseline border-b border-white/5 pb-3">
+                  <div className="hidden lg:flex justify-between items-baseline border-b border-white/5 pb-3">
                     <h3 className="text-sm font-bold text-gray-300 flex items-center gap-1.5">
                       <Filter className="w-4 h-4 text-gray-400" />
                       <span>عوامل التصفية</span>
@@ -2291,6 +2305,7 @@ export default function App() {
         goHome={navigateToHome}
         openSearchOverlay={() => setIsSearchOverlayOpen(true)}
         onViewWatchlist={handleViewWatchlist}
+        isSearchOpen={isSearchOverlayOpen}
       />
 
       {/* Cmd+K QuickSearch predicting suggestions overlay */}

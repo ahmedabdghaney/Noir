@@ -6,9 +6,27 @@
   --font-display: "Rubik", "IBM Plex Sans Arabic", sans-serif;
 }
 
+:root {
+  --noir-bg: #111113;
+  --noir-surface: #1b1b1f;
+  --noir-surface-strong: #232328;
+  --noir-border: rgba(255, 255, 255, 0.09);
+  --noir-text: #f5f5f7;
+  --noir-muted: #a1a1aa;
+  --noir-accent: #dc2626;
+  --noir-radius-sm: 12px;
+  --noir-radius-md: 16px;
+  --noir-radius-lg: 24px;
+}
+
+html {
+  background: var(--noir-bg);
+}
+
 body {
-  background-color: #17171a;
-  color: #ffffff;
+  margin: 0;
+  background-color: var(--noir-bg);
+  color: var(--noir-text);
   overflow-x: hidden;
   font-family: "IBM Plex Sans Arabic", "Inter", sans-serif;
   direction: rtl;
@@ -67,24 +85,45 @@ body::before {
 /* Glass surface — the signature Apple-TV material.
    Softer, more translucent, very subtle hairline border. */
 .glass {
-  background: rgba(40, 40, 44, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(35, 35, 40, 0.82);
+  border: 1px solid var(--noir-border);
 }
 .glass-strong {
-  background: rgba(28, 28, 32, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(27, 27, 31, 0.96);
+  border: 1px solid var(--noir-border);
 }
 /* Translucent floating panel — more see-through, for search/modals.
    Lets the blurred page show through the panel itself (true Apple glass). */
 .glass-panel {
-  background: rgba(22, 22, 26, 0.97);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(24, 24, 28, 0.97);
+  border: 1px solid var(--noir-border);
 }
 /* Subtle hover-able glass for interactive chips/buttons */
 .glass-hover {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid var(--noir-border);
   transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.noir-surface {
+  background: rgba(27, 27, 31, 0.9);
+  border: 1px solid var(--noir-border);
+  border-radius: var(--noir-radius-md);
+}
+
+.noir-card-shell {
+  border-radius: var(--noir-radius-md);
+  border: 1px solid var(--noir-border);
+  background: var(--noir-surface);
+}
+
+.noir-muted {
+  color: var(--noir-muted);
+}
+
+.noir-mobile-nav {
+  min-height: calc(4rem + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
 }
 .glass-hover:hover {
   background: rgba(255, 255, 255, 0.12);
@@ -102,8 +141,8 @@ body::before {
   color: #0f172a !important;
 }
 
-.light-theme .bg-[#0a0a0a],
-.light-theme .bg-[#060606],
+.light-theme .bg-\[\#0a0a0a\],
+.light-theme .bg-\[\#060606\],
 .light-theme .min-h-screen {
   background-color: #f7f8fa !important;
 }
@@ -130,8 +169,8 @@ body::before {
 }
 
 .light-theme .bg-stone-950,
-.light-theme .bg-[#0a0a0abf],
-.light-theme .bg-[#0a0a0a] {
+.light-theme .bg-\[\#0a0a0abf\],
+.light-theme .bg-\[\#0a0a0a\] {
   background-color: rgba(255, 255, 255, 0.85) !important;
   border-color: rgba(15, 23, 42, 0.08) !important;
 }
@@ -275,7 +314,7 @@ body::before {
   animation: noir-fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-button:focus-visible, a:focus-visible {
+button:focus-visible, a:focus-visible, [role="button"]:focus-visible {
   outline: 2px solid rgba(255, 255, 255, 0.5);
   outline-offset: 2px;
 }

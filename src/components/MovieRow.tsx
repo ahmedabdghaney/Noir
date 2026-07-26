@@ -77,7 +77,7 @@ export default function MovieRow({
   if (!items.length) {
     // Skeletons
     return (
-      <div className={`mb-14 flex flex-col gap-4 ${flush ? "" : "px-6 md:px-12"}`}>
+      <div className={`mb-10 flex flex-col gap-4 ${flush ? "" : "px-4 sm:px-6 lg:px-8"}`}>
         <div className="space-y-1">
           <div className="w-48 h-6 bg-stone-800 rounded animate-pulse" />
           <div className="w-32 h-4 bg-stone-800 rounded animate-pulse" />
@@ -96,21 +96,22 @@ export default function MovieRow({
   }
 
   return (
-    <div className="mb-6 md:mb-8 relative group/row flex flex-col">
+    <section className="mb-8 md:mb-10 relative group/row flex flex-col" aria-labelledby={`row-${title.replace(/\s+/g, '-')}`}>
       {/* Category Header */}
-      <div className={`mb-4 md:mb-5 flex flex-col text-right ${flush ? "" : "px-6 md:px-12"}`}>
+      <div className={`mb-3 md:mb-4 flex flex-col text-right ${flush ? "" : "px-4 sm:px-6 lg:px-8"}`}>
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex flex-col text-right">
             {viewAllHash ? (
               <a
                 href={viewAllHash}
-                className="group/title text-lg sm:text-xl md:text-2xl font-bold text-white flex items-center gap-1.5 hover:text-white/80 transition-colors cursor-pointer"
+                id={`row-${title.replace(/\s+/g, '-')}`}
+                className="group/title text-xl md:text-2xl font-bold text-white flex items-center gap-1.5 hover:text-white/80 transition-colors cursor-pointer"
               >
                 <span>{title}</span>
                 <ChevronLeft className="w-5 h-5 text-white/40 group-hover/title:text-white group-hover/title:-translate-x-0.5 transition-all" />
               </a>
             ) : (
-              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white flex items-center">
+              <h2 id={`row-${title.replace(/\s+/g, '-')}`} className="text-xl md:text-2xl font-bold text-white flex items-center">
                 <span>{title}</span>
               </h2>
             )}
@@ -119,7 +120,7 @@ export default function MovieRow({
       </div>
 
       {/* Row Shell with Overlay Arrows */}
-      <div className={`relative ${flush ? "" : "px-6 md:px-12"}`}>
+      <div className={`relative ${flush ? "" : "px-4 sm:px-6 lg:px-8"}`}>
         {/* Edge fade gradients (only when scrollable in that direction) */}
         {showRightArrow && (
           <div className="hidden md:block absolute right-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-l from-[#17171a] to-transparent" />
@@ -165,11 +166,20 @@ export default function MovieRow({
               <div
                 key={`${item.type}-${item.id}`}
                 onClick={() => onItemClick(item)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onItemClick(item);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={`فتح ${item.title}`}
                 style={{ animationDelay: `${idx * 45}ms` }}
-                className="group/card card-pop flex-none w-[100px] sm:w-[135px] md:w-[155px] lg:w-[170px] cursor-pointer rounded-xl p-1.5 pb-3 select-none"
+                className="group/card card-pop flex-none w-[112px] sm:w-[140px] md:w-[156px] lg:w-[168px] cursor-pointer rounded-2xl p-1.5 pb-3 select-none"
               >
                 {/* Poster Artwork container */}
-                <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-white/[0.06]">
+                <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/[0.08]">
                   {onToggleSave && (
                     <WatchlistButton
                       saved={isSaved?.(item) ?? false}
@@ -210,9 +220,9 @@ export default function MovieRow({
                   {/* Subtle gradient at bottom of poster for depth */}
                   <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-                  {/* Rating stamp */}
+                  {/* Rating stamp — ثابت في الجهة المقابلة لزر الحفظ */}
                   {hasScore && (
-                    <div className="absolute bottom-2 right-2 glass text-[#f5c518] text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5">
+                    <div className="absolute top-2 left-2 glass text-[#f5c518] text-[11px] font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5">
                       <Star className="w-2.5 h-2.5 fill-current" />
                       <span>{item.rating.toFixed(1)}</span>
                     </div>
@@ -231,10 +241,10 @@ export default function MovieRow({
 
                 {/* Meta details */}
                 <div className="mt-2.5 px-1 text-right flex flex-col">
-                  <span className="text-white font-semibold text-xs sm:text-sm line-clamp-1 leading-tight transition-colors">
+                  <span className="text-white font-semibold text-sm line-clamp-1 leading-tight transition-colors">
                     {item.title}
                   </span>
-                  <span className="text-white/45 font-medium text-[10px] sm:text-xs mt-1 flex items-center gap-1 justify-start">
+                  <span className="text-white/60 font-medium text-[11px] sm:text-xs mt-1 flex items-center gap-1 justify-start">
                     <span>{item.year || '—'}</span>
                     <span className="w-1 h-1 bg-stone-800 rounded-full" />
                     <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
@@ -245,6 +255,6 @@ export default function MovieRow({
           })}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

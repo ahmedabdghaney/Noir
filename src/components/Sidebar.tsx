@@ -3,6 +3,7 @@
  */
 
 import { Home, Film, Tv, Bookmark, Search, ChevronLeft } from 'lucide-react';
+import type { ReactNode } from 'react';
 import LogoIcon from './LogoIcon';
 
 interface SidebarProps {
@@ -19,7 +20,7 @@ interface SidebarProps {
 interface NavItem {
   id: string;
   label: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   onClick: () => void;
   active: boolean;
 }
@@ -74,7 +75,7 @@ export default function Sidebar({
   ];
 
   return (
-    <aside className="hidden md:flex flex-col fixed right-0 top-0 bottom-0 w-52 z-[180] border-l border-white/[0.06] bg-[#141417]"
+    <aside className="hidden lg:flex flex-col fixed right-0 top-0 bottom-0 w-52 z-[180] border-l border-white/[0.06] bg-[#141417]"
       style={{ direction: 'rtl' }}
     >
       {/* Logo */}
@@ -109,7 +110,7 @@ export default function Sidebar({
             </span>
             <span>{item.label}</span>
             {item.id === 'search' && (
-              <span className="mr-auto text-[10px] text-stone-600 bg-white/5 px-1.5 py-0.5 rounded font-mono">⌘K</span>
+              <span className="mr-auto text-[11px] text-stone-500 bg-white/5 px-1.5 py-0.5 rounded font-mono">بحث</span>
             )}
           </button>
         ))}

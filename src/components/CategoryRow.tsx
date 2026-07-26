@@ -65,10 +65,10 @@ export default function CategoryRow({ title = 'تصفّح حسب التصنيف'
   };
 
   return (
-    <div className="relative group/row mb-16 md:mb-24 flex flex-col gap-4">
-      <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white px-6 md:px-12 text-right">{title}</h2>
+    <section className="relative group/row mb-8 md:mb-10 flex flex-col gap-3 md:gap-4" aria-labelledby="category-row-title">
+      <h2 id="category-row-title" className="text-xl md:text-2xl font-bold text-white px-4 sm:px-6 lg:px-8 text-right">{title}</h2>
 
-      <div className="relative px-6 md:px-12">
+      <div className="relative px-4 sm:px-6 lg:px-8">
         {/* Right arrow (previous in RTL) */}
         {showRightArrow && (
           <button
@@ -99,9 +99,18 @@ export default function CategoryRow({ title = 'تصفّح حسب التصنيف'
             <div
               key={cat.key}
               onClick={() => onSelect(cat.key)}
-              className="group/cat flex-none w-[100px] sm:w-[135px] md:w-[155px] lg:w-[170px] cursor-pointer rounded-xl p-1.5 pb-3 select-none"
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onSelect(cat.key);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label={`فتح تصنيف ${cat.title}`}
+              className="group/cat flex-none w-[112px] sm:w-[140px] md:w-[156px] lg:w-[168px] cursor-pointer rounded-2xl p-1.5 pb-3 select-none"
             >
-              <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-white/[0.06]">
+              <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/[0.08]">
                 {images[cat.key] && (
                   <img
                     src={images[cat.key]}
@@ -115,13 +124,13 @@ export default function CategoryRow({ title = 'تصفّح حسب التصنيف'
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                 {/* Title */}
                 <div className="absolute inset-x-0 bottom-0 p-3 flex items-end justify-center">
-                  <span className="text-white font-black text-base sm:text-xl md:text-2xl drop-shadow-lg text-center leading-tight">{cat.title}</span>
+                  <span className="text-white font-bold text-base sm:text-lg md:text-xl drop-shadow-lg text-center leading-tight">{cat.title}</span>
                 </div>
               </div>
             </div>
           ))}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

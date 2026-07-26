@@ -60,12 +60,12 @@ export default function StudiosRow({ title = 'تصفّح حسب الشركة ا�
   };
 
   return (
-    <div className="mb-16 md:mb-24 relative flex flex-col group/row">
-      <div className="px-6 md:px-12 mb-4 md:mb-5">
-        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">{title}</h2>
+    <section className="mb-8 md:mb-10 relative flex flex-col group/row" aria-labelledby="studios-row-title">
+      <div className="px-4 sm:px-6 lg:px-8 mb-3 md:mb-4">
+        <h2 id="studios-row-title" className="text-xl md:text-2xl font-bold text-white">{title}</h2>
       </div>
 
-      <div className="relative px-6 md:px-12">
+      <div className="relative px-4 sm:px-6 lg:px-8">
         {showRightArrow && (
           <button
             onClick={() => handleScroll('right')}
@@ -96,7 +96,16 @@ export default function StudiosRow({ title = 'تصفّح حسب الشركة ا�
             <div
               key={s.key}
               onClick={() => onSelect(s.key)}
-              className="group/st flex-none w-[100px] sm:w-[135px] md:w-[155px] cursor-pointer"
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onSelect(s.key);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label={`فتح أعمال ${s.title}`}
+              className="group/st flex-none w-[112px] sm:w-[140px] md:w-[156px] cursor-pointer"
             >
               {/* بطاقة زجاجية فاتحة شوي عن الخلفية — بدون stroke (نلغي بوردر glass-hover)، بدون صورة، بدون اسم نصي */}
               <div className="relative aspect-[4/3] rounded-2xl overflow-hidden glass-hover !border-0">
@@ -130,6 +139,6 @@ export default function StudiosRow({ title = 'تصفّح حسب الشركة ا�
           ))}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

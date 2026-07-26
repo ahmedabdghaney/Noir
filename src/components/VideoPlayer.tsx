@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import {
   Loader, Pause, Play, Lock,
   Subtitles, Settings, Maximize2, Minimize2,
@@ -552,7 +553,7 @@ export default function VideoPlayer({
   };
 
   /* ── tap: ضغطة = play/pause، ضغطتين على الجوانب = seek، الوسط = fullscreen ── */
-  const handleVideoClick = (e: React.MouseEvent) => {
+  const handleVideoClick = (e: ReactMouseEvent) => {
     if (!isNative) return;
     e.stopPropagation();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -582,16 +583,16 @@ export default function VideoPlayer({
     return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
   };
 
-  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleProgressClick = (e: ReactMouseEvent<HTMLDivElement>) => {
     if (!videoRef.current || !duration) return;
     videoRef.current.currentTime = pctFromEvent(e.clientX) * duration;
   };
 
-  const handleProgressMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleProgressMove = (e: ReactMouseEvent<HTMLDivElement>) => {
     setHoverPct(pctFromEvent(e.clientX) * 100);
   };
 
-  const startScrub = (e: React.MouseEvent<HTMLDivElement>) => {
+  const startScrub = (e: ReactMouseEvent<HTMLDivElement>) => {
     if (!videoRef.current || !duration) return;
     setIsScrubbing(true);
     videoRef.current.currentTime = pctFromEvent(e.clientX) * duration;
@@ -1030,7 +1031,7 @@ export default function VideoPlayer({
 }
 
 function Btn({ onClick, label, children, active = false, small = false, big = false }: {
-  onClick: () => void; label: string; children: React.ReactNode; active?: boolean; small?: boolean; big?: boolean;
+  onClick: () => void; label: string; children: ReactNode; active?: boolean; small?: boolean; big?: boolean;
 }) {
   return (
     <button onClick={onClick} title={label} aria-label={label}

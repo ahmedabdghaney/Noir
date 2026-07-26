@@ -86,6 +86,15 @@ function GridCard({
   return (
     <div
       onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`فتح ${item.title}`}
       className="group/card card-transition cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
     >
       <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-white/[0.06]">
@@ -191,7 +200,7 @@ export default function CategoryPage({
       {/* Full-width colored header */}
       <div className="relative w-full" style={{ backgroundColor: category.overlay.replace(/0\.\d+\)/, '1)') }}>
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
-        <div dir="rtl" className="relative w-full px-6 md:px-12 pt-8 pb-10 sm:pt-10 sm:pb-14">
+        <div dir="rtl" className="relative w-full px-4 sm:px-6 lg:px-8 pt-8 pb-10 sm:pt-10 sm:pb-14">
           <button onClick={onBack} className="flex items-center gap-2 text-white/90 hover:text-white text-sm font-semibold mb-5 cursor-pointer transition-colors">
             <ArrowRight className="w-4 h-4" />
             <span>الرئيسية</span>
@@ -273,7 +282,7 @@ export default function CategoryPage({
             </div>
 
             {/* Grid */}
-            <div dir="rtl" className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1 sm:gap-2">
+            <div dir="rtl" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-3">
               {allItems.map((item) => (
                 <div key={`${item.type}-${item.id}`}>
                   <GridCard
