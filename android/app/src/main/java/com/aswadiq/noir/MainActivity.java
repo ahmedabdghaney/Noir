@@ -15,6 +15,11 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
 
         WebView webView = getBridge().getWebView();
+        String buildMarker = BuildConfig.IS_TV_BUILD ? " NoirTV" : " NoirMobile";
+        String userAgent = webView.getSettings().getUserAgentString();
+        if (userAgent != null && !userAgent.contains(buildMarker.trim())) {
+            webView.getSettings().setUserAgentString(userAgent + buildMarker);
+        }
         webView.getSettings().setMediaPlaybackRequiresUserGesture(false);
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
 
@@ -24,7 +29,7 @@ public class MainActivity extends BridgeActivity {
             uiModeManager != null &&
             uiModeManager.getCurrentModeType() == Configuration.UI_MODE_TYPE_TELEVISION;
 
-        if (isTelevision) {
+        if (BuildConfig.IS_TV_BUILD && isTelevision) {
             webView.setFocusable(true);
             webView.setFocusableInTouchMode(true);
             webView.requestFocus();

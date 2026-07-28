@@ -48,6 +48,50 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:645555146334:android:d57b0c4d4665098d576ecf",
+        "android_client_info": {
+          "package_name": "com.aswadiq.noir.mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "645555146334-oopteerqnn01fsr7o30d8j2dna7g5c6e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aswadiq.noir.mobile",
+            "certificate_hash": "f66573776274df1781a558f9c0e4cffbab92e4a2"
+          }
+        },
+        {
+          "client_id": "645555146334-01oga702fvm7hh0ua0qtk4e2vb7nel0p.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCBV8gQdkj9Oxb-ur-p7NJq9QTNjWrqFeI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "645555146334-01oga702fvm7hh0ua0qtk4e2vb7nel0p.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "645555146334-e58r3p0cdkdpval99fmtakugoevs1nv1.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.aswad.daftar"
+              }
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

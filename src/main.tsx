@@ -7,9 +7,9 @@ import './index.css';
 
 const isAndroidApp = Capacitor.getPlatform() === 'android';
 
-if (isAndroidApp) {
-  document.documentElement.classList.add('noir-android-app');
-
+const enableTvSupport = () => {
+  if (document.documentElement.classList.contains('noir-tv-capabilities')) return;
+  document.documentElement.classList.add('noir-tv-capabilities');
   const updateTvLayout = () => {
     document.documentElement.classList.toggle(
       'noir-tv-layout',
@@ -120,6 +120,17 @@ if (isAndroidApp) {
       }
     }
   });
+};
+
+if (isAndroidApp) {
+  document.documentElement.classList.add('noir-android-app');
+  if (navigator.userAgent.includes('NoirTV')) {
+    enableTvSupport();
+  } else {
+    void CapacitorApp.getInfo().then(({id}) => {
+      if (id === 'com.aswadiq.noir') enableTvSupport();
+    });
+  }
 }
 
 // Safari على iOS قد يحتفظ بالتبويب القديم حياً حتى بعد نشر نسخة جديدة.

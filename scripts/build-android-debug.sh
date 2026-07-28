@@ -2,6 +2,22 @@
 
 set -eu
 
+noir_variant="${1:-tv}"
+case "$noir_variant" in
+  tv)
+    noir_gradle_task="assembleTvDebug"
+    noir_apk_path="android/app/build/outputs/apk/tv/debug/app-tv-debug.apk"
+    ;;
+  mobile)
+    noir_gradle_task="assembleMobileDebug"
+    noir_apk_path="android/app/build/outputs/apk/mobile/debug/app-mobile-debug.apk"
+    ;;
+  *)
+    echo "Unknown Android variant: $noir_variant (expected tv or mobile)." >&2
+    exit 1
+    ;;
+esac
+
 if [ -z "${JAVA_HOME:-}" ]; then
   for noir_java_home in \
     "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home" \
@@ -46,7 +62,7 @@ npm run android:sync
 
 (
   cd android
-  ./gradlew assembleDebug
+  ./gradlew "$noir_gradle_task"
 )
 
-echo "APK ready: android/app/build/outputs/apk/debug/app-debug.apk"
+echo "APK ready: $noir_apk_path"

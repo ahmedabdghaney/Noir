@@ -90,6 +90,7 @@ export default function VideoPlayer({
   const mediaRetryCountRef = useRef(0);
   const lastProgressReportAtRef = useRef(0);
   const activeScrubPointerRef = useRef<number | null>(null);
+  const activeVolumePointerRef = useRef<number | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const touchHoldActivatedRef = useRef(false);
   const ignoreNextClickRef = useRef(false);
@@ -98,6 +99,7 @@ export default function VideoPlayer({
   const [isLoading,       setIsLoading]       = useState(true);
   const [isBuffering,     setIsBuffering]     = useState(false);
   const [customMp4Failed, setCustomMp4Failed] = useState(false);
+  const [useVidApi,       setUseVidApi]       = useState(false);
   const [isPlaying,       setIsPlaying]       = useState(false);
   const [currentTime,     setCurrentTime]     = useState(0);
   const [duration,        setDuration]        = useState(0);
@@ -153,7 +155,7 @@ export default function VideoPlayer({
   const vttSrc    = vttUrl;
   // وضع الفيلم يبقى دائماً على مشغل MP4. فشل الرابط يظهر كخطأ واضح
   // ولا يحوّل المستخدم بصمت إلى مشغلات iframe خارجية.
-  const isNative = Boolean(playMode === 'movie' && customMp4);
+  const isNative = Boolean(playMode === 'movie' && customMp4 && !useVidApi);
 
   const reportNativeProgress = useCallback(
     (video: HTMLVideoElement | null, completed = false, force = false) => {
@@ -264,6 +266,7 @@ export default function VideoPlayer({
     clearTimeout(mediaRetryTimerRef.current);
     mediaRetryCountRef.current = 0;
     setIsLoading(true); setCustomMp4Failed(false);
+    setUseVidApi(false);
     setSubEnabled(true); setSpeed(1);
     setShowSettings(false); setShowSpeedMenu(false); setShowVolume(false);
     setIsPlaying(false); setCurrentTime(0); setDuration(0); setBuffered(0); setIsBuffering(false);
@@ -866,10 +869,61 @@ export default function VideoPlayer({
     if (videoRef.current) onSeek?.(videoRef.current.currentTime);
   };
 
+  /* ── volume bar: سحب ولمس مباشر، حتى على Android WebView ── */
+  const updateVolumeFromPointer = (clientX: number, track: HTMLDivElement) => {
+    const rect = track.getBoundingClientRect();
+    if (!rect.width) return;
+    changeVolume((clientX - rect.left) / rect.width);
+  };
+
+  const startVolumeChange = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    markUserActive();
+    activeVolumePointerRef.current = e.pointerId;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    updateVolumeFromPointer(e.clientX, e.currentTarget);
+  };
+
+  const moveVolumeChange = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (activeVolumePointerRef.current !== e.pointerId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    updateVolumeFromPointer(e.clientX, e.currentTarget);
+  };
+
+  const endVolumeChange = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (activeVolumePointerRef.current !== e.pointerId) return;
+    updateVolumeFromPointer(e.clientX, e.currentTarget);
+    activeVolumePointerRef.current = null;
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  };
+
   /* ── Trailer URL ── */
   const getTrailerUrl = () => youtubeKey
     ? `https://www.youtube-nocookie.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&origin=${encodeURIComponent(window.location.origin)}`
     : 'about:blank';
+
+  const getVidApiUrl = () => {
+    const params = new URLSearchParams({
+      primaryColor: '63b8bc',
+      secondaryColor: 'a2a2a2',
+      iconColor: 'eefdec',
+      icons: 'default',
+      player: 'nf',
+      title: 'true',
+      poster: 'true',
+      autoplay: 'false',
+      nextbutton: 'false',
+    });
+    if (startAt > 5) params.set('startAt', String(Math.floor(startAt)));
+    if (type === 'tv') {
+      return `https://vidapi.qzz.io/tv/${id}/${season}/${episode}?${params}`;
+    }
+    return `https://vidapi.qzz.io/movie/${id}?${params}`;
+  };
 
   const progressPct = duration > 0 ? Math.max(0, Math.min(100, (currentTime / duration) * 100)) : 0;
   const bufferedPct = duration > 0 ? Math.max(0, Math.min(100, (buffered / duration) * 100)) : 0;
@@ -889,6 +943,11 @@ export default function VideoPlayer({
     : `video::cue { color: transparent !important; text-shadow: none !important; background: transparent !important; }`;
 
   const sliderStyle = `
+    .noir-player-accent { background-color: #ff453a !important; }
+    html.noir-android-app .noir-volume-track { width: 5rem !important; margin-left: .375rem !important; opacity: 1 !important; overflow: visible !important; }
+    @media (hover: none), (pointer: coarse) {
+      .noir-volume-track { width: 5rem !important; margin-left: .375rem !important; opacity: 1 !important; overflow: visible !important; }
+    }
     @keyframes noir-flash { 0% { opacity: 0; transform: scale(.86); } 18% { opacity: 1; transform: scale(1); } 72% { opacity: 1; } 100% { opacity: 0; transform: scale(1.04); } }
     .noir-flash { animation: noir-flash .8s cubic-bezier(.2,.8,.2,1) forwards; }
     @keyframes noir-pulse { 0% { opacity: 0; transform: scale(.72); } 20% { opacity: 1; transform: scale(1.04); } 48% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(.96); } }
@@ -924,6 +983,17 @@ export default function VideoPlayer({
           {/* trailer */}
           {playMode === 'trailer' ? (
             <iframe src={getTrailerUrl()} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen className="w-full h-full border-0" onLoad={() => setIsLoading(false)} />
+
+          /* VidAPI is available only when the user explicitly switches to it. */
+          ) : useVidApi ? (
+            <iframe
+              src={isPausedByHost ? 'about:blank' : getVidApiUrl()}
+              allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+              referrerPolicy="no-referrer"
+              allowFullScreen
+              className="h-full w-full border-0"
+              onLoad={() => setIsLoading(false)}
+            />
 
           /* native mp4 */
           ) : isNative ? (
@@ -1051,7 +1121,7 @@ export default function VideoPlayer({
               />
             </video>
 
-          /* MP4 is the only movie source. No external-player fallback. */
+          /* No playable source was selected. */
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-black text-sm text-white/55" dir="rtl">
               ملف MP4 غير مهيأ لهذا العنوان
@@ -1071,7 +1141,7 @@ export default function VideoPlayer({
                 <p className="mt-2 text-sm leading-6 text-white/55">
                   رابط MP4 غير موجود أو أن التخزين يمنع الوصول إليه حالياً.
                 </p>
-                <div className="mt-5 flex items-center justify-center gap-2">
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -1089,6 +1159,18 @@ export default function VideoPlayer({
                   </button>
                   <button
                     type="button"
+                    onClick={() => {
+                      clearTimeout(mediaRetryTimerRef.current);
+                      setCustomMp4Failed(false);
+                      setIsLoading(true);
+                      setUseVidApi(true);
+                    }}
+                    className="noir-button-secondary min-w-32 cursor-pointer"
+                  >
+                    تشغيل عبر Netflix
+                  </button>
+                  <button
+                    type="button"
                     onClick={onClose}
                     className="noir-button-secondary min-w-24 cursor-pointer"
                   >
@@ -1100,7 +1182,20 @@ export default function VideoPlayer({
           )}
 
           {!isNative && (
-            <div className="absolute top-3 right-3 z-40">
+            <div className="absolute top-3 right-3 z-40 flex items-center gap-2">
+              {useVidApi && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUseVidApi(false);
+                    setCustomMp4Failed(false);
+                    setIsLoading(true);
+                  }}
+                  className="rounded-full border border-white/15 bg-black/65 px-3 py-2 text-xs font-bold text-white/80 backdrop-blur-md hover:bg-white hover:text-black"
+                >
+                  العودة إلى MP4
+                </button>
+              )}
               <Btn onClick={onClose} label="إغلاق المشغل">
                 <X className="w-5 h-5" />
               </Btn>
@@ -1152,6 +1247,16 @@ export default function VideoPlayer({
                     التريلر
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUseVidApi(true);
+                    setIsLoading(true);
+                  }}
+                  className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] text-white/65 backdrop-blur-md transition-colors hover:bg-white/15 hover:text-white md:text-xs"
+                >
+                  <span className="hidden sm:inline">مشغل </span>Netflix
+                </button>
                 <Btn onClick={onClose} label="إغلاق المشغل">
                   <X className="w-5 h-5" />
                 </Btn>
@@ -1351,8 +1456,8 @@ export default function VideoPlayer({
                       <div className="absolute inset-y-0 left-0 bg-white/20 rounded-full" style={{ width: `${hoverPct}%` }} />
                     )}
                     {/* played */}
-                    <div className="absolute inset-y-0 left-0 bg-red-500 rounded-full" style={{ width: `${progressPct}%` }}>
-                      <div className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-red-500 shadow-lg transition-opacity ${isScrubbing ? 'opacity-100 scale-110' : 'opacity-0 group-hover/bar:opacity-100'}`} />
+                    <div className="noir-player-accent absolute inset-y-0 left-0 rounded-full" style={{ width: `${progressPct}%` }}>
+                      <div className={`noir-player-accent absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full shadow-lg transition-opacity ${isScrubbing ? 'opacity-100 scale-110' : 'opacity-0 group-hover/bar:opacity-100'}`} />
                     </div>
                   </div>
                 </div>
@@ -1373,36 +1478,36 @@ export default function VideoPlayer({
                   )}
 
                   {/* volume */}
-                  <div className="relative hidden sm:flex items-center"
+                  <div className="relative flex items-center"
                     onMouseEnter={() => setShowVolume(true)}
                     onMouseLeave={() => setShowVolume(false)}
                   >
                     <Btn onClick={toggleMute} label={isMuted ? 'تشغيل الصوت' : 'كتم الصوت'}>
                       <VolumeIcon className="w-5 h-5" />
                     </Btn>
-                    <div className={`flex items-center transition-all duration-200 overflow-hidden ${showVolume ? 'w-20 ml-1.5 opacity-100' : 'w-0 opacity-0'}`}>
+                    <div className={`noir-volume-track flex w-12 min-[420px]:w-16 sm:w-20 items-center ml-1 sm:ml-1.5 opacity-100 sm:transition-all sm:duration-200 sm:overflow-hidden ${showVolume ? 'sm:w-20' : 'sm:w-0 sm:ml-0 sm:opacity-0'}`}>
                       <div
-                        className="group/vol w-full py-2 cursor-pointer relative"
-                        onClick={e => {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          changeVolume((e.clientX - rect.left) / rect.width);
-                        }}
-                        onMouseDown={e => {
-                          const track = e.currentTarget;
-                          const set = (clientX: number) => {
-                            const rect = track.getBoundingClientRect();
-                            changeVolume(Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)));
-                          };
-                          set(e.clientX);
-                          const move = (ev: MouseEvent) => set(ev.clientX);
-                          const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
-                          window.addEventListener('mousemove', move);
-                          window.addEventListener('mouseup', up);
+                        className="group/vol w-full py-3 cursor-pointer relative touch-none"
+                        role="slider"
+                        tabIndex={0}
+                        aria-label="مستوى الصوت"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={Math.round((isMuted ? 0 : volume) * 100)}
+                        onPointerDown={startVolumeChange}
+                        onPointerMove={moveVolumeChange}
+                        onPointerUp={endVolumeChange}
+                        onPointerCancel={endVolumeChange}
+                        onKeyDown={(event) => {
+                          if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+                          event.preventDefault();
+                          event.stopPropagation();
+                          changeVolume(volume + (event.key === 'ArrowRight' ? 0.05 : -0.05));
                         }}
                       >
-                        <div className="relative w-full h-[4px] bg-white/25 rounded-full group-hover/vol:h-[5px] transition-all">
-                          <div className="absolute inset-y-0 left-0 bg-red-500 rounded-full" style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}>
-                            <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 rounded-full bg-white shadow-md opacity-0 group-hover/vol:opacity-100 transition-opacity" />
+                        <div className="relative w-full h-[5px] bg-white/25 rounded-full group-hover/vol:h-[6px] transition-all">
+                          <div className="noir-player-accent absolute inset-y-0 left-0 rounded-full" style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}>
+                            <div className="noir-player-accent absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 rounded-full shadow-[0_0_0_2px_rgba(255,255,255,.9)] opacity-100 sm:opacity-0 sm:group-hover/vol:opacity-100 transition-opacity" />
                           </div>
                         </div>
                       </div>

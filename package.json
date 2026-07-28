@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "android:sync": "npm run build && cap sync android",
     "android:open": "cap open android",
-    "android:apk:debug": "sh scripts/build-android-debug.sh",
+    "android:apk:debug": "sh scripts/build-android-debug.sh tv",
+    "android:apk:tv": "sh scripts/build-android-debug.sh tv",
+    "android:apk:mobile": "sh scripts/build-android-debug.sh mobile",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
   },
