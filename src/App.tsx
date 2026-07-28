@@ -74,6 +74,8 @@ import AdminDashboard from './components/AdminDashboard';
 import WatchlistButton from './components/WatchlistButton';
 import QuickView from './components/QuickView';
 import ViewingHistoryPage from './components/ViewingHistoryPage';
+import TvHome from './components/TvHome';
+import TvNavigation from './components/TvNavigation';
 import {
   subscribeHidden, subscribeManualItems, subscribeCustomSections, subscribeSectionOrder,
   subscribeHeroHidden, toggleHeroHidden, subscribeHeroExtra, subscribeHeroOrder, HeroExtra,
@@ -1978,27 +1980,80 @@ export default function App() {
     return [...renderableSections].sort((a, b) => affinity(b.items) - affinity(a.items));
   }, [preferenceGenreScores, renderableSections]);
 
+  const tvHomeSections = useMemo(() => {
+    const sections: { key: string; title: string; subtitle?: string; items: MovieOrShow[] }[] = [];
+    if (personalizedSection) {
+      sections.push({
+        key: 'personalized',
+        title: personalizedSection.title,
+        subtitle: 'مختارة حسب مشاهداتك وقائمتك',
+        items: personalizedSection.items,
+      });
+    }
+    if (topTenItems.length) {
+      sections.push({
+        key: 'top-ten',
+        title: 'أفضل 10 اليوم',
+        subtitle: 'الأكثر رواجاً ومشاهدة الآن',
+        items: topTenItems,
+      });
+    }
+    if ((manualBySection.manual?.length ?? 0) > 0) {
+      sections.push({
+        key: 'manual',
+        title: 'حصري نوار',
+        items: manualBySection.manual,
+      });
+    }
+    personalizedRenderableSections.forEach((section) => {
+      sections.push({ key: section.key, title: section.title, items: section.items });
+    });
+    return sections;
+  }, [
+    manualBySection,
+    personalizedRenderableSections,
+    personalizedSection,
+    topTenItems,
+  ]);
+
   if (authScreen) {
     return authScreen;
   }
+
+  const isTvApp = document.documentElement.classList.contains('noir-tv-app');
 
   return (
     <div className="min-h-screen bg-[#17171a] text-white flex flex-row font-sans relative tracking-normal antialiased">
       
       {/* Desktop Sidebar — Apple TV style */}
-      <Sidebar
-        activeView={activeView}
-        searchMode={searchMode}
-        setSearchMode={handleSetSearchMode}
-        goHome={navigateToHome}
-        openSearchOverlay={() => setIsSearchOverlayOpen(true)}
-        onViewWatchlist={handleViewWatchlist}
-        user={user}
-        onOpenProfile={() => setIsProfileModalOpen(true)}
-      />
+      {!isTvApp && (
+        <Sidebar
+          activeView={activeView}
+          searchMode={searchMode}
+          setSearchMode={handleSetSearchMode}
+          goHome={navigateToHome}
+          openSearchOverlay={() => setIsSearchOverlayOpen(true)}
+          onViewWatchlist={handleViewWatchlist}
+          user={user}
+          onOpenProfile={() => setIsProfileModalOpen(true)}
+        />
+      )}
+
+      {isTvApp && (
+        <TvNavigation
+          activeView={activeView}
+          searchMode={searchMode}
+          goHome={navigateToHome}
+          openSearch={() => setIsSearchOverlayOpen(true)}
+          setSearchMode={handleSetSearchMode}
+          openWatchlist={handleViewWatchlist}
+          user={user}
+          openProfile={() => setIsProfileModalOpen(true)}
+        />
+      )}
 
       {/* Compact top header — mobile and tablet */}
-      <div className="lg:hidden">
+      <div className={isTvApp ? 'hidden' : 'lg:hidden'}>
         <Header
           goHome={navigateToHome}
           user={user}
@@ -2008,11 +2063,25 @@ export default function App() {
       </div>
 
       {/* Main content — shifts right on desktop to account for sidebar */}
-      <div className="flex-1 flex flex-col lg:mr-52 min-w-0">
+      <div className={`flex-1 flex flex-col min-w-0 ${isTvApp ? 'pt-[5.75rem]' : 'lg:mr-52'}`}>
 
       {/* Main Orchestration Views Switcher */}
-      <main className="flex-grow lg:pt-0 pt-14 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 selection:bg-red-500/30">
+      <main className={`flex-grow selection:bg-red-500/30 ${isTvApp ? 'pb-0' : 'lg:pt-0 pt-14 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0'}`}>
         {activeView ==='home' && (
+          isTvApp ? (
+            <TvHome
+              heroItems={heroItems}
+              continueWatching={continueWatching}
+              sections={tvHomeSections}
+              isSaved={isInWatchlist}
+              onToggleSave={toggleWatchlistItem}
+              onPlay={handlePlayTitle}
+              onDetails={handleTitleClick}
+              onSelect={handleOpenQuickView}
+              onContinue={handleContinueWatchingClick}
+              onCategory={(key) => { window.location.hash = `#category/${key}`; }}
+            />
+          ) : (
           <PullToRefresh onRefresh={refreshHome}>
           <div className="animate-fade-in">
             {/* Display Hero slider */}
@@ -2106,6 +2175,7 @@ export default function App() {
 </div>
 </div>
           </PullToRefresh>
+          )
         )}
 
         {/* Dedicated Watchlist View */}
@@ -2779,14 +2849,16 @@ export default function App() {
       </div>{/* end main content wrapper */}
 
       {/* iOS/Android style bottom navigation bar on touchscreens */}
-      <MobileNav
-        activeView={activeView}
-        goHome={navigateToHome}
-        openSearchOverlay={() => setIsSearchOverlayOpen(true)}
-        onViewWatchlist={handleViewWatchlist}
-        isSearchOpen={isSearchOverlayOpen}
-        onOpenProfile={() => setIsProfileModalOpen(true)}
-      />
+      {!isTvApp && (
+        <MobileNav
+          activeView={activeView}
+          goHome={navigateToHome}
+          openSearchOverlay={() => setIsSearchOverlayOpen(true)}
+          onViewWatchlist={handleViewWatchlist}
+          isSearchOpen={isSearchOverlayOpen}
+          onOpenProfile={() => setIsProfileModalOpen(true)}
+        />
+      )}
 
       {/* Cmd+K QuickSearch predicting suggestions overlay */}
       <SearchOverlay

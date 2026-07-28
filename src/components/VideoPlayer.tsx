@@ -831,6 +831,15 @@ export default function VideoPlayer({
     return x < rect.width * 0.3 ? 'left' : x > rect.width * 0.7 ? 'right' : 'center';
   };
 
+  const toggleControlsFromSurface = () => {
+    clearTimeout(hideTimer.current);
+    if (controlsVisible) {
+      setControlsVisible(false);
+      return;
+    }
+    resetHideTimer();
+  };
+
   const handleVideoPointerDown = (e: ReactPointerEvent<HTMLVideoElement>) => {
     if (e.pointerType !== 'touch' || !isNative) return;
     touchStartRef.current = { x: e.clientX, y: e.clientY };
@@ -885,7 +894,7 @@ export default function VideoPlayer({
       lastTouchTapRef.current = null;
       if (zone === 'left') seekBy(-10);
       else if (zone === 'right') seekBy(10);
-      else toggleFullscreen();
+      else setControlsVisible(true);
       resetHideTimer();
       return;
     }
@@ -894,12 +903,12 @@ export default function VideoPlayer({
     clearTimeout(dblClickTimer.current);
     dblClickTimer.current = setTimeout(() => {
       lastTouchTapRef.current = null;
-      togglePlay();
-      resetHideTimer();
+      toggleControlsFromSurface();
     }, 320);
   };
 
-  /* ── tap: ضغطة = play/pause، ضغطتين على الجوانب = seek، الوسط = fullscreen ── */
+  /* ── مثل YouTube: ضغطة تظهر/تخفي الأدوات ولا توقف الفيلم.
+     التشغيل والإيقاف يتمان فقط من الزر الأوسط، والدبل تاب على الجوانب للسيك. ── */
   const handleVideoClick = (e: ReactMouseEvent) => {
     if (!isNative) return;
     e.stopPropagation();
@@ -914,13 +923,12 @@ export default function VideoPlayer({
       clearTimeout(dblClickTimer.current);
       if (zone === 'left') seekBy(-10);
       else if (zone === 'right') seekBy(10);
-      else toggleFullscreen();
+      else setControlsVisible(true);
     } else {
-      // ضغطة واحدة — وقف/تشغيل (بتأخير بسيط عشان نميّزها عن الدبل)
+      // ضغطة واحدة — إظهار/إخفاء الأدوات (بتأخير بسيط لتمييز الدبل)
       clearTimeout(dblClickTimer.current);
       dblClickTimer.current = setTimeout(() => {
-        togglePlay();
-        resetHideTimer();
+        toggleControlsFromSurface();
       }, 300);
     }
   };
@@ -1331,6 +1339,23 @@ export default function VideoPlayer({
                   : <svg viewBox="0 0 24 24" fill="white" className="w-9 h-9" style={{ marginLeft: 3 }}><path d="M6 4l14 8-14 8V4z"/></svg>}
               </div>
             </div>
+          )}
+
+          {/* زر تشغيل/إيقاف ثابت بمنتصف الشاشة وقت ظهور الأدوات — لمس الشاشة وحده لا يوقف الفيلم. */}
+          {isNative && controlsVisible && !playPulse && !isLoading && !isBuffering && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                togglePlay();
+              }}
+              className="absolute left-1/2 top-1/2 z-30 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/45 text-white shadow-[0_10px_36px_rgba(0,0,0,.4)] backdrop-blur-xl transition-transform active:scale-90 sm:h-[72px] sm:w-[72px]"
+              aria-label={isPlaying ? 'إيقاف مؤقت' : 'تشغيل'}
+            >
+              {isPlaying
+                ? <Pause className="h-8 w-8 fill-white" />
+                : <Play className="h-8 w-8 fill-white" style={{ marginLeft: 3 }} />}
+            </button>
           )}
 
           {/* ══ 2x speed boost pill ══ */}

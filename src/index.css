@@ -73,13 +73,55 @@ body::before {
 /* Android TV density without zooming the root (zoom breaks fixed positioning). */
 @media (orientation: landscape) and (min-width: 900px) {
   html.noir-tv-layout {
-    font-size: 13px;
+    font-size: 14px;
   }
 
   html.noir-tv-layout .noir-hero-frame {
     aspect-ratio: 2.55 / 1;
     min-height: 0;
     max-height: 68vh;
+  }
+}
+
+html.noir-tv-app {
+  background: #0b0b0d;
+  scroll-padding-top: 7rem;
+}
+
+html.noir-tv-app body {
+  background: #0b0b0d;
+  overscroll-behavior: none;
+}
+
+html.noir-tv-app body::before {
+  display: none;
+}
+
+html.noir-tv-app .noir-tv-row button:focus-visible,
+html.noir-tv-app .noir-tv-home section button:focus-visible {
+  transform: scale(1.055);
+}
+
+html.noir-tv-app .noir-tv-navigation button,
+html.noir-tv-app .noir-tv-row button,
+html.noir-tv-app .noir-tv-home button,
+html.noir-tv-app .noir-tv-search-overlay button {
+  transition: transform 150ms ease, background-color 150ms ease, color 150ms ease,
+    border-color 150ms ease, box-shadow 150ms ease;
+}
+
+html.noir-tv-app .noir-tv-search-overlay {
+  direction: rtl;
+}
+
+html.noir-tv-app .noir-tv-search-overlay input:focus-visible {
+  outline-offset: 6px;
+}
+
+@media (max-height: 760px) {
+  html.noir-tv-app .noir-tv-home > section:first-child {
+    min-height: 31rem;
+    height: 70vh;
   }
 }
 

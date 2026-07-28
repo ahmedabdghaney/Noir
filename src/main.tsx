@@ -6,15 +6,14 @@ import App from './App.tsx';
 import './index.css';
 
 const isAndroidApp = Capacitor.getPlatform() === 'android';
+const isTvPreview = import.meta.env.DEV && new URLSearchParams(window.location.search).get('tv') === '1';
 
 const enableTvSupport = () => {
   if (document.documentElement.classList.contains('noir-tv-capabilities')) return;
-  document.documentElement.classList.add('noir-tv-capabilities');
+  document.documentElement.classList.remove('noir-mobile-app');
+  document.documentElement.classList.add('noir-tv-capabilities', 'noir-tv-app');
   const updateTvLayout = () => {
-    document.documentElement.classList.toggle(
-      'noir-tv-layout',
-      window.innerWidth >= 900 && window.innerWidth > window.innerHeight,
-    );
+    document.documentElement.classList.add('noir-tv-layout');
   };
 
   const tvFocusableSelector = [
@@ -122,15 +121,24 @@ const enableTvSupport = () => {
   });
 };
 
+let deviceModeReady: Promise<void> = Promise.resolve();
+
 if (isAndroidApp) {
   document.documentElement.classList.add('noir-android-app');
   if (navigator.userAgent.includes('NoirTV')) {
     enableTvSupport();
   } else {
-    void CapacitorApp.getInfo().then(({id}) => {
-      if (id === 'com.aswadiq.noir') enableTvSupport();
-    });
+    deviceModeReady = CapacitorApp.getInfo()
+      .then(({id}) => {
+        if (id === 'com.aswadiq.noir') enableTvSupport();
+        else document.documentElement.classList.add('noir-mobile-app');
+      })
+      .catch(() => {
+        document.documentElement.classList.add('noir-mobile-app');
+      });
   }
+} else if (isTvPreview) {
+  enableTvSupport();
 }
 
 // Safari على iOS قد يحتفظ بالتبويب القديم حياً حتى بعد نشر نسخة جديدة.
@@ -194,6 +202,11 @@ if (Capacitor.isNativePlatform()) {
       window.dispatchEvent(new Event('noir_mobile_player_back'));
       return;
     }
+    const openDialog = document.querySelector<HTMLElement>('[role="dialog"][aria-modal="true"]');
+    if (openDialog) {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      return;
+    }
     const hash = window.location.hash;
     if (canGoBack || (hash && hash !== '#home')) {
       window.history.back();
@@ -222,8 +235,10 @@ if (!Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
     .catch(() => {});
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+void deviceModeReady.finally(() => {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+});

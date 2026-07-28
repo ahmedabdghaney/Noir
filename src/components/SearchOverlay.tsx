@@ -53,6 +53,7 @@ export default function SearchOverlay({
   const [isLoading, setIsLoading] = useState(false);
   const [catImages, setCatImages] = useState<Record<string, string>>({});
   const inputRef = useRef<HTMLInputElement>(null);
+  const isTvApp = document.documentElement.classList.contains('noir-tv-app');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -145,13 +146,17 @@ export default function SearchOverlay({
       role="dialog"
       aria-modal="true"
       aria-labelledby="search-overlay-title"
-      className="fixed inset-y-0 left-0 right-0 lg:right-52 bg-[#111113] z-[170] pt-16 lg:pt-8 px-4 sm:px-6 lg:px-8 selection:bg-red-500/30 overflow-y-auto"
+      className={`fixed inset-y-0 left-0 right-0 bg-[#111113] selection:bg-red-500/30 overflow-y-auto ${
+        isTvApp
+          ? 'noir-tv-search-overlay z-[300] px-[5vw] pt-10'
+          : 'lg:right-52 z-[170] pt-16 lg:pt-8 px-4 sm:px-6 lg:px-8'
+      }`}
     >
       <div className="w-full max-w-7xl mx-auto">
-        <div className="flex items-center justify-between gap-4 mb-4">
+        <div className={`flex items-center justify-between gap-4 ${isTvApp ? 'mb-7' : 'mb-4'}`}>
           <div>
-            <h1 id="search-overlay-title" className="text-xl sm:text-2xl font-bold text-white">البحث</h1>
-            <p className="text-sm text-stone-400 mt-1">ابحث عن فيلم أو مسلسل، أو تصفّح حسب التصنيف.</p>
+            <h1 id="search-overlay-title" className={`${isTvApp ? 'text-4xl' : 'text-xl sm:text-2xl'} font-bold text-white`}>البحث</h1>
+            <p className={`${isTvApp ? 'text-lg' : 'text-sm'} text-stone-400 mt-1`}>ابحث عن فيلم أو مسلسل، أو تصفّح حسب التصنيف.</p>
           </div>
           <button
             type="button"
@@ -165,8 +170,8 @@ export default function SearchOverlay({
         </div>
 
         {/* Input area — bar بحث كبير */}
-        <div className="flex items-center gap-3 px-4 sm:px-5 min-h-14 noir-surface mb-7 backdrop-blur-xl">
-          <Search className="w-5 h-5 text-gray-400 shrink-0" />
+        <div className={`flex items-center gap-3 px-4 sm:px-5 noir-surface mb-7 backdrop-blur-xl ${isTvApp ? 'min-h-20 rounded-2xl' : 'min-h-14'}`}>
+          <Search className={`${isTvApp ? 'w-7 h-7' : 'w-5 h-5'} text-gray-400 shrink-0`} />
           <input
             ref={inputRef}
             type="text"
@@ -174,7 +179,7 @@ export default function SearchOverlay({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="ابحث عن فيلم أو مسلسل..."
             aria-label="ابحث عن فيلم أو مسلسل"
-            className="flex-1 bg-transparent border-0 outline-none text-white text-base md:text-lg font-medium placeholder-gray-500 text-right font-sans"
+            className={`flex-1 bg-transparent border-0 outline-none text-white font-medium placeholder-gray-500 text-right font-sans ${isTvApp ? 'text-2xl' : 'text-base md:text-lg'}`}
             autoComplete="off"
           />
           {isLoading ? (
@@ -199,13 +204,13 @@ export default function SearchOverlay({
           {!query.trim() && (
             <div className="mb-10">
               <h2 className="font-display text-xl sm:text-2xl font-bold text-white mb-4 text-right">تصفّح حسب التصنيف</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3" dir="rtl">
+              <div className={`grid gap-3 ${isTvApp ? 'grid-cols-5' : 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3'}`} dir="rtl">
                 {CATEGORIES.map((cat) => (
                   <button
                     type="button"
                     key={cat.key}
                     onClick={() => onBrowseCategory?.(cat.key)}
-                    className="group relative aspect-[16/10] rounded-2xl overflow-hidden cursor-pointer border border-white/[0.08] hover:border-white/20 transition-all hover:scale-[1.03]"
+                    className={`group relative aspect-[16/10] rounded-2xl overflow-hidden cursor-pointer border border-white/[0.08] hover:border-white/20 transition-all ${isTvApp ? '' : 'hover:scale-[1.03]'}`}
                   >
                     {catImages[cat.key] && (
                       <img
@@ -231,11 +236,11 @@ export default function SearchOverlay({
         <div className="overflow-y-auto py-2">
           {query.trim() ? (
             results.length > 0 ? (
-              <div className="space-y-0.5">
-                <div className="text-[10px] font-bold text-gray-500 px-5 py-1.5 text-right select-none uppercase">
+              <div className={isTvApp ? 'grid grid-cols-3 gap-4' : 'space-y-0.5'}>
+                <div className={`font-bold text-gray-500 px-5 py-1.5 text-right select-none uppercase ${isTvApp ? 'col-span-3 text-sm' : 'text-[10px]'}`}>
                    نتائج البحث ({results.length})
                 </div>
-                {results.slice(0, 8).map((item) => (
+                {results.slice(0, isTvApp ? 18 : 8).map((item) => (
                   <div
                     key={`${item.type}-${item.id}`}
                     onClick={() => {
@@ -252,7 +257,9 @@ export default function SearchOverlay({
                     role="button"
                     tabIndex={0}
                     aria-label={`فتح ${item.title}`}
-                    className="flex items-center gap-4 px-4 sm:px-5 py-3 rounded-xl hover:bg-white/5 cursor-pointer transition-colors text-right"
+                    className={`flex items-center gap-4 rounded-xl hover:bg-white/5 cursor-pointer transition-colors text-right ${
+                      isTvApp ? 'border border-white/8 bg-white/[0.03] p-4' : 'px-4 sm:px-5 py-3'
+                    }`}
                   >
                     <div className="w-10 h-14 bg-stone-800 rounded-lg overflow-hidden shrink-0 select-none">
                       {item.poster ? (
