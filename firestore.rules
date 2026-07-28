@@ -104,6 +104,46 @@ service cloud.firestore {
         && data.updatedAt is timestamp;
     }
 
+    function titlePreferencePath(itemId) {
+      return /databases/$(database)/documents/users/$(request.auth.uid)/titlePreferences/$(itemId);
+    }
+
+    function titleReactionPath(itemId) {
+      return /databases/$(database)/documents/titleReactions/$(itemId);
+    }
+
+    function previousTitlePreference(itemId) {
+      return exists(titlePreferencePath(itemId))
+        ? get(titlePreferencePath(itemId)).data.value
+        : 'none';
+    }
+
+    function nextTitlePreference(itemId) {
+      return existsAfter(titlePreferencePath(itemId))
+        ? getAfter(titlePreferencePath(itemId)).data.value
+        : 'none';
+    }
+
+    function reactionDelta(itemId, value) {
+      return (nextTitlePreference(itemId) == value ? 1 : 0)
+        - (previousTitlePreference(itemId) == value ? 1 : 0);
+    }
+
+    function reactionWasUpdated(itemId) {
+      return existsAfter(titleReactionPath(itemId))
+        && getAfter(titleReactionPath(itemId)).data.updatedAt == request.time;
+    }
+
+    function isValidTitleReaction(data) {
+      return data.keys().hasAll(['id', 'type', 'likes', 'dislikes', 'updatedAt'])
+        && data.keys().size() == 5
+        && data.id is int
+        && data.type is string && (data.type == 'movie' || data.type == 'tv')
+        && data.likes is int && data.likes >= 0
+        && data.dislikes is int && data.dislikes >= 0
+        && data.updatedAt is timestamp;
+    }
+
     function isValidPlaybackSettings(data) {
       return data.keys().hasAll(['autoplayNext', 'subtitleSize', 'subtitleOffset', 'updatedAt'])
         && data.keys().size() == 4
@@ -137,9 +177,12 @@ service cloud.firestore {
       }
 
       match /titlePreferences/{itemId} {
-        allow read, delete: if isOwner(userId);
+        allow read: if isOwner(userId);
+        allow delete: if isOwner(userId)
+          && reactionWasUpdated(itemId);
         allow create, update: if isOwner(userId)
-          && isValidTitlePreference(incoming());
+          && isValidTitlePreference(incoming())
+          && reactionWasUpdated(itemId);
       }
 
       match /settings/{settingsId} {
@@ -149,6 +192,35 @@ service cloud.firestore {
           && isValidPlaybackSettings(incoming());
         allow delete: if isOwner(userId);
       }
+    }
+
+    // Public aggregate counters. A signed-in user can only change the exact
+    // delta caused by their own preference in the same atomic transaction.
+    match /titleReactions/{itemId} {
+      allow read: if true;
+      allow create: if isSignedIn()
+        && isValidTitleReaction(incoming())
+        && incoming().likes == (nextTitlePreference(itemId) == 'like' ? 1 : 0)
+        && incoming().dislikes == (nextTitlePreference(itemId) == 'dislike' ? 1 : 0)
+        && (
+          (
+            existsAfter(titlePreferencePath(itemId))
+            && getAfter(titlePreferencePath(itemId)).data.id == incoming().id
+            && getAfter(titlePreferencePath(itemId)).data.type == incoming().type
+          )
+          || (
+            !existsAfter(titlePreferencePath(itemId))
+            && exists(titlePreferencePath(itemId))
+            && get(titlePreferencePath(itemId)).data.id == incoming().id
+            && get(titlePreferencePath(itemId)).data.type == incoming().type
+          )
+        );
+      allow update: if isSignedIn()
+        && isValidTitleReaction(incoming())
+        && incoming().id == resource.data.id
+        && incoming().type == resource.data.type
+        && incoming().likes == resource.data.likes + reactionDelta(itemId, 'like')
+        && incoming().dislikes == resource.data.dislikes + reactionDelta(itemId, 'dislike');
     }
 
     // Public site content. Everyone can read the catalogue configuration,

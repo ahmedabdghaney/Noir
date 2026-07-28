@@ -190,6 +190,10 @@ if (Capacitor.isNativePlatform()) {
   });
 
   void CapacitorApp.addListener('backButton', ({canGoBack}) => {
+    if (document.documentElement.classList.contains('noir-mobile-player-open')) {
+      window.dispatchEvent(new Event('noir_mobile_player_back'));
+      return;
+    }
     const hash = window.location.hash;
     if (canGoBack || (hash && hash !== '#home')) {
       window.history.back();

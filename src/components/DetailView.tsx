@@ -4,13 +4,14 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Star, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, Star, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle, ChevronsUpDown, ChevronLeft, ChevronRight, ThumbsDown, ThumbsUp } from 'lucide-react';
 import {
   CastMember,
   ContinueWatchingItem,
   DetailedInfo,
   MovieOrShow,
   NativePlaybackProgress,
+  TitlePreference,
   ViewingHistoryItem,
 } from '../types';
 import { fetchDetailedTitle, getPosterUrl, getLargePosterUrl, getBackdropUrl, getOriginalBackdropUrl } from '../lib/tmdb';
@@ -18,7 +19,12 @@ import VideoPlayer from './VideoPlayer';
 import MovieRow from './MovieRow';
 import { useWatchTogether } from '../lib/useWatchTogether';
 import { fetchSeasonEpisodes, EpisodeInfo, getStillUrl, getProfileUrl, getTitleLogoUrl } from '../lib/tmdb';
-import { auth, addToFirestoreWatchlist, removeFromFirestoreWatchlist } from '../lib/firebase';
+import {
+  auth,
+  addToFirestoreWatchlist,
+  removeFromFirestoreWatchlist,
+  subscribeFirestoreTitleReactionCounts,
+} from '../lib/firebase';
 
 interface DetailViewProps {
   type: 'movie' | 'tv';
@@ -39,6 +45,8 @@ interface DetailViewProps {
   onAutoStartConsumed?: () => void;
   watchlist: MovieOrShow[];
   onToggleWatchlistItem?: (item: MovieOrShow) => void;
+  preference?: TitlePreference;
+  onPreference?: (item: MovieOrShow, preference: TitlePreference) => void;
   introEndSeconds?: number;
   // بيانات عنصر يدوي محض (خارج TMDB). لو موجودة، نعرضها بدل جلب TMDB.
   manualData?: {
@@ -85,6 +93,8 @@ export default function DetailView({
   onAutoStartConsumed,
   watchlist,
   onToggleWatchlistItem,
+  preference,
+  onPreference,
   introEndSeconds = 0,
   manualData = null,
 }: DetailViewProps) {
@@ -119,6 +129,17 @@ export default function DetailView({
   // Saved Progress Percentage
   const [savedProgressPercent, setSavedProgressPercent] = useState<number>(0);
   const [savedPlayback, setSavedPlayback] = useState<ContinueWatchingItem | null>(null);
+  const [reactionCounts, setReactionCounts] = useState({ likes: 0, dislikes: 0 });
+
+  useEffect(
+    () => subscribeFirestoreTitleReactionCounts(
+      type,
+      id,
+      setReactionCounts,
+      (reactionError) => console.error('Failed to load title reaction counts:', reactionError),
+    ),
+    [id, type],
+  );
 
   // Watch Together - Live (real WebSocket connection)
   const [isWatchTogetherOpen, setIsWatchTogetherOpen] = useState(false);
@@ -722,6 +743,25 @@ export default function DetailView({
   const country = data.production_countries && data.production_countries[0] ? data.production_countries[0].name :'غير معروف';
   const mainLang = data.spoken_languages && data.spoken_languages[0] ? data.spoken_languages[0].name :'الأصلية';
 
+  const handlePreference = (nextPreference: TitlePreference) => {
+    if (!auth.currentUser || user?.type === 'guest') {
+      showToast('سجّل دخولك حتى تضيف تقييمك');
+      return;
+    }
+    onPreference?.({
+      id,
+      type,
+      title,
+      poster: getPosterUrl(data.poster_path),
+      backdrop: getBackdropUrl(data.backdrop_path),
+      rating: data.vote_average || 0,
+      year,
+      genres,
+      overview: data.overview || '',
+      date: data.release_date || data.first_air_date || '',
+    }, nextPreference);
+  };
+
   const handleToggleSave = async () => {
     if (user?.type === 'guest') {
       showToast('يجب تسجيل الدخول باستخدام حساب جوجل أو بريد إلكتروني لإضافة عناوين لقائمتك');
@@ -956,7 +996,7 @@ export default function DetailView({
                     className="noir-button-primary flex items-center gap-2 text-sm"
                   >
                     <Play className="w-3.5 h-3.5 fill-black text-black" />
-                    <span>إكمال المشاهدة ({savedProgressPercent}%)</span>
+                    <span>إكمال المشاهدة</span>
 </button>
 
                   <button
@@ -1002,6 +1042,37 @@ export default function DetailView({
               >
                 {isSaved ? <Check className="w-5 h-5 text-black" strokeWidth={3} /> : <Plus className="w-5 h-5" />}
 </button>
+
+              <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1">
+                <button
+                  type="button"
+                  onClick={() => handlePreference('like')}
+                  className={`h-10 min-w-14 rounded-full px-3 inline-flex items-center justify-center gap-1.5 text-xs font-bold transition-colors ${
+                    preference === 'like'
+                      ? 'bg-white text-black'
+                      : 'text-white/85 hover:bg-white/12'
+                  }`}
+                  aria-label={`أعجبني، ${reactionCounts.likes}`}
+                  aria-pressed={preference === 'like'}
+                >
+                  <ThumbsUp className="w-4 h-4" />
+                  <span dir="ltr">{reactionCounts.likes.toLocaleString()}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePreference('dislike')}
+                  className={`h-10 min-w-14 rounded-full px-3 inline-flex items-center justify-center gap-1.5 text-xs font-bold transition-colors ${
+                    preference === 'dislike'
+                      ? 'bg-white text-black'
+                      : 'text-white/85 hover:bg-white/12'
+                  }`}
+                  aria-label={`لم يعجبني، ${reactionCounts.dislikes}`}
+                  aria-pressed={preference === 'dislike'}
+                >
+                  <ThumbsDown className="w-4 h-4" />
+                  <span dir="ltr">{reactionCounts.dislikes.toLocaleString()}</span>
+                </button>
+              </div>
 
               <button
                 onClick={() => onOpenShare(window.location.href)}

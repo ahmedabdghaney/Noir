@@ -2720,6 +2720,8 @@ export default function App() {
               onAutoStartConsumed={() => setAutoPlayRequested(false)}
               watchlist={watchlist}
               onToggleWatchlistItem={toggleWatchlistItem}
+              preference={titlePreferences[`${selectedTitle.type}_${selectedTitle.id}`]}
+              onPreference={handleTitlePreference}
               introEndSeconds={selectedManualItem?.introEndSeconds || 0}
               manualData={(() => {
                 // عنصر يدوي محض: نمرّر بياناته بدل طلب TMDB.

@@ -27,8 +27,8 @@ android {
         mobile {
             dimension "device"
             applicationId "com.aswadiq.noir.mobile"
-            versionCode 3
-            versionName "1.0.2"
+            versionCode 5
+            versionName "1.0.4"
             buildConfigField "boolean", "IS_TV_BUILD", "false"
         }
     }

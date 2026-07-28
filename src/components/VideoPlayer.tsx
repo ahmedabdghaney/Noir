@@ -4,12 +4,14 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import type {
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
   ReactNode,
 } from 'react';
 import type { NativePlaybackProgress } from '../types';
+import { NoirPlayer } from '../lib/noirPlayer';
 import {
   Loader, Pause, Play, Lock,
   Subtitles, Settings, Maximize2, Minimize2,
@@ -78,6 +80,9 @@ export default function VideoPlayer({
   onTimeUpdate, onPlaybackProgress, onSeek,
   onClose, onSwitchMode, onNextEpisode,
 }: VideoPlayerProps) {
+  const isMobileAndroidApp =
+    document.documentElement.classList.contains('noir-android-app') &&
+    !document.documentElement.classList.contains('noir-tv-capabilities');
 
   const containerRef  = useRef<HTMLDivElement>(null);
   const videoRef      = useRef<HTMLVideoElement>(null);
@@ -100,13 +105,13 @@ export default function VideoPlayer({
   const [isBuffering,     setIsBuffering]     = useState(false);
   const [customMp4Failed, setCustomMp4Failed] = useState(false);
   const [useVidApi,       setUseVidApi]       = useState(false);
+  const [isCheckingMp4,   setIsCheckingMp4]   = useState(playMode === 'movie');
   const [isPlaying,       setIsPlaying]       = useState(false);
   const [currentTime,     setCurrentTime]     = useState(0);
   const [duration,        setDuration]        = useState(0);
   const [buffered,        setBuffered]        = useState(0);
   const [volume,          setVolume]          = useState(1);
   const [isMuted,         setIsMuted]         = useState(false);
-  const [showVolume,      setShowVolume]      = useState(false);
   const [subEnabled,      setSubEnabled]      = useState(true);
   const [subSize,         setSubSize]         = useState(50); // نسبة حجم الترجمة %
   const [subOffset,       setSubOffset]       = useState(0);  // تأخير الترجمة بالثانية (+/-)
@@ -114,7 +119,7 @@ export default function VideoPlayer({
   const [speed,           setSpeed]           = useState(1);
   const [showSettings,    setShowSettings]    = useState(false);
   const [showSpeedMenu,   setShowSpeedMenu]   = useState(false);
-  const [isFullscreen,    setIsFullscreen]    = useState(false);
+  const [isFullscreen,    setIsFullscreen]    = useState(isMobileAndroidApp);
   const [iosNativeFs,     setIosNativeFs]     = useState(false); // iPhone native video fullscreen
   const [autoplayNext, setAutoplayNext] = useState(
     () => localStorage.getItem('noir_autoplay_next') !== 'false',
@@ -153,9 +158,55 @@ export default function VideoPlayer({
   }
   const customMp4 = playMode === 'movie' ? mp4Url : undefined;
   const vttSrc    = vttUrl;
-  // وضع الفيلم يبقى دائماً على مشغل MP4. فشل الرابط يظهر كخطأ واضح
-  // ولا يحوّل المستخدم بصمت إلى مشغلات iframe خارجية.
-  const isNative = Boolean(playMode === 'movie' && customMp4 && !useVidApi);
+  const isNative = Boolean(
+    playMode === 'movie' &&
+    customMp4 &&
+    !useVidApi &&
+    !isCheckingMp4,
+  );
+
+  /* نفحص وجود MP4 أولاً. الخطأ المؤكد يحوّل تلقائياً إلى VidAPI،
+     أما فشل HEAD بسبب CORS/الشبكة فيترك عنصر الفيديو يجرب بنفسه. */
+  useEffect(() => {
+    if (playMode !== 'movie' || !customMp4) {
+      setIsCheckingMp4(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 4500);
+    let active = true;
+
+    setIsCheckingMp4(true);
+    setUseVidApi(false);
+    setCustomMp4Failed(false);
+    setIsLoading(true);
+
+    void fetch(customMp4, {
+      method: 'HEAD',
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!active) return;
+        if (!response.ok && response.status !== 405 && response.status !== 501) {
+          setUseVidApi(true);
+        }
+      })
+      .catch(() => {
+        // بعض مخازن الفيديو تمنع HEAD رغم أن تشغيل GET مسموح.
+      })
+      .finally(() => {
+        window.clearTimeout(timeout);
+        if (active) setIsCheckingMp4(false);
+      });
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [customMp4, playMode]);
 
   const reportNativeProgress = useCallback(
     (video: HTMLVideoElement | null, completed = false, force = false) => {
@@ -261,19 +312,21 @@ export default function VideoPlayer({
   /* ── reset ── */
   useEffect(() => {
     const timer = setTimeout(() => {
-      containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      if (!isMobileAndroidApp) {
+        containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
     }, 100);
     clearTimeout(mediaRetryTimerRef.current);
     mediaRetryCountRef.current = 0;
     setIsLoading(true); setCustomMp4Failed(false);
     setUseVidApi(false);
     setSubEnabled(true); setSpeed(1);
-    setShowSettings(false); setShowSpeedMenu(false); setShowVolume(false);
+    setShowSettings(false); setShowSpeedMenu(false);
     setIsPlaying(false); setCurrentTime(0); setDuration(0); setBuffered(0); setIsBuffering(false);
     setNextEpisodeCountdown(null);
     setShowStillWatching(false);
     return () => clearTimeout(timer);
-  }, [type, id, season, episode, playMode]);
+  }, [type, id, season, episode, playMode, isMobileAndroidApp]);
 
   useEffect(() => {
     if (nextEpisodeCountdown == null) return;
@@ -361,6 +414,37 @@ export default function VideoPlayer({
     localStorage.setItem('noir_consecutive_autoplay_count', '0');
     setShowStillWatching(false);
   };
+
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  const closePlayer = useCallback(() => {
+    onCloseRef.current();
+  }, []);
+
+  /* تطبيق الموبايل يفتح المشغل كشاشة مستقلة أفقية، مو كجزء من صفحة التفاصيل. */
+  useEffect(() => {
+    if (!isMobileAndroidApp) return;
+
+    const root = document.documentElement;
+    const previousBodyOverflow = document.body.style.overflow;
+    root.classList.add('noir-mobile-player-open');
+    document.body.style.overflow = 'hidden';
+    setIsFullscreen(true);
+    void NoirPlayer.enterFullscreen().catch(() => {});
+
+    const handleNativeBack = () => closePlayer();
+    window.addEventListener('noir_mobile_player_back', handleNativeBack);
+
+    return () => {
+      window.removeEventListener('noir_mobile_player_back', handleNativeBack);
+      root.classList.remove('noir-mobile-player-open');
+      document.body.style.overflow = previousBodyOverflow;
+      void NoirPlayer.exitFullscreen().catch(() => {});
+    };
+  }, [closePlayer, isMobileAndroidApp]);
 
   /* ── fullscreen event (native only) ── */
   useEffect(() => {
@@ -450,10 +534,12 @@ export default function VideoPlayer({
           if (showSettings) {
             setShowSettings(false);
             setShowSpeedMenu(false);
+          } else if (isMobileAndroidApp) {
+            closePlayer();
           } else if (isFullscreen) {
             toggleFullscreen();
           } else {
-            onClose();
+            closePlayer();
           }
           break;
         case 'ArrowUp':
@@ -507,7 +593,7 @@ export default function VideoPlayer({
       window.removeEventListener('keyup', handleKeyUp);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [duration, speed, startSpeedBoost, endSpeedBoost, showSettings, isFullscreen, onClose, onSeek]);
+  }, [duration, speed, startSpeedBoost, endSpeedBoost, showSettings, isFullscreen, isMobileAndroidApp, closePlayer, onSeek]);
 
   /* ── auto-hide controls after 3s ── */
   const resetHideTimer = useCallback(() => {
@@ -677,6 +763,17 @@ export default function VideoPlayer({
   const toggleFullscreen = () => {
     const el = containerRef.current as any;
     const vid = videoRef.current as any;
+
+    if (isMobileAndroidApp) {
+      // داخل التطبيق لا نرجع المشغل إلى وضع inline؛ زر التصغير يرجع للتفاصيل.
+      if (isFullscreen) {
+        closePlayer();
+      } else {
+        setIsFullscreen(true);
+        void NoirPlayer.enterFullscreen().catch(() => {});
+      }
+      return;
+    }
 
     // كشف iPhone فقط — fullscreen API على div ما تشتغل أبداً
     const isIPhone = /iPhone|iPod/.test(navigator.userAgent);
@@ -908,18 +1005,17 @@ export default function VideoPlayer({
 
   const getVidApiUrl = () => {
     const params = new URLSearchParams({
-      primaryColor: '63b8bc',
-      secondaryColor: 'a2a2a2',
-      iconColor: 'eefdec',
-      icons: 'default',
-      player: 'nf',
+      primaryColor: 'ff453a',
+      secondaryColor: '0a0a0a',
+      iconColor: 'FFFFFF',
+      icons: 'vid',
       title: 'true',
       poster: 'true',
-      autoplay: 'false',
-      nextbutton: 'false',
+      autoplay: 'true',
     });
     if (startAt > 5) params.set('startAt', String(Math.floor(startAt)));
     if (type === 'tv') {
+      params.set('nextbutton', 'true');
       return `https://vidapi.qzz.io/tv/${id}/${season}/${episode}?${params}`;
     }
     return `https://vidapi.qzz.io/movie/${id}?${params}`;
@@ -944,9 +1040,19 @@ export default function VideoPlayer({
 
   const sliderStyle = `
     .noir-player-accent { background-color: #ff453a !important; }
-    html.noir-android-app .noir-volume-track { width: 5rem !important; margin-left: .375rem !important; opacity: 1 !important; overflow: visible !important; }
-    @media (hover: none), (pointer: coarse) {
-      .noir-volume-track { width: 5rem !important; margin-left: .375rem !important; opacity: 1 !important; overflow: visible !important; }
+    .noir-volume-track { width: 4rem !important; margin-left: .25rem !important; opacity: 1 !important; overflow: visible !important; }
+    @media (min-width: 640px) {
+      .noir-volume-track { width: 5rem !important; margin-left: .375rem !important; }
+    }
+    .noir-mobile-app-player .noir-player-control { width: 2.25rem !important; height: 2.25rem !important; }
+    .noir-mobile-app-player .noir-player-control--big { width: 2.5rem !important; height: 2.5rem !important; }
+    .noir-mobile-app-player .noir-player-control svg { width: 1.125rem !important; height: 1.125rem !important; }
+    .noir-mobile-app-player .noir-player-bottom { padding: 2rem .75rem max(.5rem, env(safe-area-inset-bottom)); gap: .125rem; }
+    .noir-mobile-app-player .noir-player-top-action { padding: .3rem .6rem !important; font-size: .6875rem !important; }
+    @media (max-height: 430px) {
+      .noir-mobile-app-player .noir-player-control { width: 2rem !important; height: 2rem !important; }
+      .noir-mobile-app-player .noir-player-control--big { width: 2.25rem !important; height: 2.25rem !important; }
+      .noir-mobile-app-player .noir-volume-track { width: 3.5rem !important; }
     }
     @keyframes noir-flash { 0% { opacity: 0; transform: scale(.86); } 18% { opacity: 1; transform: scale(1); } 72% { opacity: 1; } 100% { opacity: 0; transform: scale(1.04); } }
     .noir-flash { animation: noir-flash .8s cubic-bezier(.2,.8,.2,1) forwards; }
@@ -957,8 +1063,15 @@ export default function VideoPlayer({
     }
   `;
 
-  return (
-    <div ref={containerRef} className={`${isFullscreen ? 'fixed inset-0 z-[9999] w-screen h-screen max-w-none m-0 rounded-none' : 'w-full mt-16 sm:mt-20 mb-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'}`}>
+  const player = (
+    <div
+      ref={containerRef}
+      className={`${isMobileAndroidApp ? 'noir-mobile-app-player' : ''} ${
+        isFullscreen
+          ? 'fixed inset-0 z-[9999] w-screen h-[100dvh] max-w-none m-0 rounded-none'
+          : 'w-full mt-16 sm:mt-20 mb-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'
+      }`}
+    >
       <style>{sliderStyle}</style>
       <style>{hideCueStyle}</style>
       <div
@@ -984,11 +1097,16 @@ export default function VideoPlayer({
           {playMode === 'trailer' ? (
             <iframe src={getTrailerUrl()} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen className="w-full h-full border-0" onLoad={() => setIsLoading(false)} />
 
-          /* VidAPI is available only when the user explicitly switches to it. */
+          /* فحص MP4 قبل إنشاء أي مشغل. */
+          ) : isCheckingMp4 ? (
+            <div className="h-full w-full bg-black" />
+
+          /* VidAPI fallback التلقائي. */
           ) : useVidApi ? (
             <iframe
               src={isPausedByHost ? 'about:blank' : getVidApiUrl()}
               allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+              sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
               referrerPolicy="no-referrer"
               allowFullScreen
               className="h-full w-full border-0"
@@ -1058,9 +1176,9 @@ export default function VideoPlayer({
                   return;
                 }
                 setCustomMp4Failed(true);
-                setIsLoading(false);
+                setUseVidApi(true);
+                setIsLoading(true);
                 setIsBuffering(false);
-                setControlsVisible(true);
               }}
               onPlay={() => { setIsPlaying(true); resetHideTimer(); }}
               onPlaying={() => { setIsLoading(false); setIsBuffering(false); }}
@@ -1128,75 +1246,9 @@ export default function VideoPlayer({
             </div>
           )}
 
-          {isNative && customMp4Failed && (
-            <div
-              className="absolute inset-0 z-40 flex items-center justify-center bg-black/90 px-5 backdrop-blur-sm"
-              dir="rtl"
-            >
-              <div className="w-full max-w-sm text-center">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-red-500/25 bg-red-500/10">
-                  <X className="h-6 w-6 text-red-400" />
-                </div>
-                <h3 className="mt-4 text-lg font-bold text-white">ملف الفيديو غير متاح</h3>
-                <p className="mt-2 text-sm leading-6 text-white/55">
-                  رابط MP4 غير موجود أو أن التخزين يمنع الوصول إليه حالياً.
-                </p>
-                <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const video = videoRef.current;
-                      if (!video) return;
-                      mediaRetryCountRef.current = 0;
-                      setCustomMp4Failed(false);
-                      setIsLoading(true);
-                      video.load();
-                      void video.play().catch(() => {});
-                    }}
-                    className="noir-button-primary min-w-28 cursor-pointer"
-                  >
-                    إعادة المحاولة
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      clearTimeout(mediaRetryTimerRef.current);
-                      setCustomMp4Failed(false);
-                      setIsLoading(true);
-                      setUseVidApi(true);
-                    }}
-                    className="noir-button-secondary min-w-32 cursor-pointer"
-                  >
-                    تشغيل عبر Netflix
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="noir-button-secondary min-w-24 cursor-pointer"
-                  >
-                    إغلاق
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {!isNative && (
             <div className="absolute top-3 right-3 z-40 flex items-center gap-2">
-              {useVidApi && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUseVidApi(false);
-                    setCustomMp4Failed(false);
-                    setIsLoading(true);
-                  }}
-                  className="rounded-full border border-white/15 bg-black/65 px-3 py-2 text-xs font-bold text-white/80 backdrop-blur-md hover:bg-white hover:text-black"
-                >
-                  العودة إلى MP4
-                </button>
-              )}
-              <Btn onClick={onClose} label="إغلاق المشغل">
+              <Btn onClick={closePlayer} label="إغلاق المشغل">
                 <X className="w-5 h-5" />
               </Btn>
             </div>
@@ -1243,21 +1295,11 @@ export default function VideoPlayer({
                 </div>
                 {youtubeKey && (
                   <button onClick={() => onSwitchMode('trailer')}
-                    className="shrink-0 text-[11px] md:text-xs text-white/80 hover:text-white bg-white/5 hover:bg-white/15 backdrop-blur-md border border-white/10 rounded-full px-3 py-1.5 transition-all" dir="rtl">
+                    className="noir-player-top-action shrink-0 text-[11px] md:text-xs text-white/80 hover:text-white bg-white/5 hover:bg-white/15 backdrop-blur-md border border-white/10 rounded-full px-3 py-1.5 transition-all" dir="rtl">
                     التريلر
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUseVidApi(true);
-                    setIsLoading(true);
-                  }}
-                  className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] text-white/65 backdrop-blur-md transition-colors hover:bg-white/15 hover:text-white md:text-xs"
-                >
-                  <span className="hidden sm:inline">مشغل </span>Netflix
-                </button>
-                <Btn onClick={onClose} label="إغلاق المشغل">
+                <Btn onClick={closePlayer} label="إغلاق المشغل">
                   <X className="w-5 h-5" />
                 </Btn>
               </div>
@@ -1416,7 +1458,7 @@ export default function VideoPlayer({
             >
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent pointer-events-none" />
 
-              <div className="relative px-3 sm:px-4 pb-3 pt-10 flex flex-col gap-1.5">
+              <div className="noir-player-bottom relative px-3 sm:px-4 pb-3 pt-10 flex flex-col gap-1.5">
 
                 {/* progress bar */}
                 <div
@@ -1478,14 +1520,11 @@ export default function VideoPlayer({
                   )}
 
                   {/* volume */}
-                  <div className="relative flex items-center"
-                    onMouseEnter={() => setShowVolume(true)}
-                    onMouseLeave={() => setShowVolume(false)}
-                  >
+                  <div className="relative flex items-center">
                     <Btn onClick={toggleMute} label={isMuted ? 'تشغيل الصوت' : 'كتم الصوت'}>
                       <VolumeIcon className="w-5 h-5" />
                     </Btn>
-                    <div className={`noir-volume-track flex w-12 min-[420px]:w-16 sm:w-20 items-center ml-1 sm:ml-1.5 opacity-100 sm:transition-all sm:duration-200 sm:overflow-hidden ${showVolume ? 'sm:w-20' : 'sm:w-0 sm:ml-0 sm:opacity-0'}`}>
+                    <div className="noir-volume-track flex items-center opacity-100">
                       <div
                         className="group/vol w-full py-3 cursor-pointer relative touch-none"
                         role="slider"
@@ -1515,7 +1554,7 @@ export default function VideoPlayer({
                   </div>
 
                   {/* time */}
-                  <span className="text-white/80 text-[11px] sm:text-[13px] tabular-nums select-none whitespace-nowrap ml-0.5 sm:ml-1">
+                  <span className="hidden min-[420px]:inline text-white/80 text-[11px] sm:text-[13px] tabular-nums select-none whitespace-nowrap ml-0.5 sm:ml-1">
                     {formatTime(currentTime)} <span className="hidden min-[390px]:inline text-white/40">/ {formatTime(duration)}</span>
                   </span>
 
@@ -1634,6 +1673,8 @@ export default function VideoPlayer({
       </div>
     </div>
   );
+
+  return isMobileAndroidApp ? createPortal(player, document.body) : player;
 }
 
 function Btn({ onClick, label, children, active = false, small = false, big = false }: {
@@ -1641,8 +1682,8 @@ function Btn({ onClick, label, children, active = false, small = false, big = fa
 }) {
   return (
     <button onClick={onClick} aria-label={label}
-      className={`group/control relative flex items-center justify-center rounded-full transition-[color,background-color,transform] duration-150 shrink-0 active:scale-90 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80
-        ${small ? 'w-8 h-8' : big ? 'w-11 h-11' : 'w-10 h-10 sm:w-11 sm:h-11'}
+      className={`noir-player-control ${big ? 'noir-player-control--big' : ''} group/control relative flex items-center justify-center rounded-full transition-[color,background-color,transform] duration-150 shrink-0 active:scale-90 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80
+        ${small ? 'w-8 h-8' : big ? 'w-10 h-10 sm:w-11 sm:h-11' : 'w-9 h-9 sm:w-11 sm:h-11'}
         ${active ? 'text-red-400 bg-red-500/15' : 'text-white/90 hover:text-white hover:bg-white/15'}`}>
       {children}
       <span

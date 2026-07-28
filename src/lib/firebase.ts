@@ -30,6 +30,7 @@ import {
   orderBy,
   serverTimestamp,
   getDocFromServer,
+  runTransaction,
 } from 'firebase/firestore';
 import {
   ContinueWatchingItem,
@@ -588,18 +589,70 @@ export const saveFirestoreTitlePreference = async (
   value: TitlePreference | null,
 ): Promise<void> => {
   const itemId = `${type}_${id}`;
-  const ref = doc(db, 'users', userId, 'titlePreferences', itemId);
-  if (!value) {
-    await deleteDoc(ref);
-    return;
-  }
-  await setDoc(ref, {
-    id: Number(id),
-    type,
-    value,
-    updatedAt: serverTimestamp(),
+  const preferenceRef = doc(db, 'users', userId, 'titlePreferences', itemId);
+  const countsRef = doc(db, 'titleReactions', itemId);
+
+  await runTransaction(db, async (transaction) => {
+    const preferenceSnapshot = await transaction.get(preferenceRef);
+    const countsSnapshot = await transaction.get(countsRef);
+    const previous = preferenceSnapshot.exists()
+      ? preferenceSnapshot.data().value as TitlePreference
+      : null;
+    if (previous === value && countsSnapshot.exists()) return;
+
+    let likes = Math.max(0, Number(countsSnapshot.data()?.likes || 0));
+    let dislikes = Math.max(0, Number(countsSnapshot.data()?.dislikes || 0));
+
+    if (countsSnapshot.exists()) {
+      if (previous === 'like') likes = Math.max(0, likes - 1);
+      if (previous === 'dislike') dislikes = Math.max(0, dislikes - 1);
+    }
+    if (value === 'like') likes += 1;
+    if (value === 'dislike') dislikes += 1;
+
+    if (value) {
+      transaction.set(preferenceRef, {
+        id: Number(id),
+        type,
+        value,
+        updatedAt: serverTimestamp(),
+      });
+    } else {
+      transaction.delete(preferenceRef);
+    }
+
+    transaction.set(countsRef, {
+      id: Number(id),
+      type,
+      likes,
+      dislikes,
+      updatedAt: serverTimestamp(),
+    });
   });
 };
+
+export interface TitleReactionCounts {
+  likes: number;
+  dislikes: number;
+}
+
+export const subscribeFirestoreTitleReactionCounts = (
+  type: 'movie' | 'tv',
+  id: number,
+  onCounts: (counts: TitleReactionCounts) => void,
+  onError?: (error: unknown) => void,
+): (() => void) =>
+  onSnapshot(
+    doc(db, 'titleReactions', `${type}_${id}`),
+    (snapshot) => {
+      const data = snapshot.data();
+      onCounts({
+        likes: Math.max(0, Number(data?.likes || 0)),
+        dislikes: Math.max(0, Number(data?.dislikes || 0)),
+      });
+    },
+    (error) => onError?.(error),
+  );
 
 export const subscribeFirestorePlaybackSettings = (
   userId: string,
