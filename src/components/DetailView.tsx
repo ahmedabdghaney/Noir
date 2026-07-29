@@ -98,6 +98,9 @@ export default function DetailView({
   introEndSeconds = 0,
   manualData = null,
 }: DetailViewProps) {
+  const isTvApp = document.documentElement.classList.contains('noir-tv-app');
+  const primaryTvActionRef = useRef<HTMLButtonElement>(null);
+  const seasonButtonRef = useRef<HTMLButtonElement>(null);
   const [data, setData] = useState<DetailedInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -112,6 +115,35 @@ export default function DetailView({
   const [episodes, setEpisodes] = useState<EpisodeInfo[]>([]);
   const [loadingEpisodes, setLoadingEpisodes] = useState(false);
   const [seasonMenuOpen, setSeasonMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setSeasonMenuOpen(false);
+  }, [id, type]);
+
+  useEffect(() => {
+    if (!seasonMenuOpen || !isTvApp) return;
+    const frame = window.requestAnimationFrame(() => {
+      const menu = document.querySelector<HTMLElement>('[data-tv-season-menu]');
+      const selected =
+        menu?.querySelector<HTMLElement>('[data-tv-season-option][aria-current="true"]') ||
+        menu?.querySelector<HTMLElement>('[data-tv-season-option]');
+      selected?.focus({ preventScroll: true });
+    });
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      setSeasonMenuOpen(false);
+      window.requestAnimationFrame(() => {
+        seasonButtonRef.current?.focus({ preventScroll: true });
+      });
+    };
+    window.addEventListener('keydown', handleEscape, true);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('keydown', handleEscape, true);
+    };
+  }, [isTvApp, seasonMenuOpen]);
 
   // Player Playback States
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
@@ -223,6 +255,17 @@ export default function DetailView({
       window.removeEventListener('progress_updated', handleProgressUpdated);
     };
   }, [type, id, selectedSeason, selectedEpisode]);
+
+  useEffect(() => {
+    if (!isTvApp || !data || isPlayerOpen) return;
+    const frame = window.requestAnimationFrame(() => {
+      const action = primaryTvActionRef.current;
+      if (!action) return;
+      action.focus({ preventScroll: true });
+      action.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [data, id, isPlayerOpen, isTvApp, savedProgressPercent, selectedEpisode, selectedSeason]);
 
   const handleStartFromBeginning = () => {
     const raw = localStorage.getItem('noir_continue_watching_list');
@@ -711,13 +754,15 @@ export default function DetailView({
         <span className="text-5xl">⚠</span>
         <h3 className="text-xl font-bold text-white">عذراً، فشل تحميل تفاصيل العنوان</h3>
         <p className="text-gray-400 text-sm max-w-sm">يرجى التحقق من اتصالك بالإنترنت، لم نستطع الاتصال بمزود البيانات TMDB.</p>
-        <button
-          onClick={onBackClick}
-          className="flex items-center gap-2 bg-stone-800 text-white px-6 py-2.5 rounded-full text-sm font-medium hover:bg-stone-700 transition-colors cursor-pointer"
-        >
-          <ArrowRight className="w-4 h-4 ml-1" />
-          الرجوع للرئيسية
-</button>
+        {!isTvApp && (
+          <button
+            onClick={onBackClick}
+            className="flex items-center gap-2 bg-stone-800 text-white px-6 py-2.5 rounded-full text-sm font-medium hover:bg-stone-700 transition-colors cursor-pointer"
+          >
+            <ArrowRight className="w-4 h-4 ml-1" />
+            الرجوع للرئيسية
+          </button>
+        )}
 </div>
     );
   }
@@ -988,11 +1033,14 @@ export default function DetailView({
 
 
             {/* Action buttons: Resume/Play -> Start over -> Trailer -> Save(+) -> Share */}
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full">
+            <div data-tv-focus-row={isTvApp ? '' : undefined} data-tv-top-actions={isTvApp ? '' : undefined} className="flex flex-wrap items-center gap-2 sm:gap-3 w-full">
               {savedProgressPercent > 0 ? (
                 <>
                   <button
                     onClick={() => handlePlayClick('movie')}
+                    ref={primaryTvActionRef}
+                    data-tv-autofocus={isTvApp ? '' : undefined}
+                    data-tv-primary-action={isTvApp ? '' : undefined}
                     className="noir-button-primary flex items-center gap-2 text-sm"
                   >
                     <Play className="w-3.5 h-3.5 fill-black text-black" />
@@ -1001,6 +1049,7 @@ export default function DetailView({
 
                   <button
                     onClick={handleStartFromBeginning}
+                    data-tv-secondary-action={isTvApp ? '' : undefined}
                     className="noir-button-secondary flex items-center gap-2 text-sm"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
@@ -1010,6 +1059,9 @@ export default function DetailView({
               ) : (
                 <button
                   onClick={() => handlePlayClick('movie')}
+                  ref={primaryTvActionRef}
+                  data-tv-autofocus={isTvApp ? '' : undefined}
+                  data-tv-primary-action={isTvApp ? '' : undefined}
                   className="noir-button-primary flex items-center gap-2 text-sm"
                 >
                   <Play className="w-3.5 h-3.5 fill-black text-black" />
@@ -1017,7 +1069,7 @@ export default function DetailView({
 </button>
               )}
 
-              {youtubeKey && (
+              {youtubeKey && !isTvApp && (
                 <button
                   onClick={() => handlePlayClick('trailer')}
                   className="noir-button-secondary flex items-center gap-2 text-sm"
@@ -1032,6 +1084,7 @@ export default function DetailView({
 
               <button
                 onClick={handleToggleSave}
+                data-tv-save={isTvApp ? '' : undefined}
                 title={isSaved ? 'محفوظ في قائمتي' : 'حفظ في قائمتي'}
                 aria-label={isSaved ? 'إزالة من قائمتي' : 'إضافة إلى قائمتي'}
                 className={`noir-icon-button shrink-0 ${
@@ -1046,6 +1099,7 @@ export default function DetailView({
               <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1">
                 <button
                   type="button"
+                  data-tv-reaction={isTvApp ? '' : undefined}
                   onClick={() => handlePreference('like')}
                   className={`h-10 min-w-14 rounded-full px-3 inline-flex items-center justify-center gap-1.5 text-xs font-bold transition-colors ${
                     preference === 'like'
@@ -1060,6 +1114,7 @@ export default function DetailView({
                 </button>
                 <button
                   type="button"
+                  data-tv-reaction={isTvApp ? '' : undefined}
                   onClick={() => handlePreference('dislike')}
                   className={`h-10 min-w-14 rounded-full px-3 inline-flex items-center justify-center gap-1.5 text-xs font-bold transition-colors ${
                     preference === 'dislike'
@@ -1074,6 +1129,7 @@ export default function DetailView({
                 </button>
               </div>
 
+              {!isTvApp && (
               <button
                 onClick={() => onOpenShare(window.location.href)}
                 className="noir-icon-button shrink-0"
@@ -1082,6 +1138,7 @@ export default function DetailView({
               >
                 <Share2 className="w-4 h-4" />
 </button>
+              )}
 </div>
 </div>
 
@@ -1226,8 +1283,12 @@ export default function DetailView({
                 <div className="flex items-center gap-3 mb-5">
                   <div className="relative">
                     <button
+                      ref={seasonButtonRef}
                       onClick={() => setSeasonMenuOpen((v) => !v)}
-                      className="flex items-center gap-2 text-white text-lg sm:text-xl font-bold hover:text-white/80 transition-colors cursor-pointer"
+                      data-tv-season-button={isTvApp ? '' : undefined}
+                      aria-expanded={seasonMenuOpen}
+                      aria-haspopup="dialog"
+                      className="flex items-center gap-2 rounded-full border border-transparent px-5 py-3 text-white text-lg sm:text-xl font-bold hover:text-white/80 transition-all cursor-pointer"
                     >
                       <span>الموسم {selectedSeason}</span>
                       <ChevronsUpDown className="w-4 h-4 text-stone-400" />
@@ -1240,22 +1301,33 @@ export default function DetailView({
                           className="fixed inset-0 z-[80]"
                           onClick={() => setSeasonMenuOpen(false)}
                         />
-                        <div className="absolute top-full right-0 mt-2 z-[90] min-w-[180px] glass-strong rounded-2xl p-1.5 shadow-2xl noir-fade-up">
+                        <div
+                          role="dialog"
+                          aria-modal="true"
+                          aria-label="اختيار الموسم"
+                          data-tv-season-menu={isTvApp ? '' : undefined}
+                          className="absolute top-full right-0 mt-2 z-[90] min-w-[180px] max-h-80 overflow-y-auto no-scrollbar glass-strong rounded-2xl p-1.5 shadow-2xl noir-fade-up"
+                        >
                           {data.seasons
                             .filter((s) => s.season_number > 0)
                             .map((s) => (
                               <button
                                 key={s.id}
+                                data-tv-season-option={isTvApp ? '' : undefined}
+                                aria-current={selectedSeason === s.season_number ? 'true' : undefined}
                                 onClick={() => {
                                   const seasonNum = s.season_number;
                                   setSelectedSeason(seasonNum);
                                   setSelectedEpisode(1);
                                   setEpisodesCount(s.episode_count || 1);
                                   setSeasonMenuOpen(false);
+                                  window.requestAnimationFrame(() => {
+                                    seasonButtonRef.current?.focus({ preventScroll: true });
+                                  });
                                 }}
                                 className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-bold transition-colors ${
                                   selectedSeason === s.season_number
-                                    ? 'bg-red-500 text-white'
+                                    ? 'bg-white/[0.18] text-white'
                                     : 'text-stone-200 hover:bg-white/10'
                                 }`}
                               >
@@ -1301,7 +1373,16 @@ export default function DetailView({
                       </button>
                     )}
 
-                    <div ref={episodesRowRef} onScroll={checkEpScroll} className="flex gap-4 overflow-x-auto no-scrollbar pb-3 -mx-1 px-1 scroll-smooth" dir="rtl">
+                    <div
+                      ref={episodesRowRef}
+                      onScroll={checkEpScroll}
+                      data-tv-focus-row={isTvApp ? '' : undefined}
+                      data-tv-episodes-row={isTvApp ? '' : undefined}
+                      className={`flex overflow-x-auto no-scrollbar scroll-smooth ${
+                        isTvApp ? '-mx-8 gap-7 px-8 py-5' : '-mx-1 gap-4 px-1 pb-3'
+                      }`}
+                      dir="rtl"
+                    >
                     {(episodes.length > 0
                       ? episodes
                       : Array.from({ length: episodesCount }).map((_, i) => ({
@@ -1318,14 +1399,19 @@ export default function DetailView({
                       return (
                         <button
                           key={ep.episode_number}
+                          data-tv-card={isTvApp ? '' : undefined}
                           onClick={() => {
                             setSelectedEpisode(ep.episode_number);
                             handlePlayClick('movie');
                           }}
-                          className="group/ep flex-none w-[300px] sm:w-[380px] text-right snap-start cursor-pointer"
+                          className={`group/ep flex-none text-right snap-start cursor-pointer ${
+                            isTvApp ? 'w-[330px]' : 'w-[300px] sm:w-[380px]'
+                          }`}
                         >
                           {/* Card with image + overlaid text */}
-                          <div className={`relative h-[280px] sm:h-[320px] rounded-2xl overflow-hidden bg-stone-900 ${selectedEpisode === ep.episode_number ? 'ring-2 ring-inset ring-white/90' : 'border border-white/[0.08]'}`}>
+                          <div data-tv-card-artwork className={`relative rounded-2xl overflow-hidden bg-stone-900 ${
+                            isTvApp ? 'h-[210px]' : 'h-[280px] sm:h-[320px]'
+                          } ${selectedEpisode === ep.episode_number ? 'ring-2 ring-inset ring-white/90' : 'border border-white/[0.08]'}`}>
                             {still ? (
                               <img
                                 src={still}
@@ -1349,7 +1435,7 @@ export default function DetailView({
                             )}
 
                             {/* Bottom blur + gradient so overlaid text stays readable */}
-                            <div className="absolute inset-x-0 bottom-0 h-4/5 bg-gradient-to-t from-black/95 via-black/55 to-transparent" />
+                            <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/95 via-black/55 to-transparent" />
 
                             {/* Hover play icon */}
                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/ep:opacity-100 transition-opacity">
@@ -1359,14 +1445,11 @@ export default function DetailView({
                             </div>
 
                             {/* Overlaid text content */}
-                            <div className="absolute inset-x-0 bottom-0 p-4 text-right">
+                            <div className="absolute inset-x-0 bottom-0 z-10 p-4 text-right">
                               <span className="text-xs font-semibold text-white/65 block mb-1">
                                 الحلقة {ep.episode_number}
                               </span>
                               <h4 className="text-white font-bold text-sm sm:text-base leading-tight line-clamp-1 mb-1">{ep.name}</h4>
-                              {ep.overview ? (
-                                <p className="hidden sm:block text-white/70 text-xs leading-relaxed line-clamp-2 mb-2">{ep.overview}</p>
-                              ) : <p className="hidden sm:block text-white/50 text-xs leading-relaxed mb-2">لا يوجد وصف.</p>}
 
                               {/* Footer: runtime */}
                               <div className="flex items-center justify-between">
@@ -1393,7 +1476,7 @@ export default function DetailView({
           
           <div className="space-y-12 text-right min-w-0">
             {/* Cast roster row component */}
-            {cast.length > 0 && (
+            {!isTvApp && cast.length > 0 && (
               <div className="space-y-4">
                 <h3 className="text-lg sm:text-xl font-bold text-white">طاقم العمل</h3>
                 <div className="flex gap-3 sm:gap-5 overflow-x-auto no-scrollbar pb-3 -mx-1 px-1" dir="rtl">
@@ -1477,7 +1560,7 @@ export default function DetailView({
         )}
 
         {/* Explicit back route */}
-        <div className="py-12 text-center">
+        {!isTvApp && <div className="py-12 text-center">
           <button
             onClick={onBackClick}
             className="inline-flex items-center gap-2 bg-white hover:bg-white/90 text-black text-sm font-bold px-6 py-3 rounded-full transition-all cursor-pointer"
@@ -1485,7 +1568,7 @@ export default function DetailView({
             <ArrowRight className="w-4 h-4" />
             <span>العودة للرئيسية</span>
 </button>
-</div>
+</div>}
 
 </div>
 </div>

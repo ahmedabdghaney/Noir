@@ -8,6 +8,7 @@ import { Search, X, Star, ChevronLeft, Loader } from 'lucide-react';
 import { MovieOrShow } from '../types';
 import { searchMulti, discoverTitles } from '../lib/tmdb';
 import { CATEGORIES } from '../lib/categories';
+import { NoirPlayer } from '../lib/noirPlayer';
 import WatchlistButton from './WatchlistButton';
 
 const LANGUAGE_SEARCH_TERMS: Record<string, string> = {
@@ -56,7 +57,7 @@ export default function SearchOverlay({
   const isTvApp = document.documentElement.classList.contains('noir-tv-app');
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || isTvApp) return;
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
     };
@@ -92,15 +93,21 @@ export default function SearchOverlay({
       }
     })();
     return () => { cancelled = true; };
-  }, [isOpen]);
+  }, [isOpen, isTvApp]);
 
   // Focus on entry and remove data left by the deleted search-history feature.
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 80);
+      const focusTimer = window.setTimeout(() => {
+        inputRef.current?.focus();
+        if (isTvApp) {
+          void NoirPlayer.showKeyboard().catch(() => {});
+        }
+      }, 120);
       localStorage.removeItem('noir_recent_titles');
+      return () => window.clearTimeout(focusTimer);
     }
-  }, [isOpen]);
+  }, [isOpen, isTvApp]);
 
   // Query Debounce effect
   useEffect(() => {
@@ -148,7 +155,7 @@ export default function SearchOverlay({
       aria-labelledby="search-overlay-title"
       className={`fixed inset-y-0 left-0 right-0 bg-[#111113] selection:bg-red-500/30 overflow-y-auto ${
         isTvApp
-          ? 'noir-tv-search-overlay z-[300] px-[5vw] pt-10'
+          ? 'noir-tv-search-overlay right-0 z-[200] px-[4vw] pt-32'
           : 'lg:right-52 z-[170] pt-16 lg:pt-8 px-4 sm:px-6 lg:px-8'
       }`}
     >
@@ -158,15 +165,17 @@ export default function SearchOverlay({
             <h1 id="search-overlay-title" className={`${isTvApp ? 'text-4xl' : 'text-xl sm:text-2xl'} font-bold text-white`}>البحث</h1>
             <p className={`${isTvApp ? 'text-lg' : 'text-sm'} text-stone-400 mt-1`}>ابحث عن فيلم أو مسلسل، أو تصفّح حسب التصنيف.</p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="noir-icon-button shrink-0"
-            aria-label="إغلاق البحث"
-            title="إغلاق البحث"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          {!isTvApp && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="noir-icon-button shrink-0"
+              aria-label="إغلاق البحث"
+              title="إغلاق البحث"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         {/* Input area — bar بحث كبير */}
@@ -174,9 +183,22 @@ export default function SearchOverlay({
           <Search className={`${isTvApp ? 'w-7 h-7' : 'w-5 h-5'} text-gray-400 shrink-0`} />
           <input
             ref={inputRef}
+            data-tv-autofocus={isTvApp ? '' : undefined}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(event) => {
+              if (
+                isTvApp &&
+                event.key === 'ArrowUp'
+              ) {
+                event.preventDefault();
+                event.stopPropagation();
+                document
+                  .querySelector<HTMLElement>('[data-tv-navigation] [data-tv-nav-item="search"]')
+                  ?.focus({ preventScroll: true });
+              }
+            }}
             placeholder="ابحث عن فيلم أو مسلسل..."
             aria-label="ابحث عن فيلم أو مسلسل"
             className={`flex-1 bg-transparent border-0 outline-none text-white font-medium placeholder-gray-500 text-right font-sans ${isTvApp ? 'text-2xl' : 'text-base md:text-lg'}`}
@@ -185,7 +207,7 @@ export default function SearchOverlay({
           {isLoading ? (
             <Loader className="w-4 h-4 text-red-500 animate-spin shrink-0" />
           ) : (
-            query && (
+            query && !isTvApp && (
               <button
                 type="button"
                 onClick={() => setQuery('')}
@@ -201,7 +223,7 @@ export default function SearchOverlay({
         {/* Body */}
         <div className="pb-20">
           {/* قسم التصفح بالتصنيفات — يظهر لما ماكو بحث */}
-          {!query.trim() && (
+          {!query.trim() && !isTvApp && (
             <div className="mb-10">
               <h2 className="font-display text-xl sm:text-2xl font-bold text-white mb-4 text-right">تصفّح حسب التصنيف</h2>
               <div className={`grid gap-3 ${isTvApp ? 'grid-cols-5' : 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3'}`} dir="rtl">
@@ -209,6 +231,7 @@ export default function SearchOverlay({
                   <button
                     type="button"
                     key={cat.key}
+                    data-tv-card
                     onClick={() => onBrowseCategory?.(cat.key)}
                     className={`group relative aspect-[16/10] rounded-2xl overflow-hidden cursor-pointer border border-white/[0.08] hover:border-white/20 transition-all ${isTvApp ? '' : 'hover:scale-[1.03]'}`}
                   >
@@ -255,13 +278,14 @@ export default function SearchOverlay({
                       }
                     }}
                     role="button"
+                    data-tv-card
                     tabIndex={0}
                     aria-label={`فتح ${item.title}`}
                     className={`flex items-center gap-4 rounded-xl hover:bg-white/5 cursor-pointer transition-colors text-right ${
                       isTvApp ? 'border border-white/8 bg-white/[0.03] p-4' : 'px-4 sm:px-5 py-3'
                     }`}
                   >
-                    <div className="w-10 h-14 bg-stone-800 rounded-lg overflow-hidden shrink-0 select-none">
+                    <div data-tv-card-artwork={isTvApp ? '' : undefined} className="relative w-10 h-14 bg-stone-800 rounded-lg overflow-hidden shrink-0 select-none">
                       {item.poster ? (
                         <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                       ) : (

@@ -51,10 +51,11 @@ function GridCard({
       }}
       role="button"
       tabIndex={0}
+      data-tv-card
       aria-label={`فتح ${item.title}`}
       className="group/card card-transition cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
     >
-      <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+      <div data-tv-card-artwork className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
         {onToggleSave && (
           <WatchlistButton
             saved={saved}
@@ -90,6 +91,7 @@ export default function StudioPage({
   isSaved,
   onToggleSave,
 }: StudioPageProps) {
+  const isTvApp = document.documentElement.classList.contains('noir-tv-app');
   const [allItems, setAllItems] = useState<MovieOrShow[]>([]);
   const [sortBy, setSortBy] = useState<SortKey>('popularity');
   const [page, setPage] = useState(1);
@@ -162,10 +164,10 @@ export default function StudioPage({
       <div className="relative w-full" style={{ backgroundColor: studio.color }}>
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
         <div dir="rtl" className="relative w-full px-4 sm:px-6 lg:px-8 pt-8 pb-10 sm:pt-10 sm:pb-14">
-          <button onClick={onBack} className="flex items-center gap-2 text-white/90 hover:text-white text-sm font-semibold mb-5 cursor-pointer transition-colors">
+          {!isTvApp && <button onClick={onBack} className="flex items-center gap-2 text-white/90 hover:text-white text-sm font-semibold mb-5 cursor-pointer transition-colors">
             <ArrowRight className="w-4 h-4" />
             <span>الرئيسية</span>
-          </button>
+          </button>}
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white drop-shadow-lg text-right">
             {studio.title}
           </h1>
@@ -176,7 +178,7 @@ export default function StudioPage({
         {/* Sort control */}
         <div dir="rtl" className="flex items-center justify-between mb-6">
           <h2 className="text-xl sm:text-2xl font-bold text-white">كل أعمال {studio.title}</h2>
-          <div className="relative">
+          {!isTvApp && <div className="relative">
             <button
               onClick={() => setSortOpen((o) => !o)}
               className="flex items-center gap-2 glass hover:bg-white/15 text-white text-xs sm:text-sm font-semibold px-4 py-2 rounded-full transition-all cursor-pointer"
@@ -197,7 +199,7 @@ export default function StudioPage({
                 ))}
               </div>
             )}
-          </div>
+          </div>}
         </div>
 
         {/* Grid */}

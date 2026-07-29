@@ -181,8 +181,9 @@ export default function MovieRow({
         <div
           ref={rowRef}
           onScroll={handleRowScroll}
+          data-tv-focus-row
           dir="rtl"
-          className="flex flex-row gap-2.5 md:gap-3 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none"
+          className="noir-movie-row-track flex flex-row gap-2.5 md:gap-3 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none"
         >
           {items.map((item, idx) => {
             const hasScore = item.rating > 0;
@@ -202,12 +203,13 @@ export default function MovieRow({
                 }}
                 role="button"
                 tabIndex={0}
+                data-tv-card
                 aria-label={`فتح ${item.title}`}
                 style={{ animationDelay: `${idx * 45}ms` }}
                 className="group/card card-pop relative flex-none w-[112px] sm:w-[140px] md:w-[156px] lg:w-[168px] cursor-pointer rounded-2xl p-1.5 pb-3 select-none"
               >
                 {/* Poster Artwork container */}
-                <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/[0.08]">
+                <div data-tv-card-artwork className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/[0.08]">
                   {onToggleSave && (
                     <WatchlistButton
                       saved={isSaved?.(item) ?? false}

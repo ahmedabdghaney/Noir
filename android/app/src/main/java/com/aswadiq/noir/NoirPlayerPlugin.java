@@ -1,7 +1,10 @@
 package com.aswadiq.noir;
 
 import android.content.pm.ActivityInfo;
+import android.content.Context;
 import android.view.Window;
+import android.view.inputmethod.InputMethodManager;
+import android.webkit.WebView;
 
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -55,6 +58,20 @@ public class NoirPlayerPlugin extends Plugin {
             WindowInsetsControllerCompat controller =
                 WindowCompat.getInsetsController(window, window.getDecorView());
             controller.show(WindowInsetsCompat.Type.systemBars());
+            call.resolve();
+        });
+    }
+
+    @PluginMethod
+    public void showKeyboard(PluginCall call) {
+        getBridge().executeOnMainThread(() -> {
+            WebView webView = getBridge().getWebView();
+            webView.requestFocus();
+            InputMethodManager inputMethodManager =
+                (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (inputMethodManager != null) {
+                inputMethodManager.showSoftInput(webView, InputMethodManager.SHOW_IMPLICIT);
+            }
             call.resolve();
         });
     }

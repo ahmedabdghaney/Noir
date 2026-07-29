@@ -4,6 +4,7 @@ import LogoIcon from './LogoIcon';
 interface TvNavigationProps {
   activeView: string;
   searchMode: 'movie' | 'tv';
+  isSearchOpen: boolean;
   goHome: () => void;
   openSearch: () => void;
   setSearchMode: (mode: 'movie' | 'tv') => void;
@@ -15,6 +16,7 @@ interface TvNavigationProps {
 export default function TvNavigation({
   activeView,
   searchMode,
+  isSearchOpen,
   goHome,
   openSearch,
   setSearchMode,
@@ -23,65 +25,66 @@ export default function TvNavigation({
   openProfile,
 }: TvNavigationProps) {
   const items = [
-    { key: 'home', label: 'الرئيسية', icon: Home, active: activeView === 'home', action: goHome },
-    { key: 'movies', label: 'الأفلام', icon: Film, active: activeView === 'search' && searchMode === 'movie', action: () => setSearchMode('movie') },
-    { key: 'tv', label: 'المسلسلات', icon: Tv, active: activeView === 'search' && searchMode === 'tv', action: () => setSearchMode('tv') },
-    { key: 'watchlist', label: 'قائمتي', icon: Bookmark, active: activeView === 'watchlist', action: openWatchlist },
+    { key: 'search', label: 'البحث', icon: Search, active: isSearchOpen, action: openSearch },
+    { key: 'home', label: 'الرئيسية', icon: Home, active: !isSearchOpen && activeView === 'home', action: goHome },
+    { key: 'movies', label: 'الأفلام', icon: Film, active: !isSearchOpen && activeView === 'search' && searchMode === 'movie', action: () => setSearchMode('movie') },
+    { key: 'tv', label: 'المسلسلات', icon: Tv, active: !isSearchOpen && activeView === 'search' && searchMode === 'tv', action: () => setSearchMode('tv') },
+    { key: 'watchlist', label: 'قائمتي', icon: Bookmark, active: !isSearchOpen && activeView === 'watchlist', action: openWatchlist },
   ];
 
   return (
-    <header className="noir-tv-navigation fixed inset-x-0 top-0 z-[210] h-[5.75rem] border-b border-white/8 bg-[#09090b]/92 backdrop-blur-2xl" dir="rtl">
-      <div className="mx-auto flex h-full max-w-[112rem] items-center gap-8 px-[3.5vw]">
-        <button
-          type="button"
-          onClick={goHome}
-          className="flex shrink-0 items-center gap-3 rounded-2xl px-3 py-2 text-white"
-          aria-label="نوار — الرئيسية"
-        >
-          <LogoIcon className="h-8 w-8 text-red-500" />
-          <span className="font-display text-2xl font-bold">نوار</span>
-        </button>
+    <aside
+      data-tv-navigation
+      className="noir-tv-navigation pointer-events-none fixed inset-x-0 top-0 z-[210] h-24 border-b border-white/[0.04] bg-[#17171a]/95 px-[3vw] backdrop-blur-2xl"
+      dir="rtl"
+    >
+      <div
+        className="pointer-events-none absolute right-[3vw] top-1/2 flex items-center gap-2 text-white"
+        style={{ transform: 'translateY(-50%)' }}
+        aria-hidden="true"
+      >
+          <LogoIcon className="h-7 w-7 shrink-0 text-red-500" />
+          <span className="whitespace-nowrap font-display text-2xl font-bold">نوار</span>
+      </div>
 
-        <nav className="flex flex-1 items-center gap-2" aria-label="التنقل الرئيسي">
+      <nav
+        className="noir-tv-top-navigation pointer-events-auto absolute flex items-center gap-1 rounded-full border border-white/15 bg-[#08080a] p-2"
+        style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
+        aria-label="التنقل الرئيسي"
+      >
           {items.map(({ key, label, icon: Icon, active, action }) => (
             <button
               key={key}
               type="button"
               onClick={action}
-              className={`flex min-h-12 items-center gap-2.5 rounded-2xl px-5 text-base font-semibold ${
-                active ? 'bg-white text-black' : 'text-white/65 hover:bg-white/8 hover:text-white'
+              data-tv-nav-item={key}
+              className={`flex h-12 items-center gap-2 rounded-full px-5 text-sm font-semibold ${
+                active ? 'bg-white text-black' : 'text-white/58 hover:bg-white/8 hover:text-white'
               }`}
               aria-current={active ? 'page' : undefined}
             >
-              <Icon className="h-5 w-5" />
-              {label}
+              <Icon className="h-5 w-5 shrink-0" />
+              <span className="whitespace-nowrap">{label}</span>
             </button>
           ))}
-        </nav>
-
-        <button
-          type="button"
-          onClick={openSearch}
-          className="flex min-h-12 min-w-[13rem] items-center justify-between gap-5 rounded-2xl border border-white/12 bg-white/7 px-5 text-white/65"
-          aria-label="فتح البحث"
-        >
-          <span className="text-base font-semibold">ابحث عن عنوان</span>
-          <Search className="h-5 w-5" />
-        </button>
+      </nav>
 
         {user && (
           <button
             type="button"
             onClick={openProfile}
-            className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/12 bg-white/8"
+            data-tv-nav-item="profile"
+            className="pointer-events-auto absolute left-[3vw] top-1/2 flex h-12 w-12 items-center justify-center rounded-full text-white/70"
+            style={{ transform: 'translateY(-50%)' }}
             aria-label="فتح الملف الشخصي"
           >
-            {user.photoURL
-              ? <img src={user.photoURL} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
-              : <span className="text-sm font-bold text-white">{user.name.slice(0, 2)}</span>}
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/8">
+              {user.photoURL
+                ? <img src={user.photoURL} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                : <span className="text-sm font-bold text-white">{user.name.slice(0, 2)}</span>}
+            </span>
           </button>
         )}
-      </div>
-    </header>
+    </aside>
   );
 }

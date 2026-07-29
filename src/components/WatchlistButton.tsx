@@ -13,6 +13,10 @@ export default function WatchlistButton({
   className = '',
   compact = false,
 }: WatchlistButtonProps) {
+  if (document.documentElement.classList.contains('noir-tv-app')) {
+    return null;
+  }
+
   const label = saved ? 'إزالة من قائمتي' : 'إضافة إلى قائمتي';
 
   return (

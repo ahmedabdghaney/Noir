@@ -16,7 +16,7 @@ const enableTvSupport = () => {
     document.documentElement.classList.add('noir-tv-layout');
   };
 
-  const tvFocusableSelector = [
+  const tvFocusableSelectors = [
     'button:not(:disabled)',
     'a[href]',
     'input:not(:disabled)',
@@ -24,7 +24,8 @@ const enableTvSupport = () => {
     'textarea:not(:disabled)',
     '[data-tv-focusable]',
     '[tabindex]:not([tabindex="-1"])',
-  ].join(',');
+  ];
+  const tvFocusableSelector = tvFocusableSelectors.join(',');
 
   const isVisible = (element: HTMLElement) => {
     const rect = element.getBoundingClientRect();
@@ -38,30 +39,232 @@ const enableTvSupport = () => {
     );
   };
 
+  let verticalScrollFrame: number | undefined;
+  let lastVerticalRepeatAt = 0;
+  let lastHorizontalRepeatAt = 0;
+  const scrollVerticallyTo = (element: HTMLElement, continuous = false) => {
+    if (verticalScrollFrame !== undefined) {
+      window.cancelAnimationFrame(verticalScrollFrame);
+      verticalScrollFrame = undefined;
+    }
+
+    const rect = element.getBoundingClientRect();
+    const navigationSafeArea = 112;
+    const bottomSafeArea = 28;
+    const availableHeight = Math.max(
+      1,
+      window.innerHeight - navigationSafeArea - bottomSafeArea,
+    );
+    const target = Math.max(
+      0,
+      window.scrollY +
+        rect.top -
+        navigationSafeArea -
+        Math.max(0, (availableHeight - rect.height) / 2),
+    );
+    const start = window.scrollY;
+    const distance = target - start;
+    if (Math.abs(distance) < 2) return;
+
+    /*
+     * حركة قصيرة قابلة للإلغاء: كل ضغطة جديدة تبدأ من الموقع الحالي،
+     * لذلك تبقى ناعمة من دون تراكم حركات بعد ترك أزرار الريموت.
+     */
+    const duration = continuous
+      ? Math.min(280, Math.max(220, Math.abs(distance) * 0.2))
+      : Math.min(420, Math.max(300, Math.abs(distance) * 0.36));
+    const startedAt = performance.now();
+    const animate = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      window.scrollTo(0, start + distance * eased);
+      if (progress < 1) {
+        verticalScrollFrame = window.requestAnimationFrame(animate);
+      } else {
+        verticalScrollFrame = undefined;
+      }
+    };
+    verticalScrollFrame = window.requestAnimationFrame(animate);
+  };
+
   const tvCandidates = () => {
     const dialogs = Array.from(
       document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'),
     ).filter(isVisible);
     const scope: ParentNode = dialogs.at(-1) || document;
-    return Array.from(scope.querySelectorAll<HTMLElement>(tvFocusableSelector)).filter(isVisible);
+    const scopedCandidates = Array.from(
+      scope.querySelectorAll<HTMLElement>(tvFocusableSelector),
+    ).filter(
+      (element) => isVisible(element) && !element.closest('[data-tv-ignore-focus]'),
+    );
+    if (!(scope instanceof HTMLElement) || !scope.classList.contains('noir-tv-search-overlay')) {
+      return scopedCandidates;
+    }
+    const navigationCandidates = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        tvFocusableSelectors
+          .map((selector) => `[data-tv-navigation] ${selector}`)
+          .join(','),
+      ),
+    ).filter(
+      (element) => isVisible(element) && !element.closest('[data-tv-ignore-focus]'),
+    );
+    return [...scopedCandidates, ...navigationCandidates];
   };
 
-  const focusInDirection = (direction: 'left' | 'right' | 'up' | 'down') => {
-    const candidates = tvCandidates();
-    if (!candidates.length) return;
+  const scrollHorizontallyTo = (
+    element: HTMLElement,
+    continuous: boolean,
+    inline: ScrollLogicalPosition,
+  ) => {
+    element.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      // أثناء الـHold نحرّك أقل مسافة لازمة حتى تبقى السرعة مقروءة.
+      inline: continuous ? 'nearest' : inline,
+    });
+  };
 
+  const focusInDirection = (
+    direction: 'left' | 'right' | 'up' | 'down',
+    continuous = false,
+  ) => {
+    const allCandidates = tvCandidates();
     const current = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
-    if (!current || !candidates.includes(current)) {
-      candidates[0].focus({ preventScroll: true });
-      candidates[0].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    const currentIsNavigation = Boolean(current?.closest('[data-tv-navigation]'));
+    const candidates =
+      !currentIsNavigation
+        ? allCandidates.filter((candidate) => !candidate.closest('[data-tv-navigation]'))
+        : allCandidates;
+    if (!candidates.length) return;
+
+    if (!current || !allCandidates.includes(current)) {
+      const initial =
+        allCandidates.find((candidate) => candidate.hasAttribute('data-tv-autofocus')) ||
+        allCandidates.find((candidate) => candidate.hasAttribute('data-tv-hero')) ||
+        candidates[0];
+      initial.focus({ preventScroll: true });
+      initial.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
       return;
     }
 
     const currentRect = current.getBoundingClientRect();
     const currentX = currentRect.left + currentRect.width / 2;
     const currentY = currentRect.top + currentRect.height / 2;
+    const focusTopNavigation = () => {
+      const navigationTarget =
+        allCandidates.find((candidate) =>
+          candidate.closest('[data-tv-navigation]') &&
+          candidate.getAttribute('aria-current') === 'page',
+        ) ||
+        allCandidates.find((candidate) =>
+          candidate.closest('[data-tv-navigation]') &&
+          candidate.getAttribute('data-tv-nav-item') === 'home',
+        ) ||
+        allCandidates.find((candidate) => candidate.closest('[data-tv-navigation]'));
+      if (!navigationTarget) return false;
+      navigationTarget.focus({ preventScroll: true });
+      return true;
+    };
+
+    if (
+      direction === 'up' &&
+      !currentIsNavigation &&
+      current.closest('[data-tv-top-actions]')
+    ) {
+      focusTopNavigation();
+      return;
+    }
+
+    if (
+      direction === 'up' &&
+      !currentIsNavigation &&
+      current.closest('[data-tv-episodes-row]')
+    ) {
+      const seasonButton = document.querySelector<HTMLElement>('[data-tv-season-button]');
+      if (seasonButton && isVisible(seasonButton)) {
+        seasonButton.focus({ preventScroll: true });
+        scrollVerticallyTo(seasonButton, continuous);
+      }
+      return;
+    }
+
+    /*
+     * عند الانتقال العمودي بين صفوف البطاقات نعتمد ترتيب الأقسام في الصفحة،
+     * وليس التخمين الهندسي، حتى لا نتجاوز صفاً كاملاً أثناء حركة السكرول.
+     */
+    if (
+      (direction === 'up' || direction === 'down') &&
+      !currentIsNavigation &&
+      current.matches('[data-tv-card]')
+    ) {
+      const currentRow = current.closest<HTMLElement>('[data-tv-focus-row]');
+      if (currentRow) {
+        const cardRows = Array.from(
+          document.querySelectorAll<HTMLElement>('[data-tv-focus-row]'),
+        ).filter(
+          (row) =>
+            isVisible(row) &&
+            Boolean(row.querySelector('[data-tv-card]')),
+        );
+        const rowIndex = cardRows.indexOf(currentRow);
+        const rowDelta = direction === 'down' ? 1 : -1;
+        const nextRow = rowIndex >= 0 ? cardRows[rowIndex + rowDelta] : undefined;
+        const nextCard = nextRow
+          ? Array.from(nextRow.querySelectorAll<HTMLElement>(tvFocusableSelector))
+              .find(
+                (candidate) =>
+                  candidate.matches('[data-tv-card]') &&
+                  isVisible(candidate) &&
+                  !candidate.closest('[data-tv-ignore-focus]'),
+              )
+          : undefined;
+        if (nextCard) {
+          nextCard.focus({ preventScroll: true });
+          scrollVerticallyTo(nextCard, continuous);
+          return;
+        }
+      }
+    }
+
+    /*
+     * Horizontal TV rows keep their own navigation history. Geometry alone can
+     * mistake the fixed sidebar for the next item after the row has scrolled,
+     * because the previously visited cards are temporarily behind the sidebar.
+     */
+    if (!currentIsNavigation && (direction === 'left' || direction === 'right')) {
+      const focusRow = current.closest<HTMLElement>('[data-tv-focus-row]');
+      if (focusRow) {
+        const rowCandidates = Array.from(
+          focusRow.querySelectorAll<HTMLElement>(tvFocusableSelector),
+        ).filter(
+          (candidate) =>
+            isVisible(candidate) &&
+            !candidate.closest('[data-tv-ignore-focus]') &&
+            !candidate.closest('[data-tv-navigation]'),
+        );
+        const currentIndex = rowCandidates.indexOf(current);
+        const isRtl = window.getComputedStyle(focusRow).direction === 'rtl';
+        const indexDelta =
+          direction === 'left'
+            ? (isRtl ? 1 : -1)
+            : (isRtl ? -1 : 1);
+        const nextInRow = currentIndex >= 0
+          ? rowCandidates[currentIndex + indexDelta]
+          : undefined;
+
+        if (nextInRow) {
+          nextInRow.focus({ preventScroll: true });
+          scrollHorizontallyTo(nextInRow, continuous, 'center');
+          return;
+        }
+
+        // At either edge keep focus in the row; the top navigation is reached with Up.
+        return;
+      }
+    }
 
     const ranked = candidates
       .filter((candidate) => candidate !== current)
@@ -79,15 +282,46 @@ const enableTvSupport = () => {
         const secondary = direction === 'left' || direction === 'right'
           ? Math.abs(dy)
           : Math.abs(dx);
+        if (
+          (direction === 'left' || direction === 'right') &&
+          Math.abs(dy) > Math.max(currentRect.height, rect.height) * 0.65
+        ) {
+          return null;
+        }
         return { candidate, score: primary + secondary * 2.4 };
       })
       .filter((entry): entry is { candidate: HTMLElement; score: number } => Boolean(entry))
       .sort((a, b) => a.score - b.score);
 
-    const next = ranked[0]?.candidate;
+    let next = ranked[0]?.candidate;
+    if (next && direction === 'down') {
+      const currentRow = current.closest<HTMLElement>('[data-tv-focus-row]');
+      const nextRow = next.closest<HTMLElement>('[data-tv-focus-row]');
+      if (nextRow && nextRow !== currentRow) {
+        next =
+          Array.from(nextRow.querySelectorAll<HTMLElement>(tvFocusableSelector))
+            .find(
+              (candidate) =>
+                isVisible(candidate) &&
+                !candidate.closest('[data-tv-ignore-focus]') &&
+                !candidate.closest('[data-tv-navigation]'),
+            ) || next;
+      }
+    }
+    if (!next && direction === 'up' && !currentIsNavigation) {
+      focusTopNavigation();
+      return;
+    }
     if (!next) return;
     next.focus({ preventScroll: true });
-    next.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    if (next.closest('[data-tv-season-menu]')) {
+      return;
+    }
+    if (direction === 'up' || direction === 'down') {
+      scrollVerticallyTo(next, continuous);
+    } else {
+      scrollHorizontallyTo(next, continuous, 'nearest');
+    }
   };
 
   window.addEventListener('resize', updateTvLayout);
@@ -107,7 +341,17 @@ const enableTvSupport = () => {
 
     if (direction) {
       event.preventDefault();
-      focusInDirection(direction);
+      const now = performance.now();
+      const vertical = direction === 'up' || direction === 'down';
+      const continuous = event.repeat;
+      if (continuous) {
+        const lastRepeatAt = vertical ? lastVerticalRepeatAt : lastHorizontalRepeatAt;
+        const repeatInterval = vertical ? 220 : 180;
+        if (now - lastRepeatAt < repeatInterval) return;
+        if (vertical) lastVerticalRepeatAt = now;
+        else lastHorizontalRepeatAt = now;
+      }
+      focusInDirection(direction, continuous);
       return;
     }
 
@@ -198,8 +442,8 @@ if (Capacitor.isNativePlatform()) {
   });
 
   void CapacitorApp.addListener('backButton', ({canGoBack}) => {
-    if (document.documentElement.classList.contains('noir-mobile-player-open')) {
-      window.dispatchEvent(new Event('noir_mobile_player_back'));
+    if (document.documentElement.classList.contains('noir-native-player-open')) {
+      window.dispatchEvent(new Event('noir_native_player_back'));
       return;
     }
     const openDialog = document.querySelector<HTMLElement>('[role="dialog"][aria-modal="true"]');

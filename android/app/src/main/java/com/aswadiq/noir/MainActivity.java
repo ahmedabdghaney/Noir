@@ -23,6 +23,10 @@ public class MainActivity extends BridgeActivity {
         }
         webView.getSettings().setMediaPlaybackRequiresUserGesture(false);
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        if (BuildConfig.IS_TV_BUILD) {
+            webView.setVerticalScrollBarEnabled(false);
+            webView.setHorizontalScrollBarEnabled(false);
+        }
 
         UiModeManager uiModeManager =
             (UiModeManager) getSystemService(Context.UI_MODE_SERVICE);

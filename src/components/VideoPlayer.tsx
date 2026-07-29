@@ -83,6 +83,10 @@ export default function VideoPlayer({
   const isMobileAndroidApp =
     document.documentElement.classList.contains('noir-android-app') &&
     !document.documentElement.classList.contains('noir-tv-capabilities');
+  const isTvAndroidApp =
+    document.documentElement.classList.contains('noir-android-app') &&
+    document.documentElement.classList.contains('noir-tv-capabilities');
+  const isDedicatedAndroidPlayer = isMobileAndroidApp || isTvAndroidApp;
 
   const containerRef  = useRef<HTMLDivElement>(null);
   const videoRef      = useRef<HTMLVideoElement>(null);
@@ -92,6 +96,13 @@ export default function VideoPlayer({
   const seekFlashTimer = useRef<ReturnType<typeof setTimeout>>();
   const touchHoldTimer = useRef<ReturnType<typeof setTimeout>>();
   const mediaRetryTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const closingRef = useRef(false);
+  const tvSeekStartTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const tvSeekIntervalRef = useRef<ReturnType<typeof setInterval>>();
+  const tvSeekLongActiveRef = useRef(false);
+  const tvSeekDirectionRef = useRef<1 | -1>(1);
+  const tvSeekStartedAtRef = useRef(0);
   const mediaRetryCountRef = useRef(0);
   const lastProgressReportAtRef = useRef(0);
   const activeScrubPointerRef = useRef<number | null>(null);
@@ -119,15 +130,23 @@ export default function VideoPlayer({
   const [speed,           setSpeed]           = useState(1);
   const [showSettings,    setShowSettings]    = useState(false);
   const [showSpeedMenu,   setShowSpeedMenu]   = useState(false);
-  const [isFullscreen,    setIsFullscreen]    = useState(isMobileAndroidApp);
+  const showSettingsRef = useRef(false);
+  const showSpeedMenuRef = useRef(false);
+  const [isFullscreen,    setIsFullscreen]    = useState(isDedicatedAndroidPlayer);
   const [iosNativeFs,     setIosNativeFs]     = useState(false); // iPhone native video fullscreen
   const [autoplayNext, setAutoplayNext] = useState(
     () => localStorage.getItem('noir_autoplay_next') !== 'false',
   );
   const [nextEpisodeCountdown, setNextEpisodeCountdown] = useState<number | null>(null);
   const [showStillWatching, setShowStillWatching] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
 
   const [controlsVisible, setControlsVisible] = useState(true);
+
+  useEffect(() => {
+    showSettingsRef.current = showSettings;
+    showSpeedMenuRef.current = showSpeedMenu;
+  }, [showSettings, showSpeedMenu]);
 
   // hover preview على شريط التقدم
   const [hoverPct,   setHoverPct]   = useState<number | null>(null);
@@ -312,7 +331,7 @@ export default function VideoPlayer({
   /* ── reset ── */
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!isMobileAndroidApp) {
+      if (!isDedicatedAndroidPlayer) {
         containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     }, 100);
@@ -326,7 +345,7 @@ export default function VideoPlayer({
     setNextEpisodeCountdown(null);
     setShowStillWatching(false);
     return () => clearTimeout(timer);
-  }, [type, id, season, episode, playMode, isMobileAndroidApp]);
+  }, [type, id, season, episode, playMode, isDedicatedAndroidPlayer]);
 
   useEffect(() => {
     if (nextEpisodeCountdown == null) return;
@@ -421,30 +440,70 @@ export default function VideoPlayer({
   }, [onClose]);
 
   const closePlayer = useCallback(() => {
-    onCloseRef.current();
+    if (closingRef.current) return;
+    closingRef.current = true;
+    setIsClosing(true);
+    videoRef.current?.pause();
+    clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = setTimeout(() => {
+      onCloseRef.current();
+    }, 260);
   }, []);
 
-  /* تطبيق الموبايل يفتح المشغل كشاشة مستقلة أفقية، مو كجزء من صفحة التفاصيل. */
+  useEffect(() => () => clearTimeout(closeTimerRef.current), []);
+
+  /* يبقى مؤقت الاختفاء مستقلاً عن مكان المؤشر داخل أزرار المشغل. */
+  const resetHideTimer = useCallback(() => {
+    setControlsVisible(true);
+    clearTimeout(hideTimer.current);
+    hideTimer.current = setTimeout(() => {
+      if (!showSettingsRef.current) setControlsVisible(false);
+    }, 3000);
+  }, []);
+
+  /* تطبيقات أندرويد تفتح المشغل كشاشة مستقلة؛ الرجوع يعيد صفحة التفاصيل مباشرة. */
   useEffect(() => {
-    if (!isMobileAndroidApp) return;
+    if (!isDedicatedAndroidPlayer) return;
 
     const root = document.documentElement;
     const previousBodyOverflow = document.body.style.overflow;
-    root.classList.add('noir-mobile-player-open');
+    root.classList.add('noir-native-player-open');
+    if (isMobileAndroidApp) root.classList.add('noir-mobile-player-open');
     document.body.style.overflow = 'hidden';
     setIsFullscreen(true);
     void NoirPlayer.enterFullscreen().catch(() => {});
+    const focusFrame = window.requestAnimationFrame(() => {
+      if (isTvAndroidApp) containerRef.current?.focus({ preventScroll: true });
+    });
 
-    const handleNativeBack = () => closePlayer();
-    window.addEventListener('noir_mobile_player_back', handleNativeBack);
+    const handleNativeBack = () => {
+      if (showSpeedMenuRef.current) {
+        showSpeedMenuRef.current = false;
+        setShowSpeedMenu(false);
+        return;
+      }
+      if (showSettingsRef.current) {
+        showSettingsRef.current = false;
+        setShowSettings(false);
+        window.requestAnimationFrame(() => {
+          containerRef.current
+            ?.querySelector<HTMLElement>('[aria-label="الإعدادات"]')
+            ?.focus({ preventScroll: true });
+        });
+        return;
+      }
+      closePlayer();
+    };
+    window.addEventListener('noir_native_player_back', handleNativeBack);
 
     return () => {
-      window.removeEventListener('noir_mobile_player_back', handleNativeBack);
-      root.classList.remove('noir-mobile-player-open');
+      window.removeEventListener('noir_native_player_back', handleNativeBack);
+      window.cancelAnimationFrame(focusFrame);
+      root.classList.remove('noir-native-player-open', 'noir-mobile-player-open');
       document.body.style.overflow = previousBodyOverflow;
       void NoirPlayer.exitFullscreen().catch(() => {});
     };
-  }, [closePlayer, isMobileAndroidApp]);
+  }, [closePlayer, isDedicatedAndroidPlayer, isMobileAndroidApp, isTvAndroidApp]);
 
   /* ── fullscreen event (native only) ── */
   useEffect(() => {
@@ -498,6 +557,162 @@ export default function VideoPlayer({
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
+      if (isTvAndroidApp) {
+        const tvKey = e.key.startsWith('Arrow') || e.key === 'Enter'
+          ? e.key
+          : e.code;
+        const active = document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+        const player = containerRef.current;
+        const progress = progressRef.current;
+        const controlsRow = active?.closest<HTMLElement>('[data-tv-player-controls-row]');
+        const settingsPanel = active?.closest<HTMLElement>('[data-tv-player-settings]');
+        const focusElement = (element?: HTMLElement | null) => {
+          if (!element) return;
+          setControlsVisible(true);
+          resetHideTimer();
+          element.focus({ preventScroll: true });
+        };
+        const beginTvSeek = (direction: 1 | -1) => {
+          if (e.repeat) {
+            /*
+             * بعض أجهزة Android TV ترسل ضغطات repeat منفصلة بدل keydown واحد
+             * مستمر. نحرّك الوقت مباشرة حتى يبقى المؤشر حيّاً حتى على هذه الأجهزة.
+             */
+            if (!tvSeekStartTimerRef.current && !tvSeekIntervalRef.current) {
+              tvSeekDirectionRef.current = direction;
+              seekKeyHeldRef.current = true;
+              setSeekHold(direction > 0 ? 'fwd' : 'back');
+              seekBy(direction * 5);
+            }
+            return;
+          }
+          if (tvSeekStartTimerRef.current || tvSeekIntervalRef.current || seekKeyHeldRef.current) return;
+          tvSeekDirectionRef.current = direction;
+          tvSeekLongActiveRef.current = false;
+          tvSeekStartedAtRef.current = Date.now();
+          setSeekHold(direction > 0 ? 'fwd' : 'back');
+          seekKeyHeldRef.current = true;
+          // النقرة الأولى تتحرك فوراً؛ ما ننتظر keyup حتى يتغيّر الوقت والنقطة.
+          seekBy(direction * 5);
+          tvSeekStartTimerRef.current = setTimeout(() => {
+            tvSeekStartTimerRef.current = undefined;
+            tvSeekLongActiveRef.current = true;
+            tvSeekIntervalRef.current = setInterval(() => {
+              const heldFor = Date.now() - tvSeekStartedAtRef.current;
+              /*
+               * أول ثلاث ثوانٍ: سيك سريع ودقيق.
+               * من 3 إلى 7 ثوانٍ: قفزات أسرع.
+               * بعد 7 ثوانٍ: قفزة دقيقتين بكل تحديث للمسافات الطويلة.
+               */
+              const step = heldFor >= 7000 ? 120 : heldFor >= 3000 ? 10 : 2;
+              seekBy(tvSeekDirectionRef.current * step);
+            }, 100);
+          }, 320);
+        };
+
+        if (tvKey === 'Enter' && active === player) {
+          e.preventDefault();
+          togglePlay();
+          resetHideTimer();
+          return;
+        }
+
+        if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(tvKey)) {
+          e.preventDefault();
+          e.stopPropagation();
+          resetHideTimer();
+
+          if (settingsPanel) {
+            const items = Array.from(
+              settingsPanel.querySelectorAll<HTMLElement>('[data-tv-settings-item]'),
+            ).filter((item) => item.offsetWidth > 0 && item.offsetHeight > 0);
+            const currentRect = active?.getBoundingClientRect();
+            if (!currentRect) return;
+            const currentX = currentRect.left + currentRect.width / 2;
+            const currentY = currentRect.top + currentRect.height / 2;
+            const direction = tvKey.replace('Arrow', '').toLowerCase();
+            const next = items
+              .filter((item) => item !== active)
+              .map((item) => {
+                const rect = item.getBoundingClientRect();
+                const x = rect.left + rect.width / 2;
+                const y = rect.top + rect.height / 2;
+                const dx = x - currentX;
+                const dy = y - currentY;
+                const primary =
+                  direction === 'left' ? -dx :
+                  direction === 'right' ? dx :
+                  direction === 'up' ? -dy : dy;
+                if (primary <= 1) return null;
+                const secondary = direction === 'left' || direction === 'right'
+                  ? Math.abs(dy)
+                  : Math.abs(dx);
+                return { item, score: primary + secondary * 2 };
+              })
+              .filter((entry): entry is { item: HTMLElement; score: number } => Boolean(entry))
+              .sort((a, b) => a.score - b.score)[0]?.item;
+            focusElement(next);
+            return;
+          }
+
+          if (
+            (active === progress || active === player) &&
+            (tvKey === 'ArrowLeft' || tvKey === 'ArrowRight')
+          ) {
+            beginTvSeek(tvKey === 'ArrowRight' ? 1 : -1);
+            return;
+          }
+
+          if (active === player) {
+            if (tvKey === 'ArrowDown') focusElement(progress);
+            return;
+          }
+
+          if (active === progress) {
+            if (tvKey === 'ArrowDown') {
+              focusElement(
+                player?.querySelector<HTMLElement>(
+                  '[data-tv-player-controls-row] [data-tv-player-control]',
+                ),
+              );
+            } else if (tvKey === 'ArrowUp') {
+              // شريط التقدم هو أعلى عنصر تحكم؛ لا ننقل المؤشر إلى مكان غير مرئي.
+              focusElement(progress);
+              resetHideTimer();
+            }
+            return;
+          }
+
+          if (controlsRow) {
+            if (tvKey === 'ArrowUp') {
+              focusElement(progress);
+              return;
+            }
+            if (tvKey === 'ArrowDown') return;
+
+            const controls = Array.from(
+              controlsRow.querySelectorAll<HTMLElement>('[data-tv-player-control]'),
+            ).filter((item) => item.offsetWidth > 0 && item.offsetHeight > 0);
+            const currentRect = active?.getBoundingClientRect();
+            if (!currentRect) return;
+            const currentX = currentRect.left + currentRect.width / 2;
+            const next = controls
+              .filter((item) => item !== active)
+              .map((item) => {
+                const rect = item.getBoundingClientRect();
+                const x = rect.left + rect.width / 2;
+                return { item, distance: Math.abs(x - currentX), delta: x - currentX };
+              })
+              .filter(({ delta }) => tvKey === 'ArrowLeft' ? delta < -1 : delta > 1)
+              .sort((a, b) => a.distance - b.distance)[0]?.item;
+            focusElement(next);
+            return;
+          }
+        }
+      }
+
       switch (e.code) {
         case 'Space': {
           e.preventDefault();
@@ -534,7 +749,14 @@ export default function VideoPlayer({
           if (showSettings) {
             setShowSettings(false);
             setShowSpeedMenu(false);
-          } else if (isMobileAndroidApp) {
+            if (isTvAndroidApp) {
+              window.requestAnimationFrame(() => {
+                containerRef.current
+                  ?.querySelector<HTMLElement>('[aria-label="الإعدادات"]')
+                  ?.focus({ preventScroll: true });
+              });
+            }
+          } else if (isDedicatedAndroidPlayer) {
             closePlayer();
           } else if (isFullscreen) {
             toggleFullscreen();
@@ -565,6 +787,30 @@ export default function VideoPlayer({
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
+      if (
+        isTvAndroidApp &&
+        (
+          e.code === 'ArrowRight' ||
+          e.code === 'ArrowLeft' ||
+          e.key === 'ArrowRight' ||
+          e.key === 'ArrowLeft'
+        ) &&
+        seekKeyHeldRef.current
+      ) {
+        e.preventDefault();
+        clearTimeout(tvSeekStartTimerRef.current);
+        clearInterval(tvSeekIntervalRef.current);
+        tvSeekStartTimerRef.current = undefined;
+        tvSeekIntervalRef.current = undefined;
+        tvSeekLongActiveRef.current = false;
+        seekKeyHeldRef.current = false;
+        setTimeout(() => {
+          if (!seekKeyHeldRef.current) setSeekHold(null);
+        }, 400);
+        resetHideTimer();
+        return;
+      }
+
       if (e.code === 'Space') {
         e.preventDefault();
         clearTimeout(spaceHoldTimerRef.current);
@@ -591,27 +837,28 @@ export default function VideoPlayer({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      clearTimeout(tvSeekStartTimerRef.current);
+      clearInterval(tvSeekIntervalRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [duration, speed, startSpeedBoost, endSpeedBoost, showSettings, isFullscreen, isMobileAndroidApp, closePlayer, onSeek]);
-
-  /* ── auto-hide controls after 3s ── */
-  const resetHideTimer = useCallback(() => {
-    setControlsVisible(true);
-    clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => {
-      if (videoRef.current && !videoRef.current.paused && !showSettings) setControlsVisible(false);
-    }, 3000);
-  }, [showSettings]);
+  }, [duration, speed, startSpeedBoost, endSpeedBoost, showSettings, isFullscreen, isDedicatedAndroidPlayer, closePlayer, onSeek]);
 
   useEffect(() => {
     if (showSettings) {
       clearTimeout(hideTimer.current);
       setControlsVisible(true);
+      if (isTvAndroidApp) {
+        const frame = window.requestAnimationFrame(() => {
+          containerRef.current
+            ?.querySelector<HTMLElement>('[data-tv-player-settings] [data-tv-settings-item]')
+            ?.focus({ preventScroll: true });
+        });
+        return () => window.cancelAnimationFrame(frame);
+      }
     } else if (videoRef.current && !videoRef.current.paused) {
       resetHideTimer();
     }
-  }, [showSettings, resetHideTimer]);
+  }, [showSettings, resetHideTimer, isTvAndroidApp]);
 
   /* ── helpers ── */
   const syncSubtitleTrackMode = useCallback((
@@ -718,12 +965,16 @@ export default function VideoPlayer({
     clearTimeout(playPulseTimer.current);
     if (v.paused) {
       void v.play().catch(() => {});
-      setPlayPulse({ kind: 'play', key: Date.now() });
+      if (isTvAndroidApp) setPlayPulse(null);
+      else setPlayPulse({ kind: 'play', key: Date.now() });
     } else {
       v.pause();
-      setPlayPulse({ kind: 'pause', key: Date.now() });
+      if (isTvAndroidApp) setPlayPulse(null);
+      else setPlayPulse({ kind: 'pause', key: Date.now() });
     }
-    playPulseTimer.current = setTimeout(() => setPlayPulse(null), 750);
+    if (!isTvAndroidApp) {
+      playPulseTimer.current = setTimeout(() => setPlayPulse(null), 750);
+    }
   };
 
   const changeVolume = (val: number) => {
@@ -753,8 +1004,13 @@ export default function VideoPlayer({
   const seekBy = (s: number) => {
     if (!videoRef.current) return;
     markUserActive();
-    videoRef.current.currentTime = Math.max(0, Math.min(duration || Infinity, videoRef.current.currentTime + s));
-    onSeek?.(videoRef.current.currentTime);
+    const nextTime = Math.max(
+      0,
+      Math.min(duration || Infinity, videoRef.current.currentTime + s),
+    );
+    videoRef.current.currentTime = nextTime;
+    setCurrentTime(nextTime);
+    onSeek?.(nextTime);
     setSeekFlash({ dir: s > 0 ? 'fwd' : 'back', amount: Math.abs(s) });
     clearTimeout(seekFlashTimer.current);
     seekFlashTimer.current = setTimeout(() => setSeekFlash(null), 1200);
@@ -764,7 +1020,7 @@ export default function VideoPlayer({
     const el = containerRef.current as any;
     const vid = videoRef.current as any;
 
-    if (isMobileAndroidApp) {
+    if (isDedicatedAndroidPlayer) {
       // داخل التطبيق لا نرجع المشغل إلى وضع inline؛ زر التصغير يرجع للتفاصيل.
       if (isFullscreen) {
         closePlayer();
@@ -1066,6 +1322,8 @@ export default function VideoPlayer({
     .noir-flash { animation: noir-flash .8s cubic-bezier(.2,.8,.2,1) forwards; }
     @keyframes noir-pulse { 0% { opacity: 0; transform: scale(.72); } 20% { opacity: 1; transform: scale(1.04); } 48% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(.96); } }
     .noir-pulse { animation: noir-pulse .62s cubic-bezier(.2,.8,.2,1) forwards; }
+    @keyframes noir-player-close { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(.975); } }
+    .noir-player-is-closing { animation: noir-player-close .26s cubic-bezier(.4,0,1,1) both; pointer-events: none; transform-origin: center; }
     @media (prefers-reduced-motion: reduce) {
       .noir-flash, .noir-pulse { animation-duration: .01ms !important; }
     }
@@ -1074,7 +1332,9 @@ export default function VideoPlayer({
   const player = (
     <div
       ref={containerRef}
-      className={`${isMobileAndroidApp ? 'noir-mobile-app-player' : ''} ${
+      data-tv-player={isTvAndroidApp ? '' : undefined}
+      tabIndex={isTvAndroidApp ? 0 : undefined}
+      className={`${isMobileAndroidApp ? 'noir-mobile-app-player' : ''} ${isTvAndroidApp ? 'noir-tv-app-player' : ''} ${isClosing ? 'noir-player-is-closing' : ''} ${
         isFullscreen
           ? 'fixed inset-0 z-[9999] w-screen h-[100dvh] max-w-none m-0 rounded-none'
           : 'w-full mt-16 sm:mt-20 mb-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'
@@ -1254,7 +1514,7 @@ export default function VideoPlayer({
             </div>
           )}
 
-          {!isNative && (
+          {!isNative && !isTvAndroidApp && (
             <div className="absolute top-3 right-3 z-40 flex items-center gap-2">
               <Btn onClick={closePlayer} label="إغلاق المشغل">
                 <X className="w-5 h-5" />
@@ -1301,15 +1561,17 @@ export default function VideoPlayer({
                     <p className="text-white/50 text-[11px] md:text-xs truncate">الموسم {season} • الحلقة {episode}</p>
                   )}
                 </div>
-                {youtubeKey && (
+                {youtubeKey && !isTvAndroidApp && (
                   <button onClick={() => onSwitchMode('trailer')}
                     className="noir-player-top-action shrink-0 text-[11px] md:text-xs text-white/80 hover:text-white bg-white/5 hover:bg-white/15 backdrop-blur-md border border-white/10 rounded-full px-3 py-1.5 transition-all" dir="rtl">
                     التريلر
                   </button>
                 )}
-                <Btn onClick={closePlayer} label="إغلاق المشغل">
-                  <X className="w-5 h-5" />
-                </Btn>
+                {!isTvAndroidApp && (
+                  <Btn onClick={closePlayer} label="إغلاق المشغل">
+                    <X className="w-5 h-5" />
+                  </Btn>
+                )}
               </div>
             </div>
           )}
@@ -1331,7 +1593,7 @@ export default function VideoPlayer({
           )}
 
           {/* ══ center play/pause pulse ══ */}
-          {isNative && playPulse && (
+          {isNative && !isTvAndroidApp && playPulse && (
             <div key={playPulse.key} className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none noir-pulse">
               <div className="w-[72px] h-[72px] sm:w-20 sm:h-20 rounded-full bg-black/45 backdrop-blur-xl border border-white/15 shadow-[0_10px_36px_rgba(0,0,0,.4)] flex items-center justify-center">
                 {playPulse.kind === 'pause'
@@ -1342,9 +1604,11 @@ export default function VideoPlayer({
           )}
 
           {/* زر تشغيل/إيقاف ثابت بمنتصف الشاشة وقت ظهور الأدوات — لمس الشاشة وحده لا يوقف الفيلم. */}
-          {isNative && controlsVisible && !playPulse && !isLoading && !isBuffering && (
+          {isNative && controlsVisible && !playPulse && !isLoading && !isBuffering && (!isTvAndroidApp || !isPlaying) && (
             <button
               type="button"
+              tabIndex={isTvAndroidApp ? -1 : undefined}
+              data-tv-ignore-focus={isTvAndroidApp ? '' : undefined}
               onClick={(event) => {
                 event.stopPropagation();
                 togglePlay();
@@ -1488,6 +1752,7 @@ export default function VideoPlayer({
                 {/* progress bar */}
                 <div
                   ref={progressRef}
+                  data-tv-progress={isTvAndroidApp ? '' : undefined}
                   className="group/bar w-full py-3 sm:py-2 cursor-pointer relative touch-none"
                   role="slider"
                   tabIndex={0}
@@ -1502,6 +1767,7 @@ export default function VideoPlayer({
                   onPointerCancel={endScrub}
                   onPointerLeave={() => !isScrubbing && setHoverPct(null)}
                   onKeyDown={(event) => {
+                    if (isTvAndroidApp) return;
                     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
                     event.preventDefault();
                     event.stopPropagation();
@@ -1524,28 +1790,35 @@ export default function VideoPlayer({
                     )}
                     {/* played */}
                     <div className="noir-player-accent absolute inset-y-0 left-0 rounded-full" style={{ width: `${progressPct}%` }}>
-                      <div className={`noir-player-accent absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full shadow-lg transition-opacity ${isScrubbing ? 'opacity-100 scale-110' : 'opacity-0 group-hover/bar:opacity-100'}`} />
+                      <div className={`noir-player-progress-thumb noir-player-accent absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full transition-opacity ${isScrubbing ? 'opacity-100 scale-110' : 'opacity-0 group-hover/bar:opacity-100'}`} />
                     </div>
                   </div>
                 </div>
 
                 {/* bottom row */}
-                <div className="flex items-center gap-0.5 sm:gap-1">
+                <div
+                  data-tv-player-controls-row={isTvAndroidApp ? '' : undefined}
+                  className="flex items-center gap-0.5 sm:gap-1"
+                  onFocusCapture={() => {
+                    if (!isTvAndroidApp) return;
+                    resetHideTimer();
+                  }}
+                >
 
                   {/* play/pause */}
-                  <Btn onClick={togglePlay} label={isPlaying ? 'إيقاف مؤقت' : 'تشغيل'} big>
+                  <Btn onClick={togglePlay} label={isPlaying ? 'إيقاف مؤقت' : 'تشغيل'} big tvControl={isTvAndroidApp}>
                     {isPlaying ? <Pause className="w-6 h-6 fill-white" /> : <Play className="w-6 h-6 fill-white" />}
                   </Btn>
 
                   {/* next episode */}
                   {hasNextEp && (
-                    <Btn onClick={() => { markUserActive(); setNextEpisodeCountdown(null); onNextEpisode?.(); }} label="الحلقة التالية">
+                    <Btn onClick={() => { markUserActive(); setNextEpisodeCountdown(null); onNextEpisode?.(); }} label="الحلقة التالية" tvControl={isTvAndroidApp}>
                       <SkipForward className="w-5 h-5 fill-white" />
                     </Btn>
                   )}
 
                   {/* volume */}
-                  <div className="relative flex items-center">
+                  {!isTvAndroidApp && <div className="relative flex items-center">
                     <Btn onClick={toggleMute} label={isMuted ? 'تشغيل الصوت' : 'كتم الصوت'}>
                       <VolumeIcon className="w-5 h-5" />
                     </Btn>
@@ -1576,7 +1849,7 @@ export default function VideoPlayer({
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </div>}
 
                   {/* time */}
                   <span className="hidden min-[420px]:inline text-white/80 text-[11px] sm:text-[13px] tabular-nums select-none whitespace-nowrap ml-0.5 sm:ml-1">
@@ -1586,13 +1859,13 @@ export default function VideoPlayer({
                   <div className="flex-1" />
 
                   {/* subtitle toggle */}
-                  <Btn onClick={toggleSubs} label={subEnabled ? 'إخفاء الترجمة' : 'تشغيل الترجمة'} active={subEnabled}>
+                  <Btn onClick={toggleSubs} label={subEnabled ? 'إخفاء الترجمة' : 'تشغيل الترجمة'} active={subEnabled} tvControl={isTvAndroidApp}>
                     <Subtitles className="w-5 h-5" />
                   </Btn>
 
                   {/* settings */}
                   <div className="relative">
-                    <Btn onClick={() => { setShowSettings(p => !p); setShowSpeedMenu(false); }} label="الإعدادات" active={showSettings}>
+                    <Btn onClick={() => { setShowSettings(p => !p); setShowSpeedMenu(false); }} label="الإعدادات" active={showSettings} tvControl={isTvAndroidApp}>
                       <Settings className="w-5 h-5" />
                     </Btn>
                     {showSettings && (
@@ -1603,12 +1876,16 @@ export default function VideoPlayer({
                           className="fixed inset-0 z-40"
                           onPointerDown={(e) => { e.stopPropagation(); setShowSettings(false); setShowSpeedMenu(false); }}
                         />
-                      <div dir="rtl" className="fixed sm:absolute inset-x-3 sm:inset-x-auto sm:right-0 bottom-[max(.75rem,env(safe-area-inset-bottom))] sm:bottom-full sm:mb-3 bg-[#111]/95 sm:bg-black/75 backdrop-blur-2xl border border-white/15 rounded-[22px] sm:rounded-2xl shadow-2xl w-auto sm:w-60 max-h-[min(70vh,28rem)] overflow-y-auto z-50">
+                      <div
+                        dir="rtl"
+                        data-tv-player-settings={isTvAndroidApp ? '' : undefined}
+                        className="fixed sm:absolute inset-x-3 sm:inset-x-auto sm:right-0 bottom-[max(.75rem,env(safe-area-inset-bottom))] sm:bottom-full sm:mb-3 bg-[#111]/95 sm:bg-black/75 backdrop-blur-2xl border border-white/15 rounded-[22px] sm:rounded-2xl shadow-2xl w-auto sm:w-60 max-h-[min(70vh,28rem)] overflow-y-auto z-50"
+                      >
                         <div className="sm:hidden flex justify-center pt-2">
                           <span className="w-9 h-1 rounded-full bg-white/20" />
                         </div>
                         <div className="px-3.5 py-2.5 text-[10px] text-white/40 uppercase tracking-widest border-b border-white/10 text-right">الإعدادات</div>
-                        <button onClick={() => setShowSpeedMenu(p => !p)} className="w-full flex items-center justify-between px-3.5 py-3 text-sm text-white hover:bg-white/10 transition-colors">
+                        <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => setShowSpeedMenu(p => !p)} className="w-full flex items-center justify-between px-3.5 py-3 text-sm text-white hover:bg-white/10 transition-colors">
                           <span className="flex items-center gap-1 text-red-400 font-semibold text-xs">
                             {speed === 1 ? 'عادي' : `${speed}×`}
                             <ChevronDown className={`w-3 h-3 transition-transform ${showSpeedMenu ? 'rotate-180' : ''}`} />
@@ -1618,7 +1895,7 @@ export default function VideoPlayer({
                         {showSpeedMenu && (
                           <div className="border-t border-white/10 max-h-48 overflow-y-auto">
                             {SPEEDS.map(s => (
-                              <button key={s} onClick={() => changeSpeed(s)} className={`w-full text-right px-3.5 py-2.5 text-sm transition-colors ${speed === s ? 'text-red-400 bg-red-500/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
+                              <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} key={s} onClick={() => changeSpeed(s)} className={`w-full text-right px-3.5 py-2.5 text-sm transition-colors ${speed === s ? 'text-red-400 bg-red-500/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
                                 {s === 1 ? 'عادي (1×)' : `${s}×`}
                               </button>
                             ))}
@@ -1627,6 +1904,7 @@ export default function VideoPlayer({
                         {type === 'tv' && (
                           <button
                             type="button"
+                            data-tv-settings-item={isTvAndroidApp ? '' : undefined}
                             onClick={() => {
                               setAutoplayNext((current) => {
                                 const next = !current;
@@ -1634,31 +1912,41 @@ export default function VideoPlayer({
                                 return next;
                               });
                             }}
-                            className="w-full border-t border-white/10 px-3.5 py-3 flex items-center justify-between text-sm text-white hover:bg-white/10"
+                            className="w-full border-t border-white/10 px-3.5 py-3 flex items-center justify-between gap-4 text-sm text-white hover:bg-white/10"
                             aria-pressed={autoplayNext}
+                            role="switch"
                           >
                             <span
-                              className={`relative w-10 h-6 rounded-full transition-colors ${
-                                autoplayNext ? 'bg-red-500' : 'bg-white/15'
+                              dir="ltr"
+                              className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${
+                                autoplayNext
+                                  ? 'border-red-400/70 bg-red-500'
+                                  : 'border-white/15 bg-white/10'
                               }`}
                             >
                               <span
-                                className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                                  autoplayNext ? 'translate-x-5' : 'translate-x-1'
-                                } left-0`}
+                                className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
+                                style={{
+                                  transform: `translateX(${autoplayNext ? '20px' : '0px'})`,
+                                }}
                               />
                             </span>
-                            <span>تشغيل الحلقة التالية</span>
+                            <span className="flex flex-1 items-center justify-between">
+                              <span>تشغيل الحلقة التالية تلقائياً</span>
+                              <span className={autoplayNext ? 'text-red-400' : 'text-white/40'}>
+                                {autoplayNext ? 'مفعّل' : 'متوقف'}
+                              </span>
+                            </span>
                           </button>
                         )}
                         {/* حجم الترجمة */}
                         <div className="border-t border-white/10 px-3.5 py-3 flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
-                            <button onClick={() => changeSubSize(10)} className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="تكبير">
+                            <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeSubSize(10)} className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="تكبير">
                               <Plus className="w-3 h-3" />
                             </button>
                             <span className="text-xs text-red-400 font-semibold w-10 text-center tabular-nums select-none">{subSize}%</span>
-                            <button onClick={() => changeSubSize(-10)} className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="تصغير">
+                            <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeSubSize(-10)} className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="تصغير">
                               <Minus className="w-3 h-3" />
                             </button>
                           </div>
@@ -1667,13 +1955,13 @@ export default function VideoPlayer({
                         {/* تأخير الترجمة */}
                         <div className="border-t border-white/10 px-3.5 py-3 flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
-                            <button onClick={() => changeSubOffset(0.5)} className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="+0.5s">
+                            <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeSubOffset(0.5)} className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="+0.5s">
                               <Plus className="w-3 h-3" />
                             </button>
                             <span className={`text-xs font-semibold w-14 text-center tabular-nums select-none ${subOffset === 0 ? 'text-white/40' : subOffset > 0 ? 'text-red-400' : 'text-blue-400'}`}>
                               {subOffset === 0 ? '0.0s' : `${subOffset > 0 ? '+' : ''}${subOffset.toFixed(1)}s`}
                             </span>
-                            <button onClick={() => changeSubOffset(-0.5)} className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="-0.5s">
+                            <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeSubOffset(-0.5)} className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="-0.5s">
                               <Minus className="w-3 h-3" />
                             </button>
                           </div>
@@ -1685,9 +1973,11 @@ export default function VideoPlayer({
                   </div>
 
                   {/* fullscreen */}
-                  <Btn onClick={toggleFullscreen} label={isFullscreen ? 'الخروج من ملء الشاشة' : 'ملء الشاشة'}>
-                    {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
-                  </Btn>
+                  {!isTvAndroidApp && (
+                    <Btn onClick={toggleFullscreen} label={isFullscreen ? 'الخروج من ملء الشاشة' : 'ملء الشاشة'}>
+                      {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+                    </Btn>
+                  )}
 
                 </div>
               </div>
@@ -1699,14 +1989,14 @@ export default function VideoPlayer({
     </div>
   );
 
-  return isMobileAndroidApp ? createPortal(player, document.body) : player;
+  return isDedicatedAndroidPlayer ? createPortal(player, document.body) : player;
 }
 
-function Btn({ onClick, label, children, active = false, small = false, big = false }: {
-  onClick: () => void; label: string; children: ReactNode; active?: boolean; small?: boolean; big?: boolean;
+function Btn({ onClick, label, children, active = false, small = false, big = false, tvControl = false }: {
+  onClick: () => void; label: string; children: ReactNode; active?: boolean; small?: boolean; big?: boolean; tvControl?: boolean;
 }) {
   return (
-    <button onClick={onClick} aria-label={label}
+    <button onClick={onClick} aria-label={label} data-tv-player-control={tvControl ? '' : undefined}
       className={`noir-player-control ${big ? 'noir-player-control--big' : ''} group/control relative flex items-center justify-center rounded-full transition-[color,background-color,transform] duration-150 shrink-0 active:scale-90 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80
         ${small ? 'w-8 h-8' : big ? 'w-10 h-10 sm:w-11 sm:h-11' : 'w-9 h-9 sm:w-11 sm:h-11'}
         ${active ? 'text-red-400 bg-red-500/15' : 'text-white/90 hover:text-white hover:bg-white/15'}`}>

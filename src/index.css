@@ -84,22 +84,18 @@ body::before {
 }
 
 html.noir-tv-app {
-  background: #0b0b0d;
+  background: #08080a;
   scroll-padding-top: 7rem;
 }
 
 html.noir-tv-app body {
-  background: #0b0b0d;
+  background: #08080a;
   overscroll-behavior: none;
+  scroll-behavior: auto;
 }
 
 html.noir-tv-app body::before {
   display: none;
-}
-
-html.noir-tv-app .noir-tv-row button:focus-visible,
-html.noir-tv-app .noir-tv-home section button:focus-visible {
-  transform: scale(1.055);
 }
 
 html.noir-tv-app .noir-tv-navigation button,
@@ -115,7 +111,7 @@ html.noir-tv-app .noir-tv-search-overlay {
 }
 
 html.noir-tv-app .noir-tv-search-overlay input:focus-visible {
-  outline-offset: 6px;
+  outline: none;
 }
 
 @media (max-height: 760px) {
@@ -136,10 +132,9 @@ html.noir-tv-layout :where(
   [data-tv-focusable],
   [tabindex]:not([tabindex="-1"])
 ):focus-visible {
-  outline: 3px solid rgba(255, 255, 255, 0.96);
-  outline-offset: 4px;
-  box-shadow: 0 0 0 7px rgba(220, 38, 38, 0.5), 0 12px 34px rgba(0, 0, 0, 0.5);
-  filter: brightness(1.12);
+  outline: none;
+  box-shadow: none;
+  filter: brightness(1.08);
   z-index: 60;
 }
 
@@ -619,5 +614,414 @@ button, a {
     background: rgba(10, 10, 12, 0.55);
     border-color: rgba(255, 255, 255, 0.16);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  }
+}
+
+/* TV focus is communicated by a restrained lift/brightness, never a loud ring. */
+html.noir-tv-app *,
+html.noir-tv-app *::before,
+html.noir-tv-app *::after {
+  scrollbar-width: none;
+}
+
+html.noir-tv-app *::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+html.noir-tv-app .noir-save-button {
+  display: none !important;
+}
+
+html.noir-tv-app button:has(.lucide-x) {
+  display: none !important;
+}
+
+html.noir-tv-app :where(
+  button,
+  a[href],
+  input,
+  select,
+  textarea,
+  [role="button"],
+  [data-tv-focusable],
+  [tabindex]:not([tabindex="-1"])
+):focus,
+html.noir-tv-app :where(
+  button,
+  a[href],
+  input,
+  select,
+  textarea,
+  [role="button"],
+  [data-tv-focusable],
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+}
+
+html.noir-tv-app :where(button, a[href]):focus-visible {
+  transform: scale(1.018);
+  filter: brightness(1.18);
+}
+
+html.noir-tv-app :where(
+  [data-tv-card],
+  [role="button"].group\/card,
+  [role="button"].card-transition
+):focus-visible {
+  transform: scale(1.1) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  filter: brightness(1.09);
+  z-index: 30;
+}
+
+html.noir-tv-app [data-tv-hero]:focus-visible {
+  transform: none !important;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.2) !important;
+  filter: brightness(1.06);
+}
+
+html.noir-tv-app :where([data-tv-card], .card-transition, .card-pop):hover,
+html.noir-tv-app :where([data-tv-card], .card-transition, .card-pop):focus-visible {
+  transform: scale(1.1) !important;
+  box-shadow: none !important;
+}
+
+html.noir-tv-app :where([data-tv-card], .card-transition, .card-pop):hover img,
+html.noir-tv-app :where([data-tv-card], .card-transition, .card-pop):focus-visible img {
+  transform: scale(1.024) !important;
+}
+
+html.noir-tv-app [data-tv-navigation] [data-tv-nav-item]:not([data-tv-nav-item="profile"]):focus-visible {
+  transform: scale(1.08);
+  border-radius: 9999px;
+  background: #fff !important;
+  color: #09090b !important;
+}
+
+html.noir-tv-app [data-tv-navigation] [data-tv-nav-item="profile"]:focus-visible {
+  transform: scale(1.1);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+html.noir-tv-app .noir-tv-top-navigation:focus-within [aria-current="page"]:not(:focus) {
+  color: rgba(255, 255, 255, 0.58) !important;
+  background: transparent !important;
+}
+
+html.noir-tv-app .noir-tv-search-overlay input:focus,
+html.noir-tv-app .noir-tv-search-overlay input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
+
+html.noir-tv-app .noir-movie-row-track {
+  gap: 2.5rem !important;
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
+}
+
+html.noir-tv-app .noir-tv-card-track {
+  gap: 3.25rem !important;
+  padding-top: 3rem !important;
+  padding-bottom: 3rem !important;
+}
+
+html.noir-tv-app .noir-tv-top-navigation {
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  background: rgba(8, 8, 10, 0.98) !important;
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.48);
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+/* Cards use a slightly larger TV lift, without borders or drop shadows. */
+html.noir-tv-app :where([data-tv-card], .card-transition, .card-pop) {
+  position: relative;
+  isolation: isolate;
+  box-shadow: none !important;
+  transition:
+    transform 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.26s ease !important;
+  will-change: transform;
+}
+
+html.noir-tv-app :where(.card-transition, .card-pop) {
+  opacity: 1 !important;
+  animation: none !important;
+  transform: scale(1);
+}
+
+html.noir-tv-app :where([data-tv-card], .card-transition, .card-pop) img {
+  transition:
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s ease !important;
+  will-change: transform;
+}
+
+html.noir-tv-app [data-tv-card] > div {
+  box-shadow: none !important;
+}
+
+html.noir-tv-app [data-tv-card-artwork] {
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+}
+
+html.noir-tv-app [data-tv-card]:focus-visible [data-tv-card-artwork],
+html.noir-tv-app [data-tv-card][data-tv-card-artwork]:focus-visible {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+html.noir-tv-app [data-tv-card-artwork]::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 46%;
+  border-radius: inherit;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.88), rgba(0, 0, 0, 0));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.24s ease;
+}
+
+html.noir-tv-app [data-tv-card-artwork]::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+}
+
+html.noir-tv-app [data-tv-card]:focus-visible [data-tv-card-artwork]::after,
+html.noir-tv-app [data-tv-card][data-tv-card-artwork]:focus-visible::after {
+  opacity: 1;
+}
+
+html.noir-tv-app [data-tv-focus-row] {
+  gap: 1.25rem !important;
+}
+
+html.noir-tv-app [data-tv-focus-row]:has(> [data-tv-card]) {
+  gap: 2.75rem !important;
+  padding-top: 2.75rem !important;
+  padding-bottom: 2.75rem !important;
+}
+
+html.noir-tv-app [data-tv-focus-row].noir-tv-card-track {
+  gap: 3.25rem !important;
+  padding-top: 3rem !important;
+  padding-bottom: 3rem !important;
+}
+
+html.noir-tv-app [data-tv-episodes-row] {
+  gap: 3.5rem !important;
+  padding-inline: 2rem !important;
+}
+
+html.noir-tv-app [data-tv-episodes-row] [data-tv-card]:hover,
+html.noir-tv-app [data-tv-episodes-row] [data-tv-card]:focus-visible {
+  transform: scale(1.08) !important;
+}
+
+html.noir-tv-app .grid:has(> [data-tv-card]) {
+  gap: 2.5rem !important;
+}
+
+html.noir-tv-app .noir-tv-hero-focus-gradient {
+  opacity: 0.24;
+  transition: opacity 0.28s ease;
+}
+
+html.noir-tv-app [data-tv-hero]:focus-visible .noir-tv-hero-focus-gradient {
+  opacity: 1;
+}
+
+html.noir-tv-app [data-tv-primary-action]:focus,
+html.noir-tv-app [data-tv-primary-action]:focus-visible {
+  transform: scale(1.16) !important;
+  color: #fff !important;
+  border-color: rgba(248, 113, 113, 0.85) !important;
+  background: #dc2626 !important;
+  filter: brightness(1.08);
+}
+
+html.noir-tv-app [data-tv-primary-action]:focus svg,
+html.noir-tv-app [data-tv-primary-action]:focus-visible svg {
+  color: #fff !important;
+  fill: #fff !important;
+}
+
+html.noir-tv-app [data-tv-secondary-action]:focus,
+html.noir-tv-app [data-tv-secondary-action]:focus-visible {
+  transform: scale(1.16) !important;
+  color: #09090b !important;
+  border-color: rgba(255, 255, 255, 0.92) !important;
+  background: #fff !important;
+  filter: brightness(1.04);
+}
+
+html.noir-tv-app [data-tv-secondary-action]:focus svg,
+html.noir-tv-app [data-tv-secondary-action]:focus-visible svg {
+  color: #09090b !important;
+}
+
+html.noir-tv-app [data-tv-save]:focus,
+html.noir-tv-app [data-tv-save]:focus-visible {
+  transform: scale(1.12) !important;
+  color: #09090b !important;
+  background: #fff !important;
+}
+
+html.noir-tv-app [data-tv-save]:focus svg,
+html.noir-tv-app [data-tv-save]:focus-visible svg {
+  color: #09090b !important;
+}
+
+html.noir-tv-app [data-tv-season-button]:focus,
+html.noir-tv-app [data-tv-season-button]:focus-visible {
+  transform: scale(1.09) !important;
+  border-color: rgba(255, 255, 255, 0.72) !important;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+html.noir-tv-app [data-tv-season-option][aria-current="true"] {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+html.noir-tv-app [data-tv-season-option]:focus,
+html.noir-tv-app [data-tv-season-option]:focus-visible {
+  transform: scale(1.035) !important;
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+html.noir-tv-app [data-tv-reaction]:focus,
+html.noir-tv-app [data-tv-reaction]:focus-visible {
+  transform: scale(1.12) !important;
+  color: #09090b !important;
+  background: #fff !important;
+}
+
+html.noir-tv-app [data-tv-reaction]:focus svg,
+html.noir-tv-app [data-tv-reaction]:focus-visible svg {
+  fill: currentColor;
+}
+
+html.noir-tv-app [data-tv-load-more]:focus,
+html.noir-tv-app [data-tv-load-more]:focus-visible {
+  transform: scale(1.09) !important;
+  color: #fff;
+  border-color: rgba(239, 68, 68, 0.7) !important;
+  background: rgba(127, 29, 29, 0.78) !important;
+}
+
+html.noir-tv-app [data-tv-player] [data-tv-progress]:focus,
+html.noir-tv-app [data-tv-player] [data-tv-progress]:focus-visible {
+  transform: none !important;
+  filter: brightness(1.15);
+}
+
+html.noir-tv-app [data-tv-player] [data-tv-progress]:focus .noir-player-progress-thumb,
+html.noir-tv-app [data-tv-player] [data-tv-progress]:focus-visible .noir-player-progress-thumb {
+  opacity: 1 !important;
+  transform: translate(50%, -50%) scale(1.2);
+}
+
+html.noir-tv-app [data-tv-player] [data-tv-progress]:focus > div:last-child,
+html.noir-tv-app [data-tv-player] [data-tv-progress]:focus-visible > div:last-child {
+  height: 7px;
+}
+
+html.noir-tv-app [data-tv-player-control]:focus,
+html.noir-tv-app [data-tv-player-control]:focus-visible {
+  transform: scale(1.16) !important;
+  color: #fff;
+  background: rgba(220, 38, 38, 0.42) !important;
+}
+
+html.noir-tv-app [data-tv-player-settings] [data-tv-settings-item]:focus,
+html.noir-tv-app [data-tv-player-settings] [data-tv-settings-item]:focus-visible {
+  transform: scale(1.035) !important;
+  color: #fff;
+  background: rgba(220, 38, 38, 0.25) !important;
+}
+
+html.noir-tv-app .noir-tv-auth-screen input {
+  transform-origin: center;
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.22s ease,
+    background-color 0.22s ease !important;
+}
+
+html.noir-tv-app .noir-tv-auth-screen input:focus,
+html.noir-tv-app .noir-tv-auth-screen input:focus-visible {
+  transform: scale(1.035) !important;
+  border-color: rgba(255, 255, 255, 0.78) !important;
+  background: #29292e !important;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.16) !important;
+}
+
+html.noir-tv-app .noir-tv-auth-screen button:focus,
+html.noir-tv-app .noir-tv-auth-screen button:focus-visible {
+  transform: scale(1.09) !important;
+  border-color: rgba(255, 255, 255, 0.88) !important;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18) !important;
+  filter: brightness(1.14);
+}
+
+.noir-tv-row-reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition:
+    opacity 0.5s ease,
+    transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.noir-tv-row-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@keyframes noir-tv-hero-media-in {
+  from { opacity: 0.25; transform: scale(1.025); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes noir-tv-hero-content-in {
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+html.noir-tv-app .noir-tv-hero-media {
+  animation: noir-tv-hero-media-in 0.58s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+html.noir-tv-app .noir-tv-hero-content {
+  animation: noir-tv-hero-content-in 0.48s 0.08s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.noir-tv-app .noir-tv-hero-media,
+  html.noir-tv-app .noir-tv-hero-content,
+  .noir-tv-row-reveal {
+    animation: none;
+    transition: none;
   }
 }

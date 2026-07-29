@@ -171,10 +171,30 @@ export default function App() {
   const homeScrollRef = useRef(Number(localStorage.getItem('noir_home_scroll') || 0));
   const scrollSaveFrameRef = useRef<number | null>(null);
   const previousViewRef = useRef(activeView);
+  const pendingSearchFocusIndexRef = useRef<number | null>(null);
+  const profileHistoryButtonRef = useRef<HTMLButtonElement>(null);
 
   // User Profile Modal active state
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isSendingVerification, setIsSendingVerification] = useState(false);
+
+  useEffect(() => {
+    if (!isProfileModalOpen) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsProfileModalOpen(false);
+    };
+    window.addEventListener('keydown', handleEscape);
+    if (!document.documentElement.classList.contains('noir-tv-app')) {
+      return () => window.removeEventListener('keydown', handleEscape);
+    }
+    const frame = window.requestAnimationFrame(() => {
+      profileHistoryButtonRef.current?.focus({ preventScroll: true });
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [isProfileModalOpen]);
 
   // Watchlist custom filter & sorting options
   const [watchlistFilter, setWatchlistFilter] = useState<'all' | 'movie' | 'tv' | 'started' | 'unstarted'>('all');
@@ -1112,6 +1132,7 @@ export default function App() {
   // Keep the home browsing position, like a streaming app, while other views start at the top.
   useEffect(() => {
     const saveHomePosition = () => {
+      if (document.documentElement.classList.contains('noir-tv-app')) return;
       if (activeView !== 'home' || scrollSaveFrameRef.current != null) return;
       scrollSaveFrameRef.current = window.requestAnimationFrame(() => {
         scrollSaveFrameRef.current = null;
@@ -1135,7 +1156,10 @@ export default function App() {
     previousViewRef.current = activeView;
     const t = setTimeout(() => {
       if (activeView === 'home') {
-        window.scrollTo({ top: homeScrollRef.current, behavior: 'auto' });
+        const top = document.documentElement.classList.contains('noir-tv-app')
+          ? 0
+          : homeScrollRef.current;
+        window.scrollTo({ top, behavior: 'auto' });
       } else if (previousView !== activeView || selectedTitle) {
         window.scrollTo({ top: 0, behavior: 'auto' });
       }
@@ -1148,6 +1172,7 @@ export default function App() {
     const nextPage = append ? searchPage + 1 : 1;
     if (append) {
       if (isLoadingMore || nextPage > searchTotalPages) return;
+      pendingSearchFocusIndexRef.current = searchResults.length;
       setIsLoadingMore(true);
     } else {
       setIsSearching(true);
@@ -1207,6 +1232,23 @@ export default function App() {
       setIsLoadingMore(false);
     }
   };
+
+  useEffect(() => {
+    const index = pendingSearchFocusIndexRef.current;
+    if (
+      index == null ||
+      !document.documentElement.classList.contains('noir-tv-app') ||
+      searchResults.length <= index
+    ) return;
+
+    pendingSearchFocusIndexRef.current = null;
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>(`[data-search-result-index="${index}"]`)
+        ?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [searchResults.length]);
 
   // Global redirection tool
   const navigateToHome = () => {
@@ -1405,6 +1447,7 @@ export default function App() {
   };
 
   const authScreen = !user ? (() => {
+    const isTvAuth = document.documentElement.classList.contains('noir-tv-app');
     const col1Posters = [
       'https://images.unsplash.com/photo-1542204172-e7052809a862?q=80&w=350&auto=format&fit=crop',
       'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=350&auto=format&fit=crop',
@@ -1424,13 +1467,19 @@ export default function App() {
     const col1PostersReverse = [...col1Posters].reverse();
 
     return (
-      <div className="relative min-h-screen bg-[#111113] text-white flex items-center justify-center font-sans overflow-hidden p-3.5 sm:p-6 md:p-10 select-none">
+      <div className={`noir-tv-auth-screen relative min-h-screen text-white flex items-center justify-center font-sans overflow-hidden select-none ${
+        isTvAuth ? 'bg-[#08080a] p-10' : 'bg-[#111113] p-3.5 sm:p-6 md:p-10'
+      }`}>
         
         {/* Main Double-Pane Card Layout */}
-        <div className="relative z-10 w-full max-w-5xl bg-[#17171a] border border-white/[0.08] shadow-2xl rounded-[24px] overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[620px] animate-pop-in" dir="ltr">
+        <div className={`relative z-10 w-full border border-white/[0.08] shadow-2xl overflow-hidden grid grid-cols-1 animate-pop-in ${
+          isTvAuth
+            ? 'max-w-xl min-h-0 rounded-[32px] bg-[#101012]'
+            : 'max-w-5xl min-h-[620px] rounded-[24px] bg-[#17171a] lg:grid-cols-12'
+        }`} dir="ltr">
           
           {/* LEFT COLUMN: Tilted & Scrolling Movie Covers Pattern */}
-          <div className="hidden lg:flex lg:col-span-5 relative flex-col justify-between p-12 overflow-hidden bg-[#101012] border-r border-white/[0.08]">
+          <div className={`${isTvAuth ? 'hidden' : 'hidden lg:flex'} lg:col-span-5 relative flex-col justify-between p-12 overflow-hidden bg-[#101012] border-r border-white/[0.08]`}>
             {/* Tilted Poster Grid container rotated 30 degrees */}
             <div className="absolute inset-0 z-0 pointer-events-none select-none opacity-25">
               <div className="absolute -inset-10 flex gap-4 rotate-[30deg] scale-125 justify-center">
@@ -1484,17 +1533,31 @@ export default function App() {
           </div>
 
           {/* RIGHT COLUMN: Stylish Login / Signup Input Form */}
-          <div className="col-span-1 lg:col-span-7 flex flex-col justify-center p-7 sm:p-12 md:p-16 select-none relative z-10 bg-[#17171a]" dir="rtl">
+          <div className={`col-span-1 flex flex-col justify-center select-none relative z-10 ${
+            isTvAuth ? 'p-12 bg-[#101012]' : 'lg:col-span-7 p-7 sm:p-12 md:p-16 bg-[#17171a]'
+          }`} dir="rtl">
+            {isTvAuth && (
+              <div className="mb-8 flex items-center justify-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-600">
+                  <LogoIcon className="h-6 w-6 text-white" />
+                </div>
+                <span className="text-xl font-black text-white">نوار سينما</span>
+              </div>
+            )}
             
             {/* Form Header */}
-            <div className="text-right mb-8">
+            <div className={`${isTvAuth ? 'mb-7 text-center' : 'text-right mb-8'}`}>
               <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
-                {authView === 'signin' && 'سجل الدخول الآن'}
+                {authView === 'signin' && (isTvAuth ? 'سجل الدخول بجوجل' : 'سجل الدخول الآن')}
                 {authView === 'signup' && 'ابدأ حسابك الآن'}
                 {authView === 'reset' && 'استعادة كلمة السر'}
               </h1>
               <p className="text-gray-400 text-sm mt-2 leading-relaxed font-medium">
-                {authView === 'signin' && 'من فضلك قم بتسجيل الدخول إلى حسابك للاستمرار.'}
+                {authView === 'signin' && (
+                  isTvAuth
+                    ? 'استخدم حساب جوجل للمتابعة ومزامنة قائمتك ومشاهداتك.'
+                    : 'من فضلك قم بتسجيل الدخول إلى حسابك للاستمرار.'
+                )}
                 {authView === 'signup' && 'قم بملء البيانات التالية لتسجيل حسابك الجديد.'}
                 {authView === 'reset' && 'أدخل بريدك الإلكتروني وسنقوم بإرسال رابط الاستعادة.'}
               </p>
@@ -1519,7 +1582,7 @@ export default function App() {
               )}
 
               {/* Email address field */}
-              <div className="flex flex-col gap-1.5 text-right w-full">
+              {!isTvAuth && <div className="flex flex-col gap-1.5 text-right w-full">
                 <label className="text-gray-400 text-xs font-bold mr-1">البريد الإلكتروني</label>
                 <input
                   type="email"
@@ -1529,21 +1592,13 @@ export default function App() {
                   className="w-full bg-[#202024] border border-white/10 hover:border-white/20 focus:border-white/40 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-2xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-white/10"
                   dir="ltr"
                 />
-              </div>
+              </div>}
 
               {/* Password field with built-in "Forgot password" Link inside the label row */}
-              {authView !== 'reset' && (
+              {!isTvAuth && authView !== 'reset' && (
                 <div className="flex flex-col gap-1.5 w-full">
                   <div className="flex items-center justify-between mr-1 ml-1 text-xs">
                     <label className="text-gray-400 font-bold block">كلمة السر</label>
-                    {authView === 'signin' && (
-                      <button
-                        onClick={() => { setAuthView('reset'); setAuthError(''); }}
-                        className="text-red-400 hover:text-red-300 font-bold transition-colors cursor-pointer text-[11px]"
-                      >
-                        نسيت كلمة السر؟
-                      </button>
-                    )}
                   </div>
                   <div className="relative">
                     <input
@@ -1560,14 +1615,16 @@ export default function App() {
                         }
                       }}
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer p-1"
-                      title={showPassword ? 'إخفاء' : 'إظهار'}
-                    >
-                      {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                    </button>
+                    {!isTvAuth && (
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer p-1"
+                        title={showPassword ? 'إخفاء' : 'إظهار'}
+                      >
+                        {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -1588,14 +1645,16 @@ export default function App() {
                       dir="rtl"
                       onKeyDown={(e) => { if (e.key === 'Enter') handleEmailSignUp(); }}
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer p-1"
-                      title={showPasswordConfirm ? 'إخفاء' : 'إظهار'}
-                    >
-                      {showPasswordConfirm ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                    </button>
+                    {!isTvAuth && (
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer p-1"
+                        title={showPasswordConfirm ? 'إخفاء' : 'إظهار'}
+                      >
+                        {showPasswordConfirm ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                      </button>
+                    )}
                   </div>
                   <p className="text-gray-500 text-[10px] leading-relaxed text-right -mt-0.5 mr-1">
                     6 خانات على الأقل، حرف كبير وحرف صغير
@@ -1613,7 +1672,7 @@ export default function App() {
               )}
 
               {/* Submit Action Button */}
-              <button
+              {!isTvAuth && <button
                 onClick={() => {
                   if (authView === 'signin') handleEmailSignIn();
                   else if (authView === 'signup') handleEmailSignUp();
@@ -1631,10 +1690,10 @@ export default function App() {
                     {authView === 'reset' && 'إرسال رابط استعادة'}
                   </span>
                 )}
-              </button>
+              </button>}
 
               {/* Switch View Trigger Text link */}
-              <div className="text-center text-xs my-2.5">
+              {!isTvAuth && <div className="text-center text-xs my-2.5">
                 {authView === 'signin' && (
                   <>
                     <span className="text-gray-500 font-medium">ليس لديك حساب؟ </span>
@@ -1665,10 +1724,10 @@ export default function App() {
                     ← العودة لصفحة تسجيل الدخول
                   </button>
                 )}
-              </div>
+              </div>}
 
               {/* OR Divider Line exactly matching mockup "Or" layout */}
-              {authView !== 'reset' && (
+              {!isTvAuth && authView !== 'reset' && (
                 <div className="flex items-center gap-3 my-2.5">
                   <div className="h-px flex-1 bg-white/5" />
                   <span className="text-[10px] text-gray-500 uppercase font-black">أو</span>
@@ -1681,28 +1740,35 @@ export default function App() {
                 <button
                   onClick={() => handleLogin('google')}
                   disabled={isAuthLoading}
-                  className="w-full flex items-center justify-center gap-2.5 bg-white/[0.07] hover:bg-white/[0.12] border border-white/10 disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-2xl cursor-pointer transition-all text-sm"
+                  autoFocus={isTvAuth}
+                  className={`w-full flex items-center justify-center bg-white/[0.07] hover:bg-white/[0.12] border border-white/10 disabled:opacity-50 text-white font-bold cursor-pointer transition-all ${
+                    isTvAuth
+                      ? 'gap-3 rounded-full px-7 py-5 text-lg'
+                      : 'gap-2.5 rounded-2xl px-4 py-3.5 text-sm'
+                  }`}
                 >
                   {isAuthLoading && authMethod === 'google' ? (
                     <div className="w-3.5 h-3.5 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" />
                   ) : (
-                    <svg className="w-[14px] h-[14px] shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <svg className={`${isTvAuth ? 'h-6 w-6' : 'h-[14px] w-[14px]'} shrink-0`} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                       <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                       <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                     </svg>
                   )}
-                  <span>دخول بجوجل</span>
+                  <span>{isTvAuth ? 'المتابعة باستخدام جوجل' : 'دخول بجوجل'}</span>
                 </button>
               )}
 
             </div>
 
             {/* Bottom mini disclaimer footer */}
-            <div className="mt-10 pt-4 border-t border-white/5 flex items-center justify-center gap-1.5 text-[11px] text-gray-500">
-              <span>تطبق شروط الاستخدام والأمان الكاملة © {new Date().getFullYear()} نوار سينما</span>
-            </div>
+            {!isTvAuth && (
+              <div className="mt-10 pt-4 border-t border-white/5 flex items-center justify-center gap-1.5 text-[11px] text-gray-500">
+                <span>تطبق شروط الاستخدام والأمان الكاملة © {new Date().getFullYear()} نوار سينما</span>
+              </div>
+            )}
           </div>
 
         </div>
@@ -2023,7 +2089,9 @@ export default function App() {
   const isTvApp = document.documentElement.classList.contains('noir-tv-app');
 
   return (
-    <div className="min-h-screen bg-[#17171a] text-white flex flex-row font-sans relative tracking-normal antialiased">
+    <div className={`min-h-screen text-white flex flex-row font-sans relative tracking-normal antialiased ${
+      isTvApp ? 'bg-[#08080a]' : 'bg-[#17171a]'
+    }`}>
       
       {/* Desktop Sidebar — Apple TV style */}
       {!isTvApp && (
@@ -2043,6 +2111,7 @@ export default function App() {
         <TvNavigation
           activeView={activeView}
           searchMode={searchMode}
+          isSearchOpen={isSearchOverlayOpen}
           goHome={navigateToHome}
           openSearch={() => setIsSearchOverlayOpen(true)}
           setSearchMode={handleSetSearchMode}
@@ -2063,23 +2132,19 @@ export default function App() {
       </div>
 
       {/* Main content — shifts right on desktop to account for sidebar */}
-      <div className={`flex-1 flex flex-col min-w-0 ${isTvApp ? 'pt-[5.75rem]' : 'lg:mr-52'}`}>
+      <div className={`flex-1 flex flex-col min-w-0 ${isTvApp ? '' : 'lg:mr-52'}`}>
 
       {/* Main Orchestration Views Switcher */}
-      <main className={`flex-grow selection:bg-red-500/30 ${isTvApp ? 'pb-0' : 'lg:pt-0 pt-14 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0'}`}>
+      <main className={`flex-grow selection:bg-red-500/30 ${isTvApp ? 'pb-0 pt-32' : 'lg:pt-0 pt-14 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0'}`}>
         {activeView ==='home' && (
           isTvApp ? (
             <TvHome
               heroItems={heroItems}
               continueWatching={continueWatching}
               sections={tvHomeSections}
-              isSaved={isInWatchlist}
-              onToggleSave={toggleWatchlistItem}
-              onPlay={handlePlayTitle}
               onDetails={handleTitleClick}
-              onSelect={handleOpenQuickView}
+              onSelect={handleTitleClick}
               onContinue={handleContinueWatchingClick}
-              onCategory={(key) => { window.location.hash = `#category/${key}`; }}
             />
           ) : (
           <PullToRefresh onRefresh={refreshHome}>
@@ -2182,22 +2247,22 @@ export default function App() {
         {activeView ==='watchlist' && (() => {
           // Process current watchlist items with filter & sort states
           let processedItems = [...watchlist];
-          if (watchlistFilter === 'movie' || watchlistFilter === 'tv') {
+          if (!isTvApp && (watchlistFilter === 'movie' || watchlistFilter === 'tv')) {
             processedItems = processedItems.filter(item => item.type === watchlistFilter);
-          } else if (watchlistFilter === 'started') {
+          } else if (!isTvApp && watchlistFilter === 'started') {
             processedItems = processedItems.filter((item) =>
               continueWatching.some((current) => current.type === item.type && current.id === item.id),
             );
-          } else if (watchlistFilter === 'unstarted') {
+          } else if (!isTvApp && watchlistFilter === 'unstarted') {
             processedItems = processedItems.filter((item) =>
               !continueWatching.some((current) => current.type === item.type && current.id === item.id),
             );
           }
-          if (watchlistSort ==='rating') {
+          if (!isTvApp && watchlistSort ==='rating') {
             processedItems.sort((a, b) =>
               watchlistSortDir === 'asc' ? a.rating - b.rating : b.rating - a.rating
             );
-          } else if (watchlistSort ==='year') {
+          } else if (!isTvApp && watchlistSort ==='year') {
             processedItems.sort((a, b) => {
               const yearA = parseInt(itemYear(a.year)) || 0;
               const yearB = parseInt(itemYear(b.year)) || 0;
@@ -2225,7 +2290,7 @@ export default function App() {
 </p>
 </div>
                 
-                {watchlist.length > 0 && (
+                {!isTvApp && watchlist.length > 0 && (
                   <div className="flex flex-wrap gap-4 items-center justify-start md:justify-end">
                     {/* Filter Segmented Control */}
                     <div className="flex flex-wrap bg-stone-900 border border-white/5 p-1 rounded-xl">
@@ -2360,12 +2425,13 @@ export default function App() {
                         }}
                         role="button"
                         tabIndex={0}
+                        data-tv-card={isTvApp ? '' : undefined}
                         aria-label={`فتح ${item.title}`}
                         style={{ animationDelay: `${idx * 40}ms` }}
                         className="group/card card-transition cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
                       >
                         {/* Poster Artwork container */}
-                        <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+                        <div data-tv-card-artwork className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
                           <WatchlistButton
                             saved
                             onToggle={() => toggleWatchlistItem(item)}
@@ -2451,7 +2517,8 @@ export default function App() {
 </p>
 </div>
 
-            {/* Direct Input Filter bar */}
+            {/* Direct Input Filter bar — البحث العام في TV موجود بالسايدبار فقط. */}
+            {!isTvApp && (
             <div className="flex gap-3 mb-6 relative z-10 select-none">
               <div className="flex-1 flex items-center gap-3 noir-surface focus-within:border-white/20 px-4 min-h-14 transition-all">
                 <Search className="w-5 h-5 text-gray-500 shrink-0" />
@@ -2477,9 +2544,10 @@ export default function App() {
                 <span>التصفية</span>
 </button>
 </div>
+            )}
 
             {/* Core Search View Layout Box (Grid map) */}
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-8">
+            <div className={`grid grid-cols-1 gap-8 ${isTvApp ? '' : 'lg:grid-cols-[1fr_260px]'}`}>
               
               {/* Left Side: Dynamic Grid items */}
               <div className="order-2 lg:order-1 min-w-0">
@@ -2490,6 +2558,7 @@ export default function App() {
                     {searchResults.length > 0 ?`تم العثور على ${searchResults.length} عنوان` :'لا توجد نتائج مناسبة'}
 </span>
                   
+                  {!isTvApp && (
                   <div className="flex items-center gap-1.5 min-w-[140px]">
                     <ArrowUpDown className="w-4 h-4 text-stone-500" />
                     <select
@@ -2503,6 +2572,7 @@ export default function App() {
                       <option value="az">ترتيب أبجدي (A-Z)</option>
 </select>
 </div>
+                  )}
 </div>
 
                 {isSearching ? (
@@ -2534,12 +2604,14 @@ export default function App() {
                           }}
                           role="button"
                           tabIndex={0}
+                          data-tv-card={isTvApp ? '' : undefined}
+                          data-search-result-index={idx}
                           aria-label={`فتح ${item.title}`}
                           style={{ animationDelay: `${idx * 40}ms` }}
                           className="group/card card-transition cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
                         >
                           {/* Poster Artwork container */}
-                          <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+                          <div data-tv-card-artwork className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
                             <WatchlistButton
                               saved={isInWatchlist(item)}
                               onToggle={() => toggleWatchlistItem(item)}
@@ -2594,6 +2666,7 @@ export default function App() {
                         <button
                           onClick={() => triggerSearchQuery(true)}
                           disabled={isLoadingMore}
+                          data-tv-load-more={isTvApp ? '' : undefined}
                           className="flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-gray-300 hover:text-white border border-white/5 hover:border-white/10 px-8 py-3 rounded-full text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
                         >
                           {isLoadingMore ? (
@@ -2620,6 +2693,7 @@ export default function App() {
 </div>
 
               {/* Right Side / Sidebar: Desktop Filter lists & Mobile panel */}
+              {!isTvApp && (
               <div
                 className={`order-1 lg:order-2 ${
                   isFilterSidebarOpen
@@ -2762,8 +2836,9 @@ export default function App() {
 </div>
                   )}
                   
-</div>
-</div>
+              </div>
+              </div>
+              )}
 
 </div>
 </div>
@@ -2873,7 +2948,7 @@ export default function App() {
         }}
       />
 
-      <QuickView
+      {!isTvApp && <QuickView
         item={quickViewItem}
         saved={quickViewItem ? isInWatchlist(quickViewItem) : false}
         preference={quickViewItem ? titlePreferences[`${quickViewItem.type}_${quickViewItem.id}`] : undefined}
@@ -2882,19 +2957,19 @@ export default function App() {
         onDetails={handleTitleClick}
         onToggleSave={toggleWatchlistItem}
         onPreference={handleTitlePreference}
-      />
+      />}
 
       {/* Browser URL Share Dialog */}
-      <ShareModal
+      {!isTvApp && <ShareModal
         isOpen={isShareModalOpen}
         url={shareUrl}
         onClose={() => setIsShareModalOpen(false)}
         onToast={showToast}
-      />
+      />}
 
       {/* Google Account Profile Details Dialog Modal */}
       {isProfileModalOpen && user && (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 text-right">
+        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 text-right" role="dialog" aria-modal="true" aria-label="الملف الشخصي">
           {/* Backdrop */}
           <div 
             className="absolute inset-0 bg-black/85 backdrop-blur-md cursor-pointer animate-fade-in" 
@@ -2902,16 +2977,18 @@ export default function App() {
           />
 
           {/* Modal Container */}
-          <div className="relative z-10 w-full max-w-sm bg-stone-950 border border-white/5 rounded-3xl p-6 md:p-8 shadow-3xl text-center select-none animate-scale-in">
+          <div className={`relative z-10 w-full border border-white/8 rounded-3xl p-6 md:p-8 shadow-3xl text-center select-none animate-scale-in ${
+            isTvApp ? 'max-w-lg bg-[#101012]' : 'max-w-sm bg-stone-950'
+          }`}>
             {/* Close Trigger Button */}
-            <button
+            {!isTvApp && <button
               onClick={() => setIsProfileModalOpen(false)}
               className="absolute top-4 left-4 p-1.5 rounded-full text-gray-500 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
 </svg>
-</button>
+</button>}
 
             {/* Profile Avatar Frame */}
             <div className="flex flex-col items-center gap-4 mt-2">
@@ -2954,21 +3031,21 @@ export default function App() {
                         <p className="text-[9px] text-gray-400 leading-normal">
                           السحابة تمنع الحفظ لغير المفعّلين لحماية بياناتك.
                         </p>
-                        <button
+                        {!isTvApp && <button
                           onClick={handleSendVerificationEmail}
                           disabled={isSendingVerification}
                           className="text-[10px] text-indigo-400 hover:text-indigo-300 underline font-extrabold cursor-pointer disabled:opacity-50"
                         >
                           {isSendingVerification ? 'جاري الإرسال...' : 'إرسال رابط تفعيل البريد'}
-                        </button>
+                        </button>}
                       </div>
                     )}
                   </div>
-                ) : (
+                ) : !isTvApp ? (
                   <span className="inline-block bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full mt-1">
                     حساب جوجل مفعل وموثق 
 </span>
-                )}
+                ) : null}
 </div>
 </div>
 
@@ -2989,13 +3066,15 @@ export default function App() {
             {/* Action buttons */}
             <div className="mt-6 flex flex-col gap-2">
               <button
+                ref={profileHistoryButtonRef}
+                data-tv-autofocus={isTvApp ? '' : undefined}
                 onClick={handleViewHistory}
                 className="w-full bg-white/5 border border-white/8 hover:bg-white/10 text-white font-bold py-3 rounded-xl transition-colors cursor-pointer text-xs flex items-center justify-center gap-2"
               >
                 <span>سجل المشاهدة</span>
                 <span className="text-white/45">({viewingHistory.length})</span>
               </button>
-              {user.type ==='guest' && (
+              {user.type ==='guest' && !isTvApp && (
                 <button
                   onClick={() => {
                     setIsProfileModalOpen(false);

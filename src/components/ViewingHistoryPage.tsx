@@ -14,6 +14,7 @@ export default function ViewingHistoryPage({
   onRemove,
   onBack,
 }: ViewingHistoryPageProps) {
+  const isTvApp = document.documentElement.classList.contains('noir-tv-app');
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in" dir="rtl">
       <div className="flex items-end justify-between gap-4 border-b border-white/5 pb-6 mb-8">
@@ -25,9 +26,9 @@ export default function ViewingHistoryPage({
             أعمالك المكتملة والتي بدأت مشاهدتها، متزامنة بين أجهزتك.
           </p>
         </div>
-        <button type="button" onClick={onBack} className="noir-button-secondary cursor-pointer">
+        {!isTvApp && <button type="button" onClick={onBack} className="noir-button-secondary cursor-pointer">
           الرئيسية
-        </button>
+        </button>}
       </div>
 
       {items.length === 0 ? (
@@ -43,9 +44,10 @@ export default function ViewingHistoryPage({
               <button
                 type="button"
                 onClick={() => onItemClick(item)}
+                data-tv-card={isTvApp ? '' : undefined}
                 className="block w-full text-right cursor-pointer"
               >
-                <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8">
+                <div data-tv-card-artwork={isTvApp ? '' : undefined} className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8">
                   {item.poster || item.backdrop ? (
                     <img
                       src={item.poster || item.backdrop || undefined}
