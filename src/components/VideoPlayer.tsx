@@ -1294,7 +1294,8 @@ export default function VideoPlayer({
       primaryColor: 'ff453a',
       secondaryColor: '0a0a0a',
       iconColor: 'FFFFFF',
-      icons: 'vid',
+      // Keep the web embed identical to the iOS WKWebView configuration.
+      icons: 'default',
       player: 'nf',
       title: 'true',
       poster: 'true',
@@ -1397,7 +1398,6 @@ export default function VideoPlayer({
             <iframe
               src={isPausedByHost ? 'about:blank' : getVidApiUrl()}
               allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-              sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
               referrerPolicy="no-referrer"
               allowFullScreen
               className="h-full w-full border-0"
