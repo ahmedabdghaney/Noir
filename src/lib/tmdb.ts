@@ -56,7 +56,7 @@ async function tmdbFetch(path: string, params: Record<string, any> = {}): Promis
 }
 
 // Helpers for images
-export const getPosterUrl = (path: string | null) => path ? `${IMG_BASE}/w342${path}` : null;
+export const getPosterUrl = (path: string | null) => path ? `${IMG_BASE}/w780${path}` : null;
 export const getLargePosterUrl = (path: string | null) => path ? `${IMG_BASE}/w780${path}` : null;
 export const getBackdropUrl = (path: string | null) => path ? `${IMG_BASE}/w1280${path}` : null;
 export const getOriginalBackdropUrl = (path: string | null) => path ? `${IMG_BASE}/original${path}` : null;
@@ -286,6 +286,30 @@ export const getTitleLogoUrl = (data: any): string | null => {
   const chosen = en || logos[0];
   return chosen?.file_path ? `${IMG_BASE}/w500${chosen.file_path}` : null;
 };
+
+// Lightweight logo query for the TV home hero. Keeping it separate from the
+// full details request avoids downloading credits, videos and recommendations
+// just to render the title artwork.
+export async function fetchTitleLogo(
+  type: 'movie' | 'tv',
+  id: number,
+): Promise<string | null> {
+  if (id <= 0) return null;
+  try {
+    const data = await tmdbFetch(`/${type}/${id}/images`, {
+      include_image_language: 'en,null,ar',
+    });
+    const logos: any[] = data?.logos || [];
+    const chosen =
+      logos.find((logo) => logo.iso_639_1 === 'en') ||
+      logos.find((logo) => logo.iso_639_1 === null) ||
+      logos.find((logo) => logo.iso_639_1 === 'ar') ||
+      logos[0];
+    return chosen?.file_path ? `${IMG_BASE}/w500${chosen.file_path}` : null;
+  } catch {
+    return null;
+  }
+}
 
 export interface EpisodeInfo {
   episode_number: number;

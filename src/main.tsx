@@ -39,7 +39,76 @@ const enableTvSupport = () => {
     );
   };
 
+  type TvRouteFocusMemory = { identity: string; scrollY: number };
+  const routeFocusMemory = new Map<string, TvRouteFocusMemory>();
+  const currentRouteKey = () => window.location.hash || '#home';
+  const focusIdentity = (element: HTMLElement) => {
+    const explicit = element.getAttribute('data-tv-focus-key');
+    if (explicit) return `key:${explicit}`;
+    const row = element.closest<HTMLElement>('[data-tv-focus-row]');
+    const section = row?.closest<HTMLElement>('section');
+    const rowLabel = section?.getAttribute('aria-label') || '';
+    const ariaLabel = element.getAttribute('aria-label') || '';
+    const text = (element.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 96);
+    const rowIndex = row
+      ? Array.from(row.querySelectorAll<HTMLElement>(tvFocusableSelector)).indexOf(element)
+      : -1;
+    return `auto:${rowLabel}|${ariaLabel}|${text}|${rowIndex}`;
+  };
+
+  const rememberCurrentFocus = (element?: HTMLElement | null) => {
+    if (document.documentElement.dataset.tvFocusRestorePending === 'true') return;
+    const focused = element || (
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
+    );
+    if (!focused || focused.closest('[data-tv-navigation], [data-tv-player]')) return;
+    routeFocusMemory.set(currentRouteKey(), {
+      identity: focusIdentity(focused),
+      scrollY: Math.max(0, window.scrollY),
+    });
+  };
+
+  let restoreFrame: number | undefined;
+  const restoreRouteFocus = () => {
+    if (restoreFrame !== undefined) window.cancelAnimationFrame(restoreFrame);
+    const memory = routeFocusMemory.get(currentRouteKey());
+    if (!memory) {
+      delete document.documentElement.dataset.tvFocusRestorePending;
+      return;
+    }
+    document.documentElement.dataset.tvFocusRestorePending = 'true';
+    let attempts = 0;
+    const restore = () => {
+      attempts += 1;
+      const target = Array.from(
+        document.querySelectorAll<HTMLElement>(tvFocusableSelector),
+      ).find((candidate) => isVisible(candidate) && focusIdentity(candidate) === memory.identity);
+      if (target) {
+        delete document.documentElement.dataset.tvFocusRestorePending;
+        target.focus({ preventScroll: true });
+        window.scrollTo({ top: memory.scrollY, behavior: 'auto' });
+        restoreFrame = undefined;
+        return;
+      }
+      if (attempts < 300) {
+        restoreFrame = window.requestAnimationFrame(restore);
+      } else {
+        delete document.documentElement.dataset.tvFocusRestorePending;
+        restoreFrame = undefined;
+      }
+    };
+    restoreFrame = window.requestAnimationFrame(restore);
+  };
+
+  document.addEventListener('focusin', (event) => {
+    if (document.documentElement.dataset.tvFocusRestorePending === 'true') return;
+    if (event.target instanceof HTMLElement) rememberCurrentFocus(event.target);
+  });
+  window.addEventListener('scroll', () => rememberCurrentFocus(), { passive: true });
+  window.addEventListener('hashchange', restoreRouteFocus);
+
   let verticalScrollFrame: number | undefined;
+  let horizontalScrollFrame: number | undefined;
   let lastVerticalRepeatAt = 0;
   let lastHorizontalRepeatAt = 0;
   const scrollVerticallyTo = (element: HTMLElement, continuous = false) => {
@@ -49,7 +118,7 @@ const enableTvSupport = () => {
     }
 
     const rect = element.getBoundingClientRect();
-    const navigationSafeArea = 112;
+    const navigationSafeArea = 80;
     const bottomSafeArea = 28;
     const availableHeight = Math.max(
       1,
@@ -117,12 +186,43 @@ const enableTvSupport = () => {
     continuous: boolean,
     inline: ScrollLogicalPosition,
   ) => {
-    element.scrollIntoView({
-      behavior: 'smooth',
-      block: 'nearest',
-      // أثناء الـHold نحرّك أقل مسافة لازمة حتى تبقى السرعة مقروءة.
-      inline: continuous ? 'nearest' : inline,
-    });
+    const scroller = element.closest<HTMLElement>('[data-tv-focus-row]');
+    if (!scroller || scroller.scrollWidth <= scroller.clientWidth + 2) return;
+
+    if (horizontalScrollFrame !== undefined) {
+      window.cancelAnimationFrame(horizontalScrollFrame);
+      horizontalScrollFrame = undefined;
+    }
+
+    const scrollerRect = scroller.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
+    const padding = Math.max(20, scrollerRect.width * 0.035);
+    let distance = 0;
+    if (!continuous && inline === 'center') {
+      distance =
+        elementRect.left + elementRect.width / 2 -
+        (scrollerRect.left + scrollerRect.width / 2);
+    } else if (elementRect.left < scrollerRect.left + padding) {
+      distance = elementRect.left - scrollerRect.left - padding;
+    } else if (elementRect.right > scrollerRect.right - padding) {
+      distance = elementRect.right - scrollerRect.right + padding;
+    }
+    if (Math.abs(distance) < 2) return;
+
+    const start = scroller.scrollLeft;
+    const duration = continuous ? 520 : 620;
+    const startedAt = performance.now();
+    const animate = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      scroller.scrollLeft = start + distance * eased;
+      if (progress < 1) {
+        horizontalScrollFrame = window.requestAnimationFrame(animate);
+      } else {
+        horizontalScrollFrame = undefined;
+      }
+    };
+    horizontalScrollFrame = window.requestAnimationFrame(animate);
   };
 
   const focusInDirection = (
@@ -165,6 +265,7 @@ const enableTvSupport = () => {
         ) ||
         allCandidates.find((candidate) => candidate.closest('[data-tv-navigation]'));
       if (!navigationTarget) return false;
+      window.dispatchEvent(new Event('noir_tv_reveal_navigation'));
       navigationTarget.focus({ preventScroll: true });
       return true;
     };
@@ -226,6 +327,16 @@ const enableTvSupport = () => {
           scrollVerticallyTo(nextCard, continuous);
           return;
         }
+        if (direction === 'up' && rowIndex === 0) {
+          const heroPlay = document.querySelector<HTMLElement>(
+            '[data-tv-top-actions] [data-tv-primary-action]',
+          );
+          if (heroPlay && isVisible(heroPlay)) {
+            heroPlay.focus({ preventScroll: true });
+            scrollVerticallyTo(heroPlay, continuous);
+            return;
+          }
+        }
       }
     }
 
@@ -257,7 +368,7 @@ const enableTvSupport = () => {
 
         if (nextInRow) {
           nextInRow.focus({ preventScroll: true });
-          scrollHorizontallyTo(nextInRow, continuous, 'center');
+          scrollHorizontallyTo(nextInRow, continuous, 'nearest');
           return;
         }
 
@@ -346,7 +457,7 @@ const enableTvSupport = () => {
       const continuous = event.repeat;
       if (continuous) {
         const lastRepeatAt = vertical ? lastVerticalRepeatAt : lastHorizontalRepeatAt;
-        const repeatInterval = vertical ? 220 : 180;
+        const repeatInterval = vertical ? 680 : 650;
         if (now - lastRepeatAt < repeatInterval) return;
         if (vertical) lastVerticalRepeatAt = now;
         else lastHorizontalRepeatAt = now;

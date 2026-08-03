@@ -96,6 +96,7 @@ export default function VideoPlayer({
   const seekFlashTimer = useRef<ReturnType<typeof setTimeout>>();
   const touchHoldTimer = useRef<ReturnType<typeof setTimeout>>();
   const mediaRetryTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const mediaStartupTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const closeTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const closingRef = useRef(false);
   const tvSeekStartTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -117,6 +118,7 @@ export default function VideoPlayer({
   const [customMp4Failed, setCustomMp4Failed] = useState(false);
   const [useVidApi,       setUseVidApi]       = useState(false);
   const [isCheckingMp4,   setIsCheckingMp4]   = useState(playMode === 'movie');
+  const [, setRecoveryNotice] = useState('');
   const [isPlaying,       setIsPlaying]       = useState(false);
   const [currentTime,     setCurrentTime]     = useState(0);
   const [duration,        setDuration]        = useState(0);
@@ -302,6 +304,23 @@ export default function VideoPlayer({
     }
   }, [id, isNative, episode, season, startAt, type]);
 
+  // لا نترك شاشة التحميل معلقة إذا لم يصبح المصدر الأول قابلاً للتشغيل.
+  useEffect(() => {
+    clearTimeout(mediaStartupTimerRef.current);
+    if (!isNative) return;
+    mediaStartupTimerRef.current = setTimeout(() => {
+      const video = videoRef.current;
+      if (video && video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) return;
+      reportNativeProgress(video, false, true);
+      setRecoveryNotice('الاتصال بطيء، جاري تجهيز مصدر بديل...');
+      setCustomMp4Failed(true);
+      setUseVidApi(true);
+      setIsLoading(true);
+      setIsBuffering(false);
+    }, 11000);
+    return () => clearTimeout(mediaStartupTimerRef.current);
+  }, [episode, id, isNative, reportNativeProgress, season, type]);
+
   /* ── postMessage ── */
   const lastWatchedRef   = useRef(0);
   const lastWatchedAtRef = useRef(0);
@@ -336,9 +355,11 @@ export default function VideoPlayer({
       }
     }, 100);
     clearTimeout(mediaRetryTimerRef.current);
+    clearTimeout(mediaStartupTimerRef.current);
     mediaRetryCountRef.current = 0;
     setIsLoading(true); setCustomMp4Failed(false);
     setUseVidApi(false);
+    setRecoveryNotice('');
     setSubEnabled(true); setSpeed(1);
     setShowSettings(false); setShowSpeedMenu(false);
     setIsPlaying(false); setCurrentTime(0); setDuration(0); setBuffered(0); setIsBuffering(false);
@@ -367,6 +388,7 @@ export default function VideoPlayer({
     clearTimeout(seekFlashTimer.current);
     clearTimeout(touchHoldTimer.current);
     clearTimeout(mediaRetryTimerRef.current);
+    clearTimeout(mediaStartupTimerRef.current);
   }, []);
 
   /* ── load and cloud-sync playback preferences ── */
@@ -1273,11 +1295,13 @@ export default function VideoPlayer({
       secondaryColor: '0a0a0a',
       iconColor: 'FFFFFF',
       icons: 'vid',
+      player: 'nf',
       title: 'true',
       poster: 'true',
       autoplay: 'true',
     });
-    if (startAt > 5) params.set('startAt', String(Math.floor(startAt)));
+    const resumeAt = Math.max(startAt, currentTime);
+    if (resumeAt > 5) params.set('startAt', String(Math.floor(resumeAt)));
     if (type === 'tv') {
       params.set('nextbutton', 'true');
       return `https://vidapi.qzz.io/tv/${id}/${season}/${episode}?${params}`;
@@ -1357,7 +1381,6 @@ export default function VideoPlayer({
               <div className={`${isLoading ? '' : 'w-14 h-14 rounded-full bg-black/55 backdrop-blur-md'} flex items-center justify-center`}>
                 <Loader className={`${isLoading ? 'w-8 h-8' : 'w-7 h-7'} text-red-500 animate-spin`} />
               </div>
-              {isLoading && <span className="text-xs text-white/40 select-none">جاري التحميل...</span>}
             </div>
           )}
 
@@ -1378,7 +1401,10 @@ export default function VideoPlayer({
               referrerPolicy="no-referrer"
               allowFullScreen
               className="h-full w-full border-0"
-              onLoad={() => setIsLoading(false)}
+              onLoad={() => {
+                setRecoveryNotice('');
+                setIsLoading(false);
+              }}
             />
 
           /* native mp4 */
@@ -1411,20 +1437,24 @@ export default function VideoPlayer({
                 }
               }}
               onLoadedData={() => {
+                clearTimeout(mediaStartupTimerRef.current);
                 mediaRetryCountRef.current = 0;
                 setCustomMp4Failed(false);
+                setRecoveryNotice('');
                 setIsLoading(false);
                 setDuration(videoRef.current?.duration || 0);
               }}
               onCanPlay={() => {
+                clearTimeout(mediaStartupTimerRef.current);
                 mediaRetryCountRef.current = 0;
                 setCustomMp4Failed(false);
+                setRecoveryNotice('');
                 setIsLoading(false);
                 setIsBuffering(false);
               }}
               onError={() => {
                 const mediaError = videoRef.current?.error;
-                console.error('MP4 playback failed', {
+                console.error('Primary playback failed', {
                   url: customMp4,
                   code: mediaError?.code,
                   message: mediaError?.message,
@@ -1432,6 +1462,7 @@ export default function VideoPlayer({
                 if (mediaRetryCountRef.current < 2) {
                   mediaRetryCountRef.current += 1;
                   const retryDelay = mediaRetryCountRef.current * 700;
+                  setRecoveryNotice('الاتصال متذبذب، نحاول مرة أخرى...');
                   setIsLoading(true);
                   setIsBuffering(false);
                   clearTimeout(mediaRetryTimerRef.current);
@@ -1443,8 +1474,10 @@ export default function VideoPlayer({
                   }, retryDelay);
                   return;
                 }
+                reportNativeProgress(videoRef.current, false, true);
                 setCustomMp4Failed(true);
                 setUseVidApi(true);
+                setRecoveryNotice('جاري تجهيز مصدر بديل...');
                 setIsLoading(true);
                 setIsBuffering(false);
               }}
@@ -1510,7 +1543,7 @@ export default function VideoPlayer({
           /* No playable source was selected. */
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-black text-sm text-white/55" dir="rtl">
-              ملف MP4 غير مهيأ لهذا العنوان
+              هذا العنوان غير متاح حالياً
             </div>
           )}
 

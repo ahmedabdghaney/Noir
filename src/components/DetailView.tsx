@@ -939,16 +939,18 @@ export default function DetailView({
     <div className="w-full text-right detail-enter">
       
       {/* Immersive backdrop background section */}
-      <div className="relative w-full h-[35vh] md:h-[45vh] overflow-hidden select-none mb-4">
-        <div
-          className="absolute inset-0 bg-cover bg-center ken-burns"
-          style={{
-            backgroundImage: `url(${backdropSrc ||''})`,
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#111113] via-[#111113]/70 to-[#111113]/20" />
-        <div className="absolute inset-0 bg-gradient-to-l from-[#111113]/80 via-transparent to-transparent" />
-</div>
+      <div className={`noir-detail-backdrop-stage relative w-full h-[35vh] md:h-[45vh] select-none mb-4 ${isTvApp ? 'overflow-visible' : 'overflow-hidden'}`}>
+        <div className={`noir-detail-backdrop-media absolute inset-x-0 top-0 ${isTvApp ? 'bottom-[-12rem]' : 'bottom-0'}`}>
+          <div
+            className="absolute inset-0 bg-cover bg-center ken-burns"
+            style={{
+              backgroundImage: `url(${backdropSrc ||''})`,
+            }}
+          />
+          <div className={`absolute inset-0 bg-gradient-to-t ${isTvApp ? 'from-[#08080a] via-[#08080a]/70 to-[#08080a]/20' : 'from-[#111113] via-[#111113]/70 to-[#111113]/20'}`} />
+          <div className="absolute inset-0 bg-gradient-to-l from-[#111113]/80 via-transparent to-transparent" />
+        </div>
+      </div>
 
       {/* Main Details Panel Layout */}
       <div className="w-full mx-auto px-4 sm:px-8 lg:px-16 xl:px-24 relative -mt-36 md:-mt-48 z-10">

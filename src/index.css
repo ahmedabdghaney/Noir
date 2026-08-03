@@ -673,7 +673,7 @@ html.noir-tv-app :where(
   [role="button"].group\/card,
   [role="button"].card-transition
 ):focus-visible {
-  transform: scale(1.1) !important;
+  transform: scale(1.07) !important;
   border-color: transparent !important;
   box-shadow: none !important;
   filter: brightness(1.09);
@@ -688,7 +688,7 @@ html.noir-tv-app [data-tv-hero]:focus-visible {
 
 html.noir-tv-app :where([data-tv-card], .card-transition, .card-pop):hover,
 html.noir-tv-app :where([data-tv-card], .card-transition, .card-pop):focus-visible {
-  transform: scale(1.1) !important;
+  transform: scale(1.07) !important;
   box-shadow: none !important;
 }
 
@@ -729,20 +729,48 @@ html.noir-tv-app .noir-movie-row-track {
 }
 
 html.noir-tv-app .noir-tv-card-track {
-  gap: 3.25rem !important;
-  padding-top: 3rem !important;
-  padding-bottom: 3rem !important;
+  gap: 2rem !important;
+  padding-top: 2rem !important;
+  padding-bottom: 2rem !important;
 }
 
 html.noir-tv-app .noir-tv-top-navigation {
   left: 50% !important;
   top: 50% !important;
   transform: translate(-50%, -50%) !important;
-  background: rgba(8, 8, 10, 0.98) !important;
-  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.48);
+  background: rgba(8, 8, 10, 0.7) !important;
+  border-color: rgba(255, 255, 255, 0.11) !important;
+  box-shadow:
+    0 12px 34px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  -webkit-backdrop-filter: blur(26px) saturate(145%);
+  backdrop-filter: blur(26px) saturate(145%);
   transition:
     background-color 0.3s ease,
     border-color 0.3s ease;
+}
+
+html.noir-tv-app {
+  --noir-tv-card-radius: clamp(0.95rem, 1vw, 1.2rem);
+}
+
+html.noir-tv-app .noir-tv-navigation {
+  transform: translateY(0);
+  opacity: 1;
+  transition:
+    transform 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.24s ease;
+  will-change: transform, opacity;
+}
+
+html.noir-tv-app .noir-tv-navigation-brand,
+html.noir-tv-app .noir-tv-navigation-profile {
+  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.72));
+}
+
+html.noir-tv-app .noir-tv-navigation.is-hidden {
+  transform: translateY(calc(-100% - 1rem));
+  opacity: 0;
 }
 
 /* Cards use a slightly larger TV lift, without borders or drop shadows. */
@@ -751,8 +779,8 @@ html.noir-tv-app :where([data-tv-card], .card-transition, .card-pop) {
   isolation: isolate;
   box-shadow: none !important;
   transition:
-    transform 0.34s cubic-bezier(0.22, 1, 0.36, 1),
-    filter 0.26s ease !important;
+    transform 0.52s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.38s ease !important;
   will-change: transform;
 }
 
@@ -764,8 +792,8 @@ html.noir-tv-app :where(.card-transition, .card-pop) {
 
 html.noir-tv-app :where([data-tv-card], .card-transition, .card-pop) img {
   transition:
-    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.25s ease !important;
+    transform 0.56s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.38s ease !important;
   will-change: transform;
 }
 
@@ -774,12 +802,17 @@ html.noir-tv-app [data-tv-card] > div {
 }
 
 html.noir-tv-app [data-tv-card-artwork] {
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border: 0 !important;
+  border-radius: var(--noir-tv-card-radius) !important;
+}
+
+html.noir-tv-app [data-tv-card] {
+  border-radius: var(--noir-tv-card-radius) !important;
 }
 
 html.noir-tv-app [data-tv-card]:focus-visible [data-tv-card-artwork],
 html.noir-tv-app [data-tv-card][data-tv-card-artwork]:focus-visible {
-  border-color: rgba(255, 255, 255, 0.3) !important;
+  border-color: transparent !important;
 }
 
 html.noir-tv-app [data-tv-card-artwork]::after {
@@ -823,9 +856,9 @@ html.noir-tv-app [data-tv-focus-row]:has(> [data-tv-card]) {
 }
 
 html.noir-tv-app [data-tv-focus-row].noir-tv-card-track {
-  gap: 3.25rem !important;
-  padding-top: 3rem !important;
-  padding-bottom: 3rem !important;
+  gap: 2rem !important;
+  padding-top: 2rem !important;
+  padding-bottom: 2rem !important;
 }
 
 html.noir-tv-app [data-tv-episodes-row] {
@@ -1000,21 +1033,245 @@ html.noir-tv-app .noir-tv-auth-screen button:focus-visible {
 }
 
 @keyframes noir-tv-hero-media-in {
-  from { opacity: 0.25; transform: scale(1.025); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; filter: blur(7px); transform: translateX(-1.2%); }
+  to { opacity: 1; filter: blur(0); transform: translateX(0); }
 }
 
 @keyframes noir-tv-hero-content-in {
-  from { opacity: 0; transform: translateX(28px); }
-  to { opacity: 1; transform: translateX(0); }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 html.noir-tv-app .noir-tv-hero-media {
-  animation: noir-tv-hero-media-in 0.58s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: noir-tv-hero-media-in 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 html.noir-tv-app .noir-tv-hero-content {
-  animation: noir-tv-hero-content-in 0.48s 0.08s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: noir-tv-hero-content-in 0.5s 0.08s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Apple TV-inspired home: the artwork is a stage, not a framed card. */
+html.noir-tv-app .noir-tv-hero-stage {
+  isolation: isolate;
+  background: transparent;
+  overflow: visible !important;
+}
+
+html.noir-tv-app .noir-tv-home {
+  overflow-x: clip;
+}
+
+html.noir-tv-app,
+html.noir-tv-app body,
+html.noir-tv-app #root {
+  overflow-x: clip !important;
+  max-width: 100%;
+}
+
+html.noir-tv-app .noir-tv-hero-media {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 66%,
+    rgba(0, 0, 0, 0.96) 72%,
+    rgba(0, 0, 0, 0.72) 82%,
+    rgba(0, 0, 0, 0.28) 92%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 66%,
+    rgba(0, 0, 0, 0.96) 72%,
+    rgba(0, 0, 0, 0.72) 82%,
+    rgba(0, 0, 0, 0.28) 92%,
+    transparent 100%
+  );
+}
+
+html.noir-tv-app .noir-tv-hero-side-scrim {
+  background: linear-gradient(270deg, rgba(5, 5, 7, 0.84) 0%, rgba(5, 5, 7, 0.46) 25%, rgba(5, 5, 7, 0.08) 56%, transparent 76%);
+}
+
+html.noir-tv-app .noir-tv-hero-bottom-scrim {
+  background: linear-gradient(to bottom, transparent 46%, rgba(8, 8, 10, 0.08) 60%, rgba(8, 8, 10, 0.54) 80%, #08080a 100%);
+}
+
+html.noir-tv-app .noir-tv-hero-stage .noir-tv-hero-media img {
+  object-position: center 24%;
+}
+
+html.noir-tv-app .noir-tv-hero-actions > button {
+  flex-shrink: 0;
+  transition:
+    transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    filter 0.2s ease !important;
+}
+
+html.noir-tv-app .noir-tv-hero-actions > button:focus,
+html.noir-tv-app .noir-tv-hero-actions > button:focus-visible {
+  transform: scale(1.1) !important;
+}
+
+html.noir-tv-app .noir-tv-continue-card {
+  border-color: rgba(255, 255, 255, 0.13) !important;
+}
+
+html.noir-tv-app .noir-tv-home .noir-tv-row {
+  margin-block: 0;
+}
+
+html.noir-tv-app .noir-tv-home .noir-tv-row + .noir-tv-row {
+  margin-top: 1.75rem;
+}
+
+html.noir-tv-app .noir-tv-home [data-tv-card]:focus-visible {
+  filter: brightness(1.08) saturate(1.04);
+  border-color: rgba(255, 255, 255, 0.36) !important;
+}
+
+html.noir-tv-app .noir-tv-home .noir-tv-card-track {
+  gap: clamp(1.65rem, 1.8vw, 2.25rem) !important;
+  padding-top: 1.05rem !important;
+  padding-bottom: 1.85rem !important;
+}
+
+html.noir-tv-app .noir-tv-home .noir-tv-row-heading {
+  position: relative;
+  z-index: 2;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.72);
+}
+
+html.noir-tv-app .noir-detail-backdrop-stage {
+  isolation: isolate;
+  overflow: visible !important;
+}
+
+html.noir-tv-app .noir-detail-backdrop-media {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 58%,
+    rgba(0, 0, 0, 0.92) 68%,
+    rgba(0, 0, 0, 0.55) 82%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 58%,
+    rgba(0, 0, 0, 0.92) 68%,
+    rgba(0, 0, 0, 0.55) 82%,
+    transparent 100%
+  );
+}
+
+@media (max-height: 760px) {
+  html.noir-tv-app .noir-tv-hero-stage {
+    min-height: 42rem;
+  }
+
+  html.noir-tv-app .noir-tv-hero-copy {
+    bottom: 11.5rem !important;
+    width: min(29rem, 38vw) !important;
+  }
+
+  html.noir-tv-app .noir-tv-hero-logo {
+    max-width: 17rem !important;
+    max-height: 4.8rem !important;
+  }
+
+  html.noir-tv-app .noir-tv-hero-description {
+    max-width: 28rem !important;
+    font-size: 0.84rem !important;
+    line-height: 1.55 !important;
+  }
+
+  html.noir-tv-app .noir-tv-hero-actions {
+    margin-top: 1.15rem !important;
+  }
+
+  html.noir-tv-app .noir-tv-hero-actions > button {
+    height: 3rem !important;
+  }
+
+  html.noir-tv-app .noir-tv-hero-circle {
+    width: 3rem !important;
+  }
+
+  html.noir-tv-app .noir-tv-hero-play {
+    padding-inline: 1.55rem !important;
+    font-size: 1rem !important;
+  }
+}
+
+@media (min-width: 2400px) and (min-height: 1200px) {
+  html.noir-tv-app .noir-tv-navigation {
+    height: 5.25rem !important;
+  }
+
+  html.noir-tv-app .noir-tv-top-navigation {
+    padding: 0.4rem !important;
+    gap: 0.2rem !important;
+  }
+
+  html.noir-tv-app .noir-tv-top-navigation [data-tv-nav-item] {
+    height: 2.65rem !important;
+    padding-inline: 1.05rem !important;
+    font-size: 0.82rem !important;
+  }
+
+  html.noir-tv-app .noir-tv-hero-copy {
+    bottom: 18rem !important;
+    width: min(43rem, 35vw) !important;
+  }
+
+  html.noir-tv-app .noir-tv-hero-logo {
+    max-width: 27rem !important;
+    max-height: 7.5rem !important;
+  }
+
+  html.noir-tv-app .noir-tv-hero-title {
+    font-size: 4.75rem !important;
+  }
+
+  html.noir-tv-app .noir-tv-hero-description {
+    max-width: 44rem !important;
+    font-size: 1.22rem !important;
+    line-height: 1.8 !important;
+  }
+
+  html.noir-tv-app .noir-tv-hero-actions > button {
+    height: 4.25rem !important;
+  }
+
+  html.noir-tv-app .noir-tv-hero-circle {
+    width: 4.25rem !important;
+  }
+
+  html.noir-tv-app .noir-tv-hero-play {
+    padding-inline: 2.35rem !important;
+    font-size: 1.25rem !important;
+  }
+
+  html.noir-tv-app .noir-tv-continue-card {
+    width: clamp(25rem, 19vw, 31rem) !important;
+  }
+
+  html.noir-tv-app .noir-tv-landscape-card {
+    width: clamp(23.5rem, 18vw, 29rem) !important;
+  }
+
+  html.noir-tv-app .noir-tv-portrait-card {
+    width: clamp(15rem, 12vw, 19rem) !important;
+  }
+
+  html.noir-tv-app .noir-tv-row h2 {
+    font-size: 2rem !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

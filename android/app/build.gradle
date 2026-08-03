@@ -20,8 +20,8 @@ android {
         tv {
             dimension "device"
             applicationId "com.aswadiq.noir"
-            versionCode 20
-            versionName "1.1.15"
+            versionCode 25
+            versionName "1.1.20"
             buildConfigField "boolean", "IS_TV_BUILD", "true"
         }
         mobile {

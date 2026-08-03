@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.5
  */
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, Star, X } from 'lucide-react';
 import LogoIcon from './components/LogoIcon';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -60,20 +60,15 @@ import Sidebar from './components/Sidebar';
 import Hero from './components/Hero';
 import MovieRow from './components/MovieRow';
 import CategoryRow from './components/CategoryRow';
-import CategoryPage from './components/CategoryPage';
-import StudioPage from './components/StudioPage';
 import PullToRefresh from './components/PullToRefresh';
 import { getCategoryByKey } from './lib/categories';
 import { getStudioByKey } from './lib/studios';
 import ContinueWatchingRow from './components/ContinueWatchingRow';
-import DetailView from './components/DetailView';
 import SearchOverlay from './components/SearchOverlay';
 import ShareModal from './components/ShareModal';
 import MobileNav from './components/MobileNav';
-import AdminDashboard from './components/AdminDashboard';
 import WatchlistButton from './components/WatchlistButton';
 import QuickView from './components/QuickView';
-import ViewingHistoryPage from './components/ViewingHistoryPage';
 import TvHome from './components/TvHome';
 import TvNavigation from './components/TvNavigation';
 import {
@@ -82,6 +77,20 @@ import {
   toggleHidden,
   itemKey, ManualItem, CustomSection,
 } from './lib/adminStore';
+
+const DetailView = lazy(() => import('./components/DetailView'));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
+const CategoryPage = lazy(() => import('./components/CategoryPage'));
+const StudioPage = lazy(() => import('./components/StudioPage'));
+const ViewingHistoryPage = lazy(() => import('./components/ViewingHistoryPage'));
+
+function DeferredViewFallback() {
+  return (
+    <div className="flex min-h-[55vh] items-center justify-center text-white/55" aria-label="جاري فتح الصفحة">
+      <Loader className="h-8 w-8 animate-spin text-red-500" />
+    </div>
+  );
+}
 
 // Static Configuration Constants
 const COUNTRIES = [
@@ -1155,10 +1164,14 @@ export default function App() {
     const previousView = previousViewRef.current;
     previousViewRef.current = activeView;
     const t = setTimeout(() => {
+      if (
+        document.documentElement.classList.contains('noir-tv-app') &&
+        document.documentElement.dataset.tvFocusRestorePending === 'true'
+      ) {
+        return;
+      }
       if (activeView === 'home') {
-        const top = document.documentElement.classList.contains('noir-tv-app')
-          ? 0
-          : homeScrollRef.current;
+        const top = homeScrollRef.current;
         window.scrollTo({ top, behavior: 'auto' });
       } else if (previousView !== activeView || selectedTitle) {
         window.scrollTo({ top: 0, behavior: 'auto' });
@@ -2135,16 +2148,18 @@ export default function App() {
       <div className={`flex-1 flex flex-col min-w-0 ${isTvApp ? '' : 'lg:mr-52'}`}>
 
       {/* Main Orchestration Views Switcher */}
-      <main className={`flex-grow selection:bg-red-500/30 ${isTvApp ? 'pb-0 pt-32' : 'lg:pt-0 pt-14 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0'}`}>
+      <main className={`flex-grow selection:bg-red-500/30 ${isTvApp ? ((activeView === 'home' || activeView === 'detail') ? 'pb-0 pt-0' : 'pb-0 pt-24') : 'lg:pt-0 pt-14 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0'}`}>
         {activeView ==='home' && (
           isTvApp ? (
             <TvHome
               heroItems={heroItems}
               continueWatching={continueWatching}
               sections={tvHomeSections}
-              onDetails={handleTitleClick}
               onSelect={handleTitleClick}
               onContinue={handleContinueWatchingClick}
+              onPlay={handlePlayTitle}
+              isSaved={isInWatchlist}
+              onToggleSave={toggleWatchlistItem}
             />
           ) : (
           <PullToRefresh onRefresh={refreshHome}>
@@ -2496,12 +2511,14 @@ export default function App() {
         })()}
 
         {activeView === 'history' && (
-          <ViewingHistoryPage
-            items={viewingHistory}
-            onItemClick={handleTitleClick}
-            onRemove={removeViewingHistoryItem}
-            onBack={navigateToHome}
-          />
+          <Suspense fallback={<DeferredViewFallback />}>
+            <ViewingHistoryPage
+              items={viewingHistory}
+              onItemClick={handleTitleClick}
+              onRemove={removeViewingHistoryItem}
+              onBack={navigateToHome}
+            />
+          </Suspense>
         )}
 
 
@@ -2846,6 +2863,7 @@ export default function App() {
 
         {activeView ==='detail' && selectedTitle && (
           <div className="animate-fade-in block">
+            <Suspense fallback={<DeferredViewFallback />}>
             <DetailView
               type={selectedTitle.type}
               id={selectedTitle.id}
@@ -2879,42 +2897,49 @@ export default function App() {
                 };
               })()}
             />
+            </Suspense>
 </div>
         )}
 
         {activeView ==='category' && selectedCategoryKey && getCategoryByKey(selectedCategoryKey) && (
-          <CategoryPage
-            category={getCategoryByKey(selectedCategoryKey)!}
-            onItemClick={handleTitleClick}
-            onBack={navigateToHome}
-            showAllMode={categoryAllMode}
-            onOpenAll={(key) => { window.location.hash = `#category/${key}/all`; }}
-            isSaved={isInWatchlist}
-            onToggleSave={toggleWatchlistItem}
-          />
+          <Suspense fallback={<DeferredViewFallback />}>
+            <CategoryPage
+              category={getCategoryByKey(selectedCategoryKey)!}
+              onItemClick={handleTitleClick}
+              onBack={navigateToHome}
+              showAllMode={categoryAllMode}
+              onOpenAll={(key) => { window.location.hash = `#category/${key}/all`; }}
+              isSaved={isInWatchlist}
+              onToggleSave={toggleWatchlistItem}
+            />
+          </Suspense>
         )}
 
         {activeView ==='studio' && selectedStudioKey && getStudioByKey(selectedStudioKey) && (
-          <StudioPage
-            studio={getStudioByKey(selectedStudioKey)!}
-            onItemClick={handleTitleClick}
-            onBack={navigateToHome}
-            isSaved={isInWatchlist}
-            onToggleSave={toggleWatchlistItem}
-          />
+          <Suspense fallback={<DeferredViewFallback />}>
+            <StudioPage
+              studio={getStudioByKey(selectedStudioKey)!}
+              onItemClick={handleTitleClick}
+              onBack={navigateToHome}
+              isSaved={isInWatchlist}
+              onToggleSave={toggleWatchlistItem}
+            />
+          </Suspense>
         )}
 
         {activeView ==='admin' && (
-          <AdminDashboard
-            userEmail={user?.email}
-            onBack={navigateToHome}
-            siteSections={siteSectionsForAdmin}
-            hiddenIds={hiddenIds}
-            onToggleHidden={(type, id, hide) => { toggleHidden(type, id, hide); }}
-            heroItems={heroItemsAll}
-            heroHiddenIds={heroHiddenIds}
-            onToggleHeroHidden={(type, id, hide) => { toggleHeroHidden(type, id, hide); }}
-          />
+          <Suspense fallback={<DeferredViewFallback />}>
+            <AdminDashboard
+              userEmail={user?.email}
+              onBack={navigateToHome}
+              siteSections={siteSectionsForAdmin}
+              hiddenIds={hiddenIds}
+              onToggleHidden={(type, id, hide) => { toggleHidden(type, id, hide); }}
+              heroItems={heroItemsAll}
+              heroHiddenIds={heroHiddenIds}
+              onToggleHeroHidden={(type, id, hide) => { toggleHeroHidden(type, id, hide); }}
+            />
+          </Suspense>
         )}
 </main>
 

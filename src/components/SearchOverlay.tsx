@@ -54,6 +54,7 @@ export default function SearchOverlay({
   const [isLoading, setIsLoading] = useState(false);
   const [catImages, setCatImages] = useState<Record<string, string>>({});
   const inputRef = useRef<HTMLInputElement>(null);
+  const focusResultsAfterSearchRef = useRef(false);
   const isTvApp = document.documentElement.classList.contains('noir-tv-app');
 
   useEffect(() => {
@@ -146,6 +147,30 @@ export default function SearchOverlay({
     return () => clearTimeout(delayDebounceRaw);
   }, [query]);
 
+  useEffect(() => {
+    if (!isTvApp || isLoading || !focusResultsAfterSearchRef.current) return;
+    focusResultsAfterSearchRef.current = false;
+    window.requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>('.noir-tv-search-overlay [data-tv-search-result]')
+        ?.focus({ preventScroll: true });
+    });
+  }, [isLoading, isTvApp, results]);
+
+  const submitTvSearch = () => {
+    if (!isTvApp) return;
+    focusResultsAfterSearchRef.current = true;
+    inputRef.current?.blur();
+    void NoirPlayer.hideKeyboard().catch(() => {});
+    if (!isLoading && results.length > 0) {
+      window.requestAnimationFrame(() => {
+        document
+          .querySelector<HTMLElement>('.noir-tv-search-overlay [data-tv-search-result]')
+          ?.focus({ preventScroll: true });
+      });
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -155,7 +180,7 @@ export default function SearchOverlay({
       aria-labelledby="search-overlay-title"
       className={`fixed inset-y-0 left-0 right-0 bg-[#111113] selection:bg-red-500/30 overflow-y-auto ${
         isTvApp
-          ? 'noir-tv-search-overlay right-0 z-[200] px-[4vw] pt-32'
+          ? 'noir-tv-search-overlay right-0 z-[200] px-[4vw] pt-24'
           : 'lg:right-52 z-[170] pt-16 lg:pt-8 px-4 sm:px-6 lg:px-8'
       }`}
     >
@@ -179,7 +204,13 @@ export default function SearchOverlay({
         </div>
 
         {/* Input area — bar بحث كبير */}
-        <div className={`flex items-center gap-3 px-4 sm:px-5 noir-surface mb-7 backdrop-blur-xl ${isTvApp ? 'min-h-20 rounded-2xl' : 'min-h-14'}`}>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            submitTvSearch();
+          }}
+          className={`flex items-center gap-3 px-4 sm:px-5 noir-surface mb-7 backdrop-blur-xl ${isTvApp ? 'min-h-20 rounded-2xl' : 'min-h-14'}`}
+        >
           <Search className={`${isTvApp ? 'w-7 h-7' : 'w-5 h-5'} text-gray-400 shrink-0`} />
           <input
             ref={inputRef}
@@ -188,6 +219,12 @@ export default function SearchOverlay({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(event) => {
+              if (isTvApp && event.key === 'Enter') {
+                event.preventDefault();
+                event.stopPropagation();
+                submitTvSearch();
+                return;
+              }
               if (
                 isTvApp &&
                 event.key === 'ArrowUp'
@@ -201,6 +238,7 @@ export default function SearchOverlay({
             }}
             placeholder="ابحث عن فيلم أو مسلسل..."
             aria-label="ابحث عن فيلم أو مسلسل"
+            enterKeyHint="search"
             className={`flex-1 bg-transparent border-0 outline-none text-white font-medium placeholder-gray-500 text-right font-sans ${isTvApp ? 'text-2xl' : 'text-base md:text-lg'}`}
             autoComplete="off"
           />
@@ -218,7 +256,7 @@ export default function SearchOverlay({
               </button>
             )
           )}
-        </div>
+        </form>
 
         {/* Body */}
         <div className="pb-20">
@@ -279,6 +317,7 @@ export default function SearchOverlay({
                     }}
                     role="button"
                     data-tv-card
+                    data-tv-search-result
                     tabIndex={0}
                     aria-label={`فتح ${item.title}`}
                     className={`flex items-center gap-4 rounded-xl hover:bg-white/5 cursor-pointer transition-colors text-right ${

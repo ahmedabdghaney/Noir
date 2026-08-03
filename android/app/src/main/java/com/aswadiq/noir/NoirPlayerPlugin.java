@@ -75,4 +75,17 @@ public class NoirPlayerPlugin extends Plugin {
             call.resolve();
         });
     }
+
+    @PluginMethod
+    public void hideKeyboard(PluginCall call) {
+        getBridge().executeOnMainThread(() -> {
+            WebView webView = getBridge().getWebView();
+            InputMethodManager inputMethodManager =
+                (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (inputMethodManager != null) {
+                inputMethodManager.hideSoftInputFromWindow(webView.getWindowToken(), 0);
+            }
+            call.resolve();
+        });
+    }
 }

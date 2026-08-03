@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
+import { Check, ChevronRight, Play, Plus, Star } from 'lucide-react';
 import type { ContinueWatchingItem, MovieOrShow } from '../types';
+import { fetchTitleLogo } from '../lib/tmdb';
 
 interface TvSection {
   key: string;
@@ -13,121 +14,210 @@ interface TvHomeProps {
   heroItems: MovieOrShow[];
   continueWatching: ContinueWatchingItem[];
   sections: TvSection[];
-  onDetails: (item: MovieOrShow) => void;
   onSelect: (item: MovieOrShow) => void;
   onContinue: (item: ContinueWatchingItem) => void;
+  onPlay: (item: MovieOrShow) => void;
+  isSaved: (item: MovieOrShow) => boolean;
+  onToggleSave: (item: MovieOrShow) => void;
 }
 
 export default function TvHome({
   heroItems,
   continueWatching,
   sections,
-  onDetails,
   onSelect,
   onContinue,
+  onPlay,
+  isSaved,
+  onToggleSave,
 }: TvHomeProps) {
-  const heroes = heroItems.slice(0, 5);
-  const [activeHero, setActiveHero] = useState(0);
+  const heroes = useMemo(() => heroItems.slice(0, 5), [heroItems]);
+  const [activeHero, setActiveHero] = useState(() => {
+    const saved = Number(sessionStorage.getItem('noir_tv_hero_index') || 0);
+    return Number.isFinite(saved) && saved >= 0 ? saved : 0;
+  });
+  const [heroLogos, setHeroLogos] = useState<Record<string, string | null>>({});
+  const [loadedHeroImages, setLoadedHeroImages] = useState<Record<string, boolean>>({});
   const hero = heroes[activeHero];
-  const heroRef = useRef<HTMLElement>(null);
+  const playButtonRef = useRef<HTMLButtonElement>(null);
+  const hasAutofocusedRef = useRef(false);
 
   useEffect(() => {
     if (activeHero >= heroes.length) setActiveHero(0);
   }, [activeHero, heroes.length]);
 
   useEffect(() => {
-    if (!hero) return;
+    sessionStorage.setItem('noir_tv_hero_index', String(activeHero));
+  }, [activeHero]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!heroes.length) return;
+    const wanted = [
+      heroes[activeHero],
+      heroes[(activeHero + 1) % heroes.length],
+    ].filter((item): item is MovieOrShow => Boolean(item));
+    const missing = wanted.filter(
+      (item) => heroLogos[`${item.type}_${item.id}`] === undefined,
+    );
+    if (!missing.length) return;
+    void Promise.all(
+      missing.map(async (item) => ({
+        key: `${item.type}_${item.id}`,
+        logo: await fetchTitleLogo(item.type, item.id),
+      })),
+    ).then((results) => {
+      if (cancelled) return;
+      setHeroLogos((current) => {
+        const next = { ...current };
+        results.forEach(({ key, logo }) => { next[key] = logo; });
+        return next;
+      });
+    });
+    return () => { cancelled = true; };
+  }, [activeHero, heroes, heroLogos]);
+
+  useEffect(() => {
+    if (!heroes.length) return;
+    const nextHero = heroes[(activeHero + 1) % heroes.length];
+    const nextImage = responsiveArtwork(nextHero?.backdrop || nextHero?.poster || '', 'hero');
+    if (!nextImage) return;
+    const image = new Image();
+    image.decoding = 'async';
+    image.src = nextImage;
+  }, [activeHero, heroes]);
+
+  useEffect(() => {
+    if (!hero || hasAutofocusedRef.current) return;
     const frame = window.requestAnimationFrame(() => {
+      hasAutofocusedRef.current = true;
       if (
         document.activeElement instanceof HTMLElement &&
         document.activeElement.closest('[data-tv-navigation]')
       ) {
         return;
       }
-      heroRef.current?.focus({ preventScroll: true });
+      playButtonRef.current?.focus({ preventScroll: true });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [activeHero, hero?.id, hero?.type]);
+  }, [hero]);
 
   if (!hero) {
     return <div className="mx-[3.5vw] mt-5 h-[55vh] animate-pulse rounded-[2rem] bg-white/5" />;
   }
 
-  const heroImage = hero.backdrop || hero.poster || '';
+  const heroImage = responsiveArtwork(hero.backdrop || hero.poster || '', 'hero');
+  const heroKey = `${hero.type}_${hero.id}`;
+  const heroLogo = heroLogos[`${hero.type}_${hero.id}`];
+  const heroGenres = hero.genres.slice(0, 2);
+  const saved = isSaved(hero);
   return (
-    <div className="noir-tv-home pb-24 pt-5">
-      <section
-        ref={heroRef}
-        tabIndex={0}
-        data-tv-hero
-        data-tv-autofocus
-        className="relative mx-[2vw] h-[59vh] min-h-[31rem] max-h-[44rem] overflow-hidden rounded-[2rem] bg-black"
-        aria-label={`${hero.title}، استخدم السهمين للتبديل واضغط موافق لفتح التفاصيل`}
-        role="button"
-        onClick={() => onDetails(hero)}
-        onKeyDown={(event) => {
-          if (event.target !== event.currentTarget) return;
-          if (event.key === 'ArrowLeft') {
-            event.preventDefault();
-            event.stopPropagation();
-            setActiveHero((current) => (current + 1) % heroes.length);
-          } else if (event.key === 'ArrowRight') {
-            event.preventDefault();
-            event.stopPropagation();
-            setActiveHero((current) => (current - 1 + heroes.length) % heroes.length);
-          } else if (
-            (event.key === 'Enter' || event.key === ' ') &&
-            event.target === event.currentTarget
-          ) {
-            event.preventDefault();
-            onDetails(hero);
-          }
-        }}
-      >
+    <div className="noir-tv-home pb-28">
+      <section className="noir-tv-hero-stage relative h-[88vh] min-h-[40rem] overflow-visible">
         <div
           key={`media-${hero.type}-${hero.id}`}
-          className="noir-tv-hero-media absolute inset-0"
+          className="noir-tv-hero-media absolute inset-x-0 top-0 bottom-[-13rem]"
         >
-          {heroImage && <img src={heroImage} alt="" className="absolute inset-0 h-full w-full object-cover" referrerPolicy="no-referrer" />}
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/15 to-black/10" />
-          <div className="absolute inset-0 bg-gradient-to-l from-black/90 via-black/25 to-transparent" />
-          <div className="noir-tv-hero-focus-gradient pointer-events-none absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-black via-black/55 to-transparent" />
+          {heroImage && (
+            <img
+              src={heroImage}
+              alt=""
+              onLoad={() => setLoadedHeroImages((current) => ({ ...current, [heroKey]: true }))}
+              className={`absolute inset-0 h-full w-full object-cover transition-[opacity,filter,transform] duration-700 ${
+                loadedHeroImages[heroKey] ? 'scale-100 opacity-100 blur-0' : 'scale-[1.015] opacity-45 blur-md'
+              }`}
+              referrerPolicy="no-referrer"
+            />
+          )}
+          <div className="absolute inset-0 bg-black/[0.08]" />
+          <div className="noir-tv-hero-side-scrim absolute inset-0" />
+          <div className="noir-tv-hero-bottom-scrim absolute inset-0" />
         </div>
 
-        <div
-          key={`content-${hero.type}-${hero.id}`}
-          className="noir-tv-hero-content absolute inset-y-0 right-[4vw] flex max-w-[42rem] flex-col justify-end pb-[4.5rem] text-right"
-          dir="rtl"
-        >
-          <div className="mb-3 flex items-center gap-3 text-sm font-semibold text-white/70">
-            <span>{hero.type === 'movie' ? 'فيلم مميز' : 'مسلسل مميز'}</span>
-            {hero.year && <><span className="h-1 w-1 rounded-full bg-white/40" /><span>{hero.year}</span></>}
-            {hero.rating > 0 && <span className="flex items-center gap-1.5 text-yellow-400"><Star className="h-4 w-4 fill-current" />{hero.rating.toFixed(1)}</span>}
+        <div className="noir-tv-hero-copy absolute bottom-[13.5rem] right-[5vw] z-10 flex w-[min(33rem,36vw)] flex-col items-start text-right" dir="rtl">
+          <div key={`content-${hero.type}-${hero.id}`} className="noir-tv-hero-content flex w-full flex-col items-start">
+            {heroLogo ? (
+              <img
+                src={heroLogo}
+                alt={hero.title}
+                className="noir-tv-hero-logo mb-4 max-h-[5.75rem] w-auto max-w-[20rem] object-contain object-right drop-shadow-2xl"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <h1 className="noir-tv-hero-title mb-4 font-display text-[clamp(2.15rem,3vw,3.6rem)] font-bold leading-[1.04] text-white drop-shadow-2xl">
+                {hero.title}
+              </h1>
+            )}
+
+            <div className="flex flex-wrap items-center gap-2.5 text-[1rem] font-semibold text-white/78">
+              <span>{hero.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
+              {heroGenres.map((genre) => <span key={genre}>• {genre}</span>)}
+              {hero.year && <span>• {hero.year}</span>}
+              {hero.rating > 0 && (
+                <span className="flex items-center gap-1 text-white">
+                  <Star className="h-4 w-4 fill-current" />
+                  {hero.rating.toFixed(1)}
+                </span>
+              )}
+            </div>
+            {hero.overview && (
+              <p className="noir-tv-hero-description mt-3 max-w-[32rem] text-[clamp(.88rem,.94vw,1rem)] leading-[1.7] text-white/68 line-clamp-2">
+                {hero.overview}
+              </p>
+            )}
           </div>
-          <h1 className="font-display text-[clamp(2.8rem,4.2vw,5rem)] font-bold leading-[1.05] text-white drop-shadow-2xl">{hero.title}</h1>
-          {hero.overview && <p className="mt-4 max-w-[40rem] text-[clamp(.95rem,1.15vw,1.2rem)] leading-7 text-white/68 line-clamp-2">{hero.overview}</p>}
+
+          <div data-tv-focus-row data-tv-top-actions className="noir-tv-hero-actions mt-6 flex items-center gap-4" dir="rtl">
+            <button
+              ref={playButtonRef}
+              type="button"
+              data-tv-autofocus
+              data-tv-primary-action
+              data-tv-focus-key={`home:hero:play:${hero.type}_${hero.id}`}
+              onClick={() => onPlay(hero)}
+              className="noir-tv-hero-play flex h-14 items-center gap-3 rounded-full bg-white px-8 text-lg font-bold text-black"
+              aria-label={`تشغيل ${hero.title}`}
+            >
+              <Play className="h-6 w-6 fill-current" />
+              <span>تشغيل</span>
+            </button>
+            <button
+              type="button"
+              data-tv-save
+              data-tv-focus-key={`home:hero:save:${hero.type}_${hero.id}`}
+              onClick={() => onToggleSave(hero)}
+              className="noir-tv-hero-circle flex h-14 w-14 items-center justify-center rounded-full border border-white/18 bg-black/45 text-white backdrop-blur-xl"
+              aria-label={saved ? `إزالة ${hero.title} من قائمتي` : `إضافة ${hero.title} إلى قائمتي`}
+            >
+              {saved ? <Check className="h-7 w-7" /> : <Plus className="h-7 w-7" />}
+            </button>
+            {heroes.length > 1 && (
+              <button
+                type="button"
+                data-tv-secondary-action
+                data-tv-focus-key="home:hero:next"
+                onClick={() => setActiveHero((current) => (current - 1 + heroes.length) % heroes.length)}
+                className="noir-tv-hero-circle flex h-14 w-14 items-center justify-center rounded-full border border-white/18 bg-black/45 text-white backdrop-blur-xl"
+                aria-label="العنوان التالي"
+              >
+                <ChevronRight className="h-8 w-8" strokeWidth={2.3} />
+              </button>
+            )}
+          </div>
         </div>
 
         {heroes.length > 1 && (
-          <>
-            <span aria-hidden="true" className="pointer-events-none absolute right-6 top-1/2 flex h-14 w-14 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white/85 backdrop-blur-xl">
-              <ChevronRight className="h-8 w-8" strokeWidth={2.3} />
-            </span>
-            <span aria-hidden="true" className="pointer-events-none absolute left-6 top-1/2 flex h-14 w-14 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white/85 backdrop-blur-xl">
-              <ChevronLeft className="h-8 w-8" strokeWidth={2.3} />
-            </span>
-            <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 items-center gap-2" dir="ltr">
-              <div className="flex gap-2">
-                {heroes.map((item, index) => (
-                  <span key={`${item.type}_${item.id}`} className={`h-1.5 rounded-full ${index === activeHero ? 'w-8 bg-white' : 'w-1.5 bg-white/35'}`} />
-                ))}
-              </div>
+          <div className="noir-tv-hero-pagination absolute bottom-[10.5rem] left-1/2 z-10 flex -translate-x-1/2 items-center gap-2" dir="ltr">
+            <div className="flex gap-2">
+              {heroes.map((item, index) => (
+                <span key={`${item.type}_${item.id}`} className={`h-1.5 rounded-full transition-all duration-300 ${index === activeHero ? 'w-8 bg-white' : 'w-1.5 bg-white/35'}`} />
+              ))}
             </div>
-          </>
+          </div>
         )}
       </section>
 
-      <div className="relative z-10 mt-6 space-y-5">
+      <div className="noir-tv-home-rows relative z-20 -mt-[7rem]">
         {continueWatching.length > 0 && (
           <TvRow
             title="أكمل المشاهدة"
@@ -144,7 +234,8 @@ export default function TvHome({
               subtitle={section.subtitle}
               items={section.items}
               onSelect={onSelect}
-              portrait={section.key === 'upcoming'}
+              portrait={section.key === 'upcoming' || section.key === 'top-ten'}
+              ranked={section.key === 'top-ten'}
             />
           </div>
         ))}
@@ -160,6 +251,7 @@ function TvRow({
   onSelect,
   progress = false,
   portrait = false,
+  ranked = false,
 }: {
   title: string;
   subtitle?: string;
@@ -167,6 +259,7 @@ function TvRow({
   onSelect: (item: MovieOrShow) => void;
   progress?: boolean;
   portrait?: boolean;
+  ranked?: boolean;
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
@@ -195,49 +288,73 @@ function TvRow({
       className={`noir-tv-row noir-tv-row-reveal ${isVisible ? 'is-visible' : ''}`}
       aria-label={title}
     >
-      <div className="mb-4 flex items-end justify-between px-[3.5vw]">
+      <div className="noir-tv-row-heading mb-0 flex items-end justify-between px-[5vw]">
         <div>
-          <h2 className="text-2xl font-bold text-white">{title}</h2>
-          {subtitle && <p className="mt-1 text-sm text-white/45">{subtitle}</p>}
+          <h2 className="text-[clamp(1.25rem,1.45vw,1.65rem)] font-bold tracking-[-0.02em] text-white">{title}</h2>
+          {subtitle && <p className="mt-1.5 text-sm text-white/42">{subtitle}</p>}
         </div>
       </div>
       <div
         ref={rowRef}
         data-tv-focus-row
-        className="noir-tv-card-track flex gap-4 overflow-x-auto px-[3.5vw] py-3 pb-6 no-scrollbar scroll-smooth"
+        className={`noir-tv-card-track flex overflow-x-auto px-[5vw] no-scrollbar scroll-smooth ${progress ? 'noir-tv-continue-track' : ''}`}
         dir="rtl"
       >
         {visibleItems.map((item, index) => {
           const continueItem = item as ContinueWatchingItem;
-          const image = portrait
-            ? (item.poster || item.backdrop)
-            : (item.backdrop || item.poster);
+          const rawImage = portrait
+            ? (item.poster || item.backdrop || '')
+            : (item.backdrop || item.poster || '');
+          const image = responsiveArtwork(
+            rawImage,
+            portrait || !item.backdrop ? 'poster' : 'landscape',
+          );
           return (
             <button
               key={`${item.type}_${item.id}`}
               type="button"
               data-tv-card
               data-tv-card-artwork
+              data-tv-focus-key={`home:${title}:${item.type}_${item.id}`}
               onClick={() => onSelect(item)}
-              className={`group relative shrink-0 overflow-hidden rounded-2xl bg-[#19191d] text-right ${
+              className={`group relative shrink-0 overflow-hidden bg-[#151518] text-right ${
                 portrait
-                  ? 'aspect-[2/3] w-[clamp(12rem,14vw,16rem)]'
-                  : 'aspect-video w-[clamp(17rem,20vw,24rem)]'
+                  ? 'noir-tv-portrait-card aspect-[2/3] w-[clamp(11rem,12vw,14rem)] rounded-[1.1rem]'
+                  : progress
+                    ? 'noir-tv-continue-card aspect-video w-[clamp(18rem,19vw,22.5rem)] rounded-[1.15rem]'
+                    : 'noir-tv-landscape-card aspect-video w-[clamp(17rem,18vw,21.5rem)] rounded-[1.15rem]'
               }`}
               aria-label={`فتح ${item.title}`}
             >
               {image && <img src={image} alt="" loading={index < 5 ? 'eager' : 'lazy'} className="absolute inset-0 h-full w-full object-cover" referrerPolicy="no-referrer" />}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/5 to-transparent" />
+              <div className={`absolute inset-0 ${progress ? 'bg-gradient-to-t from-black/95 via-black/20 to-transparent' : 'bg-gradient-to-t from-black/88 via-black/5 to-transparent'}`} />
+              {ranked && (
+                <span className="absolute left-3 top-3 z-10 text-[clamp(3.8rem,5vw,6.2rem)] font-black leading-none tracking-[-0.08em] text-white drop-shadow-[0_3px_18px_rgba(0,0,0,.8)]">
+                  {index + 1}
+                </span>
+              )}
               <div className="absolute inset-x-0 bottom-0 z-10 p-4" dir="rtl">
-                <h3 className="truncate text-lg font-bold text-white">{item.title}</h3>
-                <div className="mt-1 flex items-center gap-2 text-sm text-white/55">
-                  <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
-                  {item.year && <><span>•</span><span>{item.year}</span></>}
-                  {item.rating > 0 && <><span>•</span><span className="text-yellow-400">{item.rating.toFixed(1)}</span></>}
-                </div>
-                {progress && (
-                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/20">
-                    <div className="h-full rounded-full bg-red-500" style={{ width: `${Math.max(3, Math.min(100, Number(continueItem.progress || 0)))}%` }} />
+                <h3 className={`${progress ? 'noir-tv-continue-title text-[clamp(.82rem,.82vw,.95rem)]' : 'text-lg'} truncate font-bold text-white`}>{item.title}</h3>
+                {progress ? (
+                  <>
+                    <div className="mt-2 flex items-center justify-between gap-3 text-[.9rem] font-semibold text-white">
+                      <span className="flex items-center gap-2">
+                        <Play className="h-4 w-4 fill-current" />
+                        {continueItem.type === 'tv' && continueItem.episode > 0
+                          ? `الحلقة ${continueItem.episode}`
+                          : formatElapsed(continueItem.positionSeconds)}
+                      </span>
+                      <span>{formatRemaining(continueItem.durationSeconds, continueItem.positionSeconds)}</span>
+                    </div>
+                    <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/28">
+                      <div className="h-full rounded-full bg-white" style={{ width: `${Math.max(3, Math.min(100, Number(continueItem.progress || 0)))}%` }} />
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-1 flex items-center gap-2 text-sm text-white/70">
+                    <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
+                    {item.year && <><span>•</span><span>{item.year}</span></>}
+                    {item.rating > 0 && <><span>•</span><span>{item.rating.toFixed(1)}</span></>}
                   </div>
                 )}
               </div>
@@ -247,4 +364,32 @@ function TvRow({
       </div>
     </section>
   );
+}
+
+function formatElapsed(seconds: number): string {
+  const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  return hours > 0 ? `${hours} س ${minutes} د` : `${minutes} د`;
+}
+
+function formatRemaining(durationSeconds: number, positionSeconds: number): string {
+  const remaining = Math.max(0, (Number(durationSeconds) || 0) - (Number(positionSeconds) || 0));
+  if (!remaining) return 'متبقي قليل';
+  return `باقي ${formatElapsed(remaining)}`;
+}
+
+function responsiveArtwork(url: string, kind: 'hero' | 'poster' | 'landscape'): string {
+  if (!url.includes('image.tmdb.org')) return url;
+  const displayWidth = Math.max(window.innerWidth, window.screen?.width || 0);
+  if (kind === 'hero') {
+    return url.replace(/\/t\/p\/(?:w\d+|original)\//, '/t/p/original/');
+  }
+  if (kind === 'landscape') {
+    return url.replace(/\/t\/p\/w\d+\//, '/t/p/w1280/');
+  }
+  if (displayWidth >= 2400) {
+    return url.replace(/\/t\/p\/w\d+\//, '/t/p/original/');
+  }
+  return url.replace(/\/t\/p\/w\d+\//, '/t/p/w780/');
 }
