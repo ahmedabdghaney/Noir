@@ -32,8 +32,6 @@ struct DetailScreen: View {
                         MediaRow(section: MediaSection(id: "related", title: "Related", items: similar))
                     }
 
-                    howToWatchSection
-
                     if let cast = details?.cast, !cast.isEmpty { castSection(cast) }
 
                     informationSection
@@ -52,7 +50,9 @@ struct DetailScreen: View {
             ToolbarItem(placement: .topBarTrailing) {
                 ShareLink(item: URL(string: "https://noir.aswad-iq.com")!) {
                     Image(systemName: "square.and.arrow.up")
+                        .foregroundStyle(.white)
                 }
+                .tint(.white)
                 .accessibilityLabel("Share")
             }
         }
@@ -200,30 +200,6 @@ struct DetailScreen: View {
                 .padding(.horizontal, NoirDesign.horizontalPadding)
             }
             .scrollIndicators(.hidden)
-        }
-    }
-
-    private var howToWatchSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "How to Watch", showsChevron: false)
-            Button { playDefault() } label: {
-                HStack(spacing: 14) {
-                    Image(systemName: "play.tv.fill")
-                        .font(.title2)
-                        .frame(width: 62, height: 62)
-                        .background(.black.opacity(0.35), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Watch on Noir").font(.headline)
-                        Text("Available now").font(.subheadline).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Image(systemName: "play.fill").foregroundStyle(.secondary)
-                }
-                .padding(12)
-                .background(NoirDesign.secondaryBackground, in: RoundedRectangle(cornerRadius: NoirDesign.Radius.largeCard, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, NoirDesign.horizontalPadding)
         }
     }
 

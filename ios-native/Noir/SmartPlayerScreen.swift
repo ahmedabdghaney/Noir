@@ -12,7 +12,7 @@ struct SmartPlayerScreen: View {
     @State private var source: PlayerSource = .checking
     @State private var player: AVPlayer?
     @State private var progressTask: Task<Void, Never>?
-    @State private var orientationTask: Task<Void, Never>?
+    @State private var isClosing = false
 
     var body: some View {
         ZStack {
@@ -26,7 +26,7 @@ struct SmartPlayerScreen: View {
 
             case .native:
                 if let player {
-                    SystemVideoPlayer(player: player)
+                    SystemVideoPlayer(player: player, subtitleURL: vttURL)
                         .ignoresSafeArea()
                 }
 
@@ -47,15 +47,24 @@ struct SmartPlayerScreen: View {
                     .buttonStyle(.borderedProminent)
                 }
             }
+
+            if isClosing {
+                Color.black
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                    .zIndex(20)
+            }
         }
         .task { await resolveSource() }
-        .onAppear { enforceLandscape() }
+        .onAppear {
+            configurePlaybackAudio()
+            enforceLandscape()
+        }
         .onDisappear {
             saveProgress()
             player?.pause()
             progressTask?.cancel()
-            orientationTask?.cancel()
-            PlayerOrientation.request(.portrait)
+            AppOrientation.request(.portrait)
         }
         .simultaneousGesture(
             DragGesture(minimumDistance: 24, coordinateSpace: .global)
@@ -63,24 +72,42 @@ struct SmartPlayerScreen: View {
                     let isEdgeSwipe = value.startLocation.x <= 28
                     let isHorizontal = abs(value.translation.width) > abs(value.translation.height)
                     if isEdgeSwipe, isHorizontal, value.translation.width > 90 {
-                        dismiss()
+                        closePlayer()
                     }
                 }
         )
+        .interactiveDismissDisabled(true)
         .statusBarHidden()
         .persistentSystemOverlays(.hidden)
     }
 
     private func enforceLandscape() {
-        orientationTask?.cancel()
-        orientationTask = Task { @MainActor in
-            PlayerOrientation.request(.landscape)
-            try? await Task.sleep(for: .milliseconds(240))
-            guard !Task.isCancelled else { return }
-            PlayerOrientation.request(.landscape)
-            try? await Task.sleep(for: .milliseconds(760))
-            guard !Task.isCancelled else { return }
-            PlayerOrientation.request(.landscape)
+        // A single geometry request is enough. Repeating it while Rotation Lock
+        // is enabled can make UIKit alternate between portrait and landscape.
+        AppOrientation.request(.landscape)
+    }
+
+    private func configurePlaybackAudio() {
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .moviePlayback)
+            try session.setActive(true)
+        } catch {
+            // AVPlayer can still attempt playback if the audio session is busy.
+        }
+    }
+
+    private func closePlayer() {
+        guard !isClosing else { return }
+        saveProgress()
+        player?.pause()
+        progressTask?.cancel()
+        withAnimation(.easeOut(duration: 0.12)) {
+            isClosing = true
+        }
+        AppOrientation.request(.portrait)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) {
+            dismiss()
         }
     }
 
@@ -100,6 +127,10 @@ struct SmartPlayerScreen: View {
 
     private var mp4URL: URL {
         URL(string: "https://d269k7J205s3hx.cloudfront.net/" + encodedMediaPath(extension: "mp4"))!
+    }
+
+    private var vttURL: URL {
+        URL(string: "https://d269k7J205s3hx.cloudfront.net/" + encodedMediaPath(extension: "vtt"))!
     }
 
     private func encodedMediaPath(extension fileExtension: String) -> String {
@@ -173,6 +204,8 @@ struct SmartPlayerScreen: View {
 
         let playerItem = AVPlayerItem(url: url)
         let created = AVPlayer(playerItem: playerItem)
+        created.isMuted = false
+        created.volume = 1
         created.automaticallyWaitsToMinimizeStalling = true
         created.appliesMediaSelectionCriteriaAutomatically = true
 
@@ -215,15 +248,6 @@ struct SmartPlayerScreen: View {
 
 }
 
-@MainActor
-private enum PlayerOrientation {
-    static func request(_ orientations: UIInterfaceOrientationMask) {
-        guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first else { return }
-        scene.windows.forEach { $0.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations() }
-        scene.requestGeometryUpdate(.iOS(interfaceOrientations: orientations)) { _ in }
-    }
-}
-
 private enum PlayerSource {
     case checking
     case native
@@ -233,6 +257,11 @@ private enum PlayerSource {
 
 private struct SystemVideoPlayer: UIViewControllerRepresentable {
     let player: AVPlayer
+    let subtitleURL: URL
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(player: player, subtitleURL: subtitleURL)
+    }
 
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let controller = AVPlayerViewController()
@@ -242,6 +271,7 @@ private struct SystemVideoPlayer: UIViewControllerRepresentable {
         controller.allowsPictureInPicturePlayback = true
         controller.canStartPictureInPictureAutomaticallyFromInline = true
         controller.updatesNowPlayingInfoCenter = true
+        context.coordinator.attach(to: controller)
         return controller
     }
 
@@ -249,11 +279,326 @@ private struct SystemVideoPlayer: UIViewControllerRepresentable {
         if controller.player !== player {
             controller.player = player
         }
+        context.coordinator.update(player: player, subtitleURL: subtitleURL, controller: controller)
     }
 
-    static func dismantleUIViewController(_ controller: AVPlayerViewController, coordinator: Void) {
+    static func dismantleUIViewController(_ controller: AVPlayerViewController, coordinator: Coordinator) {
+        coordinator.teardown()
         controller.player?.pause()
         controller.player = nil
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        private var player: AVPlayer
+        private var subtitleURL: URL
+        private weak var controller: AVPlayerViewController?
+        private let subtitleLabel = UILabel()
+        private let captionButton = UIButton(type: .system)
+        private var cues: [VTTCue] = []
+        private var timeObserver: Any?
+        private var loadTask: Task<Void, Never>?
+        private var captionHideTask: Task<Void, Never>?
+        private weak var playerTapRecognizer: UITapGestureRecognizer?
+        private var subtitlesEnabled = true
+        private var subtitleSize: SubtitleSize = .medium
+
+        init(player: AVPlayer, subtitleURL: URL) {
+            self.player = player
+            self.subtitleURL = subtitleURL
+        }
+
+        func teardown() {
+            loadTask?.cancel()
+            captionHideTask?.cancel()
+            if let timeObserver { player.removeTimeObserver(timeObserver) }
+            timeObserver = nil
+            if let playerTapRecognizer {
+                playerTapRecognizer.view?.removeGestureRecognizer(playerTapRecognizer)
+            }
+        }
+
+        func attach(to controller: AVPlayerViewController) {
+            self.controller = controller
+            installSubtitleLabel(in: controller)
+            observePlayerTouches(in: controller)
+            observePlaybackTime()
+            loadSubtitles()
+        }
+
+        func update(player: AVPlayer, subtitleURL: URL, controller: AVPlayerViewController) {
+            guard self.player !== player || self.subtitleURL != subtitleURL else { return }
+            if let timeObserver { self.player.removeTimeObserver(timeObserver) }
+            self.timeObserver = nil
+            loadTask?.cancel()
+            cues = []
+            subtitleLabel.text = nil
+            self.player = player
+            self.subtitleURL = subtitleURL
+            self.controller = controller
+            observePlaybackTime()
+            loadSubtitles()
+        }
+
+        private func installSubtitleLabel(in controller: AVPlayerViewController) {
+            guard let overlay = controller.contentOverlayView else { return }
+            subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
+            subtitleLabel.numberOfLines = 0
+            subtitleLabel.textAlignment = .center
+            subtitleLabel.textColor = .white
+            subtitleLabel.font = scaledSubtitleFont()
+            subtitleLabel.adjustsFontForContentSizeCategory = true
+            subtitleLabel.isUserInteractionEnabled = false
+            subtitleLabel.layer.shadowColor = UIColor.black.cgColor
+            subtitleLabel.layer.shadowOpacity = 0.95
+            subtitleLabel.layer.shadowRadius = 3
+            subtitleLabel.layer.shadowOffset = CGSize(width: 0, height: 1)
+            overlay.addSubview(subtitleLabel)
+
+            NSLayoutConstraint.activate([
+                subtitleLabel.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
+                subtitleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: overlay.leadingAnchor, constant: 24),
+                subtitleLabel.trailingAnchor.constraint(lessThanOrEqualTo: overlay.trailingAnchor, constant: -24),
+                subtitleLabel.bottomAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.bottomAnchor, constant: -54)
+            ])
+
+            installCaptionButton(in: overlay)
+        }
+
+        private func installCaptionButton(in overlay: UIView) {
+            var configuration = UIButton.Configuration.filled()
+            configuration.image = UIImage(systemName: "captions.bubble.fill")
+            configuration.baseForegroundColor = .white
+            configuration.baseBackgroundColor = UIColor.black.withAlphaComponent(0.58)
+            configuration.cornerStyle = .capsule
+            configuration.contentInsets = NSDirectionalEdgeInsets(top: 9, leading: 9, bottom: 9, trailing: 9)
+
+            captionButton.configuration = configuration
+            captionButton.translatesAutoresizingMaskIntoConstraints = false
+            captionButton.showsMenuAsPrimaryAction = true
+            captionButton.accessibilityLabel = "Subtitles"
+            captionButton.isHidden = true
+            captionButton.alpha = 0
+            captionButton.addTarget(self, action: #selector(keepCaptionButtonVisible), for: .touchDown)
+            overlay.addSubview(captionButton)
+
+            NSLayoutConstraint.activate([
+                captionButton.trailingAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.trailingAnchor, constant: -16),
+                captionButton.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 16),
+                captionButton.widthAnchor.constraint(equalToConstant: 44),
+                captionButton.heightAnchor.constraint(equalToConstant: 44)
+            ])
+            refreshCaptionMenu()
+        }
+
+        private func refreshCaptionMenu() {
+            let off = UIAction(
+                title: "Off",
+                image: UIImage(systemName: "captions.bubble") ,
+                state: subtitlesEnabled ? .off : .on
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.subtitlesEnabled = false
+                    self?.subtitleLabel.text = nil
+                    self?.refreshCaptionMenu()
+                    self?.scheduleCaptionButtonHide()
+                }
+            }
+
+            let sizes = SubtitleSize.allCases.map { size in
+                UIAction(
+                    title: size.title,
+                    image: UIImage(systemName: size.symbol),
+                    state: subtitlesEnabled && subtitleSize == size ? .on : .off
+                ) { [weak self] _ in
+                    Task { @MainActor in
+                        guard let self else { return }
+                        self.subtitleSize = size
+                        self.subtitlesEnabled = true
+                        self.subtitleLabel.font = self.scaledSubtitleFont()
+                        self.displayCue(at: self.player.currentTime().seconds)
+                        self.refreshCaptionMenu()
+                        self.scheduleCaptionButtonHide()
+                    }
+                }
+            }
+
+            captionButton.menu = UIMenu(
+                title: "Subtitles",
+                children: [off, UIMenu(title: "Text Size", options: .displayInline, children: sizes)]
+            )
+        }
+
+        private func scaledSubtitleFont() -> UIFont {
+            UIFontMetrics(forTextStyle: .title3).scaledFont(
+                for: .systemFont(ofSize: subtitleSize.rawValue, weight: .semibold)
+            )
+        }
+
+        private func observePlayerTouches(in controller: AVPlayerViewController) {
+            let recognizer = UITapGestureRecognizer(target: self, action: #selector(playerWasTapped))
+            recognizer.cancelsTouchesInView = false
+            recognizer.delegate = self
+            controller.view.addGestureRecognizer(recognizer)
+            playerTapRecognizer = recognizer
+        }
+
+        nonisolated func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            guard let touchedView = touch.view else { return true }
+            return !touchedView.isDescendant(of: captionButton)
+        }
+
+        @objc private func playerWasTapped() {
+            showCaptionButton()
+        }
+
+        @objc private func keepCaptionButtonVisible() {
+            captionHideTask?.cancel()
+        }
+
+        private func showCaptionButton() {
+            guard !cues.isEmpty else { return }
+            captionHideTask?.cancel()
+            captionButton.isHidden = false
+            UIView.animate(withDuration: 0.14) {
+                self.captionButton.alpha = 1
+            }
+            scheduleCaptionButtonHide()
+        }
+
+        private func scheduleCaptionButtonHide() {
+            captionHideTask?.cancel()
+            captionHideTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(1.5))
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    guard let self else { return }
+                    UIView.animate(withDuration: 0.18) {
+                        self.captionButton.alpha = 0
+                    } completion: { _ in
+                        self.captionButton.isHidden = true
+                    }
+                }
+            }
+        }
+
+        private func observePlaybackTime() {
+            timeObserver = player.addPeriodicTimeObserver(
+                forInterval: CMTime(seconds: 0.15, preferredTimescale: 600),
+                queue: .main
+            ) { [weak self] time in
+                Task { @MainActor [weak self] in
+                    self?.displayCue(at: time.seconds)
+                }
+            }
+        }
+
+        private func loadSubtitles() {
+            let requestedURL = subtitleURL
+            loadTask = Task { [weak self] in
+                guard let self else { return }
+                do {
+                    let (data, response) = try await URLSession.shared.data(from: requestedURL)
+                    guard let http = response as? HTTPURLResponse,
+                          (200..<300).contains(http.statusCode),
+                          let text = String(data: data, encoding: .utf8) else { return }
+                    let parsed = VTTParser.parse(text)
+                    guard !parsed.isEmpty, !Task.isCancelled else { return }
+                    await MainActor.run {
+                        self.cues = parsed
+                        self.subtitlesEnabled = true
+                        self.refreshCaptionMenu()
+                        self.showCaptionButton()
+                    }
+                } catch {
+                    // A missing sidecar subtitle is valid; playback continues normally.
+                }
+            }
+        }
+
+        private func displayCue(at time: Double) {
+            guard subtitlesEnabled, time.isFinite else {
+                subtitleLabel.text = nil
+                return
+            }
+            subtitleLabel.text = cues.first(where: { time >= $0.start && time < $0.end })?.text
+        }
+
+    }
+}
+
+private enum SubtitleSize: CGFloat, CaseIterable {
+    case small = 18
+    case medium = 23
+    case large = 30
+
+    var title: String {
+        switch self {
+        case .small: "Small"
+        case .medium: "Medium"
+        case .large: "Large"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .small: "textformat.size.smaller"
+        case .medium: "textformat.size"
+        case .large: "textformat.size.larger"
+        }
+    }
+}
+
+private struct VTTCue {
+    let start: Double
+    let end: Double
+    let text: String
+}
+
+private enum VTTParser {
+    static func parse(_ source: String) -> [VTTCue] {
+        let normalized = source
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+        let blocks = normalized.components(separatedBy: "\n\n")
+
+        return blocks.compactMap { block in
+            let lines = block.split(separator: "\n", omittingEmptySubsequences: true).map(String.init)
+            guard let timingIndex = lines.firstIndex(where: { $0.contains("-->") }) else { return nil }
+            let timing = lines[timingIndex].components(separatedBy: "-->")
+            guard timing.count == 2,
+                  let start = timestamp(timing[0]),
+                  let end = timestamp(timing[1]) else { return nil }
+
+            let payload = lines.dropFirst(timingIndex + 1)
+                .joined(separator: "\n")
+                .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !payload.isEmpty else { return nil }
+            return VTTCue(start: start, end: end, text: payload)
+        }
+        .sorted { $0.start < $1.start }
+    }
+
+    private static func timestamp(_ raw: String) -> Double? {
+        let value = raw
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(separator: " ", maxSplits: 1)
+            .first
+            .map(String.init) ?? ""
+        let parts = value.replacingOccurrences(of: ",", with: ".").split(separator: ":")
+        guard parts.count == 2 || parts.count == 3 else { return nil }
+        let seconds = Double(parts.last ?? "") ?? 0
+        let minutes = Double(parts[parts.count - 2]) ?? 0
+        let hours = parts.count == 3 ? (Double(parts[0]) ?? 0) : 0
+        return hours * 3600 + minutes * 60 + seconds
     }
 }
 

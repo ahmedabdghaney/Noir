@@ -3,6 +3,7 @@ import SwiftUI
 enum AppTab: Hashable { case home, movies, shows, watchlist, search }
 
 struct RootView: View {
+    @AppStorage("noir.ios.onboarding.complete") private var didCompleteOnboarding = false
     @State private var selection: AppTab
     private let debugDetailPreview: Bool
     private let debugPlayerPreview: Bool
@@ -31,7 +32,11 @@ struct RootView: View {
 
     @ViewBuilder
     var body: some View {
-        if debugEpisodePreview {
+        if !didCompleteOnboarding && !debugEpisodePreview && !debugPlayerPreview && !debugDetailPreview {
+            OnboardingView {
+                didCompleteOnboarding = true
+            }
+        } else if debugEpisodePreview {
             EpisodeCardPreview()
         } else if debugPlayerPreview {
             SmartPlayerScreen(item: MediaItem(
@@ -86,7 +91,7 @@ struct RootView: View {
                 NavigationStack { SearchScreen() }
             }
         }
-        .tint(.blue)
+        .tint(NoirDesign.accent)
     }
 }
 

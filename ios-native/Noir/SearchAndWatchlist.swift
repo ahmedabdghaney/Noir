@@ -301,8 +301,9 @@ struct SectionGridScreen: View {
     }
 }
 
-private struct AppPageHeader: View {
+struct AppPageHeader: View {
     let title: String
+    var usesOverlayStyle = false
 
     var body: some View {
         HStack {
@@ -311,16 +312,21 @@ private struct AppPageHeader: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Spacer()
-            Image("ProfileAvatar")
-                .resizable()
-                .scaledToFill()
-                .frame(width: 40, height: 40)
-                .clipShape(Circle())
-                .accessibilityLabel("Profile")
+            ProfileButton()
         }
         .padding(.horizontal, NoirDesign.horizontalPadding)
-        .padding(.top, -7)
+        .padding(.top, usesOverlayStyle ? 54 : -7)
         .padding(.bottom, 12)
+        .background {
+            if usesOverlayStyle {
+                LinearGradient(
+                    colors: [.black.opacity(0.72), .black.opacity(0.26), .clear],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea(edges: .top)
+            }
+        }
     }
 }
 

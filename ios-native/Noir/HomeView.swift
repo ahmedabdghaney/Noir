@@ -35,6 +35,9 @@ struct HomeView: View {
                     .tint(Color.secondary)
             }
         }
+        .overlay(alignment: .top) {
+            AppPageHeader(title: "Home", usesOverlayStyle: true)
+        }
         .ignoresSafeArea(edges: .top)
         .task { await store.loadHome() }
         .alert("Unable to Load", isPresented: Binding(
@@ -123,6 +126,7 @@ struct HeroCarousel: View {
                                 .frame(width: dot == index ? 22 : 6, height: 6)
                         }
                     }
+                    .padding(.top, 2)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .animation(.smooth(duration: 0.28), value: index)
                 }
@@ -130,6 +134,8 @@ struct HeroCarousel: View {
                 .padding(.bottom, 18)
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
+            .clipped()
+            .compositingGroup()
             .contentShape(Rectangle())
             .simultaneousGesture(
                 DragGesture(minimumDistance: 36).onEnded { value in
@@ -289,20 +295,10 @@ struct ContinueRow: View {
                             .buttonStyle(.plain)
 
                             Menu {
-                                Button {
-                                    play(progress)
-                                } label: {
-                                    Label("Resume", systemImage: "play.fill")
-                                }
-
-                                NavigationLink(value: progress.media) {
-                                    Label("View Details", systemImage: "info.circle")
-                                }
-
                                 Button(role: .destructive) {
                                     store.removeFromContinueWatching(progress.media)
                                 } label: {
-                                    Label("Remove from Continue Watching", systemImage: "minus.circle")
+                                    Label("Remove from Continue Watching", systemImage: "trash")
                                 }
                             } label: {
                                 Image(systemName: "ellipsis")
