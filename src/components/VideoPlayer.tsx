@@ -117,6 +117,8 @@ export default function VideoPlayer({
   const [isBuffering,     setIsBuffering]     = useState(false);
   const [customMp4Failed, setCustomMp4Failed] = useState(false);
   const [useVidApi,       setUseVidApi]       = useState(false);
+  // 0 = VidAPI (player.aswad-iq.com, Premium) · 1 = Vidy (vidy.st)
+  const [serverIndex,     setServerIndex]     = useState(0);
   const [isCheckingMp4,   setIsCheckingMp4]   = useState(playMode === 'movie');
   const [, setRecoveryNotice] = useState('');
   const [isPlaying,       setIsPlaying]       = useState(false);
@@ -1289,26 +1291,40 @@ export default function VideoPlayer({
     ? `https://www.youtube-nocookie.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&origin=${encodeURIComponent(window.location.origin)}`
     : 'about:blank';
 
+  // Your custom VidAPI player domain (Premium, 0 ads). Change this one line
+  // if you move the player to another subdomain.
+  const VIDAPI_HOST = 'player.aswad-iq.com';
+
   const getVidApiUrl = () => {
     const params = new URLSearchParams({
-      primaryColor: 'ff453a',
-      secondaryColor: '0a0a0a',
-      iconColor: 'FFFFFF',
-      // Keep the web embed identical to the iOS WKWebView configuration.
-      icons: 'default',
-      player: 'nf',
-      title: 'true',
-      poster: 'true',
+      autoplay: '1',
+      primaryColor: '#FF2E29',
+    });
+    const resumeAt = Math.max(startAt, currentTime);
+    if (resumeAt > 5) params.set('resumeAt', String(Math.floor(resumeAt)));
+    // Arabic viewers get Arabic subtitles picked automatically.
+    if ((navigator.language || '').toLowerCase().startsWith('ar')) params.set('ds_lang', 'ar');
+    const path = type === 'tv'
+      ? `embed/tv/${id}/${season}/${episode}`
+      : `embed/movie/${id}`;
+    return `https://${VIDAPI_HOST}/${path}?${params}`;
+  };
+
+  const getVidyUrl = () => {
+    const params = new URLSearchParams({
+      color: 'FF2E29',
       autoplay: 'true',
     });
     const resumeAt = Math.max(startAt, currentTime);
-    if (resumeAt > 5) params.set('startAt', String(Math.floor(resumeAt)));
-    if (type === 'tv') {
-      params.set('nextbutton', 'true');
-      return `https://vidapi.qzz.io/tv/${id}/${season}/${episode}?${params}`;
-    }
-    return `https://vidapi.qzz.io/movie/${id}?${params}`;
+    if (resumeAt > 5) params.set('progress', String(Math.floor(resumeAt)));
+    const path = type === 'tv'
+      ? `tv/${id}/${season}/${episode}`
+      : `movie/${id}`;
+    return `https://vidy.st/${path}?${params}`;
   };
+
+  const SERVERS = ['VidAPI', 'Vidy'];
+  const getEmbedUrl = () => (serverIndex === 1 ? getVidyUrl() : getVidApiUrl());
 
   const progressPct = duration > 0 ? Math.max(0, Math.min(100, (currentTime / duration) * 100)) : 0;
   const bufferedPct = duration > 0 ? Math.max(0, Math.min(100, (buffered / duration) * 100)) : 0;
@@ -1395,10 +1411,12 @@ export default function VideoPlayer({
 
           /* VidAPI fallback التلقائي. */
           ) : useVidApi ? (
+            <>
             <iframe
-              src={isPausedByHost ? 'about:blank' : getVidApiUrl()}
+              key={`embed-${serverIndex}-${id}-${episode}`}
+              src={isPausedByHost ? 'about:blank' : getEmbedUrl()}
               allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-              referrerPolicy="no-referrer"
+              referrerPolicy="strict-origin-when-cross-origin"
               allowFullScreen
               className="h-full w-full border-0"
               onLoad={() => {
@@ -1406,6 +1424,37 @@ export default function VideoPlayer({
                 setIsLoading(false);
               }}
             />
+
+            {/* زر تبديل السيرفر داخل مشغل الويب */}
+            {!isPausedByHost && (
+              <div className="absolute top-3 right-3 z-40 flex items-center gap-2" dir="ltr">
+                <div className="flex items-center gap-1 rounded-full bg-black/55 backdrop-blur-md border border-white/10 p-1">
+                  {SERVERS.map((name, i) => (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => { setServerIndex(i); setIsLoading(true); }}
+                      className={`text-[11px] md:text-xs rounded-full px-3 py-1 transition-all ${
+                        serverIndex === i
+                          ? 'bg-white text-black font-semibold'
+                          : 'text-white/75 hover:text-white'
+                      }`}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={closePlayer}
+                  aria-label="إغلاق المشغل"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 backdrop-blur-md border border-white/10 text-white/85 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+            </>
 
           /* native mp4 */
           ) : isNative ? (

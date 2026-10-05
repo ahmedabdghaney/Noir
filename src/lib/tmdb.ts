@@ -5,8 +5,8 @@
 
 import { MovieOrShow, DetailedInfo } from '../types';
 
-const FALLBACK_KEY = 'ba9b34ad730f140e4c7de6c7491d0a90';
-const TMDB_KEY = (import.meta as any).env?.VITE_TMDB_API_KEY || FALLBACK_KEY;
+const TMDB_KEY = (import.meta as any).env?.VITE_TMDB_API_KEY ?? '';
+if (!TMDB_KEY) console.warn('VITE_TMDB_API_KEY is not set — TMDB requests will fail.');
 const API_BASE = 'https://api.themoviedb.org/3';
 const IMG_BASE = 'https://image.tmdb.org/t/p';
 
