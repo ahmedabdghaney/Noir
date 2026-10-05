@@ -329,7 +329,11 @@ export default function VideoPlayer({
     if (playMode !== 'movie') return;
     lastWatchedRef.current = lastWatchedAtRef.current = 0;
     const handler = (event: MessageEvent) => {
-      const d: any = event?.data;
+      let d: any = event?.data;
+      // Vidy sends JSON strings: { event: "timeupdate", currentTime, duration }
+      if (typeof d === 'string') {
+        try { d = JSON.parse(d); } catch { return; }
+      }
       if (!d || typeof d !== 'object') return;
       let w: number | null = null;
       if      (d.type === 'MEDIA_DATA'   && d.data?.progress?.watched != null) w = Number(d.data.progress.watched);
@@ -1310,9 +1314,9 @@ export default function VideoPlayer({
     return `https://${VIDAPI_HOST}/${path}?${params}`;
   };
 
-  // Vidy blocks direct embedding, so it's served through our Cloudflare Worker
-  // proxy (strips X-Frame-Options) to run inside the iframe.
-  const VIDY_PROXY = 'https://vidy-proxy.ahmedabdghaney.workers.dev';
+  // Official Vidy embed (www.vidy.st). Use the www host directly — vidy.st
+  // redirects there, and a cross-origin redirect breaks the iframe.
+  const VIDY_HOST = 'https://www.vidy.st';
 
   const getVidyUrl = () => {
     const params = new URLSearchParams({
@@ -1321,10 +1325,15 @@ export default function VideoPlayer({
     });
     const resumeAt = Math.max(startAt, currentTime);
     if (resumeAt > 5) params.set('progress', String(Math.floor(resumeAt)));
+    if (type === 'tv') {
+      params.set('nextEpisode', 'true');
+      params.set('episodeSelector', 'true');
+      params.set('autoplayNextEpisode', 'true');
+    }
     const path = type === 'tv'
       ? `tv/${id}/${season}/${episode}`
       : `movie/${id}`;
-    return `${VIDY_PROXY}/${path}?${params}`;
+    return `${VIDY_HOST}/${path}?${params}`;
   };
 
   // Vidy first (default), VidAPI as the alternate — both inside the iframe.
@@ -1420,7 +1429,7 @@ export default function VideoPlayer({
             <iframe
               key={`embed-${serverIndex}-${id}-${episode}`}
               src={isPausedByHost ? 'about:blank' : getEmbedUrl()}
-              allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+              allow="encrypted-media; autoplay *; fullscreen *; picture-in-picture *"
               referrerPolicy="strict-origin-when-cross-origin"
               allowFullScreen
               className="h-full w-full border-0"
