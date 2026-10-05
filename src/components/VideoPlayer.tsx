@@ -116,11 +116,12 @@ export default function VideoPlayer({
   const [isLoading,       setIsLoading]       = useState(true);
   const [isBuffering,     setIsBuffering]     = useState(false);
   const [customMp4Failed, setCustomMp4Failed] = useState(false);
-  const [useVidApi,       setUseVidApi]       = useState(false);
+  // Always true now: the web embed is the only player.
+  const [useVidApi,       setUseVidApi]       = useState(true);
   // 0 = VidAPI (player.aswad-iq.com, Premium) · 1 = Vidy (vidy.st)
   // 1 = Vidy (default, via proxy) · 0 = VidAPI fallback
   const [serverIndex,     setServerIndex]     = useState(1);
-  const [isCheckingMp4,   setIsCheckingMp4]   = useState(playMode === 'movie');
+  const [isCheckingMp4,   setIsCheckingMp4]   = useState(false);
   const [, setRecoveryNotice] = useState('');
   const [isPlaying,       setIsPlaying]       = useState(false);
   const [currentTime,     setCurrentTime]     = useState(0);
@@ -180,14 +181,11 @@ export default function VideoPlayer({
     mp4Url = `${CDN_BASE_URL}${encodedDir}/movie_${id}.mp4`;
     vttUrl = `${CDN_BASE_URL}${encodedDir}/movie_${id}.vtt`;
   }
-  const customMp4 = playMode === 'movie' ? mp4Url : undefined;
+  // MP4/CloudFront player removed — every title streams through the web
+  // embed (Vidy by default, VidAPI as the alternate). isNative stays false.
+  const customMp4 = undefined;
   const vttSrc    = vttUrl;
-  const isNative = Boolean(
-    playMode === 'movie' &&
-    customMp4 &&
-    !useVidApi &&
-    !isCheckingMp4,
-  );
+  const isNative = false;
 
   /* نفحص وجود MP4 أولاً. الخطأ المؤكد يحوّل تلقائياً إلى VidAPI،
      أما فشل HEAD بسبب CORS/الشبكة فيترك عنصر الفيديو يجرب بنفسه. */
@@ -361,7 +359,8 @@ export default function VideoPlayer({
     clearTimeout(mediaStartupTimerRef.current);
     mediaRetryCountRef.current = 0;
     setIsLoading(true); setCustomMp4Failed(false);
-    setUseVidApi(false);
+    // The web embed is the only player, so keep it on across title changes.
+    setUseVidApi(true);
     setRecoveryNotice('');
     setSubEnabled(true); setSpeed(1);
     setShowSettings(false); setShowSpeedMenu(false);
