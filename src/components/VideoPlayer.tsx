@@ -1324,7 +1324,7 @@ export default function VideoPlayer({
   };
 
   const SERVERS = ['VidAPI', 'Vidy'];
-  const getEmbedUrl = () => (serverIndex === 1 ? getVidyUrl() : getVidApiUrl());
+  const getEmbedUrl = () => getVidApiUrl();
 
   const progressPct = duration > 0 ? Math.max(0, Math.min(100, (currentTime / duration) * 100)) : 0;
   const bufferedPct = duration > 0 ? Math.max(0, Math.min(100, (buffered / duration) * 100)) : 0;
@@ -1433,14 +1433,23 @@ export default function VideoPlayer({
                     <button
                       key={name}
                       type="button"
-                      onClick={() => { setServerIndex(i); setIsLoading(true); }}
+                      onClick={() => {
+                        // Vidy blocks embedding (X-Frame-Options), so it can't
+                        // run inside an iframe — open it in a new tab instead.
+                        if (i === 1) {
+                          window.open(getVidyUrl(), '_blank', 'noopener');
+                          return;
+                        }
+                        setServerIndex(0);
+                        setIsLoading(true);
+                      }}
                       className={`text-[11px] md:text-xs rounded-full px-3 py-1 transition-all ${
-                        serverIndex === i
+                        serverIndex === 0 && i === 0
                           ? 'bg-white text-black font-semibold'
                           : 'text-white/75 hover:text-white'
                       }`}
                     >
-                      {name}
+                      {name}{i === 1 ? ' ↗' : ''}
                     </button>
                   ))}
                 </div>
