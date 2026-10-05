@@ -118,7 +118,8 @@ export default function VideoPlayer({
   const [customMp4Failed, setCustomMp4Failed] = useState(false);
   const [useVidApi,       setUseVidApi]       = useState(false);
   // 0 = VidAPI (player.aswad-iq.com, Premium) · 1 = Vidy (vidy.st)
-  const [serverIndex,     setServerIndex]     = useState(0);
+  // 1 = Vidy (default, via proxy) · 0 = VidAPI fallback
+  const [serverIndex,     setServerIndex]     = useState(1);
   const [isCheckingMp4,   setIsCheckingMp4]   = useState(playMode === 'movie');
   const [, setRecoveryNotice] = useState('');
   const [isPlaying,       setIsPlaying]       = useState(false);
@@ -1310,6 +1311,10 @@ export default function VideoPlayer({
     return `https://${VIDAPI_HOST}/${path}?${params}`;
   };
 
+  // Vidy blocks direct embedding, so it's served through our Cloudflare Worker
+  // proxy (strips X-Frame-Options) to run inside the iframe.
+  const VIDY_PROXY = 'https://vidy-proxy.ahmedabdghaney.workers.dev';
+
   const getVidyUrl = () => {
     const params = new URLSearchParams({
       color: 'FF2E29',
@@ -1320,11 +1325,12 @@ export default function VideoPlayer({
     const path = type === 'tv'
       ? `tv/${id}/${season}/${episode}`
       : `movie/${id}`;
-    return `https://vidy.st/${path}?${params}`;
+    return `${VIDY_PROXY}/${path}?${params}`;
   };
 
-  const SERVERS = ['VidAPI', 'Vidy'];
-  const getEmbedUrl = () => getVidApiUrl();
+  // Vidy first (default), VidAPI as the alternate — both inside the iframe.
+  const SERVERS = ['Vidy', 'VidAPI'];
+  const getEmbedUrl = () => (serverIndex === 0 ? getVidApiUrl() : getVidyUrl());
 
   const progressPct = duration > 0 ? Math.max(0, Math.min(100, (currentTime / duration) * 100)) : 0;
   const bufferedPct = duration > 0 ? Math.max(0, Math.min(100, (buffered / duration) * 100)) : 0;
@@ -1429,29 +1435,24 @@ export default function VideoPlayer({
             {!isPausedByHost && (
               <div className="absolute top-3 right-3 z-40 flex items-center gap-2" dir="ltr">
                 <div className="flex items-center gap-1 rounded-full bg-black/55 backdrop-blur-md border border-white/10 p-1">
-                  {SERVERS.map((name, i) => (
-                    <button
-                      key={name}
-                      type="button"
-                      onClick={() => {
-                        // Vidy blocks embedding (X-Frame-Options), so it can't
-                        // run inside an iframe — open it in a new tab instead.
-                        if (i === 1) {
-                          window.open(getVidyUrl(), '_blank', 'noopener');
-                          return;
-                        }
-                        setServerIndex(0);
-                        setIsLoading(true);
-                      }}
-                      className={`text-[11px] md:text-xs rounded-full px-3 py-1 transition-all ${
-                        serverIndex === 0 && i === 0
-                          ? 'bg-white text-black font-semibold'
-                          : 'text-white/75 hover:text-white'
-                      }`}
-                    >
-                      {name}{i === 1 ? ' ↗' : ''}
-                    </button>
-                  ))}
+                  {SERVERS.map((name, i) => {
+                    // SERVERS[0]=Vidy → serverIndex 1 · SERVERS[1]=VidAPI → serverIndex 0
+                    const idx = i === 0 ? 1 : 0;
+                    return (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => { setServerIndex(idx); setIsLoading(true); }}
+                        className={`text-[11px] md:text-xs rounded-full px-3 py-1 transition-all ${
+                          serverIndex === idx
+                            ? 'bg-white text-black font-semibold'
+                            : 'text-white/75 hover:text-white'
+                        }`}
+                      >
+                        {name}
+                      </button>
+                    );
+                  })}
                 </div>
                 <button
                   type="button"
