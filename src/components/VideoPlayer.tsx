@@ -1041,19 +1041,38 @@ export default function VideoPlayer({
 
     if (Hls.isSupported()) {
       // Chrome / Firefox — hls.js مع دعم مسارات الترجمة.
+      // renderTextTracksNatively:true — hls.js يضيف الترجمة لـ video.textTracks
+      // بشكل قياسي (مع حدث addtrack)، ونحن نضبط المسار hidden فيقرأ Noir
+      // activeCues بدون أن يرسمها المتصفح. (false يجعل hls.js يدير المسار
+      // داخلياً فلا يظهر بـ textTracks إطلاقاً — وهذا سبب اختفاء الترجمة.)
       const hls = new Hls({
         enableWebVTT: true,
-        renderTextTracksNatively: false, // Noir يرسم الترجمة، لا المتصفح.
+        renderTextTracksNatively: true,
         startPosition: startAt > 5 ? startAt : -1,
       });
       hlsRef.current = hls;
       hls.loadSource(hlsUrl);
       hls.attachMedia(v);
+      // يفعّل مسار الترجمة بـ hls.js حتى تُحمّل الـ cues، ويفضّل العربي.
+      const enableArabicSubtitle = () => {
+        const tracks = hls.subtitleTracks || [];
+        if (tracks.length === 0) return;
+        const arIdx = tracks.findIndex(
+          (t) => /^ar/i.test(t.lang || '') || /arabic|عرب/i.test(t.name || ''),
+        );
+        const target = arIdx >= 0 ? arIdx : 0;
+        // display=false: hls.js لا يرسم الترجمة بنفسه، Noir يرسمها من activeCues.
+        hls.subtitleDisplay = false;
+        if (hls.subtitleTrack !== target) hls.subtitleTrack = target;
+      };
+
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         pickEnglishAudio(hls);
+        enableArabicSubtitle();
         setIsLoading(false);
       });
       hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => pickEnglishAudio(hls));
+      hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => enableArabicSubtitle());
       let netRetries = 0;
       let mediaRetries = 0;
       hls.on(Hls.Events.ERROR, (_evt, data) => {
