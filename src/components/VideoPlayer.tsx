@@ -157,6 +157,10 @@ export default function VideoPlayer({
   const [subOffset,       setSubOffset]       = useState(0);  // تأخير الترجمة بالثانية (+/-) — مُبقى داخلياً
   const [cueText,         setCueText]         = useState('');  // نص الترجمة الحالي
   const [speed,           setSpeed]           = useState(1);
+  // مستويات جودة HLS: {index الفعلي بـ hls.levels, height} — -1 = Auto
+  const [qualityLevels, setQualityLevels] = useState<{ index: number; height: number }[]>([]);
+  const [currentLevel,  setCurrentLevel]  = useState(-1); // -1 = Auto
+  const [showQualityMenu, setShowQualityMenu] = useState(false);
   const [showSettings,    setShowSettings]    = useState(false);
   const [showSpeedMenu,   setShowSpeedMenu]   = useState(false);
   const showSettingsRef = useRef(false);
@@ -398,7 +402,8 @@ export default function VideoPlayer({
     setEmbedFallback([]);
     setRecoveryNotice('');
     setSubEnabled(true); setSpeed(1);
-    setShowSettings(false); setShowSpeedMenu(false);
+    setShowSettings(false); setShowSpeedMenu(false); setShowQualityMenu(false);
+    setQualityLevels([]); setCurrentLevel(-1);
     setIsPlaying(false); setCurrentTime(0); setDuration(0); setBuffered(0); setIsBuffering(false);
     setNextEpisodeCountdown(null);
     setShowStillWatching(false);
@@ -1069,7 +1074,20 @@ export default function VideoPlayer({
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         pickEnglishAudio(hls);
         enableArabicSubtitle();
+        // اجمع مستويات الجودة الفريدة (حسب الارتفاع) للعرض بقائمة الإعدادات.
+        const levels = (hls.levels || [])
+          .map((lv, i) => ({ index: i, height: lv.height || 0 }))
+          .filter((lv) => lv.height > 0)
+          .sort((a, b) => b.height - a.height);
+        // أزل التكرار بنفس الارتفاع (نبقي أول index).
+        const seen = new Set<number>();
+        const unique = levels.filter((lv) => (seen.has(lv.height) ? false : (seen.add(lv.height), true)));
+        setQualityLevels(unique);
+        setCurrentLevel(hls.autoLevelEnabled ? -1 : hls.currentLevel);
         setIsLoading(false);
+      });
+      hls.on(Hls.Events.LEVEL_SWITCHED, (_e, d) => {
+        setCurrentLevel(hls.autoLevelEnabled ? -1 : d.level);
       });
       hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => pickEnglishAudio(hls));
       hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => enableArabicSubtitle());
@@ -1203,6 +1221,18 @@ export default function VideoPlayer({
   const changeSpeed = (s: number) => {
     if (videoRef.current) videoRef.current.playbackRate = s;
     setSpeed(s); setShowSpeedMenu(false); setShowSettings(false);
+  };
+
+  // تبديل جودة الفيديو. index = -1 → Auto (ABR). خلاف ذلك index من hls.levels.
+  const changeQuality = (index: number) => {
+    const hls = hlsRef.current;
+    if (hls) {
+      // -1 يعيد الوضع التلقائي (ABR) بـ hls.js.
+      hls.currentLevel = index;
+      setCurrentLevel(index);
+    }
+    setShowQualityMenu(false);
+    setShowSettings(false);
   };
 
   /* ── iPhone native fullscreen: ارفع الترجمة من قاع الشاشة (cue.line) ── */
@@ -2247,7 +2277,7 @@ export default function VideoPlayer({
 
                   {/* settings */}
                   <div className="relative">
-                    <Btn onClick={() => { setShowSettings(p => !p); setShowSpeedMenu(false); }} label="الإعدادات" active={showSettings} tvControl={isTvAndroidApp}>
+                    <Btn onClick={() => { setShowSettings(p => !p); setShowSpeedMenu(false); setShowQualityMenu(false); }} label="الإعدادات" active={showSettings} tvControl={isTvAndroidApp}>
                       <Settings className="w-5 h-5" />
                     </Btn>
                     {showSettings && (
@@ -2256,7 +2286,7 @@ export default function VideoPlayer({
                             أي ضغطة عليه — حتى على زر الإعدادات تحته — تسد القائمة */}
                         <div
                           className="fixed inset-0 z-40"
-                          onPointerDown={(e) => { e.stopPropagation(); setShowSettings(false); setShowSpeedMenu(false); }}
+                          onPointerDown={(e) => { e.stopPropagation(); setShowSettings(false); setShowSpeedMenu(false); setShowQualityMenu(false); }}
                         />
                       <div
                         dir="rtl"
@@ -2282,6 +2312,31 @@ export default function VideoPlayer({
                               </button>
                             ))}
                           </div>
+                        )}
+                        {qualityLevels.length > 0 && (
+                          <>
+                            <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => setShowQualityMenu(p => !p)} className="w-full border-t border-white/10 flex items-center justify-between px-3.5 py-3 text-sm text-white hover:bg-white/10 transition-colors">
+                              <span className="flex items-center gap-1 text-red-400 font-semibold text-xs">
+                                {currentLevel === -1
+                                  ? 'تلقائي'
+                                  : `${qualityLevels.find((l) => l.index === currentLevel)?.height || ''}p`}
+                                <ChevronDown className={`w-3 h-3 transition-transform ${showQualityMenu ? 'rotate-180' : ''}`} />
+                              </span>
+                              <span>الجودة</span>
+                            </button>
+                            {showQualityMenu && (
+                              <div className="border-t border-white/10 max-h-48 overflow-y-auto">
+                                <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeQuality(-1)} className={`w-full text-right px-3.5 py-2.5 text-sm transition-colors ${currentLevel === -1 ? 'text-red-400 bg-red-500/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
+                                  تلقائي
+                                </button>
+                                {qualityLevels.map((lv) => (
+                                  <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} key={lv.index} onClick={() => changeQuality(lv.index)} className={`w-full text-right px-3.5 py-2.5 text-sm transition-colors ${currentLevel === lv.index ? 'text-red-400 bg-red-500/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
+                                    {lv.height}p
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </>
                         )}
                         {type === 'tv' && (
                           <button
