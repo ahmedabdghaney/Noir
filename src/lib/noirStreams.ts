@@ -262,6 +262,72 @@ export interface ResolvedPlayback {
 }
 
 /**
+ * يقرأ أعلى دقة (ارتفاع البكسل) من master.m3u8 دون تشغيله — يجلب نص الـ
+ * playlist ويبحث عن أعلى RESOLUTION مذكورة. يرجّع 0 لو تعذّر (نعامله كأدنى).
+ * timeout قصير حتى لا يؤخّر بدء التشغيل كثيراً.
+ */
+export async function probeHlsMaxHeight(
+  url: string,
+  signal?: AbortSignal,
+  timeoutMs = 4000,
+): Promise<number> {
+  try {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), timeoutMs);
+    const onAbort = () => ctrl.abort();
+    signal?.addEventListener('abort', onAbort, { once: true });
+    const res = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(to);
+    signal?.removeEventListener('abort', onAbort);
+    if (!res.ok) return 0;
+    const text = await res.text();
+    // RESOLUTION=1920x1080 → ناخذ الارتفاع (الرقم الثاني). ناخذ الأعلى.
+    let max = 0;
+    const re = /RESOLUTION=\d+x(\d+)/gi;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      const h = parseInt(m[1], 10);
+      if (!isNaN(h) && h > max) max = h;
+    }
+    return max;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * يفحص كل مصادر HLS بالتوازي ويرتّبهن تنازلياً حسب أعلى دقة.
+ * المصادر غير HLS تبقى بترتيبها بعد HLS. يُستخدم لاختيار أعلى جودة متاحة.
+ */
+export async function orderHlsByResolution(
+  streams: NoirStream[],
+  signal?: AbortSignal,
+): Promise<NoirStream[]> {
+  const native = streams.filter((s) => !s.isEmbed);
+  const hls = native.filter((s) => s.isHls);
+  const rest = native.filter((s) => !s.isHls);
+
+  if (hls.length <= 1) {
+    // مصدر HLS واحد أو لا شيء — لا داعي للفحص.
+    return [...hls, ...rest.filter((s) => !s.isMkv), ...rest.filter((s) => s.isMkv)];
+  }
+
+  const heights = await Promise.all(
+    hls.map((s) => probeHlsMaxHeight(s.url, signal).catch(() => 0)),
+  );
+  const ranked = hls
+    .map((s, i) => ({ s, h: heights[i] }))
+    .sort((a, b) => b.h - a.h)
+    .map((x) => x.s);
+
+  return [
+    ...ranked,
+    ...rest.filter((s) => !s.isMkv),
+    ...rest.filter((s) => s.isMkv),
+  ];
+}
+
+/**
  * التدفق الكامل لتحديد ما يُشغَّل، مطابق لتطبيق iOS:
  * 1) يجيب المصادر من الخادم.
  * 2) يرتّب مصادر native (HLS أولاً، بعدها المباشرة) للتجربة بالتسلسل.
@@ -287,7 +353,8 @@ export async function resolvePlayback(
       : await fetchMovieStreams(tmdbId, signal);
 
   const embeds = pickEmbedStreams(streamsResult.streams);
-  const native = orderNativeStreams(streamsResult.streams);
+  // نفحص دقة كل مصادر HLS ونرتّبهن بالأعلى دقة أولاً (يفحص بالتوازي، timeout قصير).
+  const native = await orderHlsByResolution(streamsResult.streams, signal);
 
   // IMDb: من الخادم لو موجود، وإلا من TMDB.
   let imdbId = streamsResult.imdbId || null;
