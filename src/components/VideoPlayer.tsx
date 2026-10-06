@@ -10,8 +10,10 @@ import type {
   PointerEvent as ReactPointerEvent,
   ReactNode,
 } from 'react';
+import Hls from 'hls.js';
 import type { NativePlaybackProgress } from '../types';
 import { NoirPlayer } from '../lib/noirPlayer';
+import { resolvePlayback, type NoirStream, type PlayableSource } from '../lib/noirStreams';
 import {
   Loader, Pause, Play, Lock,
   Subtitles, Settings, Maximize2, Minimize2,
@@ -48,6 +50,26 @@ interface VideoPlayerProps {
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 const CDN_BASE_URL = 'https://d269k7J205s3hx.cloudfront.net/';
+
+// أحجام الترجمة الأربعة (مطابقة لتطبيق iOS) — كل اسم يقابل نسبة تُطبّق على
+// طبقة الترجمة المخصصة. القيم اختيرت لتعطي فروقاً واضحة ومريحة.
+type SubSizeKey = 'sm' | 'md' | 'lg' | 'xl';
+const SUB_SIZES: { key: SubSizeKey; label: string; pct: number }[] = [
+  { key: 'sm', label: 'Small',       pct: 70 },
+  { key: 'md', label: 'Medium',      pct: 100 },
+  { key: 'lg', label: 'Large',       pct: 140 },
+  { key: 'xl', label: 'Extra Large', pct: 185 },
+];
+const subPctToKey = (pct: number): SubSizeKey => {
+  // أقرب مفتاح للنسبة المحفوظة (توافق خلفي مع القيم القديمة).
+  let best = SUB_SIZES[1];
+  for (const s of SUB_SIZES) {
+    if (Math.abs(s.pct - pct) < Math.abs(best.pct - pct)) best = s;
+  }
+  return best.key;
+};
+const subKeyToPct = (key: SubSizeKey): number =>
+  (SUB_SIZES.find((s) => s.key === key) || SUB_SIZES[1]).pct;
 
 // تنظيف اسم المسلسل ليطابق مسار S3 — لازم يطابق sanitizeName ببوت المسلسلات حرفياً
 function sanitizeName(name: string): string {
@@ -130,14 +152,16 @@ export default function VideoPlayer({
   const [volume,          setVolume]          = useState(1);
   const [isMuted,         setIsMuted]         = useState(false);
   const [subEnabled,      setSubEnabled]      = useState(true);
-  const [subSize,         setSubSize]         = useState(50); // نسبة حجم الترجمة %
-  const [subOffset,       setSubOffset]       = useState(0);  // تأخير الترجمة بالثانية (+/-)
+  const [subSize,         setSubSize]         = useState(100); // نسبة حجم الترجمة % (مشتقّة من الحجم المسمّى)
+  const [subSheetOpen,    setSubSheetOpen]    = useState(false); // Bottom Sheet إعدادات الترجمة
+  const [subOffset,       setSubOffset]       = useState(0);  // تأخير الترجمة بالثانية (+/-) — مُبقى داخلياً
   const [cueText,         setCueText]         = useState('');  // نص الترجمة الحالي
   const [speed,           setSpeed]           = useState(1);
   const [showSettings,    setShowSettings]    = useState(false);
   const [showSpeedMenu,   setShowSpeedMenu]   = useState(false);
   const showSettingsRef = useRef(false);
   const showSpeedMenuRef = useRef(false);
+  const subSheetOpenRef = useRef(false);
   const [isFullscreen,    setIsFullscreen]    = useState(isDedicatedAndroidPlayer);
   const [iosNativeFs,     setIosNativeFs]     = useState(false); // iPhone native video fullscreen
   const [autoplayNext, setAutoplayNext] = useState(
@@ -152,7 +176,8 @@ export default function VideoPlayer({
   useEffect(() => {
     showSettingsRef.current = showSettings;
     showSpeedMenuRef.current = showSpeedMenu;
-  }, [showSettings, showSpeedMenu]);
+    subSheetOpenRef.current = subSheetOpen;
+  }, [showSettings, showSpeedMenu, subSheetOpen]);
 
   // hover preview على شريط التقدم
   const [hoverPct,   setHoverPct]   = useState<number | null>(null);
@@ -165,27 +190,40 @@ export default function VideoPlayer({
   const [seekHold, setSeekHold] = useState<'fwd' | 'back' | null>(null);
   // تسريع 2x مؤقت بالضغط المستمر على Space
   const [speedBoost, setSpeedBoost] = useState(false);
-  /* ── URLs + native flag (معرّفة مبكراً عشان الـ effects تستخدمها) ── */
-  // المسلسلات: TV/{اسم}/{tmdbId}/Season {n}/{episode}
-  // الأفلام:   Movies/{اسم}/{tmdbId}/movie  — tmdbId يميّز الأفلام بنفس الاسم (Scream 1997 vs 2022)
-  let mp4Url: string, vttUrl: string;
-  if (type === 'tv') {
-    const seriesFolder = sanitizeName(title);
-    const pathParts = ['TV', seriesFolder, String(id), `Season ${season}`];
-    const encodedDir = pathParts.map((p) => encodeURIComponent(p)).join('/');
-    mp4Url = `${CDN_BASE_URL}${encodedDir}/${episode}.mp4`;
-    vttUrl = `${CDN_BASE_URL}${encodedDir}/${episode}.vtt`;
-  } else {
-    const movieFolder = sanitizeName(title);
-    const encodedDir = ['Movies', movieFolder].map((p) => encodeURIComponent(p)).join('/');
-    mp4Url = `${CDN_BASE_URL}${encodedDir}/movie_${id}.mp4`;
-    vttUrl = `${CDN_BASE_URL}${encodedDir}/movie_${id}.vtt`;
-  }
-  // MP4/CloudFront player removed — every title streams through the web
-  // embed (Vidy by default, VidAPI as the alternate). isNative stays false.
+  /* ── Noir native HLS (api.aswad-iq.com) ──
+     المشغّل الأساسي الآن هو HLS native يُسحب من خادم Noir مع مسار الترجمة
+     العربية المدموج بالـ master.m3u8. مصادر Vidy/VidAPI القديمة (CloudFront
+     وقيم SERVERS) باقية بالكود لكنها مُطفأة — لا تُستخدم إلا لو أعدناها يدوياً.
+     Vidcore ثم Vidy (الجدد) يبقون احتياط فقط عند عدم توفر أي HLS native. */
+  // قائمة مصادر native مرتّبة (HLS أولاً) نجرّبها بالتسلسل، مع مؤشر المصدر الحالي.
+  const [sources,       setSources]       = useState<PlayableSource[]>([]);
+  const [sourceIndex,   setSourceIndex]   = useState(0);
+  const [resolveError,  setResolveError]  = useState(false);
+  const [embedFallback, setEmbedFallback] = useState<NoirStream[]>([]);
+  const [useEmbed,      setUseEmbed]      = useState(false); // تحوّلنا لـ embed احتياطي؟
+  const [embedIndex,    setEmbedIndex]    = useState(0);     // أي مصدر embed احتياطي
+  const hlsRef = useRef<Hls | null>(null);
+
+  // المصدر الحالي ورابطه — مشتقّان من القائمة والمؤشر.
+  const currentSource = sources[sourceIndex] || null;
+  const hlsUrl = currentSource?.url || null;
+  const arabicReady = currentSource?.arabicReady ?? false;
+
+  // السطوع: المتصفح ما يغيّر سطوع الجهاز الحقيقي، فنطبّقه بصرياً على الفيديو فقط
+  // عبر CSS filter: brightness() — دون المساس ببقية الواجهة والأزرار.
+  const [brightness, setBrightness] = useState(1);        // 0.3 .. 1
+  // Fit = احتواء كامل (contain) · Fill = ملء الإطار (cover)
+  const [videoFit, setVideoFit] = useState<'contain' | 'cover'>('contain');
+  const activeBrightnessPointerRef = useRef<number | null>(null);
+
+  // isNative = نشغّل بطبقة Noir المخصصة (عنصر <video> + ترجمة activeCues).
+  // صحيح لما يتوفر مصدر native ولم نتحوّل للـ embed الاحتياطي.
+  const isNative = playMode === 'movie' && !!hlsUrl && !useEmbed;
+
+  // CloudFront القديم — غير مستخدم بعد الآن (مُبقى مرجعياً فقط).
+  void CDN_BASE_URL; void sanitizeName;
   const customMp4 = undefined;
-  const vttSrc    = vttUrl;
-  const isNative = false;
+  const vttSrc    = '';
 
   /* نفحص وجود MP4 أولاً. الخطأ المؤكد يحوّل تلقائياً إلى VidAPI،
      أما فشل HEAD بسبب CORS/الشبكة فيترك عنصر الفيديو يجرب بنفسه. */
@@ -305,22 +343,9 @@ export default function VideoPlayer({
     }
   }, [id, isNative, episode, season, startAt, type]);
 
-  // لا نترك شاشة التحميل معلقة إذا لم يصبح المصدر الأول قابلاً للتشغيل.
-  useEffect(() => {
-    clearTimeout(mediaStartupTimerRef.current);
-    if (!isNative) return;
-    mediaStartupTimerRef.current = setTimeout(() => {
-      const video = videoRef.current;
-      if (video && video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) return;
-      reportNativeProgress(video, false, true);
-      setRecoveryNotice('الاتصال بطيء، جاري تجهيز مصدر بديل...');
-      setCustomMp4Failed(true);
-      setUseVidApi(true);
-      setIsLoading(true);
-      setIsBuffering(false);
-    }, 11000);
-    return () => clearTimeout(mediaStartupTimerRef.current);
-  }, [episode, id, isNative, reportNativeProgress, season, type]);
+  // تحميل HLS البطيء ليس فشل مصدر — لا نحوّل تلقائياً لـ embed بسببه (قاعدة #9).
+  // hls.js يتولّى إعادة محاولة التحميل عند تذبذب الشبكة، وشاشة التحميل تبقى
+  // حتى يبدأ التشغيل أو يرجع خطأ fatal (يُعالَج بـ ERROR handler بالأعلى).
 
   /* ── postMessage ── */
   const lastWatchedRef   = useRef(0);
@@ -363,8 +388,14 @@ export default function VideoPlayer({
     clearTimeout(mediaStartupTimerRef.current);
     mediaRetryCountRef.current = 0;
     setIsLoading(true); setCustomMp4Failed(false);
-    // The web embed is the only player, so keep it on across title changes.
-    setUseVidApi(true);
+    // الأساسي الآن HLS native. نبدأ بدون embed ونصفّر حالة المصدر.
+    setUseVidApi(false);
+    setUseEmbed(false);
+    setEmbedIndex(0);
+    setSources([]);
+    setSourceIndex(0);
+    setResolveError(false);
+    setEmbedFallback([]);
     setRecoveryNotice('');
     setSubEnabled(true); setSpeed(1);
     setShowSettings(false); setShowSpeedMenu(false);
@@ -373,6 +404,77 @@ export default function VideoPlayer({
     setShowStillWatching(false);
     return () => clearTimeout(timer);
   }, [type, id, season, episode, playMode, isDedicatedAndroidPlayer]);
+
+  /* ── resolve Noir playback: يجيب المصادر من الخادم ويجهّز الترجمة العربية ──
+     يُشغَّل عند فتح المشغل بوضع الفيلم، ويعيد الطلب عند تغيّر العنوان/الحلقة.
+     فشل الخادم نفسه يعرض خطأ + إعادة محاولة (resolveError) ولا يتحوّل تلقائياً
+     لـ embed. التحوّل لـ embed يصير فقط لما ما يرجع أي HLS native. */
+  const resolveNonceRef = useRef(0);
+  const runResolve = useCallback(() => {
+    if (playMode !== 'movie') return;
+    const nonce = ++resolveNonceRef.current;
+    const controller = new AbortController();
+    setResolveError(false);
+    setUseEmbed(false);
+    setSources([]);
+    setSourceIndex(0);
+    setIsLoading(true);
+
+    void resolvePlayback(type, id, {
+      season,
+      episode,
+      signal: controller.signal,
+    })
+      .then((result) => {
+        if (nonce !== resolveNonceRef.current) return;
+        setEmbedFallback(result.embeds);
+        if (result.sources.length > 0) {
+          setSources(result.sources);
+          setSourceIndex(0);
+          setSubEnabled(result.sources[0].arabicReady); // العربية تلقائياً لو جاهزة
+        } else if (result.embeds.length > 0) {
+          // ما في مصدر native — ننتقل للـ embed الاحتياطي (Vidy).
+          setUseEmbed(true);
+        } else {
+          setResolveError(true);
+          setIsLoading(false);
+        }
+      })
+      .catch(() => {
+        if (nonce !== resolveNonceRef.current) return;
+        // خطأ بالخادم نفسه — خطأ واضح، لا تحوّل تلقائي لـ embed.
+        setResolveError(true);
+        setIsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [type, id, season, episode, playMode]);
+
+  useEffect(() => {
+    const cleanup = runResolve();
+    return cleanup;
+  }, [runResolve]);
+
+  /* ينتقل للمصدر native التالي عند فشل الحالي؛ وإذا خلصت المصادر ينتقل لـ Vidy
+     (embed). منطق "جرّب كل المصادر، وإذا فشل الكل انتقل لـ Vidy". */
+  const tryNextSource = useCallback(() => {
+    setSourceIndex((idx) => {
+      const next = idx + 1;
+      if (next < sources.length) {
+        setIsLoading(true);
+        return next;
+      }
+      // خلصت مصادر native — ننتقل للـ embed الاحتياطي لو متوفر.
+      if (embedFallback.length > 0) {
+        setUseEmbed(true);
+        setIsLoading(true);
+      } else {
+        setResolveError(true);
+        setIsLoading(false);
+      }
+      return idx;
+    });
+  }, [sources.length, embedFallback.length]);
 
   useEffect(() => {
     if (nextEpisodeCountdown == null) return;
@@ -403,7 +505,8 @@ export default function VideoPlayer({
       const savedSize = Number(localStorage.getItem('noir_sub_size'));
       const savedOffset = Number(localStorage.getItem('noir_sub_offset'));
       setAutoplayNext(localStorage.getItem('noir_autoplay_next') !== 'false');
-      if (savedSize >= 50 && savedSize <= 250) setSubSize(savedSize);
+      // نطبّق أقرب حجم مسمّى للقيمة المحفوظة (توافق خلفي مع النسب القديمة).
+      if (savedSize >= 40 && savedSize <= 250) setSubSize(subKeyToPct(subPctToKey(savedSize)));
       if (savedOffset >= -10 && savedOffset <= 10) setSubOffset(savedOffset);
     };
     const handleCloudSync = (event: Event) => {
@@ -441,12 +544,11 @@ export default function VideoPlayer({
     }));
   };
 
-  const changeSubSize = (delta: number) => {
-    setSubSize(prev => {
-      const next = Math.max(50, Math.min(250, prev + delta));
-      persistPlaybackSettings(autoplayNext, next, subOffset);
-      return next;
-    });
+  // يضبط حجم الترجمة بالاسم (Small/Medium/Large/XL) ويحفظه.
+  const setSubSizeByKey = (key: SubSizeKey) => {
+    const pct = subKeyToPct(key);
+    setSubSize(pct);
+    persistPlaybackSettings(autoplayNext, pct, subOffset);
   };
 
   const changeSubOffset = (delta: number) => {
@@ -485,7 +587,7 @@ export default function VideoPlayer({
     setControlsVisible(true);
     clearTimeout(hideTimer.current);
     hideTimer.current = setTimeout(() => {
-      if (!showSettingsRef.current) setControlsVisible(false);
+      if (!showSettingsRef.current && !subSheetOpenRef.current) setControlsVisible(false);
     }, 3000);
   }, []);
 
@@ -772,9 +874,13 @@ export default function VideoPlayer({
           e.preventDefault(); toggleFullscreen(); break;
         case 'KeyM':
           e.preventDefault(); toggleMute(); break;
+        case 'KeyC':
+          e.preventDefault(); toggleSubs(); break;
         case 'Escape':
           e.preventDefault();
-          if (showSettings) {
+          if (subSheetOpen) {
+            setSubSheetOpen(false);
+          } else if (showSettings) {
             setShowSettings(false);
             setShowSpeedMenu(false);
             if (isTvAndroidApp) {
@@ -869,13 +975,13 @@ export default function VideoPlayer({
       clearInterval(tvSeekIntervalRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [duration, speed, startSpeedBoost, endSpeedBoost, showSettings, isFullscreen, isDedicatedAndroidPlayer, closePlayer, onSeek]);
+  }, [duration, speed, startSpeedBoost, endSpeedBoost, showSettings, subSheetOpen, isFullscreen, isDedicatedAndroidPlayer, closePlayer, onSeek]);
 
   useEffect(() => {
-    if (showSettings) {
+    if (showSettings || subSheetOpen) {
       clearTimeout(hideTimer.current);
       setControlsVisible(true);
-      if (isTvAndroidApp) {
+      if (isTvAndroidApp && showSettings) {
         const frame = window.requestAnimationFrame(() => {
           containerRef.current
             ?.querySelector<HTMLElement>('[data-tv-player-settings] [data-tv-settings-item]')
@@ -886,81 +992,194 @@ export default function VideoPlayer({
     } else if (videoRef.current && !videoRef.current.paused) {
       resetHideTimer();
     }
-  }, [showSettings, resetHideTimer, isTvAndroidApp]);
+  }, [showSettings, subSheetOpen, resetHideTimer, isTvAndroidApp]);
+
+  /* ── ربط hls.js / HLS الأصلي بعنصر الفيديو ──
+     Safari (وأي متصفح فيه دعم HLS أصلي): نمرّر الرابط لـ video.src مباشرة.
+     Chrome/Firefox: نستخدم hls.js. بالحالتين الترجمة تجي من video.textTracks
+     (مدموجة بالـ master.m3u8) ويرسمها Noir من activeCues.
+     اختيار الصوت: الإنجليزي تلقائياً عند توفره (ما نخلي إيطالي يبدأ لو عدنا إنجليزي). */
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !isNative || !hlsUrl) return;
+
+    const pickEnglishAudio = (hls?: Hls | null) => {
+      // hls.js: اختر مسار الصوت الإنجليزي لو موجود.
+      if (hls && hls.audioTracks?.length) {
+        const en = hls.audioTracks.findIndex((t) =>
+          /^en/i.test(t.lang || '') || /english|انكليزي|إنجليزي/i.test(t.name || ''),
+        );
+        if (en >= 0 && hls.audioTrack !== en) hls.audioTrack = en;
+        return;
+      }
+      // HLS أصلي (Safari): من video.audioTracks لو المتصفح يدعمها.
+      const audioTracks = (v as any).audioTracks;
+      if (audioTracks?.length) {
+        for (let i = 0; i < audioTracks.length; i++) {
+          const t = audioTracks[i];
+          if (/^en/i.test(t.language || '') || /english/i.test(t.label || '')) {
+            for (let j = 0; j < audioTracks.length; j++) audioTracks[j].enabled = j === i;
+            break;
+          }
+        }
+      }
+    };
+
+    const canNativeHls = v.canPlayType('application/vnd.apple.mpegurl');
+
+    if (canNativeHls && !Hls.isSupported()) {
+      // Safari / iOS — HLS أصلي.
+      v.src = hlsUrl;
+      const onLoaded = () => { pickEnglishAudio(null); setIsLoading(false); };
+      v.addEventListener('loadedmetadata', onLoaded, { once: true });
+      return () => {
+        v.removeEventListener('loadedmetadata', onLoaded);
+        v.removeAttribute('src');
+        v.load();
+      };
+    }
+
+    if (Hls.isSupported()) {
+      // Chrome / Firefox — hls.js مع دعم مسارات الترجمة.
+      const hls = new Hls({
+        enableWebVTT: true,
+        renderTextTracksNatively: false, // Noir يرسم الترجمة، لا المتصفح.
+        startPosition: startAt > 5 ? startAt : -1,
+      });
+      hlsRef.current = hls;
+      hls.loadSource(hlsUrl);
+      hls.attachMedia(v);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        pickEnglishAudio(hls);
+        setIsLoading(false);
+      });
+      hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => pickEnglishAudio(hls));
+      let netRetries = 0;
+      let mediaRetries = 0;
+      hls.on(Hls.Events.ERROR, (_evt, data) => {
+        if (!data.fatal) return;
+        switch (data.type) {
+          case Hls.ErrorTypes.NETWORK_ERROR:
+            // نحاول إعادة التحميل مرتين قبل الانتقال للمصدر التالي.
+            if (netRetries < 2) { netRetries += 1; hls.startLoad(); }
+            else tryNextSource();
+            break;
+          case Hls.ErrorTypes.MEDIA_ERROR:
+            if (mediaRetries < 2) { mediaRetries += 1; hls.recoverMediaError(); }
+            else tryNextSource();
+            break;
+          default:
+            // فشل غير قابل للإصلاح — المصدر التالي، وإلا Vidy.
+            tryNextSource();
+            break;
+        }
+      });
+      return () => {
+        hls.destroy();
+        hlsRef.current = null;
+      };
+    }
+
+    // لا دعم HLS إطلاقاً بهذا المتصفح — ننتقل مباشرة للـ embed الاحتياطي.
+    if (embedFallback.length > 0) setUseEmbed(true);
+    else setResolveError(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNative, hlsUrl, tryNextSource]);
 
   /* ── helpers ── */
+  // يختار مسار الترجمة الفعلي (عربي أولاً) من بين كل المسارات.
+  const getSubtitleTrack = useCallback((): TextTrack | null => {
+    const v = videoRef.current;
+    if (!v?.textTracks?.length) return null;
+    const subs: TextTrack[] = [];
+    for (let i = 0; i < v.textTracks.length; i++) {
+      const t = v.textTracks[i];
+      if (t.kind === 'subtitles' || t.kind === 'captions') subs.push(t);
+    }
+    if (subs.length === 0) return null;
+    return (
+      subs.find((t) => /^ar/i.test(t.language || '') || /عرب/i.test(t.label || '')) ||
+      subs[0]
+    );
+  }, []);
+
   const syncSubtitleTrackMode = useCallback((
     enabled = subEnabled,
     nativeFullscreen = iosNativeFs,
   ) => {
-    const v = videoRef.current;
-    if (!v?.textTracks?.length) return;
-    v.textTracks[0].mode = !enabled
+    const track = getSubtitleTrack();
+    if (!track) return;
+    track.mode = !enabled
       ? 'disabled'
       : nativeFullscreen
         ? 'showing'
         : 'hidden';
-  }, [subEnabled, iosNativeFs]);
+  }, [subEnabled, iosNativeFs, getSubtitleTrack]);
 
   const toggleSubs = () => {
-    const v = videoRef.current;
-    if (!v?.textTracks?.length) return;
     const next = !subEnabled;
     syncSubtitleTrackMode(next);
     if (!next) setCueText('');
     setSubEnabled(next);
   };
 
-  /* Safari قد يفعّل track افتراضياً قبل اكتمال تحميله.
-     ثبّت الوضع بعد تحميل الفيديو والـ VTT حتى يبقى العرض المخصص وحده. */
+  /* ── custom subtitle rendering: اقرأ الـ cue الحالي وارسمه بنفسنا ──
+     مع hls.js مسار الترجمة (المدموج بالـ master) يُضاف متأخراً، فنتابع
+     video.textTracks بحدث addtrack ونعيد الربط كل ما تغيّر عددها. */
   useEffect(() => {
-    if (!isNative) return;
-    const v = videoRef.current;
-    if (!v) return;
-
-    const sync = () => syncSubtitleTrackMode();
-    const trackElement = v.querySelector('track');
-    sync();
-    trackElement?.addEventListener('load', sync);
-    return () => trackElement?.removeEventListener('load', sync);
-  }, [isNative, customMp4, vttSrc, syncSubtitleTrackMode]);
-
-  /* ── custom subtitle rendering: اقرأ الـ cue الحالي وارسمه بنفسنا ── */
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v || !isNative) return;
-    const track = v.textTracks?.[0];
-    if (!track) return;
+    const vid = videoRef.current;
+    if (!vid || !isNative) return;
     // وقت iPhone native fullscreen نخلي iOS يدير الـ track (showing) — ما نلمسه
     if (iosNativeFs) return;
-    // hidden = الأحداث تشتغل بس بدون رسم المتصفح الأصلي
-    // metadata kind: hidden = نقرأ الـ cues بدون عرض native, disabled = نوقف الـ events
-    track.mode = subEnabled ? 'hidden' : 'disabled';
+
+    let boundTrack: TextTrack | null = null;
+    const pickSubtitleTrack = getSubtitleTrack;
 
     const onCueChange = () => {
-      if (!subEnabled) { setCueText(''); return; }
-      // نطبّق subOffset: نبحث يدوياً عن الـ cue المناسب للوقت المعدّل
-      const vid = videoRef.current;
-      const adjustedTime = (vid?.currentTime ?? 0) - (subOffset);
-      const allCues = track.cues ? Array.from(track.cues as any) : [];
-      const matching = allCues.filter((c: any) => adjustedTime >= c.startTime && adjustedTime <= c.endTime);
-      if (matching.length > 0) {
-        setCueText(matching.map((c: any) => c.text).join('\n'));
-      } else {
-        setCueText('');
-      }
+      if (!subEnabled || !boundTrack) { setCueText(''); return; }
+      const adjustedTime = (vid.currentTime ?? 0) - subOffset;
+      const allCues = boundTrack.cues ? Array.from(boundTrack.cues as any) : [];
+      const matching = allCues.filter(
+        (c: any) => adjustedTime >= c.startTime && adjustedTime <= c.endTime,
+      );
+      setCueText(matching.length ? matching.map((c: any) => c.text).join('\n') : '');
     };
 
-    track.addEventListener('cuechange', onCueChange);
-    // نستمع لـ timeupdate أيضاً عشان يتحدث مع الـ offset
-    const vid = videoRef.current;
-    vid?.addEventListener('timeupdate', onCueChange);
-    onCueChange();
-    return () => {
-      track.removeEventListener('cuechange', onCueChange);
-      vid?.removeEventListener('timeupdate', onCueChange);
+    const bind = () => {
+      const track = pickSubtitleTrack();
+      if (track === boundTrack) {
+        // نفس المسار — بس حدّث الوضع حسب التفعيل.
+        if (boundTrack) boundTrack.mode = subEnabled ? 'hidden' : 'disabled';
+        return;
+      }
+      // فك الربط القديم.
+      if (boundTrack) {
+        boundTrack.removeEventListener('cuechange', onCueChange);
+        boundTrack.mode = 'disabled';
+      }
+      boundTrack = track;
+      if (boundTrack) {
+        // hidden = الأحداث تشتغل بدون رسم المتصفح الأصلي (منع ترجمتين).
+        boundTrack.mode = subEnabled ? 'hidden' : 'disabled';
+        boundTrack.addEventListener('cuechange', onCueChange);
+      }
+      onCueChange();
     };
-  }, [isNative, subEnabled, customMp4, iosNativeFs, subOffset]);
+
+    bind();
+    // متابعة إضافة/إزالة المسارات (hls.js يضيف المسار بعد تحليل الـ manifest).
+    vid.textTracks?.addEventListener?.('addtrack', bind);
+    vid.textTracks?.addEventListener?.('removetrack', bind);
+    // timeupdate عشان يتحدث النص مع الـ offset.
+    vid.addEventListener('timeupdate', onCueChange);
+
+    return () => {
+      vid.textTracks?.removeEventListener?.('addtrack', bind);
+      vid.textTracks?.removeEventListener?.('removetrack', bind);
+      vid.removeEventListener('timeupdate', onCueChange);
+      if (boundTrack) boundTrack.removeEventListener('cuechange', onCueChange);
+    };
+  }, [isNative, subEnabled, hlsUrl, iosNativeFs, subOffset, getSubtitleTrack]);
 
   const changeSpeed = (s: number) => {
     if (videoRef.current) videoRef.current.playbackRate = s;
@@ -969,9 +1188,9 @@ export default function VideoPlayer({
 
   /* ── iPhone native fullscreen: ارفع الترجمة من قاع الشاشة (cue.line) ── */
   useEffect(() => {
-    const v = videoRef.current;
-    if (!v?.textTracks?.length || !iosNativeFs) return;
-    const track = v.textTracks[0];
+    if (!iosNativeFs) return;
+    const track = getSubtitleTrack();
+    if (!track) return;
     // line = رقم السطر من الأعلى (سالب = من الأسفل). -3 يرفعها فوق حافة الشاشة
     const applyLine = () => {
       const cues = track.cues;
@@ -983,7 +1202,7 @@ export default function VideoPlayer({
     applyLine();
     track.addEventListener('cuechange', applyLine);
     return () => track.removeEventListener('cuechange', applyLine);
-  }, [iosNativeFs, subEnabled]);
+  }, [iosNativeFs, subEnabled, getSubtitleTrack]);
 
   const playPulseTimer = useRef<ReturnType<typeof setTimeout>>();
   const togglePlay = () => {
@@ -1080,12 +1299,13 @@ export default function VideoPlayer({
     // iPhone — لازم fullscreen على عنصر <video> نفسه (الوحيد المدعوم)
     // نحوّل الـ track لـ showing عشان iOS يعرض الترجمة بكنترولاته (الـ offset مطبّق أصلاً على الـ cues)
     if (isIPhone && vid?.webkitEnterFullscreen) {
-      if (subEnabled && vid.textTracks?.[0]) vid.textTracks[0].mode = 'showing';
+      const subTrack = getSubtitleTrack();
+      if (subEnabled && subTrack) subTrack.mode = 'showing';
       setIosNativeFs(true);
       const onEnd = () => {
         setIosNativeFs(false);
         // رجّع الـ track لـ hidden عشان يرجع الـ overlay المخصّص
-        if (vid.textTracks?.[0]) vid.textTracks[0].mode = subEnabled ? 'hidden' : 'disabled';
+        if (subTrack) subTrack.mode = subEnabled ? 'hidden' : 'disabled';
         vid.removeEventListener('webkitendfullscreen', onEnd);
       };
       vid.addEventListener('webkitendfullscreen', onEnd);
@@ -1290,6 +1510,38 @@ export default function VideoPlayer({
     }
   };
 
+  /* ── سلايدر السطوع العمودي (بصري فقط على الفيديو) ──
+     الأعلى = أسطع (1)، الأسفل = أعتم (0.3). نحسب من موضع اللمس العمودي. */
+  const updateBrightnessFromPointer = (clientY: number, track: HTMLDivElement) => {
+    const rect = track.getBoundingClientRect();
+    if (!rect.height) return;
+    const ratio = 1 - Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+    setBrightness(0.3 + ratio * 0.7);
+  };
+  const startBrightnessChange = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    markUserActive();
+    activeBrightnessPointerRef.current = e.pointerId;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    updateBrightnessFromPointer(e.clientY, e.currentTarget);
+    resetHideTimer();
+  };
+  const moveBrightnessChange = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (activeBrightnessPointerRef.current !== e.pointerId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    updateBrightnessFromPointer(e.clientY, e.currentTarget);
+  };
+  const endBrightnessChange = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (activeBrightnessPointerRef.current !== e.pointerId) return;
+    updateBrightnessFromPointer(e.clientY, e.currentTarget);
+    activeBrightnessPointerRef.current = null;
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  };
+
   /* ── Trailer URL ── */
   const getTrailerUrl = () => youtubeKey
     ? `https://www.youtube-nocookie.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&origin=${encodeURIComponent(window.location.origin)}`
@@ -1419,69 +1671,30 @@ export default function VideoPlayer({
           {playMode === 'trailer' ? (
             <iframe src={getTrailerUrl()} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen className="w-full h-full border-0" onLoad={() => setIsLoading(false)} />
 
-          /* فحص MP4 قبل إنشاء أي مشغل. */
-          ) : isCheckingMp4 ? (
-            <div className="h-full w-full bg-black" />
+          /* خطأ بالخادم — لا تحوّل تلقائي لـ embed؛ خطأ واضح + إعادة محاولة. */
+          ) : resolveError ? (
+            <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-black px-6 text-center" dir="rtl">
+              <span className="text-4xl">⚠</span>
+              <p className="text-sm text-white/70 max-w-xs leading-6">
+                تعذّر الاتصال بخادم المشاهدة. تأكد من الاتصال وحاول مرة أخرى.
+              </p>
+              <button
+                type="button"
+                onClick={() => runResolve()}
+                className="rounded-full bg-white px-6 py-2.5 text-sm font-bold text-black transition-colors hover:bg-white/90"
+              >
+                إعادة المحاولة
+              </button>
+            </div>
 
-          /* VidAPI fallback التلقائي. */
-          ) : useVidApi ? (
-            <>
-            <iframe
-              key={`embed-${serverIndex}-${id}-${episode}`}
-              src={isPausedByHost ? 'about:blank' : getEmbedUrl()}
-              allow="encrypted-media; autoplay *; fullscreen *; picture-in-picture *"
-              referrerPolicy="strict-origin-when-cross-origin"
-              allowFullScreen
-              className="h-full w-full border-0"
-              onLoad={() => {
-                setRecoveryNotice('');
-                setIsLoading(false);
-              }}
-            />
-
-            {/* زر تبديل السيرفر داخل مشغل الويب */}
-            {!isPausedByHost && (
-              <div className="absolute top-3 right-3 z-40 flex items-center gap-2" dir="ltr">
-                <div className="flex items-center gap-1 rounded-full bg-black/55 backdrop-blur-md border border-white/10 p-1">
-                  {SERVERS.map((name, i) => {
-                    // SERVERS[0]=Vidy → serverIndex 1 · SERVERS[1]=VidAPI → serverIndex 0
-                    const idx = i === 0 ? 1 : 0;
-                    return (
-                      <button
-                        key={name}
-                        type="button"
-                        onClick={() => { setServerIndex(idx); setIsLoading(true); }}
-                        className={`text-[11px] md:text-xs rounded-full px-3 py-1 transition-all ${
-                          serverIndex === idx
-                            ? 'bg-white text-black font-semibold'
-                            : 'text-white/75 hover:text-white'
-                        }`}
-                      >
-                        {name}
-                      </button>
-                    );
-                  })}
-                </div>
-                <button
-                  type="button"
-                  onClick={closePlayer}
-                  aria-label="إغلاق المشغل"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 backdrop-blur-md border border-white/10 text-white/85 hover:text-white transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            )}
-            </>
-
-          /* native mp4 */
+          /* المشغّل الأساسي: HLS native مع طبقة Noir المخصصة. */
           ) : isNative ? (
             <video
               ref={videoRef}
-              key={`mp4-${id}-${episode}`}
+              key={`hls-${id}-${episode}-${season}`}
               autoPlay playsInline
-              crossOrigin="anonymous"
               className={`w-full h-full bg-black select-none touch-manipulation ${controlsVisible ? 'cursor-default' : 'cursor-none'}`}
+              style={{ objectFit: videoFit, filter: `brightness(${brightness})` }}
               onClick={handleVideoClick}
               onContextMenu={(event) => event.preventDefault()}
               onPointerDown={handleVideoPointerDown}
@@ -1504,49 +1717,14 @@ export default function VideoPlayer({
                 }
               }}
               onLoadedData={() => {
-                clearTimeout(mediaStartupTimerRef.current);
-                mediaRetryCountRef.current = 0;
-                setCustomMp4Failed(false);
-                setRecoveryNotice('');
                 setIsLoading(false);
                 setDuration(videoRef.current?.duration || 0);
               }}
-              onCanPlay={() => {
-                clearTimeout(mediaStartupTimerRef.current);
-                mediaRetryCountRef.current = 0;
-                setCustomMp4Failed(false);
-                setRecoveryNotice('');
-                setIsLoading(false);
-                setIsBuffering(false);
-              }}
+              onCanPlay={() => { setIsLoading(false); setIsBuffering(false); }}
               onError={() => {
-                const mediaError = videoRef.current?.error;
-                console.error('Primary playback failed', {
-                  url: customMp4,
-                  code: mediaError?.code,
-                  message: mediaError?.message,
-                });
-                if (mediaRetryCountRef.current < 2) {
-                  mediaRetryCountRef.current += 1;
-                  const retryDelay = mediaRetryCountRef.current * 700;
-                  setRecoveryNotice('الاتصال متذبذب، نحاول مرة أخرى...');
-                  setIsLoading(true);
-                  setIsBuffering(false);
-                  clearTimeout(mediaRetryTimerRef.current);
-                  mediaRetryTimerRef.current = setTimeout(() => {
-                    const video = videoRef.current;
-                    if (!video) return;
-                    video.load();
-                    void video.play().catch(() => {});
-                  }, retryDelay);
-                  return;
-                }
-                reportNativeProgress(videoRef.current, false, true);
-                setCustomMp4Failed(true);
-                setUseVidApi(true);
-                setRecoveryNotice('جاري تجهيز مصدر بديل...');
-                setIsLoading(true);
-                setIsBuffering(false);
+                // على Safari (HLS أصلي، بلا hls.js) فشل العنصر = فشل المصدر،
+                // فننتقل للتالي. على Chrome يدير hls.js الأخطاء فنتجاهل هنا.
+                if (!hlsRef.current) tryNextSource();
               }}
               onPlay={() => { setIsPlaying(true); resetHideTimer(); }}
               onPlaying={() => { setIsLoading(false); setIsBuffering(false); }}
@@ -1596,16 +1774,77 @@ export default function VideoPlayer({
                 setIsMuted(v.muted);
                 setVolume(v.volume);
               }}
-            >
-              <source src={customMp4} type="video/mp4" />
-              <track
-                kind="subtitles"
-                srcLang="ar"
-                label="العربية"
-                src={vttSrc}
-                onLoad={() => syncSubtitleTrackMode()}
-              />
-            </video>
+            />
+
+          /* احتياطي embed (Vidcore ثم Vidy) — فقط عند عدم توفر HLS native.
+             المصدر: روابط الـ embed القادمة من خادم Noir (embedFallback).
+             مسار Vidy/VidAPI القديم (getEmbedUrl) مُبقى مرجعياً ويُستخدم فقط
+             لو أُعيد تفعيله يدوياً عبر useVidApi. */
+          ) : useEmbed || useVidApi ? (
+            <>
+            <iframe
+              key={`embed-${embedIndex}-${id}-${episode}`}
+              src={
+                isPausedByHost
+                  ? 'about:blank'
+                  : useEmbed && embedFallback.length > 0
+                    ? (embedFallback[Math.min(embedIndex, embedFallback.length - 1)]?.url || 'about:blank')
+                    : getEmbedUrl()
+              }
+              allow="encrypted-media; autoplay *; fullscreen *; picture-in-picture *"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+              className="h-full w-full border-0"
+              onLoad={() => {
+                setRecoveryNotice('');
+                setIsLoading(false);
+              }}
+            />
+
+            {/* زر تبديل مصدر الـ embed الاحتياطي (Vidcore / Vidy) */}
+            {!isPausedByHost && (
+              <div className="absolute top-3 right-3 z-40 flex items-center gap-2" dir="ltr">
+                <div className="flex items-center gap-1 rounded-full bg-black/55 backdrop-blur-md border border-white/10 p-1">
+                  {(useEmbed && embedFallback.length > 0
+                    ? embedFallback.map((s, i) => ({
+                        name: s.provider || s.label || `مصدر ${i + 1}`,
+                        onPick: () => { setEmbedIndex(i); setIsLoading(true); },
+                        selected: embedIndex === i,
+                      }))
+                    : SERVERS.map((name, i) => {
+                        const idx = i === 0 ? 1 : 0;
+                        return {
+                          name,
+                          onPick: () => { setServerIndex(idx); setIsLoading(true); },
+                          selected: serverIndex === idx,
+                        };
+                      })
+                  ).map((btn) => (
+                    <button
+                      key={btn.name}
+                      type="button"
+                      onClick={btn.onPick}
+                      className={`text-[11px] md:text-xs rounded-full px-3 py-1 transition-all ${
+                        btn.selected
+                          ? 'bg-white text-black font-semibold'
+                          : 'text-white/75 hover:text-white'
+                      }`}
+                    >
+                      {btn.name}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={closePlayer}
+                  aria-label="إغلاق المشغل"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 backdrop-blur-md border border-white/10 text-white/85 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+            </>
 
           /* No playable source was selected. */
           ) : (
@@ -1664,6 +1903,33 @@ export default function VideoPlayer({
                     <X className="w-5 h-5" />
                   </Btn>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* ══ سلايدر السطوع العمودي (يمين المشغل، خط فقط بدون thumb) ══ */}
+          {isNative && (
+            <div
+              className={`absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 z-30 flex flex-col items-center transition-opacity duration-200 ease-out ${controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            >
+              <div
+                className="group/bright h-32 sm:h-40 w-8 flex items-end justify-center cursor-pointer touch-none py-2"
+                role="slider"
+                aria-label="السطوع"
+                aria-valuemin={30}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(((brightness - 0.3) / 0.7) * 70 + 30)}
+                onPointerDown={startBrightnessChange}
+                onPointerMove={moveBrightnessChange}
+                onPointerUp={endBrightnessChange}
+                onPointerCancel={endBrightnessChange}
+              >
+                <div className="relative h-full w-[4px] rounded-full bg-white/25 overflow-hidden">
+                  <div
+                    className="absolute bottom-0 left-0 w-full rounded-full bg-white"
+                    style={{ height: `${((brightness - 0.3) / 0.7) * 100}%` }}
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -1950,8 +2216,13 @@ export default function VideoPlayer({
 
                   <div className="flex-1" />
 
-                  {/* subtitle toggle */}
-                  <Btn onClick={toggleSubs} label={subEnabled ? 'إخفاء الترجمة' : 'تشغيل الترجمة'} active={subEnabled} tvControl={isTvAndroidApp}>
+                  {/* subtitle — يفتح Bottom Sheet إعدادات الترجمة */}
+                  <Btn
+                    onClick={() => { setSubSheetOpen(true); setShowSettings(false); }}
+                    label="الترجمة"
+                    active={subEnabled}
+                    tvControl={isTvAndroidApp}
+                  >
                     <Subtitles className="w-5 h-5" />
                   </Btn>
 
@@ -2031,19 +2302,6 @@ export default function VideoPlayer({
                             </span>
                           </button>
                         )}
-                        {/* حجم الترجمة */}
-                        <div className="border-t border-white/10 px-3.5 py-3 flex items-center justify-between">
-                          <div className="flex items-center gap-1.5">
-                            <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeSubSize(10)} className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="تكبير">
-                              <Plus className="w-3 h-3" />
-                            </button>
-                            <span className="text-xs text-red-400 font-semibold w-10 text-center tabular-nums select-none">{subSize}%</span>
-                            <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeSubSize(-10)} className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="تصغير">
-                              <Minus className="w-3 h-3" />
-                            </button>
-                          </div>
-                          <span className="text-sm text-white">حجم الترجمة</span>
-                        </div>
                         {/* تأخير الترجمة */}
                         <div className="border-t border-white/10 px-3.5 py-3 flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
@@ -2064,6 +2322,21 @@ export default function VideoPlayer({
                     )}
                   </div>
 
+                  {/* Fit / Fill */}
+                  {!isTvAndroidApp && (
+                    <Btn
+                      onClick={() => setVideoFit((f) => (f === 'contain' ? 'cover' : 'contain'))}
+                      label={videoFit === 'contain' ? 'ملء الفيديو' : 'احتواء الفيديو'}
+                      active={videoFit === 'cover'}
+                    >
+                      {videoFit === 'contain' ? (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M4 8V5a2 2 0 0 1 2-2h3M15 3h3a2 2 0 0 1 2 2v3M20 16v3a2 2 0 0 1-2 2h-3M9 21H6a2 2 0 0 1-2-2v-3"/></svg>
+                      )}
+                    </Btn>
+                  )}
+
                   {/* fullscreen */}
                   {!isTvAndroidApp && (
                     <Btn onClick={toggleFullscreen} label={isFullscreen ? 'الخروج من ملء الشاشة' : 'ملء الشاشة'}>
@@ -2071,6 +2344,99 @@ export default function VideoPlayer({
                     </Btn>
                   )}
 
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ══ Bottom Sheet: إعدادات الترجمة (Wheel Picker على الهاتف) ══ */}
+          {isNative && subSheetOpen && (
+            <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center" dir="rtl">
+              {/* خلفية معتمة — الضغط عليها يغلق الشيت */}
+              <div
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                onPointerDown={() => { setSubSheetOpen(false); resetHideTimer(); }}
+              />
+              <div className="relative w-full sm:w-[440px] sm:max-w-[92%] rounded-t-[26px] sm:rounded-[26px] border border-white/12 bg-[#0d0d0f]/95 backdrop-blur-2xl shadow-2xl pb-[max(1rem,env(safe-area-inset-bottom))]">
+                <div className="sm:hidden flex justify-center pt-2.5">
+                  <span className="h-1 w-10 rounded-full bg-white/20" />
+                </div>
+                <div className="flex items-center justify-between px-5 pt-4 pb-3">
+                  <h3 className="text-base font-bold text-white">الترجمة</h3>
+                  <button
+                    type="button"
+                    onClick={() => { setSubSheetOpen(false); resetHideTimer(); }}
+                    aria-label="إغلاق"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/80 hover:bg-white/20 active:scale-90 transition-all"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 px-5 pb-5">
+                  {/* عمود: حجم الترجمة */}
+                  <div className="flex flex-col">
+                    <span className="mb-2 text-center text-[11px] uppercase tracking-wider text-white/40">Subtitles size</span>
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
+                      {SUB_SIZES.map((s) => {
+                        const selected = subPctToKey(subSize) === s.key && subEnabled;
+                        return (
+                          <button
+                            key={s.key}
+                            type="button"
+                            onClick={() => {
+                              // اختيار حجم يفعّل الترجمة لو كانت Off.
+                              if (!subEnabled) { syncSubtitleTrackMode(true); setSubEnabled(true); }
+                              setSubSizeByKey(s.key);
+                              resetHideTimer();
+                            }}
+                            className={`w-full px-3 py-3 text-center text-sm transition-colors ${
+                              selected
+                                ? 'bg-white text-black font-bold'
+                                : 'text-white/80 hover:bg-white/10'
+                            }`}
+                          >
+                            {s.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* عمود: اختيار الترجمة (Off / Arabic / مسارات أخرى حقيقية) */}
+                  <div className="flex flex-col">
+                    <span className="mb-2 text-center text-[11px] uppercase tracking-wider text-white/40">Subtitle</span>
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // Off — يعطّل المسار ويمسح النص فوراً ويبقى Off.
+                          syncSubtitleTrackMode(false);
+                          setCueText('');
+                          setSubEnabled(false);
+                          resetHideTimer();
+                        }}
+                        className={`w-full px-3 py-3 text-center text-sm transition-colors ${
+                          !subEnabled ? 'bg-white text-black font-bold' : 'text-white/80 hover:bg-white/10'
+                        }`}
+                      >
+                        Off
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          syncSubtitleTrackMode(true);
+                          setSubEnabled(true);
+                          resetHideTimer();
+                        }}
+                        className={`w-full border-t border-white/10 px-3 py-3 text-center text-sm transition-colors ${
+                          subEnabled ? 'bg-white text-black font-bold' : 'text-white/80 hover:bg-white/10'
+                        }`}
+                      >
+                        Arabic
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -311,6 +311,19 @@ export async function fetchTitleLogo(
   }
 }
 
+// يجيب IMDb ID لفيلم/مسلسل من TMDB عبر /external_ids — يُستخدم لتجهيز الترجمة
+// العربية (OpenSubtitles يطابق بالـ IMDb). يرجع null لو ما توفر. نكاش النتيجة
+// بالـ responseCache تلقائياً لأنه يمر عبر tmdbFetch.
+export async function fetchImdbId(type: 'movie' | 'tv', id: number): Promise<string | null> {
+  try {
+    const data = await tmdbFetch(`/${type}/${id}/external_ids`, {});
+    const imdb = data?.imdb_id;
+    return typeof imdb === 'string' && imdb.startsWith('tt') ? imdb : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface EpisodeInfo {
   episode_number: number;
   name: string;
