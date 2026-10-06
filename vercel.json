@@ -32,7 +32,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://image.tmdb.org https://*.googleusercontent.com https://i.ytimg.com; media-src 'self' blob: https:; connect-src 'self' https://api.themoviedb.org https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebase.com; frame-src https://player.aswad-iq.com https://vidy.st https://www.vidy.st https://*.vidy.st https://www.youtube-nocookie.com https://*.firebaseapp.com; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://image.tmdb.org https://*.googleusercontent.com https://i.ytimg.com; media-src 'self' blob: https:; connect-src 'self' https://api.aswad-iq.com https://api.themoviedb.org https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebase.com; frame-src https://player.aswad-iq.com https://vidy.st https://www.vidy.st https://*.vidy.st https://www.youtube-nocookie.com https://*.firebaseapp.com; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
         },
         {
           "key": "X-Content-Type-Options",
