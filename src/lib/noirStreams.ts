@@ -33,6 +33,8 @@ export interface NoirStream {
   isHls: boolean;
   // هل هو مصدر embed (iframe) بدل تشغيل native؟
   isEmbed: boolean;
+  // mkv لا يشتغل بأي متصفح (حاجز تقني) — نتخطّاه بالويب.
+  isMkv: boolean;
   // مزوّد المصدر (StreamFlix / Vidlink / Vixsrc / Vidy / Vidcore ...).
   provider?: string;
   // الاسم/العنوان والجودة كما يرجّعها الخادم.
@@ -68,6 +70,11 @@ function looksLikeHls(url: string): boolean {
   return /m3u8-proxy/i.test(url) || /\.m3u8(\?|$|&)/i.test(url);
 }
 
+// mkv: نكتشفه من رابط الملف الأصلي داخل الـ proxy (url=...mkv).
+function looksLikeMkv(url: string): boolean {
+  return /\.mkv(\?|$|%3F|&)/i.test(url) || /matroska/i.test(url);
+}
+
 function normalizeSubtitle(raw: any): NoirSubtitle | null {
   if (!raw) return null;
   const url = typeof raw === 'string' ? raw : raw.url || raw.file || raw.src || '';
@@ -87,7 +94,7 @@ function normalizeSubtitle(raw: any): NoirSubtitle | null {
 function normalizeStream(raw: any): NoirStream | null {
   if (!raw) return null;
   if (typeof raw === 'string') {
-    return { url: raw, isHls: looksLikeHls(raw), isEmbed: false, raw };
+    return { url: raw, isHls: looksLikeHls(raw), isMkv: looksLikeMkv(raw), isEmbed: false, raw };
   }
   const url: string = raw.url || raw.file || raw.link || raw.src || '';
   if (!url || typeof url !== 'string') return null;
@@ -96,6 +103,7 @@ function normalizeStream(raw: any): NoirStream | null {
   const providerLc = (provider || '').toLowerCase();
   const isEmbed = raw.embed === true || EMBED_PROVIDERS.some((p) => providerLc.includes(p));
   const isHls = looksLikeHls(url);
+  const isMkv = looksLikeMkv(url);
 
   const subtitles = Array.isArray(raw.subtitles)
     ? raw.subtitles.map(normalizeSubtitle).filter((s: NoirSubtitle | null): s is NoirSubtitle => s !== null)
@@ -104,6 +112,7 @@ function normalizeStream(raw: any): NoirStream | null {
   return {
     url,
     isHls,
+    isMkv,
     isEmbed,
     provider,
     name: raw.name || undefined,
@@ -169,9 +178,12 @@ export async function fetchSeriesStreams(
  */
 export function orderNativeStreams(streams: NoirStream[]): NoirStream[] {
   const native = streams.filter((s) => !s.isEmbed);
+  // الترتيب: HLS أولاً (الأمثل)، بعدها mp4 وغيره القابل للتشغيل بالويب،
+  // وأخيراً mkv (لا يشتغل بأي متصفح — نضعه آخر كملاذ، غالباً سيُتخطّى).
   return [
     ...native.filter((s) => s.isHls),
-    ...native.filter((s) => !s.isHls),
+    ...native.filter((s) => !s.isHls && !s.isMkv),
+    ...native.filter((s) => !s.isHls && s.isMkv),
   ];
 }
 
