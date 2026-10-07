@@ -71,10 +71,10 @@ export default function CategoryRow({ title = 'تصفّح حسب التصنيف'
   };
 
   return (
-    <section className="relative group/row mb-8 md:mb-10 flex flex-col gap-3 md:gap-4" aria-labelledby="category-row-title">
-      <h2 id="category-row-title" className="text-xl md:text-2xl font-bold text-white px-4 sm:px-6 lg:px-8 text-right">{title}</h2>
+    <section className="relative group/row mb-6 md:mb-8 flex flex-col gap-2.5" aria-labelledby="category-row-title">
+      <h2 id="category-row-title" className="text-lg md:text-xl font-bold text-white px-4 sm:px-6 lg:px-12 text-right">{title}</h2>
 
-      <div className="relative px-4 sm:px-6 lg:px-8">
+      <div className="relative px-4 sm:px-6 lg:px-12">
         {/* Right arrow (previous in RTL) */}
         {showRightArrow && (
           <button
@@ -99,7 +99,7 @@ export default function CategoryRow({ title = 'تصفّح حسب التصنيف'
           ref={rowRef}
           onScroll={checkScroll}
           dir="rtl"
-          className="flex flex-row gap-2.5 md:gap-3 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none"
+          className="flex flex-row gap-1.5 md:gap-2 overflow-x-auto no-scrollbar py-2 scroll-smooth select-none"
         >
           {CATEGORIES.map((cat) => (
             <div
@@ -114,9 +114,9 @@ export default function CategoryRow({ title = 'تصفّح حسب التصنيف'
               role="button"
               tabIndex={0}
               aria-label={`فتح تصنيف ${cat.title}`}
-              className="group/cat card-cinematic flex-none w-[112px] sm:w-[140px] md:w-[156px] lg:w-[168px] cursor-pointer rounded-md pb-3 select-none"
+              className="group/cat card-cinematic flex-none w-[170px] sm:w-[220px] md:w-[248px] xl:w-[278px] cursor-pointer rounded-sm select-none"
             >
-              <div className="relative aspect-[2/3] overflow-hidden rounded-md bg-[#101010] border border-white/[0.055]">
+              <div className="relative aspect-video overflow-hidden rounded-sm bg-[#101010] border border-white/[0.055]">
                 {images[cat.key] && (
                   <img
                     src={images[cat.key]}
@@ -127,10 +127,10 @@ export default function CategoryRow({ title = 'تصفّح حسب التصنيف'
                 )}
                 {/* Color overlay (genre identity) */}
                 <div className="absolute inset-0" style={{ backgroundColor: cat.overlay }} />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
                 {/* Title */}
                 <div className="absolute inset-x-0 bottom-0 p-3 flex items-end justify-center">
-                  <span className="text-white font-bold text-base sm:text-lg md:text-xl drop-shadow-lg text-center leading-tight">{cat.title}</span>
+                  <span className="text-white font-bold text-base sm:text-lg drop-shadow-lg text-center leading-tight">{cat.title}</span>
                 </div>
               </div>
             </div>

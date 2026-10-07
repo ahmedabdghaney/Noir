@@ -60,12 +60,12 @@ export default function StudiosRow({ title = 'تصفّح حسب الشركة ا�
   };
 
   return (
-    <section className="mb-8 md:mb-10 relative flex flex-col group/row" aria-labelledby="studios-row-title">
-      <div className="px-4 sm:px-6 lg:px-8 mb-3 md:mb-4">
-        <h2 id="studios-row-title" className="text-xl md:text-2xl font-bold text-white">{title}</h2>
+    <section className="mb-6 md:mb-8 relative flex flex-col group/row" aria-labelledby="studios-row-title">
+      <div className="px-4 sm:px-6 lg:px-12 mb-2.5">
+        <h2 id="studios-row-title" className="text-lg md:text-xl font-bold text-white">{title}</h2>
       </div>
 
-      <div className="relative px-4 sm:px-6 lg:px-8">
+      <div className="relative px-4 sm:px-6 lg:px-12">
         {showRightArrow && (
           <button
             onClick={() => handleScroll('right')}
@@ -90,7 +90,7 @@ export default function StudiosRow({ title = 'تصفّح حسب الشركة ا�
           ref={rowRef}
           onScroll={checkScroll}
           dir="rtl"
-          className="flex flex-row gap-2.5 md:gap-3 overflow-x-auto overflow-y-visible no-scrollbar py-3 scroll-smooth select-none"
+          className="flex flex-row gap-1.5 md:gap-2 overflow-x-auto overflow-y-visible no-scrollbar py-2 scroll-smooth select-none"
         >
           {STUDIOS.map((s) => (
             <div
@@ -105,10 +105,10 @@ export default function StudiosRow({ title = 'تصفّح حسب الشركة ا�
               role="button"
               tabIndex={0}
               aria-label={`فتح أعمال ${s.title}`}
-              className="group/st flex-none w-[112px] sm:w-[140px] md:w-[156px] cursor-pointer"
+              className="group/st card-cinematic flex-none w-[170px] sm:w-[220px] md:w-[248px] xl:w-[278px] cursor-pointer"
             >
               {/* بطاقة زجاجية فاتحة شوي عن الخلفية — بدون stroke (نلغي بوردر glass-hover)، بدون صورة، بدون اسم نصي */}
-              <div className="relative aspect-[4/3] rounded-md overflow-hidden glass-hover !border-0">
+              <div className="relative aspect-video rounded-sm overflow-hidden bg-[#151515] border border-white/[0.055]">
                 {/* radial gradient لطيف فوق-وسط وتحت-وسط — هوية الشركة بدون لون كتيم */}
                 <div
                   className="absolute inset-0 pointer-events-none"

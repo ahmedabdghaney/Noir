@@ -38,7 +38,7 @@ export default function ViewingHistoryPage({
           <p className="mt-2 text-sm text-white/45">ابدأ مشاهدة أي فيلم أو مسلسل وسيظهر هنا.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2">
           {items.map((item) => (
             <article key={`${item.type}_${item.id}`} className="group relative min-w-0">
               <button
@@ -47,10 +47,10 @@ export default function ViewingHistoryPage({
                 data-tv-card={isTvApp ? '' : undefined}
                 className="block w-full text-right cursor-pointer"
               >
-                <div data-tv-card-artwork={isTvApp ? '' : undefined} className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8">
-                  {item.poster || item.backdrop ? (
+                <div data-tv-card-artwork={isTvApp ? '' : undefined} className="relative aspect-video overflow-hidden rounded-sm bg-black border border-white/[0.06]">
+                  {item.backdrop || item.poster ? (
                     <img
-                      src={item.poster || item.backdrop || undefined}
+                      src={item.backdrop || item.poster || undefined}
                       alt={item.title}
                       loading="lazy"
                       referrerPolicy="no-referrer"
@@ -61,8 +61,9 @@ export default function ViewingHistoryPage({
                       {item.title}
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                   <div className="absolute bottom-3 right-3 left-3">
+                    <h2 className="mb-1 text-sm font-bold text-white line-clamp-1">{item.title}</h2>
                     <span className="inline-flex items-center gap-1.5 text-[11px] text-white/80">
                       {item.completed ? (
                         <>
@@ -78,10 +79,6 @@ export default function ViewingHistoryPage({
                     </span>
                   </div>
                 </div>
-                <h2 className="mt-2.5 px-1 text-sm font-semibold text-white line-clamp-1">{item.title}</h2>
-                <p className="mt-1 px-1 text-[11px] text-white/45">
-                  {item.type === 'movie' ? 'فيلم' : `م${item.season} • ح${item.episode}`}
-                </p>
               </button>
               <button
                 type="button"

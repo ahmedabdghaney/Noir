@@ -939,26 +939,26 @@ export default function DetailView({
     <div className="w-full text-right detail-enter">
       
       {/* Immersive backdrop background section */}
-      <div className={`noir-detail-backdrop-stage relative w-full h-[35vh] md:h-[45vh] select-none mb-4 ${isTvApp ? 'overflow-visible' : 'overflow-hidden'}`}>
+      <div className={`noir-detail-backdrop-stage relative w-full select-none ${isTvApp ? 'h-[35vh] md:h-[45vh] mb-4 overflow-visible' : 'h-[72svh] min-h-[560px] max-h-[840px] overflow-hidden'}`}>
         <div className={`noir-detail-backdrop-media absolute inset-x-0 top-0 ${isTvApp ? 'bottom-[-12rem]' : 'bottom-0'}`}>
           <div
-            className="absolute inset-0 bg-cover bg-center ken-burns"
+            className="absolute inset-0 bg-cover bg-center"
             style={{
               backgroundImage: `url(${backdropSrc ||''})`,
             }}
           />
-          <div className={`absolute inset-0 bg-gradient-to-t ${isTvApp ? 'from-[#08080a] via-[#08080a]/70 to-[#08080a]/20' : 'from-[#111113] via-[#111113]/70 to-[#111113]/20'}`} />
-          <div className="absolute inset-0 bg-gradient-to-l from-[#111113]/80 via-transparent to-transparent" />
+          <div className={`absolute inset-0 bg-gradient-to-t ${isTvApp ? 'from-[#08080a] via-[#08080a]/70 to-[#08080a]/20' : 'from-[#070707] via-[#070707]/30 to-black/10'}`} />
+          <div className="absolute inset-0 bg-gradient-to-l from-black/90 via-black/28 to-transparent" />
         </div>
       </div>
 
       {/* Main Details Panel Layout */}
-      <div className="w-full mx-auto px-4 sm:px-8 lg:px-16 xl:px-24 relative -mt-36 md:-mt-48 z-10">
+      <div className={`w-full mx-auto px-4 sm:px-8 lg:px-12 relative z-10 ${isTvApp ? '-mt-36 md:-mt-48 xl:px-24' : '-mt-[52svh]'}`}>
         
-        <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6 md:gap-12 items-end">
+        <div className={`grid grid-cols-1 gap-6 items-end ${isTvApp ? 'md:grid-cols-[240px_1fr] md:gap-12' : ''}`}>
           
           {/* Text Information pane (Right side in standard RTL layouts) */}
-          <div className="order-2 md:order-2 flex flex-col items-start text-right min-w-0 pr-0 md:pr-4 w-full">
+          <div className={`order-2 flex flex-col items-start text-right min-w-0 w-full ${isTvApp ? 'md:order-2 md:pr-4' : 'max-w-3xl'}`}>
             
             {titleLogo ? (
               <img
@@ -1145,7 +1145,7 @@ export default function DetailView({
 </div>
 
           {/* Left Side: Solid Poster Art (Order-1 on display size to look traditional) */}
-          <div className="order-1 md:order-1">
+          <div className={`${isTvApp ? 'order-1 md:order-1' : 'hidden'}`}>
             <div className="w-[160px] md:w-[240px] aspect-[2/3] mx-auto md:mx-0 rounded-2xl overflow-hidden bg-stone-900 border border-white/[0.06] relative select-none">
               {posterSrc ? (
                 <img

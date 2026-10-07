@@ -178,10 +178,10 @@ export default function SearchOverlay({
       role="dialog"
       aria-modal="true"
       aria-labelledby="search-overlay-title"
-      className={`fixed inset-y-0 left-0 right-0 bg-[#111113] selection:bg-red-500/30 overflow-y-auto ${
+      className={`fixed inset-y-0 left-0 right-0 bg-[#070707] selection:bg-red-500/30 overflow-y-auto ${
         isTvApp
           ? 'noir-tv-search-overlay right-0 z-[200] px-[4vw] pt-24'
-          : 'lg:right-52 z-[170] pt-16 lg:pt-8 px-4 sm:px-6 lg:px-8'
+          : 'z-[230] pt-16 lg:pt-24 px-4 sm:px-6 lg:px-12'
       }`}
     >
       <div className="w-full max-w-7xl mx-auto">
@@ -271,7 +271,7 @@ export default function SearchOverlay({
                     key={cat.key}
                     data-tv-card
                     onClick={() => onBrowseCategory?.(cat.key)}
-                    className={`group relative aspect-[16/10] rounded-2xl overflow-hidden cursor-pointer border border-white/[0.08] hover:border-white/20 transition-all ${isTvApp ? '' : 'hover:scale-[1.03]'}`}
+                    className={`group relative aspect-video rounded-md overflow-hidden cursor-pointer border border-white/[0.08] hover:border-white/20 transition-all ${isTvApp ? '' : 'hover:scale-[1.025]'}`}
                   >
                     {catImages[cat.key] && (
                       <img

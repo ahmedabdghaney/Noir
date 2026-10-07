@@ -61,7 +61,7 @@ export default function Hero({
   };
 
   return (
-    <section className="mb-8 sm:mb-10 select-none" aria-label="العرض المميز">
+    <section className="-mb-8 sm:-mb-14 select-none" aria-label="العرض المميز">
       <div className="group/hero relative overflow-hidden bg-[#080808] shadow-[0_28px_80px_-52px_rgba(0,0,0,1)]">
         <AnimatePresence mode="wait">
           <motion.div

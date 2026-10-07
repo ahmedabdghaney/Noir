@@ -1636,7 +1636,7 @@ export default function VideoPlayer({
   };
 
   // Vidy first (default), VidAPI as the alternate — both inside the iframe.
-  const SERVERS = ['Vidy', 'VidAPI'];
+  const SERVERS = ['VidAPI', 'Vidy'];
   const getEmbedUrl = () => (serverIndex === 0 ? getVidApiUrl() : getVidyUrl());
 
   const progressPct = duration > 0 ? Math.max(0, Math.min(100, (currentTime / duration) * 100)) : 0;
@@ -1859,7 +1859,7 @@ export default function VideoPlayer({
                         selected: embedIndex === i,
                       }))
                     : SERVERS.map((name, i) => {
-                        const idx = i === 0 ? 1 : 0;
+                        const idx = i;
                         return {
                           name,
                           onPick: () => { setServerIndex(idx); setIsLoading(true); },

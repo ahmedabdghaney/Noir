@@ -1,9 +1,5 @@
-/**
- * Sidebar — Apple TV style
- */
-
-import { Home, Film, Tv, Bookmark, Search, ChevronLeft } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useEffect, useState } from 'react';
+import { Search } from 'lucide-react';
 import LogoIcon from './LogoIcon';
 
 interface SidebarProps {
@@ -17,14 +13,6 @@ interface SidebarProps {
   onOpenProfile: () => void;
 }
 
-interface NavItem {
-  id: string;
-  label: string;
-  icon: ReactNode;
-  onClick: () => void;
-  active: boolean;
-}
-
 export default function Sidebar({
   activeView,
   searchMode,
@@ -35,110 +23,94 @@ export default function Sidebar({
   user,
   onOpenProfile,
 }: SidebarProps) {
+  const [scrolled, setScrolled] = useState(false);
 
-  const navItems: NavItem[] = [
+  useEffect(() => {
+    const update = () => setScrolled(window.scrollY > 36);
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    return () => window.removeEventListener('scroll', update);
+  }, []);
+
+  const items = [
+    { id: 'home', label: 'الرئيسية', active: activeView === 'home', action: goHome },
     {
-      id: 'search',
-      label: 'البحث',
-      icon: <Search className="w-[18px] h-[18px]" />,
-      onClick: openSearchOverlay,
-      active: false,
-    },
-    {
-      id: 'home',
-      label: 'الرئيسية',
-      icon: <Home className="w-[18px] h-[18px]" />,
-      onClick: goHome,
-      active: activeView === 'home',
-    },
-    {
-      id: 'movies',
-      label: 'الأفلام',
-      icon: <Film className="w-[18px] h-[18px]" />,
-      onClick: () => setSearchMode('movie'),
+      id: 'movies', label: 'الأفلام',
       active: activeView === 'search' && searchMode === 'movie',
+      action: () => setSearchMode('movie'),
     },
     {
-      id: 'tv',
-      label: 'المسلسلات',
-      icon: <Tv className="w-[18px] h-[18px]" />,
-      onClick: () => setSearchMode('tv'),
+      id: 'tv', label: 'المسلسلات',
       active: activeView === 'search' && searchMode === 'tv',
+      action: () => setSearchMode('tv'),
     },
-    {
-      id: 'watchlist',
-      label: 'قائمتي',
-      icon: <Bookmark className="w-[18px] h-[18px]" />,
-      onClick: onViewWatchlist,
-      active: activeView === 'watchlist',
-    },
+    { id: 'watchlist', label: 'قائمتي', active: activeView === 'watchlist', action: onViewWatchlist },
   ];
 
   return (
-    <aside className="hidden lg:flex flex-col fixed right-0 top-0 bottom-0 w-52 z-[180] border-l border-white/[0.055] bg-[#080808]/95 backdrop-blur-2xl"
-      style={{ direction: 'rtl' }}
+    <header
+      className={`hidden lg:flex fixed inset-x-0 top-0 z-[220] h-[68px] items-center transition-[background-color,box-shadow] duration-300 ${
+        scrolled
+          ? 'bg-[#070707]/96 shadow-[0_12px_34px_-24px_rgba(0,0,0,1)] backdrop-blur-xl'
+          : 'bg-gradient-to-b from-black/90 via-black/55 to-transparent'
+      }`}
+      dir="rtl"
     >
-      {/* Logo */}
-      <div
-        onClick={goHome}
-        className="flex items-center gap-2.5 px-5 py-5 cursor-pointer select-none hover:bg-white/[0.025]"
-      >
-        <LogoIcon className="w-5 h-5 text-red-500 shrink-0" />
-        <span className="text-white font-extrabold text-lg tracking-tight">نوار</span>
-        <span className="text-stone-500 font-medium text-[9px] uppercase tracking-[0.18em] mr-auto">Cinema</span>
-      </div>
-
-      {/* Divider */}
-      <div className="h-px bg-white/[0.06] mx-4" />
-
-      {/* Nav Items */}
-      <nav className="flex flex-col gap-0.5 px-2.5 pt-3 flex-1">
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={item.onClick}
-            className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer w-full text-right ${
-              item.active
-                ? 'bg-white/[0.09] text-white before:absolute before:right-0 before:h-5 before:w-0.5 before:rounded-full before:bg-red-600'
-                : item.id === 'search'
-                ? 'text-stone-400 hover:text-white hover:bg-white/5'
-                : 'text-stone-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <span className={item.active ? 'text-white' : 'text-stone-500'}>
-              {item.icon}
-            </span>
-            <span>{item.label}</span>
-            {item.id === 'search' && (
-              <span className="mr-auto text-[11px] text-stone-500 bg-white/5 px-1.5 py-0.5 rounded font-mono">بحث</span>
-            )}
-          </button>
-        ))}
-      </nav>
-
-      {/* Divider */}
-      <div className="h-px bg-white/[0.06] mx-4 mb-3" />
-
-      {/* User Profile */}
-      {user && (
+      <div className="flex w-full items-center gap-8 px-5 xl:px-12">
         <button
-          onClick={onOpenProfile}
-          className="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-white/[0.055] transition-colors"
+          type="button"
+          onClick={goHome}
+          className="group flex min-h-11 shrink-0 items-center gap-2 text-white"
+          aria-label="العودة إلى الرئيسية"
         >
-          <div className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center bg-indigo-600 shrink-0">
-            {user.photoURL ? (
-              <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-            ) : (
-              <span className="text-white font-bold text-[10px] uppercase">{user.name.slice(0, 2)}</span>
-            )}
-          </div>
-          <div className="flex-1 min-w-0 text-right">
-            <p className="text-xs text-white font-medium truncate">{user.name}</p>
-            <p className="text-[10px] text-stone-500 truncate">الملف الشخصي</p>
-          </div>
-          <ChevronLeft className="w-3.5 h-3.5 text-stone-600 shrink-0" />
+          <LogoIcon className="h-7 w-7 text-red-600 transition-transform group-hover:scale-105" />
+          <span className="text-2xl font-black tracking-[-0.04em] text-red-600">نوار</span>
         </button>
-      )}
-    </aside>
+
+        <nav className="flex items-center gap-1" aria-label="التنقل الرئيسي">
+          {items.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={item.action}
+              className={`relative min-h-11 px-3 text-sm transition-colors ${
+                item.active ? 'font-bold text-white' : 'font-medium text-white/68 hover:text-white'
+              }`}
+              aria-current={item.active ? 'page' : undefined}
+            >
+              {item.label}
+              {item.active && <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-red-600" />}
+            </button>
+          ))}
+        </nav>
+
+        <div className="mr-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={openSearchOverlay}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-white/80 hover:bg-white/10 hover:text-white"
+            aria-label="البحث"
+          >
+            <Search className="h-5 w-5" />
+          </button>
+
+          {user && (
+            <button
+              type="button"
+              onClick={onOpenProfile}
+              className="group flex min-h-11 items-center gap-2 rounded-md px-1.5 text-white/85 hover:text-white"
+              aria-label="فتح الملف الشخصي"
+            >
+              <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded bg-red-700 text-[10px] font-bold uppercase ring-1 ring-white/10 group-hover:ring-white/30">
+                {user.photoURL ? (
+                  <img src={user.photoURL} alt={user.name} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                ) : user.name.slice(0, 2)}
+              </span>
+              <span className="hidden max-w-28 truncate text-xs xl:block">{user.name}</span>
+            </button>
+          )}
+        </div>
+      </div>
+    </header>
   );
 }

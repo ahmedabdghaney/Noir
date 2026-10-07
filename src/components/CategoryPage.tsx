@@ -70,7 +70,7 @@ function SubsectionRow(props: {
   );
 }
 
-// Poster grid card matching the home cards style
+// Landscape grid card matching the home rows
 function GridCard({
   item,
   onClick,
@@ -96,9 +96,9 @@ function GridCard({
       tabIndex={0}
       data-tv-card
       aria-label={`فتح ${item.title}`}
-      className="group/card card-transition cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
+      className="group/card card-transition cursor-pointer rounded-sm select-none"
     >
-      <div data-tv-card-artwork className="relative aspect-[2/3] overflow-hidden rounded-xl bg-stone-900 border border-white/[0.06]">
+      <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-sm bg-black border border-white/[0.06] shadow-[0_10px_28px_-14px_rgba(0,0,0,0.95)]">
         {onToggleSave && (
           <WatchlistButton
             saved={saved}
@@ -106,8 +106,8 @@ function GridCard({
             className="absolute top-2 right-2 z-20"
           />
         )}
-        {item.poster ? (
-          <img src={item.poster} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover transition-transform duration-500" />
+        {item.backdrop || item.poster ? (
+          <img src={item.backdrop || item.poster || undefined} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover transition-transform duration-500" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-stone-600 text-xs">بدون صورة</div>
         )}
@@ -117,11 +117,11 @@ function GridCard({
             <span className="text-[10px] font-bold text-white">{item.rating.toFixed(1)}</span>
           </div>
         )}
-        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 pointer-events-none" />
-      </div>
-      <div className="px-1 pt-2 text-right">
-        <h3 className="text-white text-xs sm:text-sm font-semibold line-clamp-1">{item.title}</h3>
-        <p className="text-stone-500 text-[10px] sm:text-xs mt-0.5">{item.type === 'movie' ? 'فيلم' : 'مسلسل'} · {item.year || '—'}</p>
+        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/55 to-transparent pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 z-10 px-3 pb-3 text-right">
+          <h3 className="text-white text-sm font-bold line-clamp-1">{item.title}</h3>
+          <p className="mt-0.5 text-stone-400 text-[10px] font-semibold">{item.type === 'movie' ? 'فيلم' : 'مسلسل'} · {item.year || '—'}</p>
+        </div>
       </div>
     </div>
   );
@@ -284,7 +284,7 @@ export default function CategoryPage({
             </div>
 
             {/* Grid */}
-            <div dir="rtl" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-3">
+            <div dir="rtl" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2">
               {allItems.map((item) => (
                 <div key={`${item.type}-${item.id}`}>
                   <GridCard

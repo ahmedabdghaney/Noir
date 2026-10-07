@@ -89,12 +89,12 @@ export default function ContinueWatchingRow({
   if (!items || items.length === 0) return null;
 
   return (
-    <section className="mb-8 md:mb-10 relative flex flex-col group/row" aria-labelledby="continue-watching-title">
-      <div className="px-4 sm:px-6 lg:px-8 mb-3 md:mb-4">
-        <h2 id="continue-watching-title" className="text-xl md:text-2xl font-bold text-white">{title}</h2>
+    <section className="mb-6 md:mb-8 relative flex flex-col group/row" aria-labelledby="continue-watching-title">
+      <div className="px-4 sm:px-6 lg:px-12 mb-2.5">
+        <h2 id="continue-watching-title" className="text-lg md:text-xl font-bold text-white">{title}</h2>
       </div>
 
-      <div className="relative px-4 sm:px-6 lg:px-8">
+      <div className="relative px-4 sm:px-6 lg:px-12">
         {showRightArrow && (
           <button
             onClick={() => handleScroll('right')}
@@ -117,7 +117,7 @@ export default function ContinueWatchingRow({
         <div
           ref={rowRef}
           onScroll={handleRowScroll}
-          className="flex flex-row gap-2.5 md:gap-3 overflow-x-auto no-scrollbar pb-3 scroll-smooth select-none"
+          className="flex flex-row gap-1.5 md:gap-2 overflow-x-auto no-scrollbar py-2 scroll-smooth select-none"
         >
           {items.map((item) => {
             const progress = Math.max(0, Math.min(100, Number(item.progress || 0)));
@@ -136,7 +136,7 @@ export default function ContinueWatchingRow({
                 role="button"
                 tabIndex={0}
                 aria-label={`متابعة مشاهدة ${item.title}`}
-                className="group/cw flex-none w-[240px] sm:w-[300px] md:w-[330px] cursor-pointer"
+                className="group/cw card-cinematic flex-none w-[220px] sm:w-[250px] md:w-[280px] xl:w-[300px] cursor-pointer"
               >
                 <div className="relative aspect-video rounded-md overflow-hidden bg-[#101010] border border-white/[0.055]">
                   {img ? (

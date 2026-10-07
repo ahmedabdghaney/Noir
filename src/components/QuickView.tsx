@@ -53,13 +53,13 @@ export default function QuickView({
     >
       <div
         dir="rtl"
-        className="relative w-full sm:max-w-3xl max-h-[92dvh] overflow-y-auto bg-[#151518] border border-white/10 rounded-t-[28px] sm:rounded-[28px] shadow-[0_30px_100px_rgba(0,0,0,.7)] animate-pop-in"
+        className="relative w-full sm:max-w-3xl max-h-[92dvh] overflow-y-auto bg-[#141414] border border-white/10 rounded-t-xl sm:rounded-md shadow-[0_30px_100px_rgba(0,0,0,.85)] animate-pop-in"
       >
         <div className="sm:hidden flex justify-center pt-2.5">
           <span className="w-10 h-1 rounded-full bg-white/20" />
         </div>
 
-        <div className="relative aspect-[16/9] min-h-[220px] overflow-hidden sm:rounded-t-[28px] bg-stone-950">
+        <div className="relative aspect-[16/9] min-h-[220px] overflow-hidden sm:rounded-t-md bg-stone-950">
           {image ? (
             <img
               src={image}
@@ -70,7 +70,7 @@ export default function QuickView({
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-stone-800 to-black" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#151518] via-black/20 to-black/15" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-black/20 to-black/15" />
 
           <button
             type="button"

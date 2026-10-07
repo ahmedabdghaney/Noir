@@ -2106,7 +2106,7 @@ export default function App() {
       isTvApp ? 'bg-[#08080a]' : 'bg-[#070707]'
     }`}>
       
-      {/* Desktop Sidebar — Apple TV style */}
+      {/* Desktop cinematic top navigation */}
       {!isTvApp && (
         <Sidebar
           activeView={activeView}
@@ -2144,11 +2144,11 @@ export default function App() {
         />
       </div>
 
-      {/* Main content — shifts right on desktop to account for sidebar */}
-      <div className={`flex-1 flex flex-col min-w-0 ${isTvApp ? '' : 'lg:mr-52'}`}>
+      {/* Main content */}
+      <div className="flex-1 flex flex-col min-w-0">
 
       {/* Main Orchestration Views Switcher */}
-      <main className={`flex-grow selection:bg-red-500/30 ${isTvApp ? ((activeView === 'home' || activeView === 'detail') ? 'pb-0 pt-0' : 'pb-0 pt-24') : 'lg:pt-0 pt-14 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0'}`}>
+      <main className={`flex-grow selection:bg-red-500/30 ${isTvApp ? ((activeView === 'home' || activeView === 'detail') ? 'pb-0 pt-0' : 'pb-0 pt-24') : `pt-14 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 ${(activeView === 'home' || activeView === 'detail') ? 'lg:pt-0' : 'lg:pt-[68px]'}`}`}>
         {activeView ==='home' && (
           isTvApp ? (
             <TvHome
@@ -2421,7 +2421,7 @@ export default function App() {
 </p>
 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-3 mt-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2 mt-6">
                   {processedItems.map((item, idx) => {
                     const hasScore = item.rating > 0;
                     const progressKey =`noir_progress_${item.type}_${item.id}`;
@@ -2443,18 +2443,17 @@ export default function App() {
                         data-tv-card={isTvApp ? '' : undefined}
                         aria-label={`فتح ${item.title}`}
                         style={{ animationDelay: `${idx * 40}ms` }}
-                        className="group/card card-transition card-cinematic cursor-pointer rounded-md pb-3.5 select-none"
+                        className="group/card card-transition card-cinematic cursor-pointer rounded-sm select-none"
                       >
-                        {/* Poster Artwork container */}
-                        <div data-tv-card-artwork className="relative aspect-[2/3] overflow-hidden rounded-md bg-stone-900 border border-white/[0.055] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.85)]">
+                        <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-sm bg-black border border-white/[0.055] shadow-[0_10px_28px_-14px_rgba(0,0,0,0.95)]">
                           <WatchlistButton
                             saved
                             onToggle={() => toggleWatchlistItem(item)}
                             className="absolute top-2 right-2 z-20"
                           />
-                          {item.poster || item.backdrop ? (
+                          {item.backdrop || item.poster ? (
                             <img
-                              src={item.poster || item.backdrop || undefined}
+                              src={item.backdrop || item.poster || undefined}
                               alt={item.title}
                               loading="lazy"
                               referrerPolicy="no-referrer"
@@ -2468,8 +2467,14 @@ export default function App() {
 </div>
                           )}
 
-                          {/* Subtle gradient at bottom of poster for depth */}
-                          <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                          <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/60 to-transparent pointer-events-none" />
+
+                          <div className="absolute inset-x-0 bottom-0 z-10 px-3 pb-3 text-right">
+                            <p className="text-white text-sm font-bold line-clamp-1">{item.title}</p>
+                            <p className="mt-0.5 text-[10px] font-semibold text-stone-400">
+                              {item.year || '—'} · {item.type === 'movie' ? 'فيلم' : 'مسلسل'}
+                            </p>
+                          </div>
 
                           {/* Rating stamp */}
                           {hasScore && (
@@ -2481,7 +2486,7 @@ export default function App() {
 
                           {/* Watch progression indicator red bar */}
                           {progress > 0 && (
-                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40">
+                            <div className="absolute bottom-0 left-0 right-0 z-20 h-1 bg-black/40">
                               <div 
                                 className="h-full bg-red-600 transition-all duration-300" 
                                 style={{ width: `${progress}%` }}
@@ -2490,17 +2495,6 @@ export default function App() {
                           )}
 </div>
 
-                        {/* Meta details */}
-                        <div className="mt-2.5 px-1 text-right flex flex-col">
-                          <span className="text-white font-bold text-xs sm:text-sm line-clamp-1 leading-tight transition-colors">
-                            {item.title}
-</span>
-                          <span className="text-stone-400 font-medium text-[11px] sm:text-xs mt-1 flex items-center gap-1 justify-start">
-                            <span>{item.year ||'—'}</span>
-                            <span className="w-1 h-1 bg-stone-800 rounded-full" />
-                            <span>{item.type ==='movie' ?'فيلم' :'مسلسل'}</span>
-</span>
-</div>
 </div>
                     );
                   })}
@@ -2594,21 +2588,17 @@ export default function App() {
 
                 {isSearching ? (
                   // Grid Skeletons loading fallback
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2">
                     {Array.from({ length: 15 }).map((_, i) => (
-                      <div key={i} className="flex flex-col gap-3">
-                        <div className="aspect-[2/3] w-full rounded-2xl bg-stone-950 border border-white/5 flex flex-col justify-end p-2 animate-pulse">
-                          <div className="w-full h-full bg-stone-900 rounded-xl shimmer-bg" />
-</div>
-                        <div className="w-24 h-4 bg-stone-900 rounded animate-pulse" />
-                        <div className="w-16 h-3 bg-stone-900 rounded animate-pulse" />
+                      <div key={i} className="aspect-video w-full rounded-sm bg-[#121212] border border-white/5 overflow-hidden animate-pulse">
+                        <div className="w-full h-full bg-stone-900 shimmer-bg" />
 </div>
                     ))}
 </div>
                 ) : searchResults.length > 0 ? (
                   <div className="space-y-8">
                     {/* Rendered lists grid layout */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2">
                       {searchResults.map((item, idx) => (
                         <div
                           key={`${item.type}-${item.id}`}
@@ -2625,18 +2615,17 @@ export default function App() {
                           data-search-result-index={idx}
                           aria-label={`فتح ${item.title}`}
                           style={{ animationDelay: `${idx * 40}ms` }}
-                          className="group/card card-transition card-cinematic cursor-pointer rounded-md pb-3.5 select-none"
+                          className="group/card card-transition card-cinematic cursor-pointer rounded-sm select-none"
                         >
-                          {/* Poster Artwork container */}
-                          <div data-tv-card-artwork className="relative aspect-[2/3] overflow-hidden rounded-md bg-stone-900 border border-white/[0.055] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.85)]">
+                          <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-sm bg-black border border-white/[0.055] shadow-[0_10px_28px_-14px_rgba(0,0,0,0.95)]">
                             <WatchlistButton
                               saved={isInWatchlist(item)}
                               onToggle={() => toggleWatchlistItem(item)}
                               className="absolute top-2 right-2 z-20"
                             />
-                            {item.poster || item.backdrop ? (
+                            {item.backdrop || item.poster ? (
                               <img
-                                src={item.poster || item.backdrop || undefined}
+                                src={item.backdrop || item.poster || undefined}
                                 alt={item.title}
                                 loading="lazy"
                                 referrerPolicy="no-referrer"
@@ -2650,8 +2639,14 @@ export default function App() {
                               </div>
                             )}
 
-                            {/* Subtle gradient at bottom of poster for depth */}
-                            <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                            <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/60 to-transparent pointer-events-none" />
+
+                            <div className="absolute inset-x-0 bottom-0 z-10 px-3 pb-3 text-right">
+                              <p className="text-white text-sm font-bold line-clamp-1">{item.title}</p>
+                              <p className="mt-0.5 text-[10px] font-semibold text-stone-400">
+                                {item.year || '—'} · {item.type === 'movie' ? 'فيلم' : 'مسلسل'}
+                              </p>
+                            </div>
 
                             {/* Rating stamp */}
                             {item.rating > 0 && (
@@ -2662,17 +2657,6 @@ export default function App() {
                             )}
 </div>
 
-                          {/* Meta details */}
-                          <div className="mt-2.5 px-1 text-right flex flex-col">
-                            <span className="text-white font-bold text-xs sm:text-sm line-clamp-1 leading-tight transition-colors">
-                              {item.title}
-</span>
-                            <span className="text-stone-400 font-medium text-[11px] sm:text-xs mt-1 flex items-center gap-1 justify-start">
-                              <span>{item.year ||'—'}</span>
-                              <span className="w-1 h-1 bg-stone-800 rounded-full" />
-                              <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
-</span>
-</div>
 </div>
                       ))}
 </div>
@@ -3002,13 +2986,13 @@ export default function App() {
           />
 
           {/* Modal Container */}
-          <div className={`relative z-10 w-full border border-white/8 rounded-3xl p-6 md:p-8 shadow-3xl text-center select-none animate-scale-in ${
-            isTvApp ? 'max-w-lg bg-[#101012]' : 'max-w-sm bg-stone-950'
+          <div className={`relative z-10 w-full border border-white/10 rounded-md p-6 md:p-8 shadow-3xl text-center select-none animate-scale-in ${
+            isTvApp ? 'max-w-lg bg-[#101012]' : 'max-w-sm bg-[#141414]'
           }`}>
             {/* Close Trigger Button */}
             {!isTvApp && <button
               onClick={() => setIsProfileModalOpen(false)}
-              className="absolute top-4 left-4 p-1.5 rounded-full text-gray-500 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+              className="absolute top-4 left-4 p-1.5 rounded-sm text-gray-500 hover:text-white hover:bg-white/8 transition-colors cursor-pointer"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
@@ -3017,16 +3001,16 @@ export default function App() {
 
             {/* Profile Avatar Frame */}
             <div className="flex flex-col items-center gap-4 mt-2">
-              <div className="w-20 h-20 rounded-full p-1 bg-white/5 border border-white/10 shadow-xl overflow-hidden relative flex items-center justify-center">
+              <div className="w-20 h-20 rounded-md bg-white/5 border border-white/10 shadow-xl overflow-hidden relative flex items-center justify-center">
                 {user.photoURL ? (
                   <img 
                     src={user.photoURL} 
                     alt={user.name} 
-                    className="w-full h-full rounded-full object-cover" 
+                    className="w-full h-full object-cover"
                     referrerPolicy="no-referrer" 
                   />
                 ) : (
-                  <div className="w-full h-full rounded-full flex items-center justify-center bg-indigo-600 text-white font-extrabold text-2xl uppercase">
+                  <div className="w-full h-full flex items-center justify-center bg-red-700 text-white font-extrabold text-2xl uppercase">
                     {user.name.slice(0, 2)}
 </div>
                 )}
@@ -3077,7 +3061,7 @@ export default function App() {
 
 
             {/* Restrict warning or list status */}
-            <div className="mt-8 p-3.5 rounded-2xl bg-stone-900/60 border border-white/5 text-right space-y-1">
+            <div className="mt-8 p-3.5 rounded-sm bg-black/35 border border-white/5 text-right space-y-1">
               <p className="text-[10px] text-gray-500 font-bold leading-normal">إحصائيات القائمة والنشاط</p>
               <div className="text-xs text-gray-300 font-semibold leading-relaxed">
                 {user.type ==='guest' ? (
@@ -3094,7 +3078,7 @@ export default function App() {
                 ref={profileHistoryButtonRef}
                 data-tv-autofocus={isTvApp ? '' : undefined}
                 onClick={handleViewHistory}
-                className="w-full bg-white/5 border border-white/8 hover:bg-white/10 text-white font-bold py-3 rounded-xl transition-colors cursor-pointer text-xs flex items-center justify-center gap-2"
+                className="w-full bg-white/8 border border-white/8 hover:bg-white/14 text-white font-bold py-3 rounded-sm transition-colors cursor-pointer text-xs flex items-center justify-center gap-2"
               >
                 <span>سجل المشاهدة</span>
                 <span className="text-white/45">({viewingHistory.length})</span>
@@ -3105,7 +3089,7 @@ export default function App() {
                     setIsProfileModalOpen(false);
                     handleLogout();
                   }}
-                  className="w-full bg-white hover:bg-white/90 text-black font-bold py-3 rounded-xl transition-all cursor-pointer text-xs"
+                  className="w-full bg-white hover:bg-white/85 text-black font-bold py-3 rounded-sm transition-all cursor-pointer text-xs"
                 >
                   ربط تسجيل الدخول بجوجل 
 </button>
@@ -3115,7 +3099,7 @@ export default function App() {
                   handleLogout();
                   setIsProfileModalOpen(false);
                 }}
-                className="w-full bg-stone-900 border border-white/5 hover:border-white/10 text-red-400 hover:text-red-300 font-bold py-3 rounded-xl transition-all cursor-pointer text-xs flex items-center justify-center gap-2"
+                className="w-full bg-black/40 border border-white/8 hover:border-red-600/60 text-red-400 hover:text-red-300 font-bold py-3 rounded-sm transition-all cursor-pointer text-xs flex items-center justify-center gap-2"
               >
                 <span></span>
                 <span>تسجيل الخروج من الحساب</span>
