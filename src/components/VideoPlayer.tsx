@@ -1736,7 +1736,7 @@ export default function VideoPlayer({
   const getVidApiUrl = () => {
     const params = new URLSearchParams({
       autoplay: '1',
-      primaryColor: '#FF2E29',
+      primaryColor: '#00D6D9',
     });
     const resumeAt = Math.max(startAt, currentTime);
     if (resumeAt > 5) params.set('resumeAt', String(Math.floor(resumeAt)));
@@ -1790,7 +1790,7 @@ export default function VideoPlayer({
     : `video::cue { color: transparent !important; text-shadow: none !important; background: transparent !important; }`;
 
   const sliderStyle = `
-    .noir-player-accent { background-color: #ff453a !important; }
+    .noir-player-accent { background-color: #00D6D9 !important; }
     .noir-volume-track { width: 4rem !important; margin-left: .25rem !important; opacity: 1 !important; overflow: visible !important; }
     @media (min-width: 640px) {
       .noir-volume-track { width: 5rem !important; margin-left: .375rem !important; }
@@ -1842,7 +1842,7 @@ export default function VideoPlayer({
           {(isLoading || isBuffering) && !isPausedByHost && (
             <div className={`absolute inset-0 flex flex-col items-center justify-center z-20 gap-3 pointer-events-none ${isLoading ? 'bg-black' : 'bg-black/10'}`}>
               <div className={`${isLoading ? '' : 'w-14 h-14 rounded-full bg-black/55 backdrop-blur-md'} flex items-center justify-center`}>
-                <Loader className={`${isLoading ? 'w-8 h-8' : 'w-7 h-7'} text-red-500 animate-spin`} />
+                <Loader className={`${isLoading ? 'w-8 h-8' : 'w-7 h-7'} text-[#00D6D9] animate-spin`} />
               </div>
             </div>
           )}
@@ -2401,7 +2401,7 @@ export default function VideoPlayer({
                         </div>
                         <div className="px-3.5 py-2.5 text-[10px] text-white/40 uppercase tracking-widest border-b border-white/10 text-right">الإعدادات</div>
                         <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => setShowSpeedMenu(p => !p)} className="w-full flex items-center justify-between px-3.5 py-3 text-sm text-white hover:bg-white/10 transition-colors">
-                          <span className="flex items-center gap-1 text-red-400 font-semibold text-xs">
+                          <span className="flex items-center gap-1 text-[#25E2E4] font-semibold text-xs">
                             {speed === 1 ? 'عادي' : `${speed}×`}
                             <ChevronDown className={`w-3 h-3 transition-transform ${showSpeedMenu ? 'rotate-180' : ''}`} />
                           </span>
@@ -2410,7 +2410,7 @@ export default function VideoPlayer({
                         {showSpeedMenu && (
                           <div className="border-t border-white/10 max-h-48 overflow-y-auto">
                             {SPEEDS.map(s => (
-                              <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} key={s} onClick={() => changeSpeed(s)} className={`w-full text-right px-3.5 py-2.5 text-sm transition-colors ${speed === s ? 'text-red-400 bg-red-500/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
+                              <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} key={s} onClick={() => changeSpeed(s)} className={`w-full text-right px-3.5 py-2.5 text-sm transition-colors ${speed === s ? 'text-[#25E2E4] bg-[#00D6D9]/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
                                 {s === 1 ? 'عادي (1×)' : `${s}×`}
                               </button>
                             ))}
@@ -2419,7 +2419,7 @@ export default function VideoPlayer({
                         {qualityLevels.length > 0 && (
                           <>
                             <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => setShowQualityMenu(p => !p)} className="w-full border-t border-white/10 flex items-center justify-between px-3.5 py-3 text-sm text-white hover:bg-white/10 transition-colors">
-                              <span className="flex items-center gap-1 text-red-400 font-semibold text-xs">
+                              <span className="flex items-center gap-1 text-[#25E2E4] font-semibold text-xs">
                                 {currentLevel === -1
                                   ? 'تلقائي'
                                   : `${qualityLevels.find((l) => l.index === currentLevel)?.height || ''}p`}
@@ -2429,11 +2429,11 @@ export default function VideoPlayer({
                             </button>
                             {showQualityMenu && (
                               <div className="border-t border-white/10 max-h-48 overflow-y-auto">
-                                <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeQuality(-1)} className={`w-full text-right px-3.5 py-2.5 text-sm transition-colors ${currentLevel === -1 ? 'text-red-400 bg-red-500/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
+                                <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeQuality(-1)} className={`w-full text-right px-3.5 py-2.5 text-sm transition-colors ${currentLevel === -1 ? 'text-[#25E2E4] bg-[#00D6D9]/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
                                   تلقائي
                                 </button>
                                 {qualityLevels.map((lv) => (
-                                  <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} key={lv.index} onClick={() => changeQuality(lv.index)} className={`w-full text-right px-3.5 py-2.5 text-sm transition-colors ${currentLevel === lv.index ? 'text-red-400 bg-red-500/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
+                                  <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} key={lv.index} onClick={() => changeQuality(lv.index)} className={`w-full text-right px-3.5 py-2.5 text-sm transition-colors ${currentLevel === lv.index ? 'text-[#25E2E4] bg-[#00D6D9]/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
                                     {lv.height}p
                                   </button>
                                 ))}
@@ -2460,7 +2460,7 @@ export default function VideoPlayer({
                               dir="ltr"
                               className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${
                                 autoplayNext
-                                  ? 'border-red-400/70 bg-red-500'
+                                  ? 'border-[#25E2E4]/70 bg-[#00D6D9]'
                                   : 'border-white/15 bg-white/10'
                               }`}
                             >
@@ -2473,7 +2473,7 @@ export default function VideoPlayer({
                             </span>
                             <span className="flex flex-1 items-center justify-between">
                               <span>تشغيل الحلقة التالية تلقائياً</span>
-                              <span className={autoplayNext ? 'text-red-400' : 'text-white/40'}>
+                              <span className={autoplayNext ? 'text-[#25E2E4]' : 'text-white/40'}>
                                 {autoplayNext ? 'مفعّل' : 'متوقف'}
                               </span>
                             </span>
@@ -2485,7 +2485,7 @@ export default function VideoPlayer({
                             <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeSubOffset(0.5)} className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="+0.5s">
                               <Plus className="w-3 h-3" />
                             </button>
-                            <span className={`text-xs font-semibold w-14 text-center tabular-nums select-none ${subOffset === 0 ? 'text-white/40' : subOffset > 0 ? 'text-red-400' : 'text-blue-400'}`}>
+                            <span className={`text-xs font-semibold w-14 text-center tabular-nums select-none ${subOffset === 0 ? 'text-white/40' : subOffset > 0 ? 'text-[#25E2E4]' : 'text-blue-400'}`}>
                               {subOffset === 0 ? '0.0s' : `${subOffset > 0 ? '+' : ''}${subOffset.toFixed(1)}s`}
                             </span>
                             <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeSubOffset(-0.5)} className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="-0.5s">
@@ -2634,7 +2634,7 @@ function Btn({ onClick, label, children, active = false, small = false, big = fa
     <button onClick={onClick} aria-label={label} data-tv-player-control={tvControl ? '' : undefined}
       className={`noir-player-control ${big ? 'noir-player-control--big' : ''} group/control relative flex items-center justify-center rounded-full transition-[color,background-color,transform] duration-150 shrink-0 active:scale-90 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80
         ${small ? 'w-8 h-8' : big ? 'w-10 h-10 sm:w-11 sm:h-11' : 'w-9 h-9 sm:w-11 sm:h-11'}
-        ${active ? 'text-red-400 bg-red-500/15' : 'text-white/90 hover:text-white hover:bg-white/15'}`}>
+        ${active ? 'text-[#25E2E4] bg-[#00D6D9]/15' : 'text-white/90 hover:text-white hover:bg-white/15'}`}>
       {children}
       <span
         role="tooltip"

@@ -64,7 +64,7 @@ export default function Sidebar({
           aria-label="العودة إلى الرئيسية"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-[12px] border border-white/10 bg-white/[0.065] transition-colors group-hover:bg-white/10">
-            <LogoIcon className="h-5 w-5 text-red-500" />
+            <LogoIcon className="h-5 w-5 text-[#00D6D9]" />
           </span>
           <span className="text-xl font-extrabold tracking-[-0.04em] text-white">نوار</span>
         </button>

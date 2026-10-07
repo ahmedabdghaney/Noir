@@ -69,7 +69,7 @@ export default function Header({
               aria-label="العودة إلى الرئيسية"
             >
               <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-white/[0.07]">
-                <LogoIcon className="h-4.5 w-4.5 shrink-0 text-red-500" />
+                <LogoIcon className="h-4.5 w-4.5 shrink-0 text-[#00D6D9]" />
               </span>
               <span>نوار</span>
           </button>
@@ -125,7 +125,7 @@ export default function Header({
                         onLogout();
                         setIsProfileDropdownOpen(false);
                       }}
-                      className="w-full min-h-11 text-right px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 flex items-center transition-colors cursor-pointer font-semibold"
+                      className="w-full min-h-11 text-right px-4 py-2.5 text-sm text-[#25E2E4] hover:text-[#62F0F1] hover:bg-[#00D6D9]/10 flex items-center transition-colors cursor-pointer font-semibold"
                     >
                       <span>تسجيل الخروج</span>
                     </button>

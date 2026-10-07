@@ -4,7 +4,7 @@
  */
 
 import { useRef, useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, Play, X } from 'lucide-react';
+import { ChevronRight, ChevronLeft, X } from 'lucide-react';
 import { MovieOrShow } from '../types';
 import WatchlistButton from './WatchlistButton';
 
@@ -44,11 +44,11 @@ export default function MovieRow({
   const checkScroll = () => {
     if (rowRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = rowRef.current;
-      
+
       // Since RTL scrollLeft is either negative or standard depending on browser representation,
       // we check mathematically standard indicators
       const absScroll = Math.abs(scrollLeft);
-      
+
       // Can scroll left (to previous items in RTL) -> scrollLeft is negative closer to 0
       setShowRightArrow(absScroll > 10);
       setShowLeftArrow(absScroll + clientWidth < scrollWidth - 10);
@@ -88,12 +88,12 @@ export default function MovieRow({
       const { clientWidth } = rowRef.current;
       // Scroll amount (75% of view width)
       const scrollAmount = clientWidth * 0.75;
-      
+
       rowRef.current.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
         behavior: 'smooth',
       });
-      
+
       // Delay check scroll as layout shifts smoothly
       setTimeout(checkScroll, 350);
     }
@@ -207,7 +207,7 @@ export default function MovieRow({
                 style={{ animationDelay: `${idx * 45}ms` }}
                 className="group/card card-pop card-cinematic relative flex-none w-[220px] cursor-pointer select-none sm:w-[260px] md:w-[300px] xl:w-[330px]"
               >
-                <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-[16px] border border-white/[0.065] bg-[#101116] shadow-[0_18px_44px_-30px_rgba(0,0,0,1)] md:rounded-[18px]">
+                <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-[16px] border border-white/[0.065] bg-[#101116] md:rounded-[18px]">
                   {onToggleSave && (
                     <WatchlistButton
                       saved={saved}
@@ -236,7 +236,7 @@ export default function MovieRow({
                       loading="lazy"
                       decoding="async"
                       referrerPolicy="no-referrer"
-                      className="h-full w-full select-none object-cover transition-transform duration-500 md:group-hover/card:scale-[1.025]"
+                      className="h-full w-full select-none object-cover"
                     />
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center p-3 text-stone-600 bg-stone-950">
@@ -250,17 +250,11 @@ export default function MovieRow({
                       #{idx + 1}
                     </span>
                   )}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-300 md:group-hover/card:bg-black/25 md:group-hover/card:opacity-100">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-[14px] border border-white/15 bg-black/45 text-white backdrop-blur-lg">
-                      <Play className="h-4 w-4 fill-current" />
-                    </span>
-                  </div>
-
                   {/* Watch progression indicator */}
                   {progress > 0 && (
                     <div className="absolute bottom-0 left-3 right-3 h-0.5 overflow-hidden rounded-full bg-white/20">
-                      <div 
-                        className="h-full bg-red-600 transition-all duration-300" 
+                      <div
+                        className="h-full bg-[#00BFC4] transition-all duration-300"
                         style={{ width: `${progress}%` }}
                       />
                     </div>

@@ -570,7 +570,7 @@ export default function DetailView({
       setIsLoading(true);
       setError(false);
       setIsPlayerOpen(false); // Reset player state on item shift
-      
+
       // Reset scroll instantly
       window.scrollTo(0, 0);
       document.documentElement.scrollTop = 0;
@@ -644,7 +644,7 @@ export default function DetailView({
     const seasonNum = Number(e.target.value);
     setSelectedSeason(seasonNum);
     setSelectedEpisode(1);
-    
+
     if (data?.seasons) {
       const match = data.seasons.find((s) => s.season_number === seasonNum);
       if (match) {
@@ -742,7 +742,7 @@ export default function DetailView({
   if (isLoading) {
     return (
       <div className="w-full min-h-[60vh] flex flex-col items-center justify-center gap-4 py-20">
-        <div className="w-10 h-10 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-[#00D6D9]/20 border-t-[#00D6D9] rounded-full animate-spin" />
         <span className="text-gray-400 font-medium text-sm">جاري التحميل...</span>
 </div>
     );
@@ -816,7 +816,7 @@ export default function DetailView({
     try {
       const savedList = localStorage.getItem('noir_watchlist');
       let list = savedList ? JSON.parse(savedList) : [];
-      
+
       const curUser = auth.currentUser;
       const isItemSaved = isSaved;
 
@@ -937,7 +937,7 @@ export default function DetailView({
 
   return (
     <div className="w-full text-right detail-enter">
-      
+
       {/* Immersive backdrop background section */}
       <div className={`noir-detail-backdrop-stage relative w-full select-none ${isTvApp ? 'h-[35vh] md:h-[45vh] mb-4 overflow-visible' : 'h-[72svh] min-h-[560px] max-h-[840px] overflow-hidden'}`}>
         <div className={`noir-detail-backdrop-media absolute inset-x-0 top-0 ${isTvApp ? 'bottom-[-12rem]' : 'bottom-0'}`}>
@@ -954,12 +954,12 @@ export default function DetailView({
 
       {/* Main Details Panel Layout */}
       <div className={`w-full mx-auto px-4 sm:px-8 lg:px-12 relative z-10 ${isTvApp ? '-mt-36 md:-mt-48 xl:px-24' : '-mt-[52svh]'}`}>
-        
+
         <div className={`grid grid-cols-1 gap-6 items-end ${isTvApp ? 'md:grid-cols-[240px_1fr] md:gap-12' : ''}`}>
-          
+
           {/* Text Information pane (Right side in standard RTL layouts) */}
           <div className={`order-2 flex flex-col items-start text-right min-w-0 w-full ${isTvApp ? 'md:order-2 md:pr-4' : 'max-w-3xl'}`}>
-            
+
             {titleLogo ? (
               <img
                 src={titleLogo}
@@ -1045,7 +1045,7 @@ export default function DetailView({
                     data-tv-primary-action={isTvApp ? '' : undefined}
                     className="noir-button-primary flex items-center gap-2 text-sm"
                   >
-                    <Play className="w-3.5 h-3.5 fill-black text-black" />
+                    <Play className="w-3.5 h-3.5 fill-white text-white" />
                     <span>إكمال المشاهدة</span>
 </button>
 
@@ -1066,7 +1066,7 @@ export default function DetailView({
                   data-tv-primary-action={isTvApp ? '' : undefined}
                   className="noir-button-primary flex items-center gap-2 text-sm"
                 >
-                  <Play className="w-3.5 h-3.5 fill-black text-black" />
+                  <Play className="w-3.5 h-3.5 fill-white text-white" />
                   <span>المشاهدة الآن</span>
 </button>
               )}
@@ -1090,8 +1090,8 @@ export default function DetailView({
                 title={isSaved ? 'محفوظ في قائمتي' : 'حفظ في قائمتي'}
                 aria-label={isSaved ? 'إزالة من قائمتي' : 'إضافة إلى قائمتي'}
                 className={`noir-icon-button shrink-0 ${
-                  isSaved 
-                    ?'!border-red-400/40 !bg-red-600 !text-white'
+                  isSaved
+                    ?'!border-[#25E2E4]/40 !bg-[#00BFC4] !text-white'
                     :''
                 }`}
               >
@@ -1146,7 +1146,7 @@ export default function DetailView({
 
           {/* Left Side: Solid Poster Art (Order-1 on display size to look traditional) */}
           <div className={`${isTvApp ? 'order-1 md:order-1' : 'hidden'}`}>
-            <div className="w-[160px] md:w-[240px] aspect-[2/3] mx-auto md:mx-0 rounded-2xl overflow-hidden bg-stone-900 border border-white/[0.06] relative select-none">
+            <div className="w-[160px] md:w-[240px] aspect-[2/3] mx-auto md:mx-0 overflow-hidden bg-stone-900 relative select-none [mask-image:linear-gradient(to_bottom,#000_0%,#000_78%,transparent_100%)]">
               {posterSrc ? (
                 <img
                   src={posterSrc || undefined}
@@ -1166,11 +1166,11 @@ export default function DetailView({
 
         {/* Watch Together Live Synchronization Panel */}
         {isWatchTogetherOpen && (
-          <div className="mt-8 bg-stone-950 border border-white/5 rounded-3xl p-4 sm:p-6 md:p-8 space-y-6 text-right animate-fade-in max-w-4xl mx-auto selection:bg-red-500/25">
+          <div className="mt-8 bg-stone-950 border border-white/5 rounded-3xl p-4 sm:p-6 md:p-8 space-y-6 text-right animate-fade-in max-w-4xl mx-auto selection:bg-[#00D6D9]/25">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/5 pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-red-600/10 border border-red-500/20 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-red-500" />
+                <div className="w-10 h-10 rounded-2xl bg-[#00BFC4]/10 border border-[#00D6D9]/20 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-[#00D6D9]" />
 </div>
                 <div className="flex flex-col text-right">
                   <h3 className="text-white font-bold text-sm sm:text-base">استوديو المشاهدة الجماعية</h3>
@@ -1191,7 +1191,7 @@ export default function DetailView({
                     className={`w-2 h-2 rounded-full ${wtConnected ? 'bg-emerald-500' : 'bg-amber-500'}`}
                   />
                   <span>ROOM:</span>
-                  <span className="text-red-400">{wtRoomCode}</span>
+                  <span className="text-[#25E2E4]">{wtRoomCode}</span>
                 </div>
                 <button
                   onClick={handleCopyRoomLink}
@@ -1209,13 +1209,13 @@ export default function DetailView({
                 {/* Scrollable messages container */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3.5 flex flex-col no-scrollbar">
                   {wtMessages.map((msg, i) => (
-                    <div 
-                      key={i} 
+                    <div
+                      key={i}
                       className={`flex flex-col gap-1 max-w-[85%] ${
                         msg.self
-                          ? 'mr-auto items-start text-left' 
-                          : msg.type === 'system' 
-                            ? 'mx-auto text-center items-center bg-white/5 border border-white/5 rounded-lg py-1 px-3 text-[10px] text-gray-400 w-full' 
+                          ? 'mr-auto items-start text-left'
+                          : msg.type === 'system'
+                            ? 'mx-auto text-center items-center bg-white/5 border border-white/5 rounded-lg py-1 px-3 text-[10px] text-gray-400 w-full'
                             : 'ml-auto items-end text-right'
                       }`}
                     >
@@ -1223,10 +1223,10 @@ export default function DetailView({
                         <span className="text-[10px] text-gray-500 font-bold px-1">{msg.sender}</span>
                       )}
                       <div className={`px-3 py-2 rounded-2xl text-xs font-semibold leading-relaxed ${
-                        msg.type === 'system' 
-                          ? '' 
+                        msg.type === 'system'
+                          ? ''
                           : msg.self
-                            ? 'bg-red-600 text-white rounded-tl-none' 
+                            ? 'bg-[#00BFC4] text-white rounded-tl-none'
                             : 'bg-stone-800 text-gray-200 rounded-tr-none'
                       }`}>
                         {msg.text}
@@ -1242,7 +1242,7 @@ export default function DetailView({
                     value={wtNewMsg}
                     onChange={(e) => setWtNewMsg(e.target.value)}
                     placeholder="اكتب رسالة لأفراد الغرفة المشاهدين..."
-                    className="flex-grow bg-stone-900 text-white text-xs px-3.5 py-2.5 rounded-xl border border-white/5 focus:outline-none focus:border-red-500 text-right font-medium"
+                    className="flex-grow bg-stone-900 text-white text-xs px-3.5 py-2.5 rounded-xl border border-white/5 focus:outline-none focus:border-[#00D6D9] text-right font-medium"
                   />
                   <button
                     type="submit"
@@ -1475,19 +1475,19 @@ export default function DetailView({
 
         {/* Bottom Synopsis and Cast grids */}
         <div className="mt-8">
-          
+
           <div className="space-y-12 text-right min-w-0">
             {/* Cast roster row component */}
             {!isTvApp && cast.length > 0 && (
               <div className="space-y-4">
                 <h3 className="text-lg sm:text-xl font-bold text-white">طاقم العمل</h3>
-                <div className="flex gap-3 sm:gap-5 overflow-x-auto no-scrollbar pb-3 -mx-1 px-1" dir="rtl">
+                <div className="flex gap-5 sm:gap-8 overflow-x-auto no-scrollbar pb-4 -mx-1 px-1" dir="rtl">
                   {cast.map((c: CastMember) => (
                     <div
                       key={c.id}
-                      className="flex-none w-[72px] sm:w-[110px] flex flex-col items-center text-center group/cast"
+                      className="flex-none w-[64px] sm:w-[90px] flex flex-col items-center text-center group/cast"
                     >
-                      <div className="w-[64px] h-[64px] sm:w-[100px] sm:h-[100px] rounded-full overflow-hidden bg-stone-800 select-none border border-white/[0.06] transition-transform duration-300">
+                      <div className="w-[56px] h-[56px] sm:w-[80px] sm:h-[80px] rounded-full overflow-hidden bg-stone-800 select-none border border-white/[0.06]">
                         {c.profile_path ? (
                           <img
                             src={getProfileUrl(c.profile_path) || undefined}
@@ -1502,7 +1502,7 @@ export default function DetailView({
 </div>
                         )}
 </div>
-                      <span className="text-xs sm:text-sm font-bold text-white mt-2 sm:mt-3 leading-tight line-clamp-1 w-full" title={c.name}>
+                      <span className="text-[11px] sm:text-xs font-bold text-white mt-2.5 leading-tight line-clamp-1 w-full" title={c.name}>
                         {c.name}
 </span>
                       <span className="text-[10px] sm:text-xs text-stone-500 truncate mt-0.5 w-full" title={c.character}>

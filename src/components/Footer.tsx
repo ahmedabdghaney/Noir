@@ -15,16 +15,16 @@ export default function Footer({ goHome, setSearchMode }: FooterProps) {
   return (
     <footer className="border-t border-white/5 bg-stone-950/40 text-stone-500 py-12 md:py-16 mt-16 select-none leading-relaxed">
       <div className="max-w-6xl mx-auto px-6 md:px-12">
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 text-right">
-          
+
           {/* Brand Info */}
           <div className="space-y-4">
             <div
               onClick={goHome}
               className="inline-flex items-center gap-2 cursor-pointer text-white font-bold text-lg tracking-tight"
             >
-              <LogoIcon className="w-5 h-5 text-red-500" />
+              <LogoIcon className="w-5 h-5 text-[#00D6D9]" />
               <span>نوار</span>
               <span className="text-gray-500 font-normal text-xs mr-1 bg-white/5 px-1.5 py-0.5 rounded">سينما</span>
             </div>

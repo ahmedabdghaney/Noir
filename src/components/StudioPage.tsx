@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowRight, Star, ChevronDown } from 'lucide-react';
+import { ArrowRight, ChevronDown } from 'lucide-react';
 import { MovieOrShow } from '../types';
 import { Studio } from '../lib/studios';
 import { discoverTitles } from '../lib/tmdb';
@@ -39,7 +39,6 @@ function GridCard({
   saved: boolean;
   onToggleSave?: () => void;
 }) {
-  const hasScore = item.rating > 0;
   return (
     <div
       onClick={onClick}
@@ -53,9 +52,9 @@ function GridCard({
       tabIndex={0}
       data-tv-card
       aria-label={`فتح ${item.title}`}
-      className="group/card card-transition cursor-pointer rounded-sm select-none"
+      className="group/card card-transition card-cinematic cursor-pointer select-none"
     >
-      <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-sm bg-black border border-white/[0.06] shadow-[0_10px_28px_-14px_rgba(0,0,0,0.95)]">
+      <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-[18px] bg-black border border-white/[0.06]">
         {onToggleSave && (
           <WatchlistButton
             saved={saved}
@@ -64,21 +63,14 @@ function GridCard({
           />
         )}
         {item.backdrop || item.poster ? (
-          <img src={item.backdrop || item.poster || undefined} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover transition-transform duration-500" />
+          <img src={item.backdrop || item.poster || undefined} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-stone-600 text-xs">بدون صورة</div>
         )}
-        {hasScore && (
-          <div className="absolute top-2 left-2 glass flex items-center gap-1 px-2 py-0.5 rounded-full">
-            <Star className="w-3 h-3 fill-[#f5c518] text-[#f5c518]" />
-            <span className="text-[10px] font-bold text-white">{item.rating.toFixed(1)}</span>
-          </div>
-        )}
-        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/55 to-transparent pointer-events-none" />
-        <div className="absolute inset-x-0 bottom-0 z-10 px-3 pb-3 text-right">
-          <h3 className="text-white text-sm font-bold line-clamp-1">{item.title}</h3>
-          <p className="mt-0.5 text-stone-400 text-[10px] font-semibold">{item.type === 'movie' ? 'فيلم' : 'مسلسل'} · {item.year || '—'}</p>
-        </div>
+      </div>
+      <div className="px-1 pt-3 text-right">
+        <h3 className="text-white text-sm font-bold line-clamp-1">{item.title}</h3>
+        <p className="mt-1 text-white/40 text-[11px] font-medium">{item.type === 'movie' ? 'فيلم' : 'مسلسل'} · {item.year || '—'}</p>
       </div>
     </div>
   );
@@ -203,7 +195,7 @@ export default function StudioPage({
         </div>
 
         {/* Grid */}
-        <div dir="rtl" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2">
+        <div dir="rtl" className="grid grid-cols-1 gap-x-4 gap-y-9 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {allItems.map((item) => (
             <div key={`${item.type}-${item.id}`}>
               <GridCard

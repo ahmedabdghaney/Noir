@@ -96,7 +96,7 @@ export default function Hero({
               >
                 <span className="mb-3 inline-flex items-center gap-2.5 text-[11px] font-semibold text-white/60 sm:text-xs">
                   <span className="inline-flex items-center gap-1.5 text-white/80">
-                    <span className="h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_14px_rgba(239,68,68,.9)]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#00D6D9] shadow-[0_0_14px_rgba(239,68,68,.9)]" />
                     اختيار نوار
                   </span>
                   {activeItem.year && <span>{activeItem.year}</span>}
@@ -141,7 +141,7 @@ export default function Hero({
                     <button
                       type="button"
                       onClick={() => onToggleSave(activeItem)}
-                      className={`noir-icon-button noir-icon-button--mobile-compact cursor-pointer ${saved ? '!border-red-400/40 !bg-red-600 !text-white' : ''}`}
+                      className={`noir-icon-button noir-icon-button--mobile-compact cursor-pointer ${saved ? '!border-[#25E2E4]/40 !bg-[#00BFC4] !text-white' : ''}`}
                       aria-label={saved ? 'إزالة من قائمتي' : 'إضافة إلى قائمتي'}
                       title={saved ? 'محفوظ في قائمتي' : 'إضافة إلى قائمتي'}
                     >

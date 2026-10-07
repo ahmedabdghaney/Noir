@@ -84,7 +84,7 @@ export default function TvNavigation({
         style={{ transform: 'translateY(-50%)' }}
         aria-hidden="true"
       >
-          <LogoIcon className="h-5 w-5 shrink-0 text-red-500" />
+          <LogoIcon className="h-5 w-5 shrink-0 text-[#00D6D9]" />
           <span className="whitespace-nowrap font-display text-lg font-bold">نوار</span>
       </div>
 

@@ -139,7 +139,7 @@ export default function ContinueWatchingRow({
                 aria-label={`متابعة مشاهدة ${item.title}`}
                 className="group/cw card-cinematic w-[230px] flex-none cursor-pointer sm:w-[270px] md:w-[310px] xl:w-[340px]"
               >
-                <div className="relative aspect-video overflow-hidden rounded-[16px] border border-white/[0.065] bg-[#101116] shadow-[0_18px_44px_-30px_rgba(0,0,0,1)] md:rounded-[18px]">
+                <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-[16px] border border-white/[0.065] bg-[#101116] md:rounded-[18px]">
                   {img ? (
                     <img
                       src={img}
@@ -154,8 +154,6 @@ export default function ContinueWatchingRow({
                     </div>
                   )}
 
-                  <div className="absolute inset-0 bg-black/0 transition-colors duration-300 md:group-hover/cw:bg-black/20" />
-
                   {onToggleSave && (
                     <WatchlistButton
                       saved={saved}
@@ -164,12 +162,6 @@ export default function ContinueWatchingRow({
                       className={`absolute top-2.5 right-2.5 z-20 transition-opacity ${saved ? '' : 'md:opacity-0 md:group-hover/cw:opacity-100'}`}
                     />
                   )}
-
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/cw:opacity-100 transition-opacity">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-[14px] border border-white/15 bg-black/45 backdrop-blur-lg">
-                      <Play className="h-4 w-4 fill-white text-white" />
-                    </div>
-                  </div>
 
                   {(onRemove || onRestart) && (
                     <div className="absolute top-2.5 left-2.5 z-20 flex items-center gap-1.5 opacity-100 md:opacity-0 md:group-hover/cw:opacity-100 transition-opacity">
@@ -207,7 +199,7 @@ export default function ContinueWatchingRow({
                   <div className="absolute inset-x-3 bottom-0">
                     <div className="h-0.5 w-full overflow-hidden rounded-full bg-white/20">
                       <div
-                        className="h-full bg-red-500 rounded-full"
+                        className="h-full bg-[#00D6D9] rounded-full"
                         style={{ width: `${Math.max(progress, 3)}%` }}
                       />
                     </div>

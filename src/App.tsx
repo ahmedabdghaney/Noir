@@ -4,7 +4,7 @@
  */
 
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, Star, X } from 'lucide-react';
+import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, X } from 'lucide-react';
 import LogoIcon from './components/LogoIcon';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
@@ -52,6 +52,8 @@ import {
   discoverTitles,
   searchTitles,
   MOVIE_GENRES,
+  getPosterUrl,
+  getBackdropUrl,
 } from './lib/tmdb';
 
 // Component Imports
@@ -59,7 +61,6 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import Hero from './components/Hero';
 import MovieRow from './components/MovieRow';
-import CategoryRow from './components/CategoryRow';
 import PullToRefresh from './components/PullToRefresh';
 import { getCategoryByKey } from './lib/categories';
 import { getStudioByKey } from './lib/studios';
@@ -87,7 +88,7 @@ const ViewingHistoryPage = lazy(() => import('./components/ViewingHistoryPage'))
 function DeferredViewFallback() {
   return (
     <div className="flex min-h-[55vh] items-center justify-center text-white/55" aria-label="جاري فتح الصفحة">
-      <Loader className="h-8 w-8 animate-spin text-red-500" />
+      <Loader className="h-8 w-8 animate-spin text-[#00D6D9]" />
     </div>
   );
 }
@@ -122,6 +123,13 @@ const RATINGS = [
   ['7','7+ نجوم'],
   ['6','6+ نجوم'],
 ];
+
+function resolveArtworkUrl(value: string | null | undefined, kind: 'poster' | 'backdrop') {
+  if (!value) return null;
+  if (/^(https?:|data:|blob:)/i.test(value)) return value;
+  const path = value.startsWith('/') ? value : `/${value}`;
+  return kind === 'backdrop' ? getBackdropUrl(path) : getPosterUrl(path);
+}
 
 const RUNTIMES = [
   ['lt90','أقل من ساعة ونصف'],
@@ -206,25 +214,21 @@ export default function App() {
   }, [isProfileModalOpen]);
 
   // Watchlist custom filter & sorting options
-  const [watchlistFilter, setWatchlistFilter] = useState<'all' | 'movie' | 'tv' | 'started' | 'unstarted'>('all');
-  const [watchlistSort, setWatchlistSort] = useState<'default' | 'rating' | 'year'>('default');
-  const [watchlistSortDir, setWatchlistSortDir] = useState<'asc' | 'desc'>('desc');
+  const [watchlistFilter, setWatchlistFilter] = useState<'all' | 'movie' | 'tv'>('all');
 
   // Authentication Management State
   const [user, setUser] = useState<{ name: string; email?: string; photoURL?: string; type: 'guest' | 'google' | 'email' } | null>(() => {
+    const guestUser = { name: 'زائر', type: 'guest' as const };
     try {
       const stored = localStorage.getItem('noir_user');
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed && parsed.type ==='guest') {
-          localStorage.removeItem('noir_user');
-          return null;
-        }
         return parsed;
       }
-      return null;
+      localStorage.setItem('noir_user', JSON.stringify(guestUser));
+      return guestUser;
     } catch {
-      return null;
+      return guestUser;
     }
   });
   const [isAuthLoading, setIsAuthLoading] = useState(false);
@@ -464,7 +468,9 @@ export default function App() {
           console.error("Background auto-login failed: ", err);
           localStorage.removeItem('noir_credentials');
           localStorage.removeItem('noir_user');
-          setUser(null);
+          const guestUser = { name: 'زائر', type: 'guest' as const };
+          localStorage.setItem('noir_user', JSON.stringify(guestUser));
+          setUser(guestUser);
           loadWatchlist();
         }
       }
@@ -514,7 +520,7 @@ export default function App() {
         setAuthMethod(null);
         void startContinueWatchingSync(firebaseUser.uid);
         void startPersonalizationSync(firebaseUser.uid);
-        
+
         // Subscribe to real-time watchlist changes in Firestore
         try {
           const q = collection(db, 'users', firebaseUser.uid, 'watchlist');
@@ -567,12 +573,15 @@ export default function App() {
           try {
             const parsed = JSON.parse(stored);
             if (parsed.type === 'google' || parsed.type === 'email') {
-              setUser(null);
-              localStorage.removeItem('noir_user');
+              const guestUser = { name: 'زائر', type: 'guest' as const };
+              localStorage.setItem('noir_user', JSON.stringify(guestUser));
+              setUser(guestUser);
               loadWatchlist();
             }
           } catch {
-            localStorage.removeItem('noir_user');
+            const guestUser = { name: 'زائر', type: 'guest' as const };
+            localStorage.setItem('noir_user', JSON.stringify(guestUser));
+            setUser(guestUser);
             loadWatchlist();
           }
         } else {
@@ -667,7 +676,7 @@ export default function App() {
   const handleLogin = async (type: 'guest' | 'google') => {
     setIsAuthLoading(true);
     setAuthMethod(type);
-    
+
     if (type ==='google') {
       try {
         const firebaseUser = await loginWithGoogle();
@@ -821,9 +830,10 @@ export default function App() {
         console.error("Logout from Firebase failed: ", e);
       }
     }
-    localStorage.removeItem('noir_user');
+    const guestUser = { name: 'زائر', type: 'guest' as const };
+    localStorage.setItem('noir_user', JSON.stringify(guestUser));
     localStorage.removeItem('noir_credentials');
-    setUser(null);
+    setUser(guestUser);
     showToast('تم تسجيل الخروج بنجاح');
   };
 
@@ -1118,7 +1128,7 @@ export default function App() {
   // Sync Search results when filters or query updates
   useEffect(() => {
     if (activeView !=='search') return;
-    
+
     // Set up search debounce timer to prevent redundant API thrashing
     const delayDebounceSearch = setTimeout(() => {
       triggerSearchQuery(false);
@@ -1232,7 +1242,7 @@ export default function App() {
 
       setSearchPage(nextPage);
       setSearchTotalPages(totalP);
-      
+
       if (append) {
         setSearchResults((prev) => [...prev, ...resultsArr]);
       } else {
@@ -1483,14 +1493,14 @@ export default function App() {
       <div className={`noir-tv-auth-screen relative min-h-screen text-white flex items-center justify-center font-sans overflow-hidden select-none ${
         isTvAuth ? 'bg-[#08080a] p-10' : 'bg-[#070707] p-3.5 sm:p-6 md:p-10'
       }`}>
-        
+
         {/* Main Double-Pane Card Layout */}
         <div className={`relative z-10 w-full border border-white/[0.08] shadow-2xl overflow-hidden grid grid-cols-1 animate-pop-in ${
           isTvAuth
             ? 'max-w-xl min-h-0 rounded-[32px] bg-[#101012]'
             : 'max-w-5xl min-h-[620px] rounded-[18px] bg-[#0c0c0c] lg:grid-cols-12'
         }`} dir="ltr">
-          
+
           {/* LEFT COLUMN: Tilted & Scrolling Movie Covers Pattern */}
           <div className={`${isTvAuth ? 'hidden' : 'hidden lg:flex'} lg:col-span-5 relative flex-col justify-between p-12 overflow-hidden bg-[#080808] border-r border-white/[0.07]`}>
             {/* Tilted Poster Grid container rotated 30 degrees */}
@@ -1504,7 +1514,7 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-                
+
                 {/* Column 2: Moves downward */}
                 <div className="flex flex-col gap-4 animate-marquee-down shrink-0">
                   {[...col2Posters, ...col2Posters].map((url, index) => (
@@ -1531,8 +1541,8 @@ export default function App() {
             {/* Content Top */}
             <div className="relative z-10" dir="rtl">
               <div className="flex items-center gap-2.5 mb-8 justify-end">
-                <span className="text-lg font-black tracking-tight text-white m-0">نوار <span className="text-red-500">سينما</span></span>
-                <div className="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center shadow-lg shadow-red-600/30">
+                <span className="text-lg font-black tracking-tight text-white m-0">نوار <span className="text-[#00D6D9]">سينما</span></span>
+                <div className="w-10 h-10 rounded-xl bg-[#00BFC4] flex items-center justify-center shadow-lg shadow-[#00BFC4]/30">
                   <LogoIcon className="w-5 h-5 text-white shrink-0" />
                 </div>
               </div>
@@ -1551,13 +1561,13 @@ export default function App() {
           }`} dir="rtl">
             {isTvAuth && (
               <div className="mb-8 flex items-center justify-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-600">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#00BFC4]">
                   <LogoIcon className="h-6 w-6 text-white" />
                 </div>
                 <span className="text-xl font-black text-white">نوار سينما</span>
               </div>
             )}
-            
+
             {/* Form Header */}
             <div className={`${isTvAuth ? 'mb-7 text-center' : 'text-right mb-8'}`}>
               <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
@@ -1578,7 +1588,7 @@ export default function App() {
 
             {/* Actual Input form fields */}
             <div className="flex flex-col gap-4 w-full">
-              
+
               {/* Name Field (Sign up only) */}
               {authView === 'signup' && (
                 <div className="flex flex-col gap-1.5 text-right w-full">
@@ -1588,7 +1598,7 @@ export default function App() {
                     value={authName}
                     onChange={(e) => setAuthName(e.target.value)}
                     placeholder="ادخل اسمك الكامل..."
-                    className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-red-500/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-red-500/20"
+                    className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#00D6D9]/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-[#00D6D9]/20"
                     dir="rtl"
                   />
                 </div>
@@ -1602,7 +1612,7 @@ export default function App() {
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-red-500/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-red-500/20"
+                  className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#00D6D9]/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-[#00D6D9]/20"
                   dir="ltr"
                 />
               </div>}
@@ -1619,7 +1629,7 @@ export default function App() {
                       value={authPassword}
                       onChange={(e) => setAuthPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-red-500/70 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-500"
+                      className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#00D6D9]/70 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-500"
                       dir="rtl"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
@@ -1654,7 +1664,7 @@ export default function App() {
                       value={authPasswordConfirm}
                       onChange={(e) => setAuthPasswordConfirm(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-red-500/70 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-500"
+                      className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#00D6D9]/70 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-500"
                       dir="rtl"
                       onKeyDown={(e) => { if (e.key === 'Enter') handleEmailSignUp(); }}
                     />
@@ -1679,7 +1689,7 @@ export default function App() {
 
               {/* Form Validation Errors alerts */}
               {authError && (
-                <div className="text-red-400 text-xs font-semibold bg-red-500/10 border border-red-500/20 rounded-xl py-3 px-4 text-right leading-relaxed animate-fade-in">
+                <div className="text-[#25E2E4] text-xs font-semibold bg-[#00D6D9]/10 border border-[#00D6D9]/20 rounded-xl py-3 px-4 text-right leading-relaxed animate-fade-in">
                   {authError}
                 </div>
               )}
@@ -1692,7 +1702,7 @@ export default function App() {
                   else if (authView === 'reset') handleResetPassword();
                 }}
                 disabled={isAuthLoading}
-                  className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl transition-all cursor-pointer text-sm mt-2 shadow-[0_12px_30px_-16px_rgba(220,38,38,.9)]"
+                  className="w-full flex items-center justify-center gap-2 bg-[#00BFC4] hover:bg-[#00D6D9] disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl transition-all cursor-pointer text-sm mt-2 shadow-[0_12px_30px_-16px_rgba(0,214,217,.9)]"
               >
                 {isAuthLoading && authMethod === 'email' ? (
                   <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -1712,7 +1722,7 @@ export default function App() {
                     <span className="text-gray-500 font-medium">ليس لديك حساب؟ </span>
                     <button
                       onClick={() => { setAuthView('signup'); setAuthError(''); setAuthPassword(''); }}
-                      className="text-[#dc2626] hover:text-red-400 font-bold transition-colors cursor-pointer"
+                      className="text-[#00BFC4] hover:text-[#25E2E4] font-bold transition-colors cursor-pointer"
                     >
                       أنشئ حساباً جديداً
                     </button>
@@ -1723,7 +1733,7 @@ export default function App() {
                     <span className="text-gray-500 font-medium">لديك حساب بالفعل؟ </span>
                     <button
                       onClick={() => { setAuthView('signin'); setAuthError(''); setAuthPassword(''); }}
-                      className="text-[#dc2626] hover:text-red-400 font-bold transition-colors cursor-pointer"
+                      className="text-[#00BFC4] hover:text-[#25E2E4] font-bold transition-colors cursor-pointer"
                     >
                       سجل دخولك
                     </button>
@@ -1790,7 +1800,7 @@ export default function App() {
         {toastMessage && (
           <div className="fixed bottom-6 left-0 right-0 z-[600] flex justify-center pointer-events-none px-4">
             <div className="pointer-events-auto glass-strong text-white text-xs font-semibold rounded-2xl py-3 px-5 shadow-2xl flex items-center gap-2.5 select-none animate-slide-up [direction:rtl]">
-              <LogoIcon className="w-4 h-4 text-red-500 shrink-0" />
+              <LogoIcon className="w-4 h-4 text-[#00D6D9] shrink-0" />
               <span>{toastMessage}</span>
             </div>
           </div>
@@ -1987,50 +1997,6 @@ export default function App() {
     return scores;
   }, [continueWatching, renderableSections, titlePreferences, viewingHistory, watchlist]);
 
-  const personalizedSection = useMemo(() => {
-    const seed = viewingHistory[0] || continueWatching[0] || watchlist[0] || null;
-    if (!seed || preferenceGenreScores.size === 0) return null;
-
-    const seen = new Set<string>();
-    const scored = renderableSections
-      .flatMap((section) => section.items)
-      .filter((item) => {
-        const key = `${item.type}_${item.id}`;
-        if (
-          seen.has(key) ||
-          titlePreferences[key] === 'dislike' ||
-          (item.type === seed.type && item.id === seed.id)
-        ) return false;
-        seen.add(key);
-        return true;
-      })
-      .map((item) => {
-        const genreScore = item.genres.reduce(
-          (total, genre) => total + (preferenceGenreScores.get(normalizeGenreName(genre)) || 0),
-          0,
-        );
-        const likedBoost = titlePreferences[`${item.type}_${item.id}`] === 'like' ? 25 : 0;
-        return { item, score: genreScore * 10 + likedBoost + item.rating };
-      })
-      .filter(({ score }) => score > 10)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 20)
-      .map(({ item }) => item);
-
-    if (scored.length < 4) return null;
-    return {
-      title: 'مختارة لك',
-      items: scored,
-    };
-  }, [
-    continueWatching,
-    preferenceGenreScores,
-    renderableSections,
-    titlePreferences,
-    viewingHistory,
-    watchlist,
-  ]);
-
   const topTenItems = useMemo(() => {
     const seen = new Set<string>();
     return [...trendingWeek, ...popularMovies, ...popularTV]
@@ -2059,14 +2025,6 @@ export default function App() {
 
   const tvHomeSections = useMemo(() => {
     const sections: { key: string; title: string; subtitle?: string; items: MovieOrShow[] }[] = [];
-    if (personalizedSection) {
-      sections.push({
-        key: 'personalized',
-        title: personalizedSection.title,
-        subtitle: 'مختارة حسب مشاهداتك وقائمتك',
-        items: personalizedSection.items,
-      });
-    }
     if (topTenItems.length) {
       sections.push({
         key: 'top-ten',
@@ -2089,7 +2047,6 @@ export default function App() {
   }, [
     manualBySection,
     personalizedRenderableSections,
-    personalizedSection,
     topTenItems,
   ]);
 
@@ -2103,7 +2060,7 @@ export default function App() {
     <div className={`min-h-screen text-white flex flex-row font-sans relative tracking-normal antialiased ${
       isTvApp ? 'bg-[#08080a]' : 'bg-[#08090c]'
     }`}>
-      
+
       {/* Desktop cinematic top navigation */}
       {!isTvApp && (
         <Sidebar
@@ -2146,7 +2103,7 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0">
 
       {/* Main Orchestration Views Switcher */}
-      <main className={`flex-grow selection:bg-red-500/30 ${isTvApp ? ((activeView === 'home' || activeView === 'detail') ? 'pb-0 pt-0' : 'pb-0 pt-24') : `pt-14 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 ${(activeView === 'home' || activeView === 'detail') ? 'lg:pt-0' : 'lg:pt-[68px]'}`}`}>
+      <main className={`flex-grow selection:bg-[#00D6D9]/30 ${isTvApp ? ((activeView === 'home' || activeView === 'detail') ? 'pb-0 pt-0' : 'pb-0 pt-24') : `pt-14 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 ${(activeView === 'home' || activeView === 'detail') ? 'lg:pt-0' : 'lg:pt-[68px]'}`}`}>
         {activeView ==='home' && (
           isTvApp ? (
             <TvHome
@@ -2189,17 +2146,6 @@ export default function App() {
                 </div>
               )}
 
-              {personalizedSection && (
-                <MovieRow
-                  title={personalizedSection.title}
-                  items={personalizedSection.items}
-                  onItemClick={handleOpenQuickView}
-                  isSaved={isInWatchlist}
-                  onToggleSave={toggleWatchlistItem}
-                  compactSaveButton
-                />
-              )}
-
               {topTenItems.length > 0 && (
                 <MovieRow
                   title="أفضل 10 اليوم"
@@ -2236,8 +2182,6 @@ export default function App() {
                       onToggleSave={toggleWatchlistItem}
                       compactSaveButton
                     />
-                    {/* شريط التصنيفات يظهر بعد أول قسم */}
-                    {i === 0 && <CategoryRow onSelect={(key) => { window.location.hash = `#category/${key}`; }} />}
                   </div>
                 )
               ))}
@@ -2256,140 +2200,52 @@ export default function App() {
 
         {/* Dedicated Watchlist View */}
         {activeView ==='watchlist' && (() => {
-          // Process current watchlist items with filter & sort states
+          // Keep this page intentionally simple: one useful content filter only.
           let processedItems = [...watchlist];
           if (!isTvApp && (watchlistFilter === 'movie' || watchlistFilter === 'tv')) {
             processedItems = processedItems.filter(item => item.type === watchlistFilter);
-          } else if (!isTvApp && watchlistFilter === 'started') {
-            processedItems = processedItems.filter((item) =>
-              continueWatching.some((current) => current.type === item.type && current.id === item.id),
-            );
-          } else if (!isTvApp && watchlistFilter === 'unstarted') {
-            processedItems = processedItems.filter((item) =>
-              !continueWatching.some((current) => current.type === item.type && current.id === item.id),
-            );
-          }
-          if (!isTvApp && watchlistSort ==='rating') {
-            processedItems.sort((a, b) =>
-              watchlistSortDir === 'asc' ? a.rating - b.rating : b.rating - a.rating
-            );
-          } else if (!isTvApp && watchlistSort ==='year') {
-            processedItems.sort((a, b) => {
-              const yearA = parseInt(itemYear(a.year)) || 0;
-              const yearB = parseInt(itemYear(b.year)) || 0;
-              return watchlistSortDir === 'asc' ? yearA - yearB : yearB - yearA;
-            });
-          }
-
-          // helper to parse year
-          function itemYear(yr: string) {
-            if (!yr) return'0';
-            const m = yr.match(/\d{4}/);
-            return m ? m[0] :'0';
           }
 
           return (
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in text-right">
+            <div className="mx-auto max-w-[1800px] px-4 py-10 sm:px-6 lg:px-8 xl:px-10 lg:py-14 animate-fade-in text-right">
               {/* Header section on Dedicated Watchlist View */}
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-6 mb-8 select-none">
-                <div className="space-y-2">
-                  <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight leading-none">
-                    قائمتي الخاصة 
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12 select-none">
+                <div className="space-y-3">
+                  <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight leading-tight">
+                    قائمتي الخاصة
 </h1>
-                  <p className="text-stone-400 text-sm font-medium">
-                    العناوين والأعمال المميزة التي قمت بحفظها لتشاهدها بكل سهولة لاحقاً.
-</p>
+                  <p className="text-white/45 text-sm">كل ما حفظته بمكان واحد.</p>
 </div>
-                
+
                 {!isTvApp && watchlist.length > 0 && (
-                  <div className="flex flex-wrap gap-4 items-center justify-start md:justify-end">
+                  <div className="flex items-center justify-start md:justify-end">
                     {/* Filter Segmented Control */}
-                    <div className="flex flex-wrap bg-stone-900 border border-white/5 p-1 rounded-xl">
+                    <div className="flex bg-white/[0.045] border border-white/[0.07] p-1 rounded-2xl">
                       <button
                         onClick={() => setWatchlistFilter('all')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          watchlistFilter ==='all' ?'bg-red-600 text-white shadow-md' :'text-gray-400 hover:text-white'
+                        className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${
+                          watchlistFilter ==='all' ?'bg-[#00BFC4] text-black' :'text-white/50 hover:text-white'
                         }`}
                       >
                         الكل
 </button>
                       <button
                         onClick={() => setWatchlistFilter('movie')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          watchlistFilter ==='movie' ?'bg-red-600 text-white shadow-md' :'text-gray-400 hover:text-white'
+                        className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${
+                          watchlistFilter ==='movie' ?'bg-[#00BFC4] text-black' :'text-white/50 hover:text-white'
                         }`}
                       >
                         أفلام
 </button>
                       <button
                         onClick={() => setWatchlistFilter('tv')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          watchlistFilter ==='tv' ?'bg-red-600 text-white shadow-md' :'text-gray-400 hover:text-white'
+                        className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${
+                          watchlistFilter ==='tv' ?'bg-[#00BFC4] text-black' :'text-white/50 hover:text-white'
                         }`}
                       >
                         مسلسلات
 </button>
-                      <button
-                        onClick={() => setWatchlistFilter('started')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          watchlistFilter === 'started' ? 'bg-red-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        بدأتها
-</button>
-                      <button
-                        onClick={() => setWatchlistFilter('unstarted')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          watchlistFilter === 'unstarted' ? 'bg-red-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        لم أبدأها
-</button>
 </div>
-
-                    {/* Sort Segmented Control + direction toggle */}
-                    <div className="flex items-center gap-2">
-                      <div className="flex bg-stone-900 border border-white/5 p-1 rounded-xl">
-                        <button
-                          onClick={() => setWatchlistSort('default')}
-                          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            watchlistSort ==='default' ?'bg-red-600 text-white shadow-md' :'text-gray-400 hover:text-white'
-                          }`}
-                        >
-                          الافتراضي
-</button>
-                        <button
-                          onClick={() => setWatchlistSort('rating')}
-                          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            watchlistSort ==='rating' ?'bg-red-600 text-white shadow-md' :'text-gray-400 hover:text-white'
-                          }`}
-                        >
-                          التقييم
-</button>
-                        <button
-                          onClick={() => setWatchlistSort('year')}
-                          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            watchlistSort ==='year' ?'bg-red-600 text-white shadow-md' :'text-gray-400 hover:text-white'
-                          }`}
-                        >
-                          السنة
-</button>
-</div>
-                      {watchlistSort !== 'default' && (
-                        <button
-                          onClick={() => setWatchlistSortDir(watchlistSortDir === 'desc' ? 'asc' : 'desc')}
-                          className="flex items-center gap-1 bg-stone-900 border border-white/5 hover:border-white/15 text-gray-300 hover:text-white px-3 py-2 rounded-xl text-[11px] font-bold transition-all cursor-pointer"
-                          title={watchlistSortDir === 'desc' ? 'تنازلي (الأعلى أولاً)' : 'تصاعدي (الأدنى أولاً)'}
-                        >
-                          <ArrowUpDown className="w-3.5 h-3.5" />
-                          <span>
-                            {watchlistSort === 'rating'
-                              ? (watchlistSortDir === 'desc' ? 'الأعلى' : 'الأدنى')
-                              : (watchlistSortDir === 'desc' ? 'الأحدث' : 'الأقدم')}
-                          </span>
-                        </button>
-                      )}
-                    </div>
 </div>
                 )}
 </div>
@@ -2405,7 +2261,7 @@ export default function App() {
                     onClick={navigateToHome}
                     className="mt-6 bg-white hover:bg-white/90 text-black text-xs font-bold px-6 py-3 rounded-full cursor-pointer transition-all"
                   >
-                    الذهاب للرئيسية وتصفّح العروض 
+                    الذهاب للرئيسية وتصفّح العروض
 </button>
 </div>
               ) : processedItems.length === 0 ? (
@@ -2417,9 +2273,9 @@ export default function App() {
 </p>
 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2 mt-6">
+                <div className="grid grid-cols-1 gap-x-4 gap-y-9 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                   {processedItems.map((item, idx) => {
-                    const hasScore = item.rating > 0;
+                    const artwork = resolveArtworkUrl(item.backdrop, 'backdrop') || resolveArtworkUrl(item.poster, 'poster');
                     const progressKey =`noir_progress_${item.type}_${item.id}`;
                     const storedProgress = localStorage.getItem(progressKey);
                     const progress = storedProgress ? Number(storedProgress) : 0;
@@ -2439,21 +2295,21 @@ export default function App() {
                         data-tv-card={isTvApp ? '' : undefined}
                         aria-label={`فتح ${item.title}`}
                         style={{ animationDelay: `${idx * 40}ms` }}
-                        className="group/card card-transition card-cinematic cursor-pointer rounded-sm select-none"
+                        className="group/card card-transition card-cinematic cursor-pointer select-none"
                       >
-                        <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-sm bg-black border border-white/[0.055] shadow-[0_10px_28px_-14px_rgba(0,0,0,0.95)]">
+                        <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-[18px] bg-black border border-white/[0.06]">
                           <WatchlistButton
                             saved
                             onToggle={() => toggleWatchlistItem(item)}
                             className="absolute top-2 right-2 z-20"
                           />
-                          {item.backdrop || item.poster ? (
+                          {artwork ? (
                             <img
-                              src={item.backdrop || item.poster || undefined}
+                              src={artwork}
                               alt={item.title}
                               loading="lazy"
                               referrerPolicy="no-referrer"
-                              className="w-full h-full object-cover select-none transition-transform duration-500"
+                              className="w-full h-full object-cover select-none"
                             />
                           ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center p-3 text-stone-600 bg-stone-950">
@@ -2463,33 +2319,23 @@ export default function App() {
 </div>
                           )}
 
-                          <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/60 to-transparent pointer-events-none" />
-
-                          <div className="absolute inset-x-0 bottom-0 z-10 px-3 pb-3 text-right">
-                            <p className="text-white text-sm font-bold line-clamp-1">{item.title}</p>
-                            <p className="mt-0.5 text-[10px] font-semibold text-stone-400">
-                              {item.year || '—'} · {item.type === 'movie' ? 'فيلم' : 'مسلسل'}
-                            </p>
-                          </div>
-
-                          {/* Rating stamp */}
-                          {hasScore && (
-                            <div className="absolute top-2 left-2 glass text-[#f5c518] text-[11px] font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5">
-                              <Star className="w-2.5 h-2.5 fill-current" />
-                              <span>{item.rating.toFixed(1)}</span>
-</div>
-                          )}
-
-                          {/* Watch progression indicator red bar */}
+                          {/* Watch progression indicator */}
                           {progress > 0 && (
                             <div className="absolute bottom-0 left-0 right-0 z-20 h-1 bg-black/40">
-                              <div 
-                                className="h-full bg-red-600 transition-all duration-300" 
+                              <div
+                                className="h-full bg-[#00BFC4] transition-all duration-300"
                                 style={{ width: `${progress}%` }}
                               />
 </div>
                           )}
 </div>
+
+                        <div className="px-1 pt-3 text-right">
+                          <p className="text-white text-sm font-bold line-clamp-1">{item.title}</p>
+                          <p className="mt-1 text-[11px] font-medium text-white/40">
+                            {item.type === 'movie' ? 'فيلم' : 'مسلسل'} · {item.year || '—'}
+                          </p>
+                        </div>
 
 </div>
                     );
@@ -2513,20 +2359,20 @@ export default function App() {
 
 
         {activeView ==='search' && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+          <div className="mx-auto max-w-[1800px] px-4 py-10 sm:px-6 lg:px-8 xl:px-10 lg:py-14 animate-fade-in">
             {/* Header section on Dedicated Search View */}
-            <div className="mb-8">
-              <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight leading-none mb-3">
+            <div className="mb-10">
+              <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight leading-tight mb-3">
                 {searchMode ==='tv' ?'دليل المسلسلات' :'دليل الأفلام'}
 </h1>
-              <p className="text-stone-400 text-sm font-medium">
-                اعثر على عملك القادم من خلال تصفية كامل المكتبة السينمائية بسرعة فائقة ومقاييس مخصصة.
+              <p className="text-white/45 text-sm">
+                اكتشف أعمالاً جديدة واختر ما يناسبك.
 </p>
 </div>
 
             {/* Direct Input Filter bar — البحث العام في TV موجود بالسايدبار فقط. */}
             {!isTvApp && (
-            <div className="flex gap-3 mb-6 relative z-10 select-none">
+            <div className="flex gap-3 mb-10 relative z-10 select-none">
               <div className="flex-1 flex items-center gap-3 noir-surface focus-within:border-white/20 px-4 min-h-14 transition-all">
                 <Search className="w-5 h-5 text-gray-500 shrink-0" />
                 <input
@@ -2555,23 +2401,23 @@ export default function App() {
 
             {/* Core Search View Layout Box (Grid map) */}
             <div className={`grid grid-cols-1 gap-8 ${isTvApp ? '' : 'lg:grid-cols-[1fr_260px]'}`}>
-              
+
               {/* Left Side: Dynamic Grid items */}
               <div className="order-2 lg:order-1 min-w-0">
-                
+
                 {/* Search Sorting Metrics controller */}
                 <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
                   <span className="text-xs text-stone-400 font-medium">
                     {searchResults.length > 0 ?`تم العثور على ${searchResults.length} عنوان` :'لا توجد نتائج مناسبة'}
 </span>
-                  
+
                   {!isTvApp && (
                   <div className="flex items-center gap-1.5 min-w-[140px]">
                     <ArrowUpDown className="w-4 h-4 text-stone-500" />
                     <select
                       value={fSort}
                       onChange={(e) => setFSort(e.target.value)}
-                      className="bg-stone-900 text-white border border-white/5 hover:border-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-red-500 cursor-pointer"
+                      className="bg-stone-900 text-white border border-white/5 hover:border-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-[#00D6D9] cursor-pointer"
                     >
                       <option value="trend">الرائج عالمياً</option>
                       <option value="rating">الأعلى تقييماً</option>
@@ -2594,7 +2440,7 @@ export default function App() {
                 ) : searchResults.length > 0 ? (
                   <div className="space-y-8">
                     {/* Rendered lists grid layout */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-1 gap-x-4 gap-y-9 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                       {searchResults.map((item, idx) => (
                         <div
                           key={`${item.type}-${item.id}`}
@@ -2611,9 +2457,9 @@ export default function App() {
                           data-search-result-index={idx}
                           aria-label={`فتح ${item.title}`}
                           style={{ animationDelay: `${idx * 40}ms` }}
-                          className="group/card card-transition card-cinematic cursor-pointer rounded-sm select-none"
+                          className="group/card card-transition card-cinematic cursor-pointer select-none"
                         >
-                          <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-sm bg-black border border-white/[0.055] shadow-[0_10px_28px_-14px_rgba(0,0,0,0.95)]">
+                          <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-[18px] bg-black border border-white/[0.06]">
                             <WatchlistButton
                               saved={isInWatchlist(item)}
                               onToggle={() => toggleWatchlistItem(item)}
@@ -2625,7 +2471,7 @@ export default function App() {
                                 alt={item.title}
                                 loading="lazy"
                                 referrerPolicy="no-referrer"
-                                className="w-full h-full object-cover select-none transition-transform duration-500"
+                                className="w-full h-full object-cover select-none"
                               />
                             ) : (
                               <div className="w-full h-full flex flex-col items-center justify-center p-3 text-stone-600 bg-stone-950">
@@ -2635,23 +2481,14 @@ export default function App() {
                               </div>
                             )}
 
-                            <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/60 to-transparent pointer-events-none" />
-
-                            <div className="absolute inset-x-0 bottom-0 z-10 px-3 pb-3 text-right">
-                              <p className="text-white text-sm font-bold line-clamp-1">{item.title}</p>
-                              <p className="mt-0.5 text-[10px] font-semibold text-stone-400">
-                                {item.year || '—'} · {item.type === 'movie' ? 'فيلم' : 'مسلسل'}
-                              </p>
-                            </div>
-
-                            {/* Rating stamp */}
-                            {item.rating > 0 && (
-                              <div className="absolute top-2 left-2 glass text-[#f5c518] text-[11px] font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5">
-                                <span>★</span>
-                                <span>{item.rating.toFixed(1)}</span>
 </div>
-                            )}
-</div>
+
+                          <div className="px-1 pt-3 text-right">
+                            <p className="text-white text-sm font-bold line-clamp-1">{item.title}</p>
+                            <p className="mt-1 text-[11px] font-medium text-white/40">
+                              {item.type === 'movie' ? 'فيلم' : 'مسلسل'} · {item.year || '—'}
+                            </p>
+                          </div>
 
 </div>
                       ))}
@@ -2668,7 +2505,7 @@ export default function App() {
                         >
                           {isLoadingMore ? (
                             <>
-                              <Loader className="w-4 h-4 text-red-500 animate-spin" />
+                              <Loader className="w-4 h-4 text-[#00D6D9] animate-spin" />
                               <span>جاري التحميل...</span>
 </>
                           ) : (
@@ -2738,7 +2575,7 @@ export default function App() {
                           setSelectedGenres(next);
                         }}
                         value={Array.from(selectedGenres)[0] ||""}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00D6D9] cursor-pointer"
                       >
                         <option value="">كل التصنيفات</option>
                         {MOVIE_GENRES.map((g) => (
@@ -2755,7 +2592,7 @@ export default function App() {
                       <select
                         value={selectedYear ||""}
                         onChange={(e) => setSelectedYear(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00D6D9] cursor-pointer"
                       >
                         <option value="">كل السنوات</option>
                         {YEARS.map((y) => (
@@ -2772,7 +2609,7 @@ export default function App() {
                       <select
                         value={selectedRating ||""}
                         onChange={(e) => setSelectedRating(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00D6D9] cursor-pointer"
                       >
                         <option value="">كل التقييمات</option>
                         {RATINGS.map(([val, label]) => (
@@ -2789,7 +2626,7 @@ export default function App() {
                       <select
                         value={selectedCountry ||""}
                         onChange={(e) => setSelectedCountry(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00D6D9] cursor-pointer"
                       >
                         <option value="">كل جهات الإنتاج</option>
                         {COUNTRIES.map(([val, label]) => (
@@ -2806,7 +2643,7 @@ export default function App() {
                       <select
                         value={selectedLanguage ||""}
                         onChange={(e) => setSelectedLanguage(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00D6D9] cursor-pointer"
                       >
                         <option value="">كل اللغات</option>
                         {LANGS.map(([val, label]) => (
@@ -2823,7 +2660,7 @@ export default function App() {
                       <select
                         value={selectedRuntime ||""}
                         onChange={(e) => setSelectedRuntime(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-red-500 cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00D6D9] cursor-pointer"
                       >
                         <option value="">كل المدد</option>
                         {RUNTIMES.map(([val, label]) => (
@@ -2832,7 +2669,7 @@ export default function App() {
 </select>
 </div>
                   )}
-                  
+
               </div>
               </div>
               )}
@@ -2924,7 +2761,7 @@ export default function App() {
 </main>
 
       {/* Global Minimalist Footer and disclaimer notes */}
-      
+
 
       </div>{/* end main content wrapper */}
 
@@ -2976,8 +2813,8 @@ export default function App() {
       {isProfileModalOpen && user && (
         <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 text-right" role="dialog" aria-modal="true" aria-label="الملف الشخصي">
           {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/85 backdrop-blur-md cursor-pointer animate-fade-in" 
+          <div
+            className="absolute inset-0 bg-black/85 backdrop-blur-md cursor-pointer animate-fade-in"
             onClick={() => setIsProfileModalOpen(false)}
           />
 
@@ -2999,18 +2836,18 @@ export default function App() {
             <div className="flex flex-col items-center gap-4 mt-2">
               <div className="w-20 h-20 rounded-md bg-white/5 border border-white/10 shadow-xl overflow-hidden relative flex items-center justify-center">
                 {user.photoURL ? (
-                  <img 
-                    src={user.photoURL} 
-                    alt={user.name} 
+                  <img
+                    src={user.photoURL}
+                    alt={user.name}
                     className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer" 
+                    referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-red-700 text-white font-extrabold text-2xl uppercase">
+                  <div className="w-full h-full flex items-center justify-center bg-[#009DA3] text-white font-extrabold text-2xl uppercase">
                     {user.name.slice(0, 2)}
 </div>
                 )}
-                <div className={`absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full border border-stone-950 ${user.type ==='google' ?'bg-indigo-500' : user.type === 'email' ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                <div className={`absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full border border-stone-950 ${user.type ==='google' ?'bg-indigo-500' : user.type === 'email' ? 'bg-[#00D6D9]' : 'bg-emerald-500'}`} />
 </div>
 
               {/* User Bio Information */}
@@ -3025,7 +2862,7 @@ export default function App() {
 </span>
                 ) : user.type === 'email' ? (
                   <div className="flex flex-col items-center gap-2 mt-1">
-                    <span className="inline-block bg-red-500/10 border border-red-500/25 text-red-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+                    <span className="inline-block bg-[#00D6D9]/10 border border-[#00D6D9]/25 text-[#25E2E4] text-[10px] font-bold px-2.5 py-0.5 rounded-full">
                       حساب نوار سينما
                     </span>
                     {auth.currentUser?.emailVerified === false && (
@@ -3048,7 +2885,7 @@ export default function App() {
                   </div>
                 ) : !isTvApp ? (
                   <span className="inline-block bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full mt-1">
-                    حساب جوجل مفعل وموثق 
+                    حساب جوجل مفعل وموثق
 </span>
                 ) : null}
 </div>
@@ -3063,7 +2900,7 @@ export default function App() {
                 {user.type ==='guest' ? (
                   <span className="text-amber-500 font-bold block">حساب الزائر محدود ميزات الحفظ والمشاهدة الجماعية. سجل دخولك بجوجل لتفعيلهم!</span>
                 ) : (
-                  <span>مجموع العناوين المضافة لقائمتك الخاصة: <strong className="text-red-400">{watchlist.length} عنوان</strong></span>
+                  <span>مجموع العناوين المضافة لقائمتك الخاصة: <strong className="text-[#25E2E4]">{watchlist.length} عنوان</strong></span>
                 )}
 </div>
 </div>
@@ -3083,11 +2920,12 @@ export default function App() {
                 <button
                   onClick={() => {
                     setIsProfileModalOpen(false);
-                    handleLogout();
+                    localStorage.removeItem('noir_user');
+                    setUser(null);
                   }}
                   className="w-full bg-white hover:bg-white/85 text-black font-bold py-3 rounded-sm transition-all cursor-pointer text-xs"
                 >
-                  ربط تسجيل الدخول بجوجل 
+                  ربط تسجيل الدخول بجوجل
 </button>
               )}
               <button
@@ -3095,7 +2933,7 @@ export default function App() {
                   handleLogout();
                   setIsProfileModalOpen(false);
                 }}
-                className="w-full bg-black/40 border border-white/8 hover:border-red-600/60 text-red-400 hover:text-red-300 font-bold py-3 rounded-sm transition-all cursor-pointer text-xs flex items-center justify-center gap-2"
+                className="w-full bg-black/40 border border-white/8 hover:border-[#00BFC4]/60 text-[#25E2E4] hover:text-[#62F0F1] font-bold py-3 rounded-sm transition-all cursor-pointer text-xs flex items-center justify-center gap-2"
               >
                 <span></span>
                 <span>تسجيل الخروج من الحساب</span>
@@ -3109,7 +2947,7 @@ export default function App() {
       {toastMessage && (
         <div className="fixed bottom-20 md:bottom-6 left-0 right-0 z-[600] flex justify-center pointer-events-none px-4">
           <div className="pointer-events-auto glass-strong text-white text-xs font-semibold rounded-full py-3 px-6 shadow-2xl flex items-center gap-2.5 select-none animate-slide-up [direction:rtl]">
-            <LogoIcon className="w-4 h-4 text-red-500 shrink-0" />
+            <LogoIcon className="w-4 h-4 text-[#00D6D9] shrink-0" />
             <span>{toastMessage}</span>
           </div>
         </div>
@@ -3139,7 +2977,7 @@ export default function App() {
           animation: popIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 `}</style>
-      
+
 </div>
   );
 }

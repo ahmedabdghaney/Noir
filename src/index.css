@@ -13,7 +13,7 @@
   --noir-border: rgba(255, 255, 255, 0.075);
   --noir-text: #f7f7f7;
   --noir-muted: #a3a3a3;
-  --noir-accent: #e50914;
+  --noir-accent: #00d6d9;
   --noir-radius-sm: 8px;
   --noir-radius-md: 12px;
   --noir-radius-lg: 18px;
@@ -46,7 +46,7 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(62% 38% at 82% 0%, rgba(239, 51, 64, 0.055), transparent 72%),
+    radial-gradient(62% 38% at 82% 0%, rgba(0, 214, 217, 0.055), transparent 72%),
     linear-gradient(180deg, #0b0c10 0%, #08090c 46%, #06070a 100%);
   background-attachment: fixed;
 }
@@ -384,6 +384,28 @@ button, a {
   transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
+/* كل عنصر قابل للنقر يوضح ذلك مباشرة بالماوس. */
+:where(
+  button,
+  a[href],
+  summary,
+  select,
+  label[for],
+  [role="button"],
+  [data-tv-focusable],
+  input[type="button"],
+  input[type="submit"],
+  input[type="checkbox"],
+  input[type="radio"]
+) {
+  cursor: pointer;
+}
+
+:where(button, select, input):disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 /* === Apple-TV motion polish === */
 
 /* Detail page entrance: gentle scale up (no opacity to avoid hidden-content risk) */
@@ -440,22 +462,41 @@ button, a {
 /* hover سينمائي للبطاقات — رفعة ناعمة + توهّج خفيف + تكبير لطيف.
    استخدمها بإضافة class="card-cinematic" على غلاف البطاقة. */
 .card-cinematic {
-  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 0.35s ease,
-              filter 0.35s ease;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
 }
 .card-cinematic:hover {
-  transform: translateY(-3px) scale(1.012);
-  box-shadow: 0 20px 44px -24px rgba(0, 0, 0, 1);
-  filter: brightness(1.035);
+  transform: scale(1.025);
+  box-shadow: none;
+  filter: none;
   z-index: 5;
+}
+
+.card-cinematic [data-tv-card-artwork]::after {
+  content: "";
+  position: absolute;
+  inset: 45% 0 0;
+  z-index: 8;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.48), transparent);
+  transition: opacity 0.3s ease;
+}
+
+.card-cinematic:hover [data-tv-card-artwork]::after {
+  opacity: 1;
+}
+
+/* صورة التفاصيل تذوب داخل خلفية الصفحة بدون حافة سفلية قاطعة. */
+.noir-detail-backdrop-media {
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 68%, rgba(0, 0, 0, 0.78) 82%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 68%, rgba(0, 0, 0, 0.78) 82%, transparent 100%);
 }
 
 /* توهّج نبضي خفيف للعناصر المميزة (شارة، زر) */
 @keyframes softPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(227, 36, 26, 0.4); }
-  50%      { box-shadow: 0 0 0 6px rgba(227, 36, 26, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 214, 217, 0.4); }
+  50%      { box-shadow: 0 0 0 6px rgba(0, 214, 217, 0); }
 }
 .soft-pulse { animation: softPulse 2.4s ease-in-out infinite; }
 
@@ -498,15 +539,15 @@ button, a {
 
 .noir-button-primary {
   color: #fff;
-  background: #ef3340;
+  background: #00D6D9;
   border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 0.72rem 1.4rem;
-  box-shadow: 0 12px 30px -18px rgba(239, 51, 64, 0.9);
+  box-shadow: 0 12px 30px -18px rgba(0, 214, 217, 0.9);
 }
 
 .noir-button-primary:hover {
-  background: #ff4652;
-  box-shadow: 0 16px 34px -18px rgba(239, 51, 64, 1);
+  background: #20E6E8;
+  box-shadow: 0 16px 34px -18px rgba(0, 214, 217, 1);
   transform: translateY(-1px);
 }
 
@@ -584,7 +625,7 @@ button, a {
 
 .noir-save-button.is-saved {
   color: #fff;
-  background: #ef3340;
+  background: #00D6D9;
   border-color: rgba(255, 255, 255, 0.12);
 }
 
@@ -596,7 +637,7 @@ button, a {
 }
 
 .noir-save-button.is-saved:hover {
-  background: #ff4652;
+  background: #20E6E8;
 }
 
 .noir-save-button:active,
@@ -897,7 +938,7 @@ html.noir-tv-app [data-tv-primary-action]:focus-visible {
   transform: scale(1.16) !important;
   color: #fff !important;
   border-color: rgba(248, 113, 113, 0.85) !important;
-  background: #dc2626 !important;
+  background: #00BFC4 !important;
   filter: brightness(1.08);
 }
 
@@ -993,14 +1034,14 @@ html.noir-tv-app [data-tv-player-control]:focus,
 html.noir-tv-app [data-tv-player-control]:focus-visible {
   transform: scale(1.16) !important;
   color: #fff;
-  background: rgba(220, 38, 38, 0.42) !important;
+  background: rgba(0, 214, 217, 0.42) !important;
 }
 
 html.noir-tv-app [data-tv-player-settings] [data-tv-settings-item]:focus,
 html.noir-tv-app [data-tv-player-settings] [data-tv-settings-item]:focus-visible {
   transform: scale(1.035) !important;
   color: #fff;
-  background: rgba(220, 38, 38, 0.25) !important;
+  background: rgba(0, 214, 217, 0.25) !important;
 }
 
 html.noir-tv-app .noir-tv-auth-screen input {

@@ -178,7 +178,7 @@ export default function SearchOverlay({
       role="dialog"
       aria-modal="true"
       aria-labelledby="search-overlay-title"
-      className={`fixed inset-y-0 left-0 right-0 bg-[#070707] selection:bg-red-500/30 overflow-y-auto ${
+      className={`fixed inset-y-0 left-0 right-0 bg-[#070707] selection:bg-[#00D6D9]/30 overflow-y-auto ${
         isTvApp
           ? 'noir-tv-search-overlay right-0 z-[200] px-[4vw] pt-24'
           : 'z-[230] pt-16 lg:pt-24 px-4 sm:px-6 lg:px-12'
@@ -243,7 +243,7 @@ export default function SearchOverlay({
             autoComplete="off"
           />
           {isLoading ? (
-            <Loader className="w-4 h-4 text-red-500 animate-spin shrink-0" />
+            <Loader className="w-4 h-4 text-[#00D6D9] animate-spin shrink-0" />
           ) : (
             query && !isTvApp && (
               <button
@@ -333,7 +333,7 @@ export default function SearchOverlay({
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="flex-1 min-w-0 pr-1">
                       <h5 className="text-white font-semibold text-sm truncate">{item.title}</h5>
                       <p className="text-gray-400 text-xs mt-1 font-medium flex items-center gap-1.5">
