@@ -60,11 +60,13 @@ export default function Sidebar({
         <button
           type="button"
           onClick={goHome}
-          className="group flex min-h-11 shrink-0 items-center gap-2 text-white"
+          className="group flex min-h-11 shrink-0 items-center gap-2.5 text-white"
           aria-label="العودة إلى الرئيسية"
         >
-          <LogoIcon className="h-7 w-7 text-red-600 transition-transform group-hover:scale-105" />
-          <span className="text-2xl font-black tracking-[-0.04em] text-red-600">نوار</span>
+          <span className="flex h-10 w-10 items-center justify-center rounded-[14px] border border-white/10 bg-gradient-to-br from-red-500 to-red-700 shadow-[0_10px_28px_-12px_rgba(229,9,20,0.9)] transition-transform group-hover:scale-[1.04]">
+            <LogoIcon className="h-6 w-6 text-white" />
+          </span>
+          <span className="text-2xl font-black tracking-[-0.04em] text-white">نوار</span>
         </button>
 
         <nav className="flex items-center gap-1" aria-label="التنقل الرئيسي">
@@ -73,13 +75,14 @@ export default function Sidebar({
               key={item.id}
               type="button"
               onClick={item.action}
-              className={`relative min-h-11 px-3 text-sm transition-colors ${
-                item.active ? 'font-bold text-white' : 'font-medium text-white/68 hover:text-white'
+              className={`relative min-h-10 rounded-xl px-3.5 text-sm transition-all ${
+                item.active
+                  ? 'border border-white/10 bg-white/10 font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                  : 'border border-transparent font-medium text-white/68 hover:bg-white/[0.055] hover:text-white'
               }`}
               aria-current={item.active ? 'page' : undefined}
             >
               {item.label}
-              {item.active && <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-red-600" />}
             </button>
           ))}
         </nav>
@@ -88,7 +91,7 @@ export default function Sidebar({
           <button
             type="button"
             onClick={openSearchOverlay}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-white/80 hover:bg-white/10 hover:text-white"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.055] text-white/80 backdrop-blur-xl hover:-translate-y-0.5 hover:bg-white/12 hover:text-white"
             aria-label="البحث"
           >
             <Search className="h-5 w-5" />
@@ -98,10 +101,10 @@ export default function Sidebar({
             <button
               type="button"
               onClick={onOpenProfile}
-              className="group flex min-h-11 items-center gap-2 rounded-md px-1.5 text-white/85 hover:text-white"
+              className="group flex min-h-11 items-center gap-2 rounded-xl border border-transparent px-1.5 text-white/85 hover:border-white/10 hover:bg-white/[0.055] hover:text-white"
               aria-label="فتح الملف الشخصي"
             >
-              <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded bg-red-700 text-[10px] font-bold uppercase ring-1 ring-white/10 group-hover:ring-white/30">
+              <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-[10px] bg-gradient-to-br from-red-500 to-red-800 text-[10px] font-bold uppercase ring-1 ring-white/10 group-hover:ring-white/30">
                 {user.photoURL ? (
                   <img src={user.photoURL} alt={user.name} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                 ) : user.name.slice(0, 2)}

@@ -1091,7 +1091,7 @@ export default function DetailView({
                 aria-label={isSaved ? 'إزالة من قائمتي' : 'إضافة إلى قائمتي'}
                 className={`noir-icon-button shrink-0 ${
                   isSaved 
-                    ?'!bg-white !text-black'
+                    ?'!border-red-400/40 !bg-red-600 !text-white'
                     :''
                 }`}
               >

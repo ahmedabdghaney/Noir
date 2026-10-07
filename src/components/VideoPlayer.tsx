@@ -13,7 +13,12 @@ import type {
 import Hls from 'hls.js';
 import type { NativePlaybackProgress } from '../types';
 import { NoirPlayer } from '../lib/noirPlayer';
-import { resolvePlayback, type NoirStream, type PlayableSource } from '../lib/noirStreams';
+import {
+  resolvePlayback,
+  type NoirStream,
+  type PlayableSource,
+  type ResolvedPlayback,
+} from '../lib/noirStreams';
 import {
   Loader, Pause, Play, Lock,
   Subtitles, Settings, Maximize2, Minimize2,
@@ -119,6 +124,10 @@ export default function VideoPlayer({
   const touchHoldTimer = useRef<ReturnType<typeof setTimeout>>();
   const mediaRetryTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const mediaStartupTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const vidyHealthTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const vidyHealthyRef = useRef(false);
+  const vidyFallbackRequestedRef = useRef(false);
+  const resolvedFallbackRef = useRef<ResolvedPlayback | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const closingRef = useRef(false);
   const tvSeekStartTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -138,8 +147,8 @@ export default function VideoPlayer({
   const [isLoading,       setIsLoading]       = useState(true);
   const [isBuffering,     setIsBuffering]     = useState(false);
   const [customMp4Failed, setCustomMp4Failed] = useState(false);
-  // Vidy opens immediately. Native resolution remains available as a recovery
-  // path in this component, but it never delays the first player frame.
+  // Vidy opens immediately. Other providers resolve silently in the background
+  // and are activated only when Vidy reports no content or never becomes ready.
   const [useVidApi,       setUseVidApi]       = useState(true);
   // 0 = VidAPI (player.aswad-iq.com, Premium) · 1 = Vidy (vidy.st)
   // 1 = Vidy (default, via proxy) · 0 = VidAPI fallback
@@ -196,8 +205,8 @@ export default function VideoPlayer({
   // تسريع 2x مؤقت بالضغط المستمر على Space
   const [speedBoost, setSpeedBoost] = useState(false);
   /* ── Noir native HLS recovery path ──
-     Vidy is the primary player. These sources are retained for manual recovery
-     and future provider health checks without blocking player startup. */
+     Vidy is the primary player. These sources are prepared silently for an
+     automatic recovery without exposing provider controls to the viewer. */
   // قائمة مصادر native مرتّبة (HLS أولاً) نجرّبها بالتسلسل، مع مؤشر المصدر الحالي.
   const [sources,       setSources]       = useState<PlayableSource[]>([]);
   const [sourceIndex,   setSourceIndex]   = useState(0);
@@ -221,7 +230,49 @@ export default function VideoPlayer({
 
   // isNative = نشغّل بطبقة Noir المخصصة (عنصر <video> + ترجمة activeCues).
   // صحيح لما يتوفر مصدر native ولم نتحوّل للـ embed الاحتياطي.
-  const isNative = playMode === 'movie' && !!hlsUrl && !useEmbed;
+  const isNative = playMode === 'movie' && !!hlsUrl && !useEmbed && !useVidApi;
+
+  const activateAutomaticFallback = useCallback((result?: ResolvedPlayback | null) => {
+    vidyFallbackRequestedRef.current = true;
+    clearTimeout(vidyHealthTimerRef.current);
+
+    const resolved = result ?? resolvedFallbackRef.current;
+    if (!resolved) {
+      // If the Noir resolver is still working, keep Vidy visible. The resolver
+      // effect calls this function again as soon as its result is ready.
+      return;
+    }
+
+    const nonVidyEmbeds = resolved.embeds.filter((stream) => {
+      const identity = `${stream.provider || ''} ${stream.name || ''} ${stream.url}`.toLowerCase();
+      return !identity.includes('vidy');
+    });
+    setEmbedFallback(nonVidyEmbeds);
+
+    if (resolved.sources.length > 0) {
+      setSources(resolved.sources);
+      setSourceIndex(0);
+      setSubEnabled(resolved.sources[0].arabicReady);
+      setUseEmbed(false);
+      setUseVidApi(false);
+      setIsLoading(true);
+      return;
+    }
+
+    if (nonVidyEmbeds.length > 0) {
+      setEmbedIndex(0);
+      setUseEmbed(true);
+      setUseVidApi(false);
+      setIsLoading(true);
+      return;
+    }
+
+    // Last internal fallback. It remains invisible as a provider choice.
+    setServerIndex(0);
+    setUseEmbed(false);
+    setUseVidApi(true);
+    setIsLoading(true);
+  }, []);
 
   // CloudFront القديم — غير مستخدم بعد الآن (مُبقى مرجعياً فقط).
   void CDN_BASE_URL; void sanitizeName;
@@ -363,6 +414,36 @@ export default function VideoPlayer({
         try { d = JSON.parse(d); } catch { return; }
       }
       if (!d || typeof d !== 'object') return;
+
+      const isVidyOrigin = (() => {
+        try {
+          return new URL(event.origin).hostname.endsWith('vidy.st');
+        } catch {
+          return false;
+        }
+      })();
+      if (isVidyOrigin && useVidApi && serverIndex === 1 && !useEmbed) {
+        const eventName = String(d.event || d.type || d.status || '').toLowerCase();
+        const message = String(d.message || d.error || d.reason || '').toLowerCase();
+        const unavailable =
+          /error|failed|not.?found|unavailable|no.?source|no.?video/.test(eventName) ||
+          /not.?found|unavailable|no.?source|no.?video|failed to load/.test(message);
+
+        if (unavailable) {
+          activateAutomaticFallback();
+          return;
+        }
+
+        if (
+          d.type === 'MEDIA_DATA' ||
+          d.type === 'PLAYER_EVENT' ||
+          /timeupdate|play|playing|pause|ended|ready/.test(eventName)
+        ) {
+          vidyHealthyRef.current = true;
+          clearTimeout(vidyHealthTimerRef.current);
+        }
+      }
+
       let w: number | null = null;
       if      (d.type === 'MEDIA_DATA'   && d.data?.progress?.watched != null) w = Number(d.data.progress.watched);
       else if (d.type === 'PLAYER_EVENT' && d.data?.player_progress   != null) w = Number(d.data.player_progress);
@@ -378,7 +459,20 @@ export default function VideoPlayer({
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [playMode, type, id, season, episode, startAt, onTimeUpdate, onSeek]);
+  }, [
+    playMode,
+    type,
+    id,
+    season,
+    episode,
+    startAt,
+    onTimeUpdate,
+    onSeek,
+    useVidApi,
+    serverIndex,
+    useEmbed,
+    activateAutomaticFallback,
+  ]);
 
   /* ── reset ── */
   useEffect(() => {
@@ -389,6 +483,10 @@ export default function VideoPlayer({
     }, 100);
     clearTimeout(mediaRetryTimerRef.current);
     clearTimeout(mediaStartupTimerRef.current);
+    clearTimeout(vidyHealthTimerRef.current);
+    vidyHealthyRef.current = false;
+    vidyFallbackRequestedRef.current = false;
+    resolvedFallbackRef.current = null;
     mediaRetryCountRef.current = 0;
     setIsLoading(true); setCustomMp4Failed(false);
     // Start with Vidy immediately; provider discovery must not block playback.
@@ -410,6 +508,42 @@ export default function VideoPlayer({
     return () => clearTimeout(timer);
   }, [type, id, season, episode, playMode, isDedicatedAndroidPlayer]);
 
+  // Prepare CinePro/HLS and the remaining providers while Vidy is playing.
+  // This never changes the visible player unless the Vidy health check fails.
+  useEffect(() => {
+    if (playMode !== 'movie') return;
+    const controller = new AbortController();
+    let active = true;
+
+    void resolvePlayback(type, id, {
+      season,
+      episode,
+      signal: controller.signal,
+    })
+      .then((result) => {
+        if (!active) return;
+        resolvedFallbackRef.current = result;
+        if (vidyFallbackRequestedRef.current && !vidyHealthyRef.current) {
+          activateAutomaticFallback(result);
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        // The legacy player is the final silent fallback when provider
+        // discovery itself is unavailable.
+        const empty: ResolvedPlayback = { sources: [], embeds: [], imdbId: null };
+        resolvedFallbackRef.current = empty;
+        if (vidyFallbackRequestedRef.current && !vidyHealthyRef.current) {
+          activateAutomaticFallback(empty);
+        }
+      });
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [type, id, season, episode, playMode, activateAutomaticFallback]);
+
   /* ── resolve Noir playback: يجيب المصادر من الخادم ويجهّز الترجمة العربية ──
      يُشغَّل عند فتح المشغل بوضع الفيلم، ويعيد الطلب عند تغيّر العنوان/الحلقة.
      فشل الخادم نفسه يعرض خطأ + إعادة محاولة (resolveError) ولا يتحوّل تلقائياً
@@ -420,6 +554,7 @@ export default function VideoPlayer({
     const nonce = ++resolveNonceRef.current;
     const controller = new AbortController();
     setResolveError(false);
+    setUseVidApi(false);
     setUseEmbed(false);
     setSources([]);
     setSourceIndex(0);
@@ -455,11 +590,8 @@ export default function VideoPlayer({
     return () => controller.abort();
   }, [type, id, season, episode, playMode]);
 
-  // Do not resolve native providers on initial open. Vidy is intentionally the
-  // first request so the viewer sees the player without API discovery latency.
-
-  /* ينتقل للمصدر native التالي عند فشل الحالي؛ وإذا خلصت المصادر ينتقل لـ Vidy
-     (embed). منطق "جرّب كل المصادر، وإذا فشل الكل انتقل لـ Vidy". */
+  /* ينتقل للمصدر native التالي عند فشل الحالي؛ وإذا خلصت المصادر ينتقل
+     تلقائياً إلى embed احتياطي أو VidAPI بدون إظهار اختيار للمستخدم. */
   const tryNextSource = useCallback(() => {
     setSourceIndex((idx) => {
       const next = idx + 1;
@@ -472,8 +604,10 @@ export default function VideoPlayer({
         setUseEmbed(true);
         setIsLoading(true);
       } else {
-        setResolveError(true);
-        setIsLoading(false);
+        setServerIndex(0);
+        setUseEmbed(false);
+        setUseVidApi(true);
+        setIsLoading(true);
       }
       return idx;
     });
@@ -500,6 +634,7 @@ export default function VideoPlayer({
     clearTimeout(touchHoldTimer.current);
     clearTimeout(mediaRetryTimerRef.current);
     clearTimeout(mediaStartupTimerRef.current);
+    clearTimeout(vidyHealthTimerRef.current);
   }, []);
 
   /* ── load and cloud-sync playback preferences ── */
@@ -1635,8 +1770,6 @@ export default function VideoPlayer({
     return `${VIDY_HOST}/${path}?${params}`;
   };
 
-  // Vidy first (default), VidAPI as the alternate — both inside the iframe.
-  const SERVERS = ['VidAPI', 'Vidy'];
   const getEmbedUrl = () => (serverIndex === 0 ? getVidApiUrl() : getVidyUrl());
 
   const progressPct = duration > 0 ? Math.max(0, Math.min(100, (currentTime / duration) * 100)) : 0;
@@ -1823,14 +1956,11 @@ export default function VideoPlayer({
               }}
             />
 
-          /* احتياطي embed (Vidcore ثم Vidy) — فقط عند عدم توفر HLS native.
-             المصدر: روابط الـ embed القادمة من خادم Noir (embedFallback).
-             مسار Vidy/VidAPI القديم (getEmbedUrl) مُبقى مرجعياً ويُستخدم فقط
-             لو أُعيد تفعيله يدوياً عبر useVidApi. */
+          /* Vidy هو العرض الأساسي. المصادر الأخرى تعمل كاسترجاع تلقائي صامت. */
           ) : useEmbed || useVidApi ? (
             <>
             <iframe
-              key={`embed-${embedIndex}-${id}-${episode}`}
+              key={`embed-${useEmbed ? 'fallback' : serverIndex}-${embedIndex}-${id}-${episode}`}
               src={
                 isPausedByHost
                   ? 'about:blank'
@@ -1845,42 +1975,17 @@ export default function VideoPlayer({
               onLoad={() => {
                 setRecoveryNotice('');
                 setIsLoading(false);
+                if (useVidApi && serverIndex === 1 && !useEmbed) {
+                  clearTimeout(vidyHealthTimerRef.current);
+                  vidyHealthTimerRef.current = setTimeout(() => {
+                    if (!vidyHealthyRef.current) activateAutomaticFallback();
+                  }, 10000);
+                }
               }}
             />
 
-            {/* زر تبديل مصدر الـ embed الاحتياطي (Vidcore / Vidy) */}
             {!isPausedByHost && (
-              <div className="absolute top-3 right-3 z-40 flex items-center gap-2" dir="ltr">
-                <div className="flex items-center gap-1 rounded-full bg-black/55 backdrop-blur-md border border-white/10 p-1">
-                  {(useEmbed && embedFallback.length > 0
-                    ? embedFallback.map((s, i) => ({
-                        name: s.provider || s.label || `مصدر ${i + 1}`,
-                        onPick: () => { setEmbedIndex(i); setIsLoading(true); },
-                        selected: embedIndex === i,
-                      }))
-                    : SERVERS.map((name, i) => {
-                        const idx = i;
-                        return {
-                          name,
-                          onPick: () => { setServerIndex(idx); setIsLoading(true); },
-                          selected: serverIndex === idx,
-                        };
-                      })
-                  ).map((btn) => (
-                    <button
-                      key={btn.name}
-                      type="button"
-                      onClick={btn.onPick}
-                      className={`text-[11px] md:text-xs rounded-full px-3 py-1 transition-all ${
-                        btn.selected
-                          ? 'bg-white text-black font-semibold'
-                          : 'text-white/75 hover:text-white'
-                      }`}
-                    >
-                      {btn.name}
-                    </button>
-                  ))}
-                </div>
+              <div className="absolute top-3 right-3 z-40" dir="ltr">
                 <button
                   type="button"
                   onClick={closePlayer}

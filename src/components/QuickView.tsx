@@ -130,7 +130,7 @@ export default function QuickView({
             <button
               type="button"
               onClick={() => onToggleSave(item)}
-              className={`noir-icon-button cursor-pointer ${saved ? '!bg-white !text-black' : ''}`}
+              className={`noir-icon-button cursor-pointer ${saved ? '!border-red-400/40 !bg-red-600 !text-white' : ''}`}
               aria-label={saved ? 'إزالة من قائمتي' : 'إضافة إلى قائمتي'}
               aria-pressed={saved}
             >

@@ -137,7 +137,7 @@ export default function Hero({
                     <button
                       type="button"
                       onClick={() => onToggleSave(activeItem)}
-                      className={`noir-icon-button noir-icon-button--mobile-compact cursor-pointer ${saved ? '!bg-white !text-black' : ''}`}
+                      className={`noir-icon-button noir-icon-button--mobile-compact cursor-pointer ${saved ? '!border-red-400/40 !bg-red-600 !text-white' : ''}`}
                       aria-label={saved ? 'إزالة من قائمتي' : 'إضافة إلى قائمتي'}
                       title={saved ? 'محفوظ في قائمتي' : 'إضافة إلى قائمتي'}
                     >

@@ -485,10 +485,12 @@ button, a {
 .noir-button-secondary,
 .noir-icon-button {
   min-height: 44px;
-  border-radius: 6px;
+  border-radius: 14px;
   font-weight: 700;
   transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
               background-color 0.22s ease,
+              border-color 0.22s ease,
+              box-shadow 0.22s ease,
               color 0.22s ease;
   cursor: pointer;
   touch-action: manipulation;
@@ -496,43 +498,57 @@ button, a {
 }
 
 .noir-button-primary {
-  color: #0a0a0a;
-  background: #fff;
-  padding: 0.7rem 1.35rem;
-  box-shadow: 0 10px 30px -18px rgba(0, 0, 0, 0.9);
+  color: #fff;
+  background: linear-gradient(135deg, #ff3b47 0%, #e50914 52%, #b90712 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 0.72rem 1.4rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 12px 34px -17px rgba(229, 9, 20, 0.95);
 }
 
 .noir-button-primary:hover {
-  background: rgba(255, 255, 255, 0.82);
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, #ff505b 0%, #f10b18 52%, #c60a16 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 16px 40px -17px rgba(229, 9, 20, 1);
+  transform: translateY(-2px) scale(1.01);
 }
 
 .noir-button-secondary {
-  color: #f5f5f7;
-  background: rgba(36, 36, 36, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 0.7rem 1.15rem;
-  backdrop-filter: blur(18px);
+  color: #f7f7f8;
+  background: linear-gradient(180deg, rgba(48, 48, 54, 0.72), rgba(23, 23, 27, 0.78));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 0.72rem 1.2rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 30px -20px #000;
+  backdrop-filter: blur(20px) saturate(135%);
+  -webkit-backdrop-filter: blur(20px) saturate(135%);
 }
 
 .noir-button-secondary:hover {
-  background: rgba(54, 54, 54, 0.92);
+  background: linear-gradient(180deg, rgba(65, 65, 72, 0.78), rgba(31, 31, 36, 0.88));
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: translateY(-2px);
 }
 
 .noir-icon-button {
-  width: 44px;
-  min-width: 44px;
+  width: 46px;
+  min-width: 46px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: #f5f5f7;
-  background: rgba(255, 255, 255, 0.09);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(52, 52, 58, 0.68), rgba(20, 20, 24, 0.78));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 12px 28px -19px #000;
+  backdrop-filter: blur(20px) saturate(135%);
+  -webkit-backdrop-filter: blur(20px) saturate(135%);
 }
 
 .noir-icon-button:hover {
-  background: rgba(255, 255, 255, 0.17);
-  transform: scale(1.04);
+  background: linear-gradient(180deg, rgba(70, 70, 78, 0.76), rgba(31, 31, 36, 0.9));
+  border-color: rgba(255, 255, 255, 0.24);
+  transform: translateY(-2px) scale(1.035);
 }
 
 .noir-button-primary:active,
