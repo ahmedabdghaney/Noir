@@ -742,7 +742,7 @@ export default function DetailView({
   if (isLoading) {
     return (
       <div className="w-full min-h-[60vh] flex flex-col items-center justify-center gap-4 py-20">
-        <div className="w-10 h-10 border-4 border-[#00D6D9]/20 border-t-[#00D6D9] rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-[#00BDC2]/20 border-t-[#00BDC2] rounded-full animate-spin" />
         <span className="text-gray-400 font-medium text-sm">جاري التحميل...</span>
 </div>
     );
@@ -1091,7 +1091,7 @@ export default function DetailView({
                 aria-label={isSaved ? 'إزالة من قائمتي' : 'إضافة إلى قائمتي'}
                 className={`noir-icon-button shrink-0 ${
                   isSaved
-                    ?'!border-[#25E2E4]/40 !bg-[#00BFC4] !text-white'
+                    ?'!border-[#22CDD0]/40 !bg-[#009FA5] !text-white'
                     :''
                 }`}
               >
@@ -1166,11 +1166,11 @@ export default function DetailView({
 
         {/* Watch Together Live Synchronization Panel */}
         {isWatchTogetherOpen && (
-          <div className="mt-8 bg-stone-950 border border-white/5 rounded-3xl p-4 sm:p-6 md:p-8 space-y-6 text-right animate-fade-in max-w-4xl mx-auto selection:bg-[#00D6D9]/25">
+          <div className="mt-8 bg-stone-950 border border-white/5 rounded-3xl p-4 sm:p-6 md:p-8 space-y-6 text-right animate-fade-in max-w-4xl mx-auto selection:bg-[#00BDC2]/25">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/5 pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-[#00BFC4]/10 border border-[#00D6D9]/20 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-[#00D6D9]" />
+                <div className="w-10 h-10 rounded-2xl bg-[#009FA5]/10 border border-[#00BDC2]/20 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-[#00BDC2]" />
 </div>
                 <div className="flex flex-col text-right">
                   <h3 className="text-white font-bold text-sm sm:text-base">استوديو المشاهدة الجماعية</h3>
@@ -1191,7 +1191,7 @@ export default function DetailView({
                     className={`w-2 h-2 rounded-full ${wtConnected ? 'bg-emerald-500' : 'bg-amber-500'}`}
                   />
                   <span>ROOM:</span>
-                  <span className="text-[#25E2E4]">{wtRoomCode}</span>
+                  <span className="text-[#22CDD0]">{wtRoomCode}</span>
                 </div>
                 <button
                   onClick={handleCopyRoomLink}
@@ -1226,7 +1226,7 @@ export default function DetailView({
                         msg.type === 'system'
                           ? ''
                           : msg.self
-                            ? 'bg-[#00BFC4] text-white rounded-tl-none'
+                            ? 'bg-[#009FA5] text-white rounded-tl-none'
                             : 'bg-stone-800 text-gray-200 rounded-tr-none'
                       }`}>
                         {msg.text}
@@ -1242,7 +1242,7 @@ export default function DetailView({
                     value={wtNewMsg}
                     onChange={(e) => setWtNewMsg(e.target.value)}
                     placeholder="اكتب رسالة لأفراد الغرفة المشاهدين..."
-                    className="flex-grow bg-stone-900 text-white text-xs px-3.5 py-2.5 rounded-xl border border-white/5 focus:outline-none focus:border-[#00D6D9] text-right font-medium"
+                    className="flex-grow bg-stone-900 text-white text-xs px-3.5 py-2.5 rounded-xl border border-white/5 focus:outline-none focus:border-[#00BDC2] text-right font-medium"
                   />
                   <button
                     type="submit"

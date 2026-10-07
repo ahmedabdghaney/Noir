@@ -254,7 +254,7 @@ export default function MovieRow({
                   {progress > 0 && (
                     <div className="absolute bottom-0 left-3 right-3 h-0.5 overflow-hidden rounded-full bg-white/20">
                       <div
-                        className="h-full bg-[#00BFC4] transition-all duration-300"
+                        className="h-full bg-[#009FA5] transition-all duration-300"
                         style={{ width: `${progress}%` }}
                       />
                     </div>

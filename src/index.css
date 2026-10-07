@@ -13,7 +13,7 @@
   --noir-border: rgba(255, 255, 255, 0.075);
   --noir-text: #f7f7f7;
   --noir-muted: #a3a3a3;
-  --noir-accent: #00d6d9;
+  --noir-accent: #00BDC2;
   --noir-radius-sm: 8px;
   --noir-radius-md: 12px;
   --noir-radius-lg: 18px;
@@ -46,7 +46,7 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(62% 38% at 82% 0%, rgba(0, 214, 217, 0.055), transparent 72%),
+    radial-gradient(62% 38% at 82% 0%, rgba(0, 189, 194, 0.055), transparent 72%),
     linear-gradient(180deg, #0b0c10 0%, #08090c 46%, #06070a 100%);
   background-attachment: fixed;
 }
@@ -495,8 +495,8 @@ button, a {
 
 /* توهّج نبضي خفيف للعناصر المميزة (شارة، زر) */
 @keyframes softPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 214, 217, 0.4); }
-  50%      { box-shadow: 0 0 0 6px rgba(0, 214, 217, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 189, 194, 0.4); }
+  50%      { box-shadow: 0 0 0 6px rgba(0, 189, 194, 0); }
 }
 .soft-pulse { animation: softPulse 2.4s ease-in-out infinite; }
 
@@ -539,15 +539,15 @@ button, a {
 
 .noir-button-primary {
   color: #fff;
-  background: #00D6D9;
+  background: #00BDC2;
   border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 0.72rem 1.4rem;
-  box-shadow: 0 12px 30px -18px rgba(0, 214, 217, 0.9);
+  box-shadow: 0 12px 30px -18px rgba(0, 189, 194, 0.9);
 }
 
 .noir-button-primary:hover {
-  background: #20E6E8;
-  box-shadow: 0 16px 34px -18px rgba(0, 214, 217, 1);
+  background: #22CDD0;
+  box-shadow: 0 16px 34px -18px rgba(0, 189, 194, 1);
   transform: translateY(-1px);
 }
 
@@ -625,7 +625,7 @@ button, a {
 
 .noir-save-button.is-saved {
   color: #fff;
-  background: #00D6D9;
+  background: #00BDC2;
   border-color: rgba(255, 255, 255, 0.12);
 }
 
@@ -637,7 +637,7 @@ button, a {
 }
 
 .noir-save-button.is-saved:hover {
-  background: #20E6E8;
+  background: #22CDD0;
 }
 
 .noir-save-button:active,
@@ -938,7 +938,7 @@ html.noir-tv-app [data-tv-primary-action]:focus-visible {
   transform: scale(1.16) !important;
   color: #fff !important;
   border-color: rgba(248, 113, 113, 0.85) !important;
-  background: #00BFC4 !important;
+  background: #009FA5 !important;
   filter: brightness(1.08);
 }
 
@@ -1034,14 +1034,14 @@ html.noir-tv-app [data-tv-player-control]:focus,
 html.noir-tv-app [data-tv-player-control]:focus-visible {
   transform: scale(1.16) !important;
   color: #fff;
-  background: rgba(0, 214, 217, 0.42) !important;
+  background: rgba(0, 189, 194, 0.42) !important;
 }
 
 html.noir-tv-app [data-tv-player-settings] [data-tv-settings-item]:focus,
 html.noir-tv-app [data-tv-player-settings] [data-tv-settings-item]:focus-visible {
   transform: scale(1.035) !important;
   color: #fff;
-  background: rgba(0, 214, 217, 0.25) !important;
+  background: rgba(0, 189, 194, 0.25) !important;
 }
 
 html.noir-tv-app .noir-tv-auth-screen input {

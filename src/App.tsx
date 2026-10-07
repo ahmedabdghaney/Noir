@@ -69,7 +69,6 @@ import SearchOverlay from './components/SearchOverlay';
 import ShareModal from './components/ShareModal';
 import MobileNav from './components/MobileNav';
 import WatchlistButton from './components/WatchlistButton';
-import QuickView from './components/QuickView';
 import TvHome from './components/TvHome';
 import TvNavigation from './components/TvNavigation';
 import {
@@ -88,7 +87,7 @@ const ViewingHistoryPage = lazy(() => import('./components/ViewingHistoryPage'))
 function DeferredViewFallback() {
   return (
     <div className="flex min-h-[55vh] items-center justify-center text-white/55" aria-label="جاري فتح الصفحة">
-      <Loader className="h-8 w-8 animate-spin text-[#00D6D9]" />
+      <Loader className="h-8 w-8 animate-spin text-[#00BDC2]" />
     </div>
   );
 }
@@ -183,7 +182,6 @@ export default function App() {
   // الموسم/الحلقة المقروءة من الـ URL (تُمرَّر لـ DetailView كقيمة ابتدائية)
   const [selectedEpisodeRoute, setSelectedEpisodeRoute] = useState<{ season: number; episode: number } | null>(null);
   const [joinRoomCode, setJoinRoomCode] = useState<string>('');
-  const [quickViewItem, setQuickViewItem] = useState<MovieOrShow | null>(null);
   const [autoPlayRequested, setAutoPlayRequested] = useState(false);
   const homeScrollRef = useRef(Number(localStorage.getItem('noir_home_scroll') || 0));
   const scrollSaveFrameRef = useRef<number | null>(null);
@@ -860,7 +858,6 @@ export default function App() {
   const handleViewWatchlist = () => {
     rememberHomeScroll();
     setIsSearchOverlayOpen(false);
-    setQuickViewItem(null);
     setActiveView('watchlist');
     setSelectedTitle(null);
     window.location.hash ='#watchlist';
@@ -869,7 +866,6 @@ export default function App() {
   const handleViewHistory = () => {
     rememberHomeScroll();
     setIsSearchOverlayOpen(false);
-    setQuickViewItem(null);
     setIsProfileModalOpen(false);
     setActiveView('history');
     setSelectedTitle(null);
@@ -1276,7 +1272,6 @@ export default function App() {
   // Global redirection tool
   const navigateToHome = () => {
     setIsSearchOverlayOpen(false);
-    setQuickViewItem(null);
     setAutoPlayRequested(false);
     if (activeView === 'home') {
       homeScrollRef.current = 0;
@@ -1305,7 +1300,6 @@ export default function App() {
   const handleSetSearchMode = (mode: 'movie' | 'tv') => {
     rememberHomeScroll();
     setIsSearchOverlayOpen(false);
-    setQuickViewItem(null);
     setSearchMode(mode);
     setActiveView('search');
     setSelectedTitle(null);
@@ -1314,14 +1308,9 @@ export default function App() {
 
   const handleTitleClick = (item: MovieOrShow) => {
     rememberHomeScroll();
-    setQuickViewItem(null);
     setAutoResumeRequested(false);
     setAutoPlayRequested(false);
     window.location.hash =`#${item.type}/${item.id}`;
-  };
-
-  const handleOpenQuickView = (item: MovieOrShow) => {
-    setQuickViewItem(item);
   };
 
   const handleTitlePreference = (
@@ -1349,7 +1338,6 @@ export default function App() {
 
   const handlePlayTitle = (item: MovieOrShow) => {
     rememberHomeScroll();
-    setQuickViewItem(null);
     setAutoResumeRequested(false);
     setAutoPlayRequested(true);
     window.location.hash = `#${item.type}/${item.id}`;
@@ -1357,7 +1345,6 @@ export default function App() {
 
   const handleContinueWatchingClick = (item: ContinueWatchingItem) => {
     rememberHomeScroll();
-    setQuickViewItem(null);
     setAutoPlayRequested(false);
     setAutoResumeRequested(true);
     if (item.type === 'tv' && item.season > 0 && item.episode > 0) {
@@ -1541,8 +1528,8 @@ export default function App() {
             {/* Content Top */}
             <div className="relative z-10" dir="rtl">
               <div className="flex items-center gap-2.5 mb-8 justify-end">
-                <span className="text-lg font-black tracking-tight text-white m-0">نوار <span className="text-[#00D6D9]">سينما</span></span>
-                <div className="w-10 h-10 rounded-xl bg-[#00BFC4] flex items-center justify-center shadow-lg shadow-[#00BFC4]/30">
+                <span className="text-lg font-black tracking-tight text-white m-0">نوار <span className="text-[#00BDC2]">سينما</span></span>
+                <div className="w-10 h-10 rounded-xl bg-[#009FA5] flex items-center justify-center shadow-lg shadow-[#009FA5]/30">
                   <LogoIcon className="w-5 h-5 text-white shrink-0" />
                 </div>
               </div>
@@ -1561,7 +1548,7 @@ export default function App() {
           }`} dir="rtl">
             {isTvAuth && (
               <div className="mb-8 flex items-center justify-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#00BFC4]">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#009FA5]">
                   <LogoIcon className="h-6 w-6 text-white" />
                 </div>
                 <span className="text-xl font-black text-white">نوار سينما</span>
@@ -1598,7 +1585,7 @@ export default function App() {
                     value={authName}
                     onChange={(e) => setAuthName(e.target.value)}
                     placeholder="ادخل اسمك الكامل..."
-                    className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#00D6D9]/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-[#00D6D9]/20"
+                    className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#00BDC2]/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-[#00BDC2]/20"
                     dir="rtl"
                   />
                 </div>
@@ -1612,7 +1599,7 @@ export default function App() {
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#00D6D9]/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-[#00D6D9]/20"
+                  className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#00BDC2]/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-[#00BDC2]/20"
                   dir="ltr"
                 />
               </div>}
@@ -1629,7 +1616,7 @@ export default function App() {
                       value={authPassword}
                       onChange={(e) => setAuthPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#00D6D9]/70 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-500"
+                      className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#00BDC2]/70 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-500"
                       dir="rtl"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
@@ -1664,7 +1651,7 @@ export default function App() {
                       value={authPasswordConfirm}
                       onChange={(e) => setAuthPasswordConfirm(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#00D6D9]/70 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-500"
+                      className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#00BDC2]/70 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-500"
                       dir="rtl"
                       onKeyDown={(e) => { if (e.key === 'Enter') handleEmailSignUp(); }}
                     />
@@ -1689,7 +1676,7 @@ export default function App() {
 
               {/* Form Validation Errors alerts */}
               {authError && (
-                <div className="text-[#25E2E4] text-xs font-semibold bg-[#00D6D9]/10 border border-[#00D6D9]/20 rounded-xl py-3 px-4 text-right leading-relaxed animate-fade-in">
+                <div className="text-[#22CDD0] text-xs font-semibold bg-[#00BDC2]/10 border border-[#00BDC2]/20 rounded-xl py-3 px-4 text-right leading-relaxed animate-fade-in">
                   {authError}
                 </div>
               )}
@@ -1702,7 +1689,7 @@ export default function App() {
                   else if (authView === 'reset') handleResetPassword();
                 }}
                 disabled={isAuthLoading}
-                  className="w-full flex items-center justify-center gap-2 bg-[#00BFC4] hover:bg-[#00D6D9] disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl transition-all cursor-pointer text-sm mt-2 shadow-[0_12px_30px_-16px_rgba(0,214,217,.9)]"
+                  className="w-full flex items-center justify-center gap-2 bg-[#009FA5] hover:bg-[#00BDC2] disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl transition-all cursor-pointer text-sm mt-2 shadow-[0_12px_30px_-16px_rgba(0,189,194,.9)]"
               >
                 {isAuthLoading && authMethod === 'email' ? (
                   <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -1722,7 +1709,7 @@ export default function App() {
                     <span className="text-gray-500 font-medium">ليس لديك حساب؟ </span>
                     <button
                       onClick={() => { setAuthView('signup'); setAuthError(''); setAuthPassword(''); }}
-                      className="text-[#00BFC4] hover:text-[#25E2E4] font-bold transition-colors cursor-pointer"
+                      className="text-[#009FA5] hover:text-[#22CDD0] font-bold transition-colors cursor-pointer"
                     >
                       أنشئ حساباً جديداً
                     </button>
@@ -1733,7 +1720,7 @@ export default function App() {
                     <span className="text-gray-500 font-medium">لديك حساب بالفعل؟ </span>
                     <button
                       onClick={() => { setAuthView('signin'); setAuthError(''); setAuthPassword(''); }}
-                      className="text-[#00BFC4] hover:text-[#25E2E4] font-bold transition-colors cursor-pointer"
+                      className="text-[#009FA5] hover:text-[#22CDD0] font-bold transition-colors cursor-pointer"
                     >
                       سجل دخولك
                     </button>
@@ -1800,7 +1787,7 @@ export default function App() {
         {toastMessage && (
           <div className="fixed bottom-6 left-0 right-0 z-[600] flex justify-center pointer-events-none px-4">
             <div className="pointer-events-auto glass-strong text-white text-xs font-semibold rounded-2xl py-3 px-5 shadow-2xl flex items-center gap-2.5 select-none animate-slide-up [direction:rtl]">
-              <LogoIcon className="w-4 h-4 text-[#00D6D9] shrink-0" />
+              <LogoIcon className="w-4 h-4 text-[#00BDC2] shrink-0" />
               <span>{toastMessage}</span>
             </div>
           </div>
@@ -2068,7 +2055,7 @@ export default function App() {
           searchMode={searchMode}
           setSearchMode={handleSetSearchMode}
           goHome={navigateToHome}
-          openSearchOverlay={() => setIsSearchOverlayOpen(true)}
+          openSearchOverlay={() => setIsSearchOverlayOpen((open) => !open)}
           onViewWatchlist={handleViewWatchlist}
           user={user}
           onOpenProfile={() => setIsProfileModalOpen(true)}
@@ -2103,7 +2090,7 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0">
 
       {/* Main Orchestration Views Switcher */}
-      <main className={`flex-grow selection:bg-[#00D6D9]/30 ${isTvApp ? ((activeView === 'home' || activeView === 'detail') ? 'pb-0 pt-0' : 'pb-0 pt-24') : `pt-14 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 ${(activeView === 'home' || activeView === 'detail') ? 'lg:pt-0' : 'lg:pt-[68px]'}`}`}>
+      <main className={`flex-grow selection:bg-[#00BDC2]/30 ${isTvApp ? ((activeView === 'home' || activeView === 'detail') ? 'pb-0 pt-0' : 'pb-0 pt-24') : `pt-14 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 ${(activeView === 'home' || activeView === 'detail') ? 'lg:pt-0' : 'lg:pt-[68px]'}`}`}>
         {activeView ==='home' && (
           isTvApp ? (
             <TvHome
@@ -2151,7 +2138,7 @@ export default function App() {
                   title="أفضل 10 اليوم"
                   items={topTenItems}
                   ranked
-                  onItemClick={handleOpenQuickView}
+                  onItemClick={handleTitleClick}
                   isSaved={isInWatchlist}
                   onToggleSave={toggleWatchlistItem}
                   compactSaveButton
@@ -2163,7 +2150,7 @@ export default function App() {
                 <MovieRow
                   title="حصري نوار"
                   items={manualBySection['manual']}
-                  onItemClick={handleOpenQuickView}
+                  onItemClick={handleTitleClick}
                   isSaved={isInWatchlist}
                   onToggleSave={toggleWatchlistItem}
                   compactSaveButton
@@ -2177,7 +2164,7 @@ export default function App() {
                     <MovieRow
                       title={sec.title}
                       items={sec.items}
-                      onItemClick={handleOpenQuickView}
+                      onItemClick={handleTitleClick}
                       isSaved={isInWatchlist}
                       onToggleSave={toggleWatchlistItem}
                       compactSaveButton
@@ -2188,8 +2175,8 @@ export default function App() {
 
               {isHomeLoading && (
                 <>
-                  <MovieRow title="جاري تجهيز اقتراحاتك" items={[]} onItemClick={handleOpenQuickView} />
-                  <MovieRow title="الأكثر مشاهدة" items={[]} onItemClick={handleOpenQuickView} />
+                  <MovieRow title="جاري تجهيز اقتراحاتك" items={[]} onItemClick={handleTitleClick} />
+                  <MovieRow title="الأكثر مشاهدة" items={[]} onItemClick={handleTitleClick} />
                 </>
               )}
 </div>
@@ -2224,7 +2211,7 @@ export default function App() {
                       <button
                         onClick={() => setWatchlistFilter('all')}
                         className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${
-                          watchlistFilter ==='all' ?'bg-[#00BFC4] text-black' :'text-white/50 hover:text-white'
+                          watchlistFilter ==='all' ?'bg-[#009FA5] text-black' :'text-white/50 hover:text-white'
                         }`}
                       >
                         الكل
@@ -2232,7 +2219,7 @@ export default function App() {
                       <button
                         onClick={() => setWatchlistFilter('movie')}
                         className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${
-                          watchlistFilter ==='movie' ?'bg-[#00BFC4] text-black' :'text-white/50 hover:text-white'
+                          watchlistFilter ==='movie' ?'bg-[#009FA5] text-black' :'text-white/50 hover:text-white'
                         }`}
                       >
                         أفلام
@@ -2240,7 +2227,7 @@ export default function App() {
                       <button
                         onClick={() => setWatchlistFilter('tv')}
                         className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${
-                          watchlistFilter ==='tv' ?'bg-[#00BFC4] text-black' :'text-white/50 hover:text-white'
+                          watchlistFilter ==='tv' ?'bg-[#009FA5] text-black' :'text-white/50 hover:text-white'
                         }`}
                       >
                         مسلسلات
@@ -2323,7 +2310,7 @@ export default function App() {
                           {progress > 0 && (
                             <div className="absolute bottom-0 left-0 right-0 z-20 h-1 bg-black/40">
                               <div
-                                className="h-full bg-[#00BFC4] transition-all duration-300"
+                                className="h-full bg-[#009FA5] transition-all duration-300"
                                 style={{ width: `${progress}%` }}
                               />
 </div>
@@ -2417,7 +2404,7 @@ export default function App() {
                     <select
                       value={fSort}
                       onChange={(e) => setFSort(e.target.value)}
-                      className="bg-stone-900 text-white border border-white/5 hover:border-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-[#00D6D9] cursor-pointer"
+                      className="bg-stone-900 text-white border border-white/5 hover:border-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-[#00BDC2] cursor-pointer"
                     >
                       <option value="trend">الرائج عالمياً</option>
                       <option value="rating">الأعلى تقييماً</option>
@@ -2505,7 +2492,7 @@ export default function App() {
                         >
                           {isLoadingMore ? (
                             <>
-                              <Loader className="w-4 h-4 text-[#00D6D9] animate-spin" />
+                              <Loader className="w-4 h-4 text-[#00BDC2] animate-spin" />
                               <span>جاري التحميل...</span>
 </>
                           ) : (
@@ -2575,7 +2562,7 @@ export default function App() {
                           setSelectedGenres(next);
                         }}
                         value={Array.from(selectedGenres)[0] ||""}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00D6D9] cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00BDC2] cursor-pointer"
                       >
                         <option value="">كل التصنيفات</option>
                         {MOVIE_GENRES.map((g) => (
@@ -2592,7 +2579,7 @@ export default function App() {
                       <select
                         value={selectedYear ||""}
                         onChange={(e) => setSelectedYear(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00D6D9] cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00BDC2] cursor-pointer"
                       >
                         <option value="">كل السنوات</option>
                         {YEARS.map((y) => (
@@ -2609,7 +2596,7 @@ export default function App() {
                       <select
                         value={selectedRating ||""}
                         onChange={(e) => setSelectedRating(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00D6D9] cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00BDC2] cursor-pointer"
                       >
                         <option value="">كل التقييمات</option>
                         {RATINGS.map(([val, label]) => (
@@ -2626,7 +2613,7 @@ export default function App() {
                       <select
                         value={selectedCountry ||""}
                         onChange={(e) => setSelectedCountry(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00D6D9] cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00BDC2] cursor-pointer"
                       >
                         <option value="">كل جهات الإنتاج</option>
                         {COUNTRIES.map(([val, label]) => (
@@ -2643,7 +2630,7 @@ export default function App() {
                       <select
                         value={selectedLanguage ||""}
                         onChange={(e) => setSelectedLanguage(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00D6D9] cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00BDC2] cursor-pointer"
                       >
                         <option value="">كل اللغات</option>
                         {LANGS.map(([val, label]) => (
@@ -2660,7 +2647,7 @@ export default function App() {
                       <select
                         value={selectedRuntime ||""}
                         onChange={(e) => setSelectedRuntime(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00D6D9] cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00BDC2] cursor-pointer"
                       >
                         <option value="">كل المدد</option>
                         {RUNTIMES.map(([val, label]) => (
@@ -2770,7 +2757,7 @@ export default function App() {
         <MobileNav
           activeView={activeView}
           goHome={navigateToHome}
-          openSearchOverlay={() => setIsSearchOverlayOpen(true)}
+          openSearchOverlay={() => setIsSearchOverlayOpen((open) => !open)}
           onViewWatchlist={handleViewWatchlist}
           isSearchOpen={isSearchOverlayOpen}
           onOpenProfile={() => setIsProfileModalOpen(true)}
@@ -2789,17 +2776,6 @@ export default function App() {
           window.location.hash = `#category/${key}`;
         }}
       />
-
-      {!isTvApp && <QuickView
-        item={quickViewItem}
-        saved={quickViewItem ? isInWatchlist(quickViewItem) : false}
-        preference={quickViewItem ? titlePreferences[`${quickViewItem.type}_${quickViewItem.id}`] : undefined}
-        onClose={() => setQuickViewItem(null)}
-        onPlay={handlePlayTitle}
-        onDetails={handleTitleClick}
-        onToggleSave={toggleWatchlistItem}
-        onPreference={handleTitlePreference}
-      />}
 
       {/* Browser URL Share Dialog */}
       {!isTvApp && <ShareModal
@@ -2822,16 +2798,15 @@ export default function App() {
           <div className={`relative z-10 w-full border border-white/10 rounded-md p-6 md:p-8 shadow-3xl text-center select-none animate-scale-in ${
             isTvApp ? 'max-w-lg bg-[#101012]' : 'max-w-sm bg-[#141414]'
           }`}>
-            {/* Close Trigger Button */}
-            {!isTvApp && <button
-              onClick={() => setIsProfileModalOpen(false)}
-              className="absolute top-4 left-4 p-1.5 rounded-sm text-gray-500 hover:text-white hover:bg-white/8 transition-colors cursor-pointer"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-</svg>
-</button>}
-
+            {!isTvApp && (
+              <button
+                onClick={() => setIsProfileModalOpen(false)}
+                className="absolute top-4 left-4 hidden h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-white/8 hover:text-white lg:flex"
+                aria-label="إغلاق"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            )}
             {/* Profile Avatar Frame */}
             <div className="flex flex-col items-center gap-4 mt-2">
               <div className="w-20 h-20 rounded-md bg-white/5 border border-white/10 shadow-xl overflow-hidden relative flex items-center justify-center">
@@ -2843,11 +2818,11 @@ export default function App() {
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-[#009DA3] text-white font-extrabold text-2xl uppercase">
+                  <div className="w-full h-full flex items-center justify-center bg-[#00858B] text-white font-extrabold text-2xl uppercase">
                     {user.name.slice(0, 2)}
 </div>
                 )}
-                <div className={`absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full border border-stone-950 ${user.type ==='google' ?'bg-indigo-500' : user.type === 'email' ? 'bg-[#00D6D9]' : 'bg-emerald-500'}`} />
+                <div className={`absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full border border-stone-950 ${user.type ==='google' ?'bg-indigo-500' : user.type === 'email' ? 'bg-[#00BDC2]' : 'bg-emerald-500'}`} />
 </div>
 
               {/* User Bio Information */}
@@ -2862,7 +2837,7 @@ export default function App() {
 </span>
                 ) : user.type === 'email' ? (
                   <div className="flex flex-col items-center gap-2 mt-1">
-                    <span className="inline-block bg-[#00D6D9]/10 border border-[#00D6D9]/25 text-[#25E2E4] text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+                    <span className="inline-block bg-[#00BDC2]/10 border border-[#00BDC2]/25 text-[#22CDD0] text-[10px] font-bold px-2.5 py-0.5 rounded-full">
                       حساب نوار سينما
                     </span>
                     {auth.currentUser?.emailVerified === false && (
@@ -2900,7 +2875,7 @@ export default function App() {
                 {user.type ==='guest' ? (
                   <span className="text-amber-500 font-bold block">حساب الزائر محدود ميزات الحفظ والمشاهدة الجماعية. سجل دخولك بجوجل لتفعيلهم!</span>
                 ) : (
-                  <span>مجموع العناوين المضافة لقائمتك الخاصة: <strong className="text-[#25E2E4]">{watchlist.length} عنوان</strong></span>
+                  <span>مجموع العناوين المضافة لقائمتك الخاصة: <strong className="text-[#22CDD0]">{watchlist.length} عنوان</strong></span>
                 )}
 </div>
 </div>
@@ -2933,7 +2908,7 @@ export default function App() {
                   handleLogout();
                   setIsProfileModalOpen(false);
                 }}
-                className="w-full bg-black/40 border border-white/8 hover:border-[#00BFC4]/60 text-[#25E2E4] hover:text-[#62F0F1] font-bold py-3 rounded-sm transition-all cursor-pointer text-xs flex items-center justify-center gap-2"
+                className="w-full bg-black/40 border border-white/8 hover:border-[#009FA5]/60 text-[#22CDD0] hover:text-[#55DADD] font-bold py-3 rounded-sm transition-all cursor-pointer text-xs flex items-center justify-center gap-2"
               >
                 <span></span>
                 <span>تسجيل الخروج من الحساب</span>
@@ -2947,7 +2922,7 @@ export default function App() {
       {toastMessage && (
         <div className="fixed bottom-20 md:bottom-6 left-0 right-0 z-[600] flex justify-center pointer-events-none px-4">
           <div className="pointer-events-auto glass-strong text-white text-xs font-semibold rounded-full py-3 px-6 shadow-2xl flex items-center gap-2.5 select-none animate-slide-up [direction:rtl]">
-            <LogoIcon className="w-4 h-4 text-[#00D6D9] shrink-0" />
+            <LogoIcon className="w-4 h-4 text-[#00BDC2] shrink-0" />
             <span>{toastMessage}</span>
           </div>
         </div>

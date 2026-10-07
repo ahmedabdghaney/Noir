@@ -33,7 +33,7 @@ export default function MobileNav({
       <button
         onClick={goHome}
         className={`flex h-12 flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-[14px] py-1 text-center transition-all ${
-          activeView === 'home' ? 'bg-white/[0.07] text-[#25E2E4]' : 'text-gray-500'
+          activeView === 'home' ? 'bg-white/[0.07] text-[#22CDD0]' : 'text-gray-500'
         }`}
         aria-current={activeView === 'home' ? 'page' : undefined}
       >
@@ -45,7 +45,7 @@ export default function MobileNav({
       <button
         onClick={openSearchOverlay}
         className={`flex h-12 flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-[14px] py-1 text-center transition-all ${
-          isSearchOpen ? 'bg-white/[0.07] text-[#25E2E4]' : 'text-gray-500 hover:text-white'
+          isSearchOpen ? 'bg-white/[0.07] text-[#22CDD0]' : 'text-gray-500 hover:text-white'
         }`}
         aria-current={isSearchOpen ? 'page' : undefined}
       >
@@ -57,7 +57,7 @@ export default function MobileNav({
       <button
         onClick={onViewWatchlist}
         className={`flex h-12 flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-[14px] py-1 text-center transition-all ${
-          activeView === 'watchlist' ? 'bg-white/[0.07] text-[#25E2E4]' : 'text-gray-500'
+          activeView === 'watchlist' ? 'bg-white/[0.07] text-[#22CDD0]' : 'text-gray-500'
         }`}
         aria-current={activeView === 'watchlist' ? 'page' : undefined}
       >

@@ -24,7 +24,7 @@ export default function Footer({ goHome, setSearchMode }: FooterProps) {
               onClick={goHome}
               className="inline-flex items-center gap-2 cursor-pointer text-white font-bold text-lg tracking-tight"
             >
-              <LogoIcon className="w-5 h-5 text-[#00D6D9]" />
+              <LogoIcon className="w-5 h-5 text-[#00BDC2]" />
               <span>نوار</span>
               <span className="text-gray-500 font-normal text-xs mr-1 bg-white/5 px-1.5 py-0.5 rounded">سينما</span>
             </div>

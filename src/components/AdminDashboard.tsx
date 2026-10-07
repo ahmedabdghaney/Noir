@@ -357,8 +357,8 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
   if (!isAdmin(userEmail)) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center gap-4 text-center px-6" dir="rtl">
-        <div className="w-16 h-16 rounded-full bg-[#00D6D9]/10 flex items-center justify-center">
-          <EyeOff className="w-8 h-8 text-[#00D6D9]" />
+        <div className="w-16 h-16 rounded-full bg-[#00BDC2]/10 flex items-center justify-center">
+          <EyeOff className="w-8 h-8 text-[#00BDC2]" />
         </div>
         <h2 className="text-xl font-black text-white">غير مصرّح</h2>
         <p className="text-gray-400 text-sm">هذي الصفحة للإدارة فقط</p>
@@ -386,7 +386,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
       <div className="flex gap-2 mb-8 border-b border-white/5 pb-3">
         {([['library', 'المكتبة'], ['hero', 'الهيرو'], ['site', 'محتوى الموقع'], ['add', form ? 'تحرير' : 'إضافة'], ['sections', 'الأقسام']] as [Tab, string][]).map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
-            className={`px-4 py-2 rounded-full text-xs font-bold cursor-pointer transition-all ${tab === k ? 'bg-[#00BFC4] text-white' : 'bg-stone-900 text-gray-400 hover:text-white'}`}>
+            className={`px-4 py-2 rounded-full text-xs font-bold cursor-pointer transition-all ${tab === k ? 'bg-[#009FA5] text-white' : 'bg-stone-900 text-gray-400 hover:text-white'}`}>
             {label}
           </button>
         ))}
@@ -396,7 +396,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
       {tab === 'library' && (
         <div>
           <div className="flex gap-2 mb-6">
-            <button onClick={handleManualNew} className="flex items-center gap-2 bg-[#00BFC4] hover:bg-[#00D6D9] text-white px-5 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-all">
+            <button onClick={handleManualNew} className="flex items-center gap-2 bg-[#009FA5] hover:bg-[#00BDC2] text-white px-5 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-all">
               <PenLine className="w-4 h-4" /> إضافة يدوية
             </button>
             <button onClick={() => { setForm(null); setTab('add'); }} className="flex items-center gap-2 bg-stone-900 hover:bg-stone-800 border border-white/8 text-white px-5 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-all">
@@ -416,13 +416,13 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                   <div className="relative aspect-[2/3] bg-stone-900">
                     {it.poster && <img src={it.poster} alt={it.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />}
                     {it.inHero && (
-                      <span className="absolute top-2 right-2 bg-[#00BFC4] text-white text-[9px] font-black px-2 py-0.5 rounded-full">هيرو</span>
+                      <span className="absolute top-2 right-2 bg-[#009FA5] text-white text-[9px] font-black px-2 py-0.5 rounded-full">هيرو</span>
                     )}
                     <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2">
                       <button onClick={() => handleEdit(it)} className="w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white cursor-pointer" title="تعديل">
                         <Edit3 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(it)} className="w-10 h-10 rounded-full bg-[#00D6D9]/30 hover:bg-[#00D6D9]/50 flex items-center justify-center text-white cursor-pointer" title="حذف">
+                      <button onClick={() => handleDelete(it)} className="w-10 h-10 rounded-full bg-[#00BDC2]/30 hover:bg-[#00BDC2]/50 flex items-center justify-center text-white cursor-pointer" title="حذف">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -451,8 +451,8 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
             <div className="relative">
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
               <input value={heroQuery} onChange={(e) => setHeroQuery(e.target.value)} placeholder="دور بـ TMDB..."
-                className="w-full bg-stone-900 border border-white/10 focus:border-[#00D6D9]/60 outline-none text-white text-sm font-semibold py-3 pr-12 pl-4 rounded-xl transition-all placeholder-gray-600" />
-              {heroSearching && <Loader className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#00D6D9] animate-spin" />}
+                className="w-full bg-stone-900 border border-white/10 focus:border-[#00BDC2]/60 outline-none text-white text-sm font-semibold py-3 pr-12 pl-4 rounded-xl transition-all placeholder-gray-600" />
+              {heroSearching && <Loader className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#00BDC2] animate-spin" />}
             </div>
             {heroResults.length > 0 && (
               <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mt-3">
@@ -460,7 +460,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                   const added = isInHero(item);
                   return (
                     <button key={`${item.type}_${item.id}`} onClick={() => !added && addToHero(item)} disabled={added}
-                      className="relative aspect-[2/3] rounded-lg overflow-hidden bg-stone-900 border border-white/[0.06] hover:border-[#00D6D9]/50 cursor-pointer group transition-all disabled:opacity-50">
+                      className="relative aspect-[2/3] rounded-lg overflow-hidden bg-stone-900 border border-white/[0.06] hover:border-[#00BDC2]/50 cursor-pointer group transition-all disabled:opacity-50">
                       {item.poster && <img src={item.poster} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />}
                       <div className={`absolute inset-0 flex items-center justify-center transition-all ${added ? 'bg-green-600/40' : 'bg-black/60 opacity-0 group-hover:opacity-100'}`}>
                         {added ? <Check className="w-6 h-6 text-white" /> : <Plus className="w-6 h-6 text-white" />}
@@ -494,7 +494,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                     onDragOver={(e) => { e.preventDefault(); if (dragOver !== key) setDragOver(key); }}
                     onDragEnd={() => { dragKey.current = null; setDragOver(null); }}
                     onDrop={(e) => { e.preventDefault(); dropHero(key); }}
-                    className={`flex items-center gap-3 bg-[#141417] border rounded-xl p-2.5 transition-all ${dragOver === key ? 'border-[#00D6D9] bg-[#00D6D9]/5' : 'border-white/8'}`}>
+                    className={`flex items-center gap-3 bg-[#141417] border rounded-xl p-2.5 transition-all ${dragOver === key ? 'border-[#00BDC2] bg-[#00BDC2]/5' : 'border-white/8'}`}>
                     {/* مقبض السحب */}
                     <div className="shrink-0 cursor-grab active:cursor-grabbing text-gray-500 hover:text-white px-1" title="اسحب للترتيب">
                       <GripVertical className="w-5 h-5" />
@@ -509,7 +509,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                       <div className="flex items-center gap-2 justify-start mt-0.5">
                         <span className="text-gray-500 text-[11px]">{item.year}</span>
                         {isExtra ? (
-                          <span className="bg-[#00BFC4]/20 text-[#25E2E4] text-[9px] font-black px-2 py-0.5 rounded-full">مضاف</span>
+                          <span className="bg-[#009FA5]/20 text-[#22CDD0] text-[9px] font-black px-2 py-0.5 rounded-full">مضاف</span>
                         ) : (
                           <span className="bg-white/5 text-gray-400 text-[9px] font-black px-2 py-0.5 rounded-full">تلقائي</span>
                         )}
@@ -525,7 +525,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                       </button>
                       {isExtra && (
                         <button onClick={() => removeHeroExtra(item.type, item.id)}
-                          className="w-9 h-9 rounded-full bg-[#00D6D9]/10 hover:bg-[#00D6D9]/20 flex items-center justify-center text-[#25E2E4] cursor-pointer" title="إلغاء من الهيرو">
+                          className="w-9 h-9 rounded-full bg-[#00BDC2]/10 hover:bg-[#00BDC2]/20 flex items-center justify-center text-[#22CDD0] cursor-pointer" title="إلغاء من الهيرو">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       )}
@@ -548,8 +548,8 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
             <div className="relative flex-1">
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
               <input value={siteQuery} onChange={(e) => setSiteQuery(e.target.value)} placeholder="دور عن أي فلم أو مسلسل..."
-                className="w-full bg-[#141417] border border-white/10 focus:border-[#00D6D9]/60 outline-none text-white text-sm font-semibold py-2.5 pr-12 pl-4 rounded-xl transition-all placeholder-gray-600" />
-              {siteSearching && <Loader className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#00D6D9] animate-spin" />}
+                className="w-full bg-[#141417] border border-white/10 focus:border-[#00BDC2]/60 outline-none text-white text-sm font-semibold py-2.5 pr-12 pl-4 rounded-xl transition-all placeholder-gray-600" />
+              {siteSearching && <Loader className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#00BDC2] animate-spin" />}
             </div>
             <select value={siteSort} onChange={(e) => setSiteSort(e.target.value as any)}
               className="bg-[#141417] border border-white/10 text-white text-sm font-semibold py-2.5 px-4 rounded-xl outline-none cursor-pointer">
@@ -642,17 +642,17 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
           {/* لو مافي فورم مفتوح: نعرض بحث TMDB للاستيراد */}
           {!form && (
             <div>
-              <p className="text-gray-400 text-xs mb-4">دور عن فلم أو مسلسل لاستيراد كل تفاصيله من TMDB، أو <button onClick={handleManualNew} className="text-[#25E2E4] underline cursor-pointer">أضف يدوياً</button>.</p>
+              <p className="text-gray-400 text-xs mb-4">دور عن فلم أو مسلسل لاستيراد كل تفاصيله من TMDB، أو <button onClick={handleManualNew} className="text-[#22CDD0] underline cursor-pointer">أضف يدوياً</button>.</p>
               <div className="relative mb-5">
                 <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="اسم الفلم أو المسلسل..."
-                  className="w-full bg-[#141417] border border-white/10 focus:border-[#00D6D9]/60 outline-none text-white text-sm font-semibold py-3.5 pr-12 pl-4 rounded-xl transition-all placeholder-gray-600" />
-                {searching && <Loader className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#00D6D9] animate-spin" />}
+                  className="w-full bg-[#141417] border border-white/10 focus:border-[#00BDC2]/60 outline-none text-white text-sm font-semibold py-3.5 pr-12 pl-4 rounded-xl transition-all placeholder-gray-600" />
+                {searching && <Loader className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#00BDC2] animate-spin" />}
               </div>
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                 {results.map((item) => (
                   <button key={`${item.type}_${item.id}`} onClick={() => handleImport(item)} disabled={importing === item.id}
-                    className="relative aspect-[2/3] rounded-xl overflow-hidden bg-stone-900 border border-white/[0.06] hover:border-[#00D6D9]/50 cursor-pointer group transition-all">
+                    className="relative aspect-[2/3] rounded-xl overflow-hidden bg-stone-900 border border-white/[0.06] hover:border-[#00BDC2]/50 cursor-pointer group transition-all">
                     {item.poster && <img src={item.poster} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />}
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
                       {importing === item.id ? <Loader className="w-6 h-6 text-white animate-spin" /> : <Import className="w-7 h-7 text-white" />}
@@ -668,7 +668,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
             <div className="bg-[#141417] border border-white/8 rounded-2xl p-5 md:p-6">
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-white font-black text-lg flex items-center gap-2">
-                  {form.tmdbId ? <Import className="w-5 h-5 text-[#00D6D9]" /> : <PenLine className="w-5 h-5 text-[#00D6D9]" />}
+                  {form.tmdbId ? <Import className="w-5 h-5 text-[#00BDC2]" /> : <PenLine className="w-5 h-5 text-[#00BDC2]" />}
                   {form.tmdbId ? 'مستورد من TMDB' : 'إضافة يدوية'}
                 </h3>
                 <button onClick={() => setForm(null)} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 cursor-pointer">
@@ -687,7 +687,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                       </div>
                       <div className="flex-1 space-y-2">
                         <input value={form.poster?.startsWith('data:') ? '' : (form.poster || '')} onChange={(e) => setF('poster', e.target.value || null)} placeholder="الصق رابط الصورة https://..."
-                          className="w-full bg-stone-900 border border-white/10 focus:border-[#00D6D9]/60 outline-none text-white text-xs py-2.5 px-3 rounded-lg" dir="ltr" />
+                          className="w-full bg-stone-900 border border-white/10 focus:border-[#00BDC2]/60 outline-none text-white text-xs py-2.5 px-3 rounded-lg" dir="ltr" />
                         <label className="flex items-center justify-center gap-1.5 bg-stone-800 hover:bg-stone-700 border border-white/10 text-white text-xs font-bold py-2 rounded-lg cursor-pointer transition-all">
                           <Upload className="w-3.5 h-3.5" /> رفع من الجهاز
                           <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f, 'poster'); e.target.value = ''; }} />
@@ -702,7 +702,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                       {form.backdrop && <img src={form.backdrop} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
                     </div>
                     <input value={form.backdrop?.startsWith('data:') ? '' : (form.backdrop || '')} onChange={(e) => setF('backdrop', e.target.value || null)} placeholder="الصق رابط الصورة https://..."
-                      className="w-full bg-stone-900 border border-white/10 focus:border-[#00D6D9]/60 outline-none text-white text-xs py-2.5 px-3 rounded-lg mb-2" dir="ltr" />
+                      className="w-full bg-stone-900 border border-white/10 focus:border-[#00BDC2]/60 outline-none text-white text-xs py-2.5 px-3 rounded-lg mb-2" dir="ltr" />
                     <label className="flex items-center justify-center gap-1.5 bg-stone-800 hover:bg-stone-700 border border-white/10 text-white text-xs font-bold py-2 rounded-lg cursor-pointer transition-all">
                       <Upload className="w-3.5 h-3.5" /> رفع من الجهاز
                       <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f, 'backdrop'); e.target.value = ''; }} />
@@ -730,13 +730,13 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                       <label className="text-white text-xs font-bold mb-1.5 flex items-center justify-between">
                         <span>التقييم</span>
                         <label className="flex items-center gap-1 text-[10px] text-gray-400 font-normal cursor-pointer">
-                          <input type="checkbox" checked={form.autoRating} disabled={!form.tmdbId} onChange={(e) => setF('autoRating', e.target.checked)} className="accent-[#00BFC4]" />
+                          <input type="checkbox" checked={form.autoRating} disabled={!form.tmdbId} onChange={(e) => setF('autoRating', e.target.checked)} className="accent-[#009FA5]" />
                           تلقائي
                         </label>
                       </label>
                       <input type="number" step="0.1" min="0" max="10" value={form.rating} disabled={form.autoRating}
                         onChange={(e) => setF('rating', Number(e.target.value))}
-                        className="w-full bg-stone-900 border border-white/10 focus:border-[#00D6D9]/60 outline-none text-white text-sm py-2.5 px-3 rounded-lg disabled:opacity-50" dir="ltr" />
+                        className="w-full bg-stone-900 border border-white/10 focus:border-[#00BDC2]/60 outline-none text-white text-sm py-2.5 px-3 rounded-lg disabled:opacity-50" dir="ltr" />
                     </div>
                     <Field label="المخرج" value={form.director} onChange={(v) => setF('director', v)} />
                   </div>
@@ -754,7 +754,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                       step="1"
                       value={form.introEndSeconds || 0}
                       onChange={(e) => setF('introEndSeconds', Math.max(0, Number(e.target.value) || 0))}
-                      className="w-full bg-stone-900 border border-white/10 focus:border-[#00D6D9]/60 outline-none text-white text-sm py-2.5 px-3 rounded-lg"
+                      className="w-full bg-stone-900 border border-white/10 focus:border-[#00BDC2]/60 outline-none text-white text-sm py-2.5 px-3 rounded-lg"
                       dir="ltr"
                     />
                     <p className="mt-1 text-[10px] text-white/35">
@@ -770,7 +770,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
               <div className="mt-4">
                 <label className="text-white text-xs font-bold mb-1.5 block">الوصف</label>
                 <textarea value={form.overview} onChange={(e) => setF('overview', e.target.value)} rows={3}
-                  className="w-full bg-stone-900 border border-white/10 focus:border-[#00D6D9]/60 outline-none text-white text-sm py-2.5 px-3 rounded-lg resize-none" />
+                  className="w-full bg-stone-900 border border-white/10 focus:border-[#00BDC2]/60 outline-none text-white text-sm py-2.5 px-3 rounded-lg resize-none" />
               </div>
 
               {/* التوزيع */}
@@ -784,7 +784,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                 </div>
                 <div className="flex items-end">
                   <label className="flex items-center gap-2 text-white text-sm font-bold cursor-pointer bg-stone-900 border border-white/10 py-2.5 px-4 rounded-lg w-full">
-                    <input type="checkbox" checked={form.inHero} onChange={(e) => setF('inHero', e.target.checked)} className="accent-[#00BFC4] w-4 h-4" />
+                    <input type="checkbox" checked={form.inHero} onChange={(e) => setF('inHero', e.target.checked)} className="accent-[#009FA5] w-4 h-4" />
                     يظهر بالكاروسيل الكبير (الهيرو)
                   </label>
                 </div>
@@ -793,7 +793,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
               {/* حفظ */}
               <div className="flex gap-3 mt-6">
                 <button onClick={handleSave} disabled={saving || !form.title.trim()}
-                  className="flex items-center gap-2 bg-[#00BFC4] hover:bg-[#00D6D9] disabled:opacity-40 text-white px-8 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all">
+                  className="flex items-center gap-2 bg-[#009FA5] hover:bg-[#00BDC2] disabled:opacity-40 text-white px-8 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all">
                   {saving ? <Loader className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                   حفظ
                 </button>
@@ -827,11 +827,11 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                   <label className="text-white text-xs font-bold mb-2 block">طريقة التعبئة</label>
                   <div className="flex gap-2">
                     <button onClick={() => setSF('kind', 'manual')}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${(secForm.kind || 'manual') === 'manual' ? 'bg-[#00BFC4] text-white' : 'bg-stone-900 text-gray-400 hover:text-white'}`}>
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${(secForm.kind || 'manual') === 'manual' ? 'bg-[#009FA5] text-white' : 'bg-stone-900 text-gray-400 hover:text-white'}`}>
                       <PenLine className="w-3.5 h-3.5" /> يدوي
                     </button>
                     <button onClick={() => setSF('kind', 'genre')}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${secForm.kind === 'genre' ? 'bg-[#00BFC4] text-white' : 'bg-stone-900 text-gray-400 hover:text-white'}`}>
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${secForm.kind === 'genre' ? 'bg-[#009FA5] text-white' : 'bg-stone-900 text-gray-400 hover:text-white'}`}>
                       <Film className="w-3.5 h-3.5" /> تصنيف تلقائي
                     </button>
                   </div>
@@ -903,7 +903,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
 
                 <div className="flex gap-3 pt-2">
                   <button onClick={saveSectionEditor} disabled={!secForm.title?.trim() || (secForm.kind === 'genre' && !secForm.genreId)}
-                    className="flex items-center gap-2 bg-[#00BFC4] hover:bg-[#00D6D9] disabled:opacity-40 text-white px-8 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all">
+                    className="flex items-center gap-2 bg-[#009FA5] hover:bg-[#00BDC2] disabled:opacity-40 text-white px-8 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all">
                     <Plus className="w-4 h-4" /> حفظ
                   </button>
                   <button onClick={() => { setSecForm(null); setSecPreview([]); }} className="bg-stone-900 hover:bg-stone-800 text-gray-300 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all">إلغاء</button>
@@ -914,7 +914,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
             <div>
               <div className="flex items-center justify-between mb-5">
                 <p className="text-gray-400 text-xs leading-relaxed max-w-md">كل أقسام الصفحة الرئيسية. رتّبها بالأسهم، عدّل المخصصة، والأصلية معلّمة "أصلي" وثابتة.</p>
-                <button onClick={() => openSectionEditor()} className="flex items-center gap-1.5 bg-[#00BFC4] hover:bg-[#00D6D9] text-white px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-all whitespace-nowrap shrink-0">
+                <button onClick={() => openSectionEditor()} className="flex items-center gap-1.5 bg-[#009FA5] hover:bg-[#00BDC2] text-white px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-all whitespace-nowrap shrink-0">
                   <FolderPlus className="w-4 h-4" /> قسم جديد
                 </button>
               </div>
@@ -930,7 +930,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                       onDragOver={(e) => { e.preventDefault(); if (dragOver !== s.key) setDragOver(s.key); }}
                       onDragEnd={() => { dragKey.current = null; setDragOver(null); }}
                       onDrop={(e) => { e.preventDefault(); dropSection(s.key); }}
-                      className={`flex items-center gap-3 bg-[#141417] border rounded-xl px-3 py-3 transition-all ${dragOver === s.key ? 'border-[#00D6D9] bg-[#00D6D9]/5' : 'border-white/8'}`}>
+                      className={`flex items-center gap-3 bg-[#141417] border rounded-xl px-3 py-3 transition-all ${dragOver === s.key ? 'border-[#00BDC2] bg-[#00BDC2]/5' : 'border-white/8'}`}>
                       {/* مقبض السحب */}
                       <div className="shrink-0 cursor-grab active:cursor-grabbing text-gray-500 hover:text-white px-1" title="اسحب للترتيب">
                         <GripVertical className="w-5 h-5" />
@@ -941,7 +941,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                         <div className="flex items-center gap-2 justify-start">
                           <p className="text-white text-sm font-bold">{s.title}</p>
                           {s.custom ? (
-                            <span className="bg-[#00BFC4]/20 text-[#25E2E4] text-[9px] font-black px-2 py-0.5 rounded-full">مضاف من قبلك</span>
+                            <span className="bg-[#009FA5]/20 text-[#22CDD0] text-[9px] font-black px-2 py-0.5 rounded-full">مضاف من قبلك</span>
                           ) : (
                             <span className="bg-white/5 text-gray-400 text-[9px] font-black px-2 py-0.5 rounded-full">أصلي</span>
                           )}
@@ -956,7 +956,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                           <button onClick={() => openSectionEditor((s as any).data)} className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-300 cursor-pointer" title="تعديل">
                             <Edit3 className="w-4 h-4" />
                           </button>
-                          <button onClick={() => removeCustomSection(s.key)} className="w-9 h-9 rounded-full bg-[#00D6D9]/10 hover:bg-[#00D6D9]/20 flex items-center justify-center text-[#25E2E4] cursor-pointer" title="حذف">
+                          <button onClick={() => removeCustomSection(s.key)} className="w-9 h-9 rounded-full bg-[#00BDC2]/10 hover:bg-[#00BDC2]/20 flex items-center justify-center text-[#22CDD0] cursor-pointer" title="حذف">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -979,7 +979,7 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
     <div>
       <label className="text-white text-xs font-bold mb-1.5 block">{label}</label>
       <input value={value} onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-stone-900 border border-white/10 focus:border-[#00D6D9]/60 outline-none text-white text-sm py-2.5 px-3 rounded-lg transition-all" />
+        className="w-full bg-stone-900 border border-white/10 focus:border-[#00BDC2]/60 outline-none text-white text-sm py-2.5 px-3 rounded-lg transition-all" />
     </div>
   );
 }
@@ -991,7 +991,7 @@ function NumField({ label, value, onChange, placeholder, step }: { label: string
       <label className="text-white text-xs font-bold mb-1.5 block">{label}</label>
       <input type="number" step={step} value={value ?? ''} placeholder={placeholder}
         onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
-        className="w-full bg-stone-900 border border-white/10 focus:border-[#00D6D9]/60 outline-none text-white text-sm py-2.5 px-3 rounded-lg transition-all placeholder-gray-600" dir="ltr" />
+        className="w-full bg-stone-900 border border-white/10 focus:border-[#00BDC2]/60 outline-none text-white text-sm py-2.5 px-3 rounded-lg transition-all placeholder-gray-600" dir="ltr" />
     </div>
   );
 }

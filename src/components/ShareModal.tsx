@@ -46,7 +46,7 @@ export default function ShareModal({ isOpen, url, onClose, onToast }: ShareModal
   return (
     <div
       onClick={(e) => e.target === e.currentTarget && onClose()}
-      className="fixed inset-0 bg-black/80 backdrop-blur-md z-[600] flex items-center justify-center p-4 selection:bg-[#00D6D9]/30"
+      className="fixed inset-0 bg-black/80 backdrop-blur-md z-[600] flex items-center justify-center p-4 selection:bg-[#00BDC2]/30"
     >
       <div className="w-full max-w-sm bg-stone-900 border border-white/10 rounded-3xl shadow-2xl p-6 relative animate-pop-in text-right">
         <button
