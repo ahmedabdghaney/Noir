@@ -7,9 +7,9 @@
 }
 
 :root {
-  --noir-bg: #070707;
-  --noir-surface: #111111;
-  --noir-surface-strong: #181818;
+  --noir-bg: #08090c;
+  --noir-surface: #111217;
+  --noir-surface-strong: #18191f;
   --noir-border: rgba(255, 255, 255, 0.075);
   --noir-text: #f7f7f7;
   --noir-muted: #a3a3a3;
@@ -46,8 +46,8 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(70% 42% at 82% 0%, rgba(229, 9, 20, 0.07), transparent 68%),
-    linear-gradient(180deg, #0a0a0a 0%, #070707 48%, #050505 100%);
+    radial-gradient(62% 38% at 82% 0%, rgba(239, 51, 64, 0.055), transparent 72%),
+    linear-gradient(180deg, #0b0c10 0%, #08090c 46%, #06070a 100%);
   background-attachment: fixed;
 }
 
@@ -446,10 +446,9 @@ button, a {
   will-change: transform;
 }
 .card-cinematic:hover {
-  transform: translateY(-4px) scale(1.025);
-  box-shadow: 0 18px 42px -16px rgba(0, 0, 0, 0.95),
-              0 0 0 1px rgba(255, 255, 255, 0.1);
-  filter: brightness(1.05);
+  transform: translateY(-3px) scale(1.012);
+  box-shadow: 0 20px 44px -24px rgba(0, 0, 0, 1);
+  filter: brightness(1.035);
   z-index: 5;
 }
 
@@ -499,36 +498,32 @@ button, a {
 
 .noir-button-primary {
   color: #fff;
-  background: linear-gradient(135deg, #ff3b47 0%, #e50914 52%, #b90712 100%);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #ef3340;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 0.72rem 1.4rem;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 12px 34px -17px rgba(229, 9, 20, 0.95);
+  box-shadow: 0 12px 30px -18px rgba(239, 51, 64, 0.9);
 }
 
 .noir-button-primary:hover {
-  background: linear-gradient(135deg, #ff505b 0%, #f10b18 52%, #c60a16 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.24),
-    0 16px 40px -17px rgba(229, 9, 20, 1);
-  transform: translateY(-2px) scale(1.01);
+  background: #ff4652;
+  box-shadow: 0 16px 34px -18px rgba(239, 51, 64, 1);
+  transform: translateY(-1px);
 }
 
 .noir-button-secondary {
   color: #f7f7f8;
-  background: linear-gradient(180deg, rgba(48, 48, 54, 0.72), rgba(23, 23, 27, 0.78));
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.11);
   padding: 0.72rem 1.2rem;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 30px -20px #000;
+  box-shadow: 0 12px 30px -22px #000;
   backdrop-filter: blur(20px) saturate(135%);
   -webkit-backdrop-filter: blur(20px) saturate(135%);
 }
 
 .noir-button-secondary:hover {
-  background: linear-gradient(180deg, rgba(65, 65, 72, 0.78), rgba(31, 31, 36, 0.88));
-  border-color: rgba(255, 255, 255, 0.22);
-  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
 }
 
 .noir-icon-button {
@@ -538,17 +533,17 @@ button, a {
   align-items: center;
   justify-content: center;
   color: #f5f5f7;
-  background: linear-gradient(180deg, rgba(52, 52, 58, 0.68), rgba(20, 20, 24, 0.78));
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 12px 28px -19px #000;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  box-shadow: 0 12px 28px -20px #000;
   backdrop-filter: blur(20px) saturate(135%);
   -webkit-backdrop-filter: blur(20px) saturate(135%);
 }
 
 .noir-icon-button:hover {
-  background: linear-gradient(180deg, rgba(70, 70, 78, 0.76), rgba(31, 31, 36, 0.9));
-  border-color: rgba(255, 255, 255, 0.24);
-  transform: translateY(-2px) scale(1.035);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.17);
+  transform: translateY(-1px);
 }
 
 .noir-button-primary:active,
@@ -572,7 +567,7 @@ button, a {
   align-items: center;
   justify-content: center;
   border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 999px;
+  border-radius: 11px;
   color: #fff;
   background: rgba(18, 18, 20, 0.58);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
@@ -588,16 +583,20 @@ button, a {
 }
 
 .noir-save-button.is-saved {
-  color: #09090b;
-  background: rgba(255, 255, 255, 0.96);
-  border-color: rgba(255, 255, 255, 0.9);
+  color: #fff;
+  background: #ef3340;
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .noir-save-button:hover {
-  color: #09090b;
-  background: rgba(255, 255, 255, 0.96);
-  border-color: rgba(255, 255, 255, 0.9);
-  transform: scale(1.06);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+.noir-save-button.is-saved:hover {
+  background: #ff4652;
 }
 
 .noir-save-button:active,

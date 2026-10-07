@@ -4,7 +4,7 @@
  */
 
 import { useRef, useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, Star, X } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Play, X } from 'lucide-react';
 import { MovieOrShow } from '../types';
 import WatchlistButton from './WatchlistButton';
 
@@ -102,17 +102,16 @@ export default function MovieRow({
   if (!items.length) {
     // Skeletons
     return (
-      <div className={`mb-10 flex flex-col gap-4 ${flush ? "" : "px-4 sm:px-6 lg:px-8"}`}>
+      <div className={`mb-10 flex flex-col gap-4 ${flush ? "" : "px-4 sm:px-6 lg:px-8 xl:px-10"}`}>
         <div className="space-y-1">
           <div className="w-48 h-6 bg-white/[0.07] rounded animate-pulse" />
           <div className="w-32 h-4 bg-white/[0.05] rounded animate-pulse" />
         </div>
         <div className="flex gap-2 overflow-hidden">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex-none w-[170px] sm:w-[220px] md:w-[260px] aspect-video bg-[#0f0f0f] rounded-sm flex flex-col justify-end gap-3 animate-pulse">
-              <div className="w-full h-full bg-[#121212] rounded-md shimmer-bg" />
-              <div className="w-24 h-4 bg-[#151515] rounded" />
-              <div className="w-12 h-3 bg-[#151515] rounded" />
+            <div key={i} className="flex-none w-[220px] sm:w-[260px] md:w-[300px] xl:w-[330px] animate-pulse">
+              <div className="aspect-video w-full rounded-[18px] bg-[#121318] shimmer-bg" />
+              <div className="mt-3 h-4 w-28 rounded bg-[#15161b]" />
             </div>
           ))}
         </div>
@@ -121,26 +120,26 @@ export default function MovieRow({
   }
 
   return (
-    <section className="mb-6 md:mb-8 relative group/row flex flex-col" aria-labelledby={`row-${title.replace(/\s+/g, '-')}`}>
+    <section className="relative mb-9 flex flex-col md:mb-12 group/row" aria-labelledby={`row-${title.replace(/\s+/g, '-')}`}>
       {/* Category Header */}
-      <div className={`mb-2.5 flex flex-col text-right ${flush ? "" : "px-4 sm:px-6 lg:px-12"}`}>
+      <div className={`mb-3.5 flex flex-col text-right ${flush ? "" : "px-4 sm:px-6 lg:px-8 xl:px-10"}`}>
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex flex-col text-right">
             {viewAllHash ? (
               <a
                 href={viewAllHash}
                 id={`row-${title.replace(/\s+/g, '-')}`}
-                className="group/title text-lg md:text-xl font-bold text-white flex items-center gap-1.5 hover:text-white/80 transition-colors cursor-pointer"
+                className="group/title flex cursor-pointer items-center gap-1.5 text-lg font-bold text-white transition-colors hover:text-white/75 md:text-xl"
               >
                 <span>{title}</span>
                 <ChevronLeft className="w-5 h-5 text-white/40 group-hover/title:text-white group-hover/title:-translate-x-0.5 transition-all" />
               </a>
             ) : (
               <>
-                <h2 id={`row-${title.replace(/\s+/g, '-')}`} className="text-lg md:text-xl font-bold text-white flex items-center">
+                <h2 id={`row-${title.replace(/\s+/g, '-')}`} className="flex items-center text-lg font-bold tracking-[-0.02em] text-white md:text-xl">
                   <span>{title}</span>
                 </h2>
-                {subtitle && <p className="mt-1 text-xs sm:text-sm text-white/45">{subtitle}</p>}
+                {subtitle && <p className="mt-1 text-xs text-white/38 sm:text-[13px]">{subtitle}</p>}
               </>
             )}
           </div>
@@ -148,13 +147,13 @@ export default function MovieRow({
       </div>
 
       {/* Row Shell with Overlay Arrows */}
-      <div className={`relative ${flush ? "" : "px-4 sm:px-6 lg:px-12"}`}>
+      <div className={`relative ${flush ? "" : "px-4 sm:px-6 lg:px-8 xl:px-10"}`}>
         {/* Edge fade gradients (only when scrollable in that direction) */}
         {showRightArrow && (
-          <div className="hidden md:block absolute right-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-l from-[#070707] to-transparent" />
+          <div className="hidden md:block absolute right-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-l from-[#08090c] to-transparent" />
         )}
         {showLeftArrow && (
-          <div className="hidden md:block absolute left-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-r from-[#070707] to-transparent" />
+          <div className="hidden md:block absolute left-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-r from-[#08090c] to-transparent" />
         )}
          {/* Navigation Arrows for desktop hover */}
         {showRightArrow && (
@@ -183,10 +182,10 @@ export default function MovieRow({
           onScroll={handleRowScroll}
           data-tv-focus-row
           dir="rtl"
-          className="noir-movie-row-track flex flex-row gap-1.5 md:gap-2 overflow-x-auto no-scrollbar py-2 scroll-smooth select-none"
+          className="noir-movie-row-track flex flex-row gap-3.5 overflow-x-auto no-scrollbar py-2 scroll-smooth select-none md:gap-4"
         >
           {items.map((item, idx) => {
-            const hasScore = item.rating > 0;
+            const saved = isSaved?.(item) ?? false;
             const progressKey = `noir_progress_${item.type}_${item.id}`;
             const storedProgress = localStorage.getItem(progressKey);
             const progress = storedProgress ? Number(storedProgress) : 0;
@@ -206,16 +205,15 @@ export default function MovieRow({
                 data-tv-card
                 aria-label={`فتح ${item.title}`}
                 style={{ animationDelay: `${idx * 45}ms` }}
-                className="group/card card-pop card-cinematic relative flex-none w-[170px] sm:w-[220px] md:w-[248px] xl:w-[278px] cursor-pointer rounded-sm select-none"
+                className="group/card card-pop card-cinematic relative flex-none w-[220px] cursor-pointer select-none sm:w-[260px] md:w-[300px] xl:w-[330px]"
               >
-                {/* Poster Artwork container */}
-                <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-sm bg-[#101010] border border-white/[0.055]">
+                <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-[16px] border border-white/[0.065] bg-[#101116] shadow-[0_18px_44px_-30px_rgba(0,0,0,1)] md:rounded-[18px]">
                   {onToggleSave && (
                     <WatchlistButton
-                      saved={isSaved?.(item) ?? false}
+                      saved={saved}
                       onToggle={() => onToggleSave(item)}
                       compact={compactSaveButton}
-                      className={`absolute top-2 z-30 ${ranked ? 'left-2' : 'right-2'}`}
+                      className={`absolute top-2.5 z-30 transition-opacity ${saved ? '' : 'md:opacity-0 md:group-hover/card:opacity-100'} ${ranked ? 'left-2.5' : 'right-2.5'}`}
                     />
                   )}
                   {!onToggleSave && onRemove && (
@@ -238,7 +236,7 @@ export default function MovieRow({
                       loading="lazy"
                       decoding="async"
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover select-none transition-transform duration-300 md:group-hover/card:scale-[1.04]"
+                      className="h-full w-full select-none object-cover transition-transform duration-500 md:group-hover/card:scale-[1.025]"
                     />
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center p-3 text-stone-600 bg-stone-950">
@@ -248,43 +246,32 @@ export default function MovieRow({
                     </div>
                   )}
                   {ranked && (
-                    <img
-                      src={`/top10/${idx + 1}.svg`}
-                      alt={`المرتبة ${idx + 1}`}
-                      className="absolute top-2 right-2 z-20 h-12 sm:h-14 md:h-16 w-auto max-w-[92px] object-contain object-right-top pointer-events-none select-none drop-shadow-[0_4px_10px_rgba(0,0,0,.75)]"
-                    />
+                    <span className="pointer-events-none absolute right-2.5 top-2.5 z-20 rounded-[10px] border border-white/10 bg-black/45 px-2 py-1 text-[11px] font-bold text-white/85 backdrop-blur-md">
+                      #{idx + 1}
+                    </span>
                   )}
-                  {/* Subtle gradient at bottom of poster for depth */}
-                  <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/90 via-black/25 to-transparent opacity-85 transition-opacity duration-300 pointer-events-none" />
-
-                  <div className="absolute inset-x-0 bottom-0 z-10 px-3 pb-2.5 text-right">
-                    <p className="truncate text-xs sm:text-sm font-bold text-white drop-shadow-lg">{item.title}</p>
-                    <p className="mt-0.5 flex items-center gap-1.5 text-[10px] font-medium text-white/65">
-                      <span>{item.year || '—'}</span>
-                      <span className="h-0.5 w-0.5 rounded-full bg-white/45" />
-                      <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
-                    </p>
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-300 md:group-hover/card:bg-black/25 md:group-hover/card:opacity-100">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-[14px] border border-white/15 bg-black/45 text-white backdrop-blur-lg">
+                      <Play className="h-4 w-4 fill-current" />
+                    </span>
                   </div>
-
-                  {/* Rating stamp — ثابت في الجهة المقابلة لزر الحفظ */}
-                  {hasScore && (
-                    <div className={`absolute left-2 glass text-[#f5c518] text-[11px] font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5 ${
-                      ranked ? 'bottom-2' : 'top-2'
-                    }`}>
-                      <Star className="w-2.5 h-2.5 fill-current" />
-                      <span>{item.rating.toFixed(1)}</span>
-                    </div>
-                  )}
 
                   {/* Watch progression indicator */}
                   {progress > 0 && (
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40">
+                    <div className="absolute bottom-0 left-3 right-3 h-0.5 overflow-hidden rounded-full bg-white/20">
                       <div 
                         className="h-full bg-red-600 transition-all duration-300" 
                         style={{ width: `${progress}%` }}
                       />
                     </div>
                   )}
+                </div>
+
+                <div className="px-1 pt-3 text-right">
+                  <p className="truncate text-sm font-semibold text-white/92">{item.title}</p>
+                  <p className="mt-1 text-[11px] font-medium text-white/38">
+                    {item.year || '—'} · {item.type === 'movie' ? 'فيلم' : 'مسلسل'}
+                  </p>
                 </div>
 
               </div>

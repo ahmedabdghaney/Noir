@@ -55,22 +55,23 @@ export default function Header({
   return (
     <nav
       aria-label="الشريط العلوي"
-        className={`fixed top-0 left-0 right-0 z-[200] h-14 flex items-center transition-all duration-300 ${
+        className={`fixed left-3 right-3 top-3 z-[200] flex h-14 items-center rounded-[18px] border transition-all duration-300 ${
           isScrolled
-            ?'backdrop-blur-2xl bg-[#070707]/90 border-b border-white/[0.07] saturate-150 shadow-[0_12px_35px_-28px_black]'
-            :'backdrop-blur-md bg-gradient-to-b from-black/75 to-transparent border-b border-transparent'
+            ?'border-white/[0.09] bg-[#0b0c0f]/90 shadow-[0_16px_36px_-24px_black] backdrop-blur-2xl'
+            :'border-white/[0.07] bg-black/42 backdrop-blur-xl'
         }`}
       >
         <div className="w-full px-4 sm:px-6 flex items-center justify-between">
           <button
               type="button"
               onClick={goHome}
-              className="flex min-h-11 items-center gap-2 cursor-pointer select-none text-white font-extrabold text-lg tracking-tight shrink-0"
+              className="flex min-h-11 shrink-0 cursor-pointer select-none items-center gap-2 text-lg font-extrabold tracking-tight text-white"
               aria-label="العودة إلى الرئيسية"
             >
-              <LogoIcon className="w-5 h-5 text-red-500 shrink-0" />
+              <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-white/[0.07]">
+                <LogoIcon className="h-4.5 w-4.5 shrink-0 text-red-500" />
+              </span>
               <span>نوار</span>
-              <span className="text-gray-500 font-medium text-[9px] mr-1 uppercase tracking-[0.16em]">Cinema</span>
           </button>
 
           <div className="flex items-center justify-end text-left relative">
@@ -79,12 +80,12 @@ export default function Header({
                 <button
                   type="button"
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                  className="w-11 h-11 rounded-full flex items-center justify-center cursor-pointer select-none"
+                  className="flex h-11 w-11 cursor-pointer select-none items-center justify-center rounded-[12px]"
                   title="خيارات الحساب"
                   aria-label="فتح خيارات الحساب"
                   aria-expanded={isProfileDropdownOpen}
                 >
-                  <span className="w-8 h-8 rounded-full border border-white/10 hover:border-white/20 overflow-hidden flex items-center justify-center bg-stone-900">
+                  <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-[9px] border border-white/10 bg-stone-900 hover:border-white/20">
                     {user.photoURL ? (
                       <img
                         src={user.photoURL}

@@ -89,12 +89,12 @@ export default function ContinueWatchingRow({
   if (!items || items.length === 0) return null;
 
   return (
-    <section className="mb-6 md:mb-8 relative flex flex-col group/row" aria-labelledby="continue-watching-title">
-      <div className="px-4 sm:px-6 lg:px-12 mb-2.5">
-        <h2 id="continue-watching-title" className="text-lg md:text-xl font-bold text-white">{title}</h2>
+    <section className="relative mb-9 flex flex-col md:mb-12 group/row" aria-labelledby="continue-watching-title">
+      <div className="mb-3.5 px-4 sm:px-6 lg:px-8 xl:px-10">
+        <h2 id="continue-watching-title" className="text-lg font-bold tracking-[-0.02em] text-white md:text-xl">{title}</h2>
       </div>
 
-      <div className="relative px-4 sm:px-6 lg:px-12">
+      <div className="relative px-4 sm:px-6 lg:px-8 xl:px-10">
         {showRightArrow && (
           <button
             onClick={() => handleScroll('right')}
@@ -117,11 +117,12 @@ export default function ContinueWatchingRow({
         <div
           ref={rowRef}
           onScroll={handleRowScroll}
-          className="flex flex-row gap-1.5 md:gap-2 overflow-x-auto no-scrollbar py-2 scroll-smooth select-none"
+          className="flex flex-row gap-3.5 overflow-x-auto no-scrollbar py-2 scroll-smooth select-none md:gap-4"
         >
           {items.map((item) => {
             const progress = Math.max(0, Math.min(100, Number(item.progress || 0)));
             const img = item.backdrop || item.poster;
+            const saved = isSaved?.(item) ?? false;
 
             return (
               <div
@@ -136,9 +137,9 @@ export default function ContinueWatchingRow({
                 role="button"
                 tabIndex={0}
                 aria-label={`متابعة مشاهدة ${item.title}`}
-                className="group/cw card-cinematic flex-none w-[220px] sm:w-[250px] md:w-[280px] xl:w-[300px] cursor-pointer"
+                className="group/cw card-cinematic w-[230px] flex-none cursor-pointer sm:w-[270px] md:w-[310px] xl:w-[340px]"
               >
-                <div className="relative aspect-video rounded-md overflow-hidden bg-[#101010] border border-white/[0.055]">
+                <div className="relative aspect-video overflow-hidden rounded-[16px] border border-white/[0.065] bg-[#101116] shadow-[0_18px_44px_-30px_rgba(0,0,0,1)] md:rounded-[18px]">
                   {img ? (
                     <img
                       src={img}
@@ -153,20 +154,20 @@ export default function ContinueWatchingRow({
                     </div>
                   )}
 
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-black/0 transition-colors duration-300 md:group-hover/cw:bg-black/20" />
 
                   {onToggleSave && (
                     <WatchlistButton
-                      saved={isSaved?.(item) ?? false}
+                      saved={saved}
                       onToggle={() => onToggleSave(item)}
                       compact={compactSaveButton}
-                      className="absolute top-2.5 right-2.5 z-20"
+                      className={`absolute top-2.5 right-2.5 z-20 transition-opacity ${saved ? '' : 'md:opacity-0 md:group-hover/cw:opacity-100'}`}
                     />
                   )}
 
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/cw:opacity-100 transition-opacity">
-                    <div className="w-14 h-14 rounded-full glass-strong flex items-center justify-center">
-                      <Play className="w-6 h-6 fill-white text-white" />
+                    <div className="flex h-11 w-11 items-center justify-center rounded-[14px] border border-white/15 bg-black/45 backdrop-blur-lg">
+                      <Play className="h-4 w-4 fill-white text-white" />
                     </div>
                   </div>
 
@@ -203,25 +204,22 @@ export default function ContinueWatchingRow({
                     </div>
                   )}
 
-                  <div className="absolute inset-x-0 bottom-0 p-3.5">
-                    <h3 className="text-white font-semibold text-base leading-tight line-clamp-1 mb-2">{item.title || (item as any).name || 'بدون عنوان'}</h3>
-                    {item.type === 'tv' && item.season > 0 && item.episode > 0 && (
-                      <p className="text-white/65 text-xs font-medium mb-2">
-                        الموسم {item.season} • الحلقة {item.episode}
-                      </p>
-                    )}
-                    {item.durationSeconds > item.positionSeconds && (
-                      <p className="text-white/55 text-[11px] font-medium mb-2">
-                        متبقي {Math.max(1, Math.ceil((item.durationSeconds - item.positionSeconds) / 60))} دقيقة
-                      </p>
-                    )}
-                    <div className="h-1 w-full bg-white/20 rounded-full overflow-hidden">
+                  <div className="absolute inset-x-3 bottom-0">
+                    <div className="h-0.5 w-full overflow-hidden rounded-full bg-white/20">
                       <div
                         className="h-full bg-red-500 rounded-full"
                         style={{ width: `${Math.max(progress, 3)}%` }}
                       />
                     </div>
                   </div>
+                </div>
+                <div className="px-1 pt-3 text-right">
+                  <h3 className="truncate text-sm font-semibold text-white/92">{item.title || (item as any).name || 'بدون عنوان'}</h3>
+                  <p className="mt-1 text-[11px] font-medium text-white/38">
+                    {item.type === 'tv' && item.season > 0 && item.episode > 0
+                      ? `الموسم ${item.season} · الحلقة ${item.episode}`
+                      : `${Math.max(1, Math.ceil((item.durationSeconds - item.positionSeconds) / 60))} دقيقة متبقية`}
+                  </p>
                 </div>
               </div>
             );

@@ -2019,9 +2019,7 @@ export default function App() {
 
     if (scored.length < 4) return null;
     return {
-      title: viewingHistory[0] || continueWatching[0]
-        ? `لأنك شاهدت ${seed.title}`
-        : 'مقترحات تناسب قائمتك',
+      title: 'مختارة لك',
       items: scored,
     };
   }, [
@@ -2103,7 +2101,7 @@ export default function App() {
 
   return (
     <div className={`min-h-screen text-white flex flex-row font-sans relative tracking-normal antialiased ${
-      isTvApp ? 'bg-[#08080a]' : 'bg-[#070707]'
+      isTvApp ? 'bg-[#08080a]' : 'bg-[#08090c]'
     }`}>
       
       {/* Desktop cinematic top navigation */}
@@ -2175,7 +2173,7 @@ export default function App() {
             />
 
             {/* Custom Horizontal Cinema Rows */}
-            <div className="space-y-1 md:space-y-2">
+            <div className="pb-8 md:pb-14">
               {continueWatching.length > 0 && (
                 <div id="continue-watching-section" className="scroll-mt-20">
                   <ContinueWatchingRow
@@ -2194,7 +2192,6 @@ export default function App() {
               {personalizedSection && (
                 <MovieRow
                   title={personalizedSection.title}
-                  subtitle="مختارة حسب مشاهداتك وقائمتك"
                   items={personalizedSection.items}
                   onItemClick={handleOpenQuickView}
                   isSaved={isInWatchlist}
@@ -2206,7 +2203,6 @@ export default function App() {
               {topTenItems.length > 0 && (
                 <MovieRow
                   title="أفضل 10 اليوم"
-                  subtitle="الأكثر رواجاً ومشاهدة الآن"
                   items={topTenItems}
                   ranked
                   onItemClick={handleOpenQuickView}
