@@ -108,7 +108,7 @@ export default function StudiosRow({ title = 'تصفّح حسب الشركة ا�
               className="group/st flex-none w-[112px] sm:w-[140px] md:w-[156px] cursor-pointer"
             >
               {/* بطاقة زجاجية فاتحة شوي عن الخلفية — بدون stroke (نلغي بوردر glass-hover)، بدون صورة، بدون اسم نصي */}
-              <div className="relative aspect-[4/3] rounded-2xl overflow-hidden glass-hover !border-0">
+              <div className="relative aspect-[4/3] rounded-md overflow-hidden glass-hover !border-0">
                 {/* radial gradient لطيف فوق-وسط وتحت-وسط — هوية الشركة بدون لون كتيم */}
                 <div
                   className="absolute inset-0 pointer-events-none"

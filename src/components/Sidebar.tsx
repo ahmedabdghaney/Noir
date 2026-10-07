@@ -75,17 +75,17 @@ export default function Sidebar({
   ];
 
   return (
-    <aside className="hidden lg:flex flex-col fixed right-0 top-0 bottom-0 w-52 z-[180] border-l border-white/[0.06] bg-[#141417]"
+    <aside className="hidden lg:flex flex-col fixed right-0 top-0 bottom-0 w-52 z-[180] border-l border-white/[0.055] bg-[#080808]/95 backdrop-blur-2xl"
       style={{ direction: 'rtl' }}
     >
       {/* Logo */}
       <div
         onClick={goHome}
-        className="flex items-center gap-2.5 px-5 py-5 cursor-pointer select-none"
+        className="flex items-center gap-2.5 px-5 py-5 cursor-pointer select-none hover:bg-white/[0.025]"
       >
         <LogoIcon className="w-5 h-5 text-red-500 shrink-0" />
-        <span className="text-white font-bold text-base tracking-tight">نوار</span>
-        <span className="text-stone-500 font-normal text-[10px] bg-white/5 px-1.5 py-0.5 rounded mr-auto">سينما</span>
+        <span className="text-white font-extrabold text-lg tracking-tight">نوار</span>
+        <span className="text-stone-500 font-medium text-[9px] uppercase tracking-[0.18em] mr-auto">Cinema</span>
       </div>
 
       {/* Divider */}
@@ -97,9 +97,9 @@ export default function Sidebar({
           <button
             key={item.id}
             onClick={item.onClick}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer w-full text-right ${
+            className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer w-full text-right ${
               item.active
-                ? 'bg-white/10 text-white'
+                ? 'bg-white/[0.09] text-white before:absolute before:right-0 before:h-5 before:w-0.5 before:rounded-full before:bg-red-600'
                 : item.id === 'search'
                 ? 'text-stone-400 hover:text-white hover:bg-white/5'
                 : 'text-stone-400 hover:text-white hover:bg-white/5'
@@ -123,7 +123,7 @@ export default function Sidebar({
       {user && (
         <button
           onClick={onOpenProfile}
-          className="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-white/5 transition-colors"
+          className="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-white/[0.055] transition-colors"
         >
           <div className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center bg-indigo-600 shrink-0">
             {user.photoURL ? (

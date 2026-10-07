@@ -25,7 +25,7 @@ export default function MobileNav({
   return (
     <nav
       aria-label="التنقل الرئيسي"
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-[200] bg-[#141417]/95 backdrop-blur-xl border-t border-white/8 flex items-start justify-around px-1 selection:bg-transparent noir-mobile-nav"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-[200] bg-[#080808]/94 backdrop-blur-2xl border-t border-white/[0.07] flex items-start justify-around px-1 selection:bg-transparent noir-mobile-nav"
       dir="rtl"
     >
       

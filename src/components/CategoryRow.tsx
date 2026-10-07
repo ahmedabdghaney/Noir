@@ -23,17 +23,23 @@ export default function CategoryRow({ title = 'تصفّح حسب التصنيف'
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const entries = await Promise.all(
-        CATEGORIES.map(async (cat) => {
+      const entries: [string, string][] = [];
+      let cursor = 0;
+      // A small worker pool avoids firing every genre request at once when the
+      // home screen mounts, which previously competed with hero and poster data.
+      const workers = Array.from({ length: Math.min(4, CATEGORIES.length) }, async () => {
+        while (cursor < CATEGORIES.length && !cancelled) {
+          const cat = CATEGORIES[cursor++];
           try {
             const res = await discoverTitles('movie', { genreIds: String(cat.primaryGenre), sortBy: 'popularity', page: 1 });
             const withPoster = res.results.find((r) => r.poster);
-            return [cat.key, withPoster?.poster || ''] as [string, string];
+            entries.push([cat.key, withPoster?.poster || '']);
           } catch {
-            return [cat.key, ''] as [string, string];
+            entries.push([cat.key, '']);
           }
-        })
-      );
+        }
+      });
+      await Promise.all(workers);
       if (!cancelled) {
         const map: Record<string, string> = {};
         entries.forEach(([k, v]) => { if (v) map[k] = v; });
@@ -108,9 +114,9 @@ export default function CategoryRow({ title = 'تصفّح حسب التصنيف'
               role="button"
               tabIndex={0}
               aria-label={`فتح تصنيف ${cat.title}`}
-              className="group/cat flex-none w-[112px] sm:w-[140px] md:w-[156px] lg:w-[168px] cursor-pointer rounded-2xl p-1.5 pb-3 select-none"
+              className="group/cat card-cinematic flex-none w-[112px] sm:w-[140px] md:w-[156px] lg:w-[168px] cursor-pointer rounded-md pb-3 select-none"
             >
-              <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/[0.08]">
+              <div className="relative aspect-[2/3] overflow-hidden rounded-md bg-[#101010] border border-white/[0.055]">
                 {images[cat.key] && (
                   <img
                     src={images[cat.key]}

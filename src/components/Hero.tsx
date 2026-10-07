@@ -42,8 +42,8 @@ export default function Hero({
 
   if (!items.length) {
     return (
-      <div className="px-4 sm:px-6 lg:px-8 pt-3 sm:pt-6 mb-10">
-        <div className="w-full aspect-[4/5] sm:aspect-[16/9] lg:aspect-[2.25/1] min-h-[420px] sm:min-h-0 rounded-[24px] bg-white/[0.05] animate-pulse" />
+      <div className="mb-8 sm:mb-10">
+        <div className="w-full h-[72svh] min-h-[520px] max-h-[820px] bg-white/[0.04] animate-pulse" />
       </div>
     );
   }
@@ -61,8 +61,8 @@ export default function Hero({
   };
 
   return (
-    <section className="px-3 sm:px-5 lg:px-8 pt-2 sm:pt-5 mb-10 sm:mb-14 select-none" aria-label="العرض المميز">
-      <div className="group/hero relative overflow-hidden rounded-[24px] sm:rounded-[28px] border border-white/[0.08] bg-[#101013] shadow-[0_32px_90px_-45px_rgba(0,0,0,0.95)]">
+    <section className="mb-8 sm:mb-10 select-none" aria-label="العرض المميز">
+      <div className="group/hero relative overflow-hidden bg-[#080808] shadow-[0_28px_80px_-52px_rgba(0,0,0,1)]">
         <AnimatePresence mode="wait">
           <motion.div
             key={`${activeItem.type}-${activeItem.id}`}
@@ -70,22 +70,23 @@ export default function Hero({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            className="noir-hero-frame relative aspect-[4/5] sm:aspect-[16/9] lg:aspect-[2.25/1] min-h-[440px] sm:min-h-0"
+            className="noir-hero-frame relative h-[72svh] min-h-[520px] max-h-[820px] sm:h-[70svh]"
           >
             <img
               src={image}
               alt=""
               referrerPolicy="no-referrer"
               fetchPriority="high"
-              className="absolute inset-0 w-full h-full object-cover object-top"
+              decoding="async"
+              className="absolute inset-0 w-full h-full object-cover object-center scale-[1.01]"
             />
 
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-black/5" />
-            <div className="absolute inset-0 bg-gradient-to-l from-black/80 via-black/20 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#070707] via-black/20 to-black/10" />
+            <div className="absolute inset-0 bg-gradient-to-l from-black/90 via-black/32 to-transparent" />
 
             <div
               dir="rtl"
-              className="absolute inset-x-0 bottom-0 max-w-3xl px-6 sm:px-10 lg:px-14 pb-8 sm:pb-10 lg:pb-12 text-right"
+              className="absolute inset-x-0 bottom-[8%] max-w-3xl px-5 sm:px-9 lg:px-12 text-right"
             >
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
@@ -103,12 +104,12 @@ export default function Hero({
                   )}
                 </span>
 
-                <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-[1.08] tracking-tight max-w-2xl line-clamp-2 drop-shadow-xl">
+                <h1 className="font-display text-4xl sm:text-5xl lg:text-7xl font-extrabold text-white leading-[1.03] tracking-tight max-w-2xl line-clamp-2 drop-shadow-2xl">
                   {activeItem.title}
                 </h1>
 
                 {activeItem.overview && (
-                  <p className="hidden sm:block mt-4 text-sm lg:text-base text-white/68 leading-7 max-w-xl line-clamp-2">
+                  <p className="hidden sm:block mt-4 text-sm lg:text-base text-white/72 leading-7 max-w-xl line-clamp-3 drop-shadow-lg">
                     {activeItem.overview}
                   </p>
                 )}
@@ -154,7 +155,7 @@ export default function Hero({
             <button
               type="button"
               onClick={() => goTo(-1)}
-              className="flex noir-icon-button noir-hero-arrow cursor-pointer absolute right-2.5 sm:right-4 top-1/2 -translate-y-1/2 z-20"
+              className="hidden sm:flex noir-icon-button noir-hero-arrow cursor-pointer absolute right-4 top-1/2 -translate-y-1/2 z-20 opacity-0 group-hover/hero:opacity-100"
               aria-label="العرض السابق"
             >
               <ChevronRight className="w-5 h-5" />
@@ -162,13 +163,13 @@ export default function Hero({
             <button
               type="button"
               onClick={() => goTo(1)}
-              className="flex noir-icon-button noir-hero-arrow cursor-pointer absolute left-2.5 sm:left-4 top-1/2 -translate-y-1/2 z-20"
+              className="hidden sm:flex noir-icon-button noir-hero-arrow cursor-pointer absolute left-4 top-1/2 -translate-y-1/2 z-20 opacity-0 group-hover/hero:opacity-100"
               aria-label="العرض التالي"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
 
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-1.5 rounded-full bg-black/25 backdrop-blur-md p-2">
+            <div className="absolute bottom-4 left-5 sm:left-9 lg:left-12 z-20 flex gap-1.5 rounded-full bg-black/30 backdrop-blur-md p-2">
               {items.map((item, index) => (
                 <button
                   type="button"

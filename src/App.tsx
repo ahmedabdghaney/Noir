@@ -1481,18 +1481,18 @@ export default function App() {
 
     return (
       <div className={`noir-tv-auth-screen relative min-h-screen text-white flex items-center justify-center font-sans overflow-hidden select-none ${
-        isTvAuth ? 'bg-[#08080a] p-10' : 'bg-[#111113] p-3.5 sm:p-6 md:p-10'
+        isTvAuth ? 'bg-[#08080a] p-10' : 'bg-[#070707] p-3.5 sm:p-6 md:p-10'
       }`}>
         
         {/* Main Double-Pane Card Layout */}
         <div className={`relative z-10 w-full border border-white/[0.08] shadow-2xl overflow-hidden grid grid-cols-1 animate-pop-in ${
           isTvAuth
             ? 'max-w-xl min-h-0 rounded-[32px] bg-[#101012]'
-            : 'max-w-5xl min-h-[620px] rounded-[24px] bg-[#17171a] lg:grid-cols-12'
+            : 'max-w-5xl min-h-[620px] rounded-[18px] bg-[#0c0c0c] lg:grid-cols-12'
         }`} dir="ltr">
           
           {/* LEFT COLUMN: Tilted & Scrolling Movie Covers Pattern */}
-          <div className={`${isTvAuth ? 'hidden' : 'hidden lg:flex'} lg:col-span-5 relative flex-col justify-between p-12 overflow-hidden bg-[#101012] border-r border-white/[0.08]`}>
+          <div className={`${isTvAuth ? 'hidden' : 'hidden lg:flex'} lg:col-span-5 relative flex-col justify-between p-12 overflow-hidden bg-[#080808] border-r border-white/[0.07]`}>
             {/* Tilted Poster Grid container rotated 30 degrees */}
             <div className="absolute inset-0 z-0 pointer-events-none select-none opacity-25">
               <div className="absolute -inset-10 flex gap-4 rotate-[30deg] scale-125 justify-center">
@@ -1547,7 +1547,7 @@ export default function App() {
 
           {/* RIGHT COLUMN: Stylish Login / Signup Input Form */}
           <div className={`col-span-1 flex flex-col justify-center select-none relative z-10 ${
-            isTvAuth ? 'p-12 bg-[#101012]' : 'lg:col-span-7 p-7 sm:p-12 md:p-16 bg-[#17171a]'
+            isTvAuth ? 'p-12 bg-[#101012]' : 'lg:col-span-7 p-7 sm:p-12 md:p-16 bg-[#0c0c0c]'
           }`} dir="rtl">
             {isTvAuth && (
               <div className="mb-8 flex items-center justify-center gap-3">
@@ -1588,7 +1588,7 @@ export default function App() {
                     value={authName}
                     onChange={(e) => setAuthName(e.target.value)}
                     placeholder="ادخل اسمك الكامل..."
-                    className="w-full bg-[#202024] border border-white/10 hover:border-white/20 focus:border-white/40 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-2xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-white/10"
+                    className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-red-500/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-red-500/20"
                     dir="rtl"
                   />
                 </div>
@@ -1602,7 +1602,7 @@ export default function App() {
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="w-full bg-[#202024] border border-white/10 hover:border-white/20 focus:border-white/40 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-2xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-white/10"
+                  className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-red-500/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-red-500/20"
                   dir="ltr"
                 />
               </div>}
@@ -1619,7 +1619,7 @@ export default function App() {
                       value={authPassword}
                       onChange={(e) => setAuthPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-[#202024] border border-white/10 hover:border-white/20 focus:border-white/40 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-2xl transition-all text-right placeholder-gray-500"
+                      className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-red-500/70 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-500"
                       dir="rtl"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
@@ -1654,7 +1654,7 @@ export default function App() {
                       value={authPasswordConfirm}
                       onChange={(e) => setAuthPasswordConfirm(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-[#202024] border border-white/10 hover:border-white/20 focus:border-white/40 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-2xl transition-all text-right placeholder-gray-500"
+                      className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-red-500/70 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-500"
                       dir="rtl"
                       onKeyDown={(e) => { if (e.key === 'Enter') handleEmailSignUp(); }}
                     />
@@ -1692,7 +1692,7 @@ export default function App() {
                   else if (authView === 'reset') handleResetPassword();
                 }}
                 disabled={isAuthLoading}
-                  className="w-full flex items-center justify-center gap-2 bg-white hover:bg-white/90 disabled:opacity-50 text-black font-bold py-3.5 px-6 rounded-2xl transition-all cursor-pointer text-sm mt-2"
+                  className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl transition-all cursor-pointer text-sm mt-2 shadow-[0_12px_30px_-16px_rgba(220,38,38,.9)]"
               >
                 {isAuthLoading && authMethod === 'email' ? (
                   <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -2103,7 +2103,7 @@ export default function App() {
 
   return (
     <div className={`min-h-screen text-white flex flex-row font-sans relative tracking-normal antialiased ${
-      isTvApp ? 'bg-[#08080a]' : 'bg-[#17171a]'
+      isTvApp ? 'bg-[#08080a]' : 'bg-[#070707]'
     }`}>
       
       {/* Desktop Sidebar — Apple TV style */}
@@ -2443,10 +2443,10 @@ export default function App() {
                         data-tv-card={isTvApp ? '' : undefined}
                         aria-label={`فتح ${item.title}`}
                         style={{ animationDelay: `${idx * 40}ms` }}
-                        className="group/card card-transition cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
+                        className="group/card card-transition card-cinematic cursor-pointer rounded-md pb-3.5 select-none"
                       >
                         {/* Poster Artwork container */}
-                        <div data-tv-card-artwork className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+                        <div data-tv-card-artwork className="relative aspect-[2/3] overflow-hidden rounded-md bg-stone-900 border border-white/[0.055] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.85)]">
                           <WatchlistButton
                             saved
                             onToggle={() => toggleWatchlistItem(item)}
@@ -2625,10 +2625,10 @@ export default function App() {
                           data-search-result-index={idx}
                           aria-label={`فتح ${item.title}`}
                           style={{ animationDelay: `${idx * 40}ms` }}
-                          className="group/card card-transition cursor-pointer rounded-2xl p-2 pb-3.5 select-none"
+                          className="group/card card-transition card-cinematic cursor-pointer rounded-md pb-3.5 select-none"
                         >
                           {/* Poster Artwork container */}
-                          <div data-tv-card-artwork className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/8 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+                          <div data-tv-card-artwork className="relative aspect-[2/3] overflow-hidden rounded-md bg-stone-900 border border-white/[0.055] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.85)]">
                             <WatchlistButton
                               saved={isInWatchlist(item)}
                               onToggle={() => toggleWatchlistItem(item)}

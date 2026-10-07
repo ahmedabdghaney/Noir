@@ -56,12 +56,14 @@ async function tmdbFetch(path: string, params: Record<string, any> = {}): Promis
 }
 
 // Helpers for images
-export const getPosterUrl = (path: string | null) => path ? `${IMG_BASE}/w780${path}` : null;
+// w500 remains crisp for the 112–240px cards (including Retina screens) while
+// avoiding the cost of downloading w780 artwork for every carousel item.
+export const getPosterUrl = (path: string | null) => path ? `${IMG_BASE}/w500${path}` : null;
 export const getLargePosterUrl = (path: string | null) => path ? `${IMG_BASE}/w780${path}` : null;
 export const getBackdropUrl = (path: string | null) => path ? `${IMG_BASE}/w1280${path}` : null;
 export const getOriginalBackdropUrl = (path: string | null) => path ? `${IMG_BASE}/original${path}` : null;
 export const getProfileUrl = (path: string | null) => path ? `${IMG_BASE}/w185${path}` : null;
-export const getStillUrl = (path: string | null) => path ? `${IMG_BASE}/original${path}` : null;
+export const getStillUrl = (path: string | null) => path ? `${IMG_BASE}/w780${path}` : null;
 
 // Normalize utility
 export function normalizeItem(item: any, customType?: 'movie' | 'tv'): MovieOrShow {

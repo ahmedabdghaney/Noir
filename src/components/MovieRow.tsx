@@ -104,15 +104,15 @@ export default function MovieRow({
     return (
       <div className={`mb-10 flex flex-col gap-4 ${flush ? "" : "px-4 sm:px-6 lg:px-8"}`}>
         <div className="space-y-1">
-          <div className="w-48 h-6 bg-stone-800 rounded animate-pulse" />
-          <div className="w-32 h-4 bg-stone-800 rounded animate-pulse" />
+          <div className="w-48 h-6 bg-white/[0.07] rounded animate-pulse" />
+          <div className="w-32 h-4 bg-white/[0.05] rounded animate-pulse" />
         </div>
         <div className="flex gap-4 overflow-hidden">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex-none w-[120px] sm:w-[160px] aspect-[2/3] bg-stone-950 border border-white/8 rounded-xl flex flex-col justify-end gap-3 animate-pulse">
-              <div className="w-full h-full bg-stone-900 rounded-xl shimmer-bg" />
-              <div className="w-24 h-4 bg-stone-900 rounded" />
-              <div className="w-12 h-3 bg-stone-900 rounded" />
+            <div key={i} className="flex-none w-[120px] sm:w-[160px] aspect-[2/3] bg-[#0f0f0f] rounded-md flex flex-col justify-end gap-3 animate-pulse">
+              <div className="w-full h-full bg-[#121212] rounded-md shimmer-bg" />
+              <div className="w-24 h-4 bg-[#151515] rounded" />
+              <div className="w-12 h-3 bg-[#151515] rounded" />
             </div>
           ))}
         </div>
@@ -151,10 +151,10 @@ export default function MovieRow({
       <div className={`relative ${flush ? "" : "px-4 sm:px-6 lg:px-8"}`}>
         {/* Edge fade gradients (only when scrollable in that direction) */}
         {showRightArrow && (
-          <div className="hidden md:block absolute right-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-l from-[#17171a] to-transparent" />
+          <div className="hidden md:block absolute right-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-l from-[#070707] to-transparent" />
         )}
         {showLeftArrow && (
-          <div className="hidden md:block absolute left-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-r from-[#17171a] to-transparent" />
+          <div className="hidden md:block absolute left-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-r from-[#070707] to-transparent" />
         )}
          {/* Navigation Arrows for desktop hover */}
         {showRightArrow && (
@@ -206,10 +206,10 @@ export default function MovieRow({
                 data-tv-card
                 aria-label={`فتح ${item.title}`}
                 style={{ animationDelay: `${idx * 45}ms` }}
-                className="group/card card-pop relative flex-none w-[112px] sm:w-[140px] md:w-[156px] lg:w-[168px] cursor-pointer rounded-2xl p-1.5 pb-3 select-none"
+                className="group/card card-pop card-cinematic relative flex-none w-[112px] sm:w-[140px] md:w-[156px] lg:w-[168px] cursor-pointer rounded-md pb-3 select-none"
               >
                 {/* Poster Artwork container */}
-                <div data-tv-card-artwork className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-stone-900 border border-white/[0.08]">
+                <div data-tv-card-artwork className="relative aspect-[2/3] overflow-hidden rounded-md bg-[#101010] border border-white/[0.055]">
                   {onToggleSave && (
                     <WatchlistButton
                       saved={isSaved?.(item) ?? false}
@@ -235,8 +235,8 @@ export default function MovieRow({
                     <img
                       src={item.poster || item.backdrop || undefined}
                       alt={item.title}
-                      loading={idx < 6 ? 'eager' : 'lazy'}
-                      fetchPriority={idx < 4 ? 'high' : 'auto'}
+                      loading="lazy"
+                      decoding="async"
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover select-none transition-transform duration-300 md:group-hover/card:scale-[1.04]"
                     />

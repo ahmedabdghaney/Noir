@@ -138,7 +138,8 @@ export default function VideoPlayer({
   const [isLoading,       setIsLoading]       = useState(true);
   const [isBuffering,     setIsBuffering]     = useState(false);
   const [customMp4Failed, setCustomMp4Failed] = useState(false);
-  // Always true now: the web embed is the only player.
+  // Vidy opens immediately. Native resolution remains available as a recovery
+  // path in this component, but it never delays the first player frame.
   const [useVidApi,       setUseVidApi]       = useState(true);
   // 0 = VidAPI (player.aswad-iq.com, Premium) · 1 = Vidy (vidy.st)
   // 1 = Vidy (default, via proxy) · 0 = VidAPI fallback
@@ -194,11 +195,9 @@ export default function VideoPlayer({
   const [seekHold, setSeekHold] = useState<'fwd' | 'back' | null>(null);
   // تسريع 2x مؤقت بالضغط المستمر على Space
   const [speedBoost, setSpeedBoost] = useState(false);
-  /* ── Noir native HLS (api.aswad-iq.com) ──
-     المشغّل الأساسي الآن هو HLS native يُسحب من خادم Noir مع مسار الترجمة
-     العربية المدموج بالـ master.m3u8. مصادر Vidy/VidAPI القديمة (CloudFront
-     وقيم SERVERS) باقية بالكود لكنها مُطفأة — لا تُستخدم إلا لو أعدناها يدوياً.
-     Vidcore ثم Vidy (الجدد) يبقون احتياط فقط عند عدم توفر أي HLS native. */
+  /* ── Noir native HLS recovery path ──
+     Vidy is the primary player. These sources are retained for manual recovery
+     and future provider health checks without blocking player startup. */
   // قائمة مصادر native مرتّبة (HLS أولاً) نجرّبها بالتسلسل، مع مؤشر المصدر الحالي.
   const [sources,       setSources]       = useState<PlayableSource[]>([]);
   const [sourceIndex,   setSourceIndex]   = useState(0);
@@ -392,8 +391,9 @@ export default function VideoPlayer({
     clearTimeout(mediaStartupTimerRef.current);
     mediaRetryCountRef.current = 0;
     setIsLoading(true); setCustomMp4Failed(false);
-    // الأساسي الآن HLS native. نبدأ بدون embed ونصفّر حالة المصدر.
-    setUseVidApi(false);
+    // Start with Vidy immediately; provider discovery must not block playback.
+    setUseVidApi(true);
+    setServerIndex(1);
     setUseEmbed(false);
     setEmbedIndex(0);
     setSources([]);
@@ -455,10 +455,8 @@ export default function VideoPlayer({
     return () => controller.abort();
   }, [type, id, season, episode, playMode]);
 
-  useEffect(() => {
-    const cleanup = runResolve();
-    return cleanup;
-  }, [runResolve]);
+  // Do not resolve native providers on initial open. Vidy is intentionally the
+  // first request so the viewer sees the player without API discovery latency.
 
   /* ينتقل للمصدر native التالي عند فشل الحالي؛ وإذا خلصت المصادر ينتقل لـ Vidy
      (embed). منطق "جرّب كل المصادر، وإذا فشل الكل انتقل لـ Vidy". */

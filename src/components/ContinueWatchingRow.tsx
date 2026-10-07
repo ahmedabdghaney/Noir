@@ -138,7 +138,7 @@ export default function ContinueWatchingRow({
                 aria-label={`متابعة مشاهدة ${item.title}`}
                 className="group/cw flex-none w-[240px] sm:w-[300px] md:w-[330px] cursor-pointer"
               >
-                <div className="relative aspect-video rounded-2xl overflow-hidden bg-stone-900 border border-white/[0.08]">
+                <div className="relative aspect-video rounded-md overflow-hidden bg-[#101010] border border-white/[0.055]">
                   {img ? (
                     <img
                       src={img}

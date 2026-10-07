@@ -7,20 +7,21 @@
 }
 
 :root {
-  --noir-bg: #111113;
-  --noir-surface: #1b1b1f;
-  --noir-surface-strong: #232328;
-  --noir-border: rgba(255, 255, 255, 0.09);
-  --noir-text: #f5f5f7;
-  --noir-muted: #a1a1aa;
-  --noir-accent: #dc2626;
-  --noir-radius-sm: 12px;
-  --noir-radius-md: 16px;
-  --noir-radius-lg: 24px;
+  --noir-bg: #070707;
+  --noir-surface: #111111;
+  --noir-surface-strong: #181818;
+  --noir-border: rgba(255, 255, 255, 0.075);
+  --noir-text: #f7f7f7;
+  --noir-muted: #a3a3a3;
+  --noir-accent: #e50914;
+  --noir-radius-sm: 8px;
+  --noir-radius-md: 12px;
+  --noir-radius-lg: 18px;
 }
 
 html {
   background: var(--noir-bg);
+  color-scheme: dark;
 }
 
 body {
@@ -34,11 +35,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   letter-spacing: -0.01em;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* خلفية سينمائية حيّة — طبقات gradient ملوّنة تتحرك ببطء شديد لإحساس عمق.
-   ثلاث بقع لونية (أحمر نوار خافت + أزرق بارد + بنفسجي) فوق قاعدة شبه سوداء. */
+/* Restrained cinematic base so artwork remains the visual focus. */
 body::before {
   content: "";
   position: fixed;
@@ -46,23 +46,9 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(60% 50% at 85% 8%, rgba(227, 36, 26, 0.10), transparent 60%),
-    radial-gradient(55% 45% at 12% 12%, rgba(60, 84, 140, 0.14), transparent 62%),
-    radial-gradient(70% 55% at 50% 100%, rgba(90, 60, 130, 0.12), transparent 65%),
-    linear-gradient(180deg, #141416 0%, #111113 45%, #0d0d0f 100%);
+    radial-gradient(70% 42% at 82% 0%, rgba(229, 9, 20, 0.07), transparent 68%),
+    linear-gradient(180deg, #0a0a0a 0%, #070707 48%, #050505 100%);
   background-attachment: fixed;
-  animation: ambientDrift 26s ease-in-out infinite alternate;
-}
-
-/* حركة خفيفة جداً للبقع اللونية — تعطي حياة بدون تشتيت */
-@keyframes ambientDrift {
-  0%   { background-position: 0% 0%, 0% 0%, 0% 0%, 0% 0%; filter: saturate(1); }
-  50%  { background-position: 3% 2%, -2% 3%, 2% -2%, 0% 0%; filter: saturate(1.15); }
-  100% { background-position: -2% 3%, 3% -2%, -3% 2%, 0% 0%; filter: saturate(1); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body::before { animation: none; }
 }
 
 #root {
@@ -153,17 +139,19 @@ html.noir-tv-layout :where(
 /* Glass surface — the signature Apple-TV material.
    Softer, more translucent, very subtle hairline border. */
 .glass {
-  background: rgba(35, 35, 40, 0.82);
+  background: rgba(18, 18, 18, 0.86);
   border: 1px solid var(--noir-border);
+  backdrop-filter: blur(18px) saturate(120%);
 }
 .glass-strong {
-  background: rgba(27, 27, 31, 0.96);
+  background: rgba(13, 13, 13, 0.96);
   border: 1px solid var(--noir-border);
+  backdrop-filter: blur(22px) saturate(120%);
 }
 /* Translucent floating panel — more see-through, for search/modals.
    Lets the blurred page show through the panel itself (true Apple glass). */
 .glass-panel {
-  background: rgba(24, 24, 28, 0.97);
+  background: rgba(12, 12, 12, 0.97);
   border: 1px solid var(--noir-border);
 }
 /* Subtle hover-able glass for interactive chips/buttons */
@@ -197,6 +185,11 @@ html.noir-tv-layout :where(
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.16);
 }
+
+/* Normalize old stone utility surfaces across legacy screens. */
+body:not(.light-theme) .bg-stone-950 { background-color: #090909; }
+body:not(.light-theme) .bg-stone-900 { background-color: #131313; }
+body:not(.light-theme) .bg-stone-800 { background-color: #202020; }
 
 /* Day Mode / Light Mode styling overrides */
 .light-theme {
@@ -419,20 +412,20 @@ button, a {
 
 /* دخول صفّ كامل (قسم) بانزلاق ناعم لأعلى */
 @keyframes rowRise {
-  from { opacity: 0; transform: translateY(28px); }
+  from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .row-rise {
-  animation: rowRise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: rowRise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* دخول متسلسل للبطاقات داخل الصف (كل بطاقة تتأخر شوية عن اللي قبلها) */
 @keyframes cardPop {
-  from { opacity: 0; transform: translateY(20px) scale(0.96); }
+  from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 .card-pop {
-  animation: cardPop 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: cardPop 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 /* تأخير متدرّج — يعطي إحساس التتابع (stagger) */
 .card-pop:nth-child(1)  { animation-delay: 0.02s; }
@@ -453,11 +446,10 @@ button, a {
   will-change: transform;
 }
 .card-cinematic:hover {
-  transform: translateY(-6px) scale(1.035);
-  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.7),
-              0 0 0 1px rgba(255, 255, 255, 0.08),
-              0 8px 30px -8px rgba(227, 36, 26, 0.25);
-  filter: brightness(1.08);
+  transform: translateY(-4px) scale(1.025);
+  box-shadow: 0 18px 42px -16px rgba(0, 0, 0, 0.95),
+              0 0 0 1px rgba(255, 255, 255, 0.1);
+  filter: brightness(1.05);
   z-index: 5;
 }
 
@@ -504,26 +496,27 @@ button, a {
 }
 
 .noir-button-primary {
-  color: #09090b;
-  background: #f5f5f7;
+  color: #fff;
+  background: var(--noir-accent);
   padding: 0.7rem 1.35rem;
+  box-shadow: 0 10px 30px -14px rgba(229, 9, 20, 0.9);
 }
 
 .noir-button-primary:hover {
-  background: #fff;
-  transform: scale(1.025);
+  background: #f6121d;
+  transform: translateY(-1px);
 }
 
 .noir-button-secondary {
   color: #f5f5f7;
-  background: rgba(255, 255, 255, 0.09);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(36, 36, 36, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   padding: 0.7rem 1.15rem;
   backdrop-filter: blur(18px);
 }
 
 .noir-button-secondary:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(54, 54, 54, 0.92);
 }
 
 .noir-icon-button {

@@ -57,20 +57,20 @@ export default function Header({
       aria-label="الشريط العلوي"
         className={`fixed top-0 left-0 right-0 z-[200] h-14 flex items-center transition-all duration-300 ${
           isScrolled
-            ?'backdrop-blur-2xl bg-[#0b0b0d]/70 border-b border-white/8 saturate-150'
-            :'backdrop-blur-xl bg-gradient-to-b from-black/50 to-transparent border-b border-transparent'
+            ?'backdrop-blur-2xl bg-[#070707]/90 border-b border-white/[0.07] saturate-150 shadow-[0_12px_35px_-28px_black]'
+            :'backdrop-blur-md bg-gradient-to-b from-black/75 to-transparent border-b border-transparent'
         }`}
       >
         <div className="w-full px-4 sm:px-6 flex items-center justify-between">
           <button
               type="button"
               onClick={goHome}
-              className="flex min-h-11 items-center gap-2 cursor-pointer select-none text-white font-bold text-lg tracking-tight shrink-0"
+              className="flex min-h-11 items-center gap-2 cursor-pointer select-none text-white font-extrabold text-lg tracking-tight shrink-0"
               aria-label="العودة إلى الرئيسية"
             >
               <LogoIcon className="w-5 h-5 text-red-500 shrink-0" />
               <span>نوار</span>
-              <span className="text-gray-500 font-normal text-[10px] mr-1 bg-white/5 px-1.5 py-0.5 rounded">سينما</span>
+              <span className="text-gray-500 font-medium text-[9px] mr-1 uppercase tracking-[0.16em]">Cinema</span>
           </button>
 
           <div className="flex items-center justify-end text-left relative">
@@ -101,7 +101,7 @@ export default function Header({
                 </button>
 
                 {isProfileDropdownOpen && (
-                  <div className="absolute left-0 mt-2.5 w-52 glass-strong rounded-2xl shadow-2xl py-2 z-[250] text-right animate-pop-in">
+                  <div className="absolute left-0 mt-2.5 w-52 glass-strong rounded-xl shadow-2xl py-2 z-[250] text-right animate-pop-in">
                     <div className="px-4 py-2 border-b border-white/5">
                       <p className="text-[11px] text-gray-400 font-medium mb-1">الحساب الحالي</p>
                       <p className="text-sm text-white font-bold truncate leading-tight">{user.name}</p>
