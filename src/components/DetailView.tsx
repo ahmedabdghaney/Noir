@@ -1133,7 +1133,7 @@ export default function DetailView({
 
               {!isTvApp && (
               <button
-                onClick={() => onOpenShare(window.location.href)}
+                onClick={() => onOpenShare(`${window.location.origin}/${type}/${id}`)}
                 className="noir-icon-button shrink-0"
                 title="مشاركة الرابط الحالي"
                 aria-label="مشاركة الرابط الحالي"

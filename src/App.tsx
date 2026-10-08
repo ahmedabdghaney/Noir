@@ -877,7 +877,10 @@ export default function App() {
   // Setup Dynamic URL Hash routing system
   useEffect(() => {
     const handleHashRouting = () => {
-      const hash = window.location.hash;
+      const hash = window.location.hash || (() => {
+        const match = window.location.pathname.match(/^\/(movie|tv)\/(\d+)\/?$/);
+        return match ? `#${match[1]}/${match[2]}` : '';
+      })();
       if (!hash || hash ==='#home') {
         setActiveView('home');
         setSelectedTitle(null);

@@ -1,5 +1,13 @@
 {
+  "rewrites": [
+    { "source": "/movie/:id", "destination": "/index.html" },
+    { "source": "/tv/:id", "destination": "/index.html" }
+  ],
   "headers": [
+    {
+      "source": "/.well-known/apple-app-site-association",
+      "headers": [{ "key": "Content-Type", "value": "application/json" }]
+    },
     {
       "source": "/sw.js",
       "headers": [

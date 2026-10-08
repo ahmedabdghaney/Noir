@@ -1984,7 +1984,7 @@ export default function VideoPlayer({
               }}
             />
 
-            {!isPausedByHost && (
+            {isDedicatedAndroidPlayer && !isPausedByHost && (
               <div className="absolute top-3 right-3 z-40" dir="ltr">
                 <button
                   type="button"
@@ -2050,7 +2050,7 @@ export default function VideoPlayer({
                     التريلر
                   </button>
                 )}
-                {!isTvAndroidApp && (
+                {isDedicatedAndroidPlayer && !isTvAndroidApp && (
                   <Btn onClick={closePlayer} label="إغلاق المشغل">
                     <X className="w-5 h-5" />
                   </Btn>

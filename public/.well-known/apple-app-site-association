@@ -1,0 +1,13 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["49C29AQYA8.com.ahmedaswad.noir.testing"],
+        "components": [
+          { "/": "/movie/*" },
+          { "/": "/tv/*" }
+        ]
+      }
+    ]
+  }
+}
