@@ -878,8 +878,10 @@ export default function App() {
   useEffect(() => {
     const handleHashRouting = () => {
       const hash = window.location.hash || (() => {
-        const match = window.location.pathname.match(/^\/(movie|tv)\/(\d+)\/?$/);
-        return match ? `#${match[1]}/${match[2]}` : '';
+        const episodeMatch = window.location.pathname.match(/^\/tv\/(\d+)\/s(\d+)\/e(\d+)\/?$/);
+        if (episodeMatch) return `#tv/${episodeMatch[1]}/s${episodeMatch[2]}/e${episodeMatch[3]}`;
+        const titleMatch = window.location.pathname.match(/^\/(movie|tv)\/(\d+)\/?$/);
+        return titleMatch ? `#${titleMatch[1]}/${titleMatch[2]}` : '';
       })();
       if (!hash || hash ==='#home') {
         setActiveView('home');

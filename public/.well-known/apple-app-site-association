@@ -2,7 +2,7 @@
   "applinks": {
     "details": [
       {
-        "appIDs": ["49C29AQYA8.com.ahmedaswad.noir.testing"],
+        "appIDs": ["Y453NDJG6J.com.aswadiq.noir"],
         "components": [
           { "/": "/movie/*" },
           { "/": "/tv/*" }
