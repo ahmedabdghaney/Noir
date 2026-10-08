@@ -231,6 +231,13 @@ export default function VideoPlayer({
   // isNative = نشغّل بطبقة Noir المخصصة (عنصر <video> + ترجمة activeCues).
   // صحيح لما يتوفر مصدر native ولم نتحوّل للـ embed الاحتياطي.
   const isNative = playMode === 'movie' && !!hlsUrl && !useEmbed && !useVidApi;
+  // Vidy داخل iframe من نطاق مختلف، لذلك الموقع لا يستطيع تعديل ترجمته مباشرة.
+  // على iPhone نمنع زر Vidy من فتح مشغل Apple الأصلي (الذي يشوّه الترجمة)،
+  // ونستخدم ملء شاشة CSS يبقي الفيديو والترجمة داخل مشغل Vidy نفسه.
+  const isIPhoneBrowser =
+    typeof navigator !== 'undefined' && /iPhone|iPod/i.test(navigator.userAgent);
+  const useMobileVidyFullscreen =
+    isIPhoneBrowser && playMode === 'movie' && useVidApi && serverIndex === 1 && !useEmbed;
 
   const activateAutomaticFallback = useCallback((result?: ResolvedPlayback | null) => {
     vidyFallbackRequestedRef.current = true;
@@ -1511,6 +1518,28 @@ export default function VideoPlayer({
     }
   };
 
+  const toggleMobileVidyFullscreen = () => {
+    // لا نستخدم Fullscreen API هنا عمداً: على iPhone يحوّل Vidy إلى مشغل
+    // Apple الأصلي ويعيد مشكلة تشويه الترجمة. الوضع الثابت يملأ الـ viewport
+    // مع إبقاء iframe والترجمة كما يرسمهما Vidy.
+    setIsFullscreen((current) => !current);
+  };
+
+  useEffect(() => {
+    if (!useMobileVidyFullscreen || !isFullscreen) return;
+
+    const root = document.documentElement;
+    const previousRootOverflow = root.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    root.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      root.style.overflow = previousRootOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+    };
+  }, [isFullscreen, useMobileVidyFullscreen]);
+
   const getTapZone = (clientX: number, target: HTMLElement) => {
     const rect = target.getBoundingClientRect();
     const x = clientX - rect.left;
@@ -1968,9 +1997,13 @@ export default function VideoPlayer({
                     ? (embedFallback[Math.min(embedIndex, embedFallback.length - 1)]?.url || 'about:blank')
                     : getEmbedUrl()
               }
-              allow="encrypted-media; autoplay *; fullscreen *; picture-in-picture *"
+              allow={
+                useMobileVidyFullscreen
+                  ? "encrypted-media; autoplay *; picture-in-picture *; fullscreen 'none'"
+                  : 'encrypted-media; autoplay *; fullscreen *; picture-in-picture *'
+              }
               referrerPolicy="strict-origin-when-cross-origin"
-              allowFullScreen
+              allowFullScreen={!useMobileVidyFullscreen}
               className="h-full w-full border-0"
               onLoad={() => {
                 setRecoveryNotice('');
@@ -1983,6 +2016,19 @@ export default function VideoPlayer({
                 }
               }}
             />
+
+            {useMobileVidyFullscreen && (
+              <button
+                type="button"
+                onClick={toggleMobileVidyFullscreen}
+                aria-label={isFullscreen ? 'الخروج من ملء الشاشة' : 'ملء الشاشة'}
+                className="absolute bottom-[max(.75rem,env(safe-area-inset-bottom))] right-[max(.75rem,env(safe-area-inset-right))] z-50 flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-black/70 text-white backdrop-blur-md active:scale-95 transition-transform"
+              >
+                {isFullscreen
+                  ? <Minimize2 className="h-5 w-5" />
+                  : <Maximize2 className="h-5 w-5" />}
+              </button>
+            )}
 
             {isDedicatedAndroidPlayer && !isPausedByHost && (
               <div className="absolute top-3 right-3 z-40" dir="ltr">
