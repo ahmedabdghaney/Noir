@@ -936,7 +936,7 @@ export default function DetailView({
     : [];
 
   return (
-    <div className="w-full text-right detail-enter">
+    <div className="noir-web-detail w-full text-right detail-enter">
 
       {/* Immersive backdrop background section */}
       <div className={`noir-detail-backdrop-stage relative w-full select-none ${isTvApp ? 'h-[35vh] md:h-[45vh] mb-4 overflow-visible' : 'h-[72svh] min-h-[560px] max-h-[840px] overflow-hidden'}`}>

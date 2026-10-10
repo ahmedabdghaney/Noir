@@ -13,9 +13,9 @@ interface CategoryRowProps {
 
 export default function CategoryRow({ title = 'التصنيفات', onSelect }: CategoryRowProps) {
   return (
-    <section className="relative mb-9 md:mb-12" aria-labelledby="category-row-title">
-      <div className="mb-3.5 px-4 sm:px-6 lg:px-8 xl:px-10">
-        <h2 id="category-row-title" className="text-lg font-bold tracking-[-0.02em] text-white md:text-xl">
+    <section className="noir-catalog-row noir-genre-row relative" aria-labelledby="category-row-title">
+      <div className="noir-catalog-heading px-4 sm:px-6 lg:px-8 xl:px-10">
+        <h2 id="category-row-title" className="noir-catalog-title text-white">
           {title}
         </h2>
       </div>
@@ -29,7 +29,7 @@ export default function CategoryRow({ title = 'التصنيفات', onSelect }: 
             key={category.key}
             type="button"
             onClick={() => onSelect(category.key)}
-            className="group flex h-[74px] w-[148px] flex-none items-center justify-between overflow-hidden rounded-[16px] border border-white/[0.07] bg-[#111217] px-4 text-right transition-all hover:-translate-y-0.5 hover:border-white/[0.13] hover:bg-[#16171d] sm:w-[164px]"
+            className="noir-genre-card group flex h-[86px] w-[178px] flex-none items-center justify-between overflow-hidden px-4 text-right sm:w-[198px]"
             aria-label={`فتح تصنيف ${category.title}`}
           >
             <span className="flex items-center gap-2.5">

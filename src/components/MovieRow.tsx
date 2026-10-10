@@ -102,7 +102,7 @@ export default function MovieRow({
   if (!items.length) {
     // Skeletons
     return (
-      <div className={`mb-10 flex flex-col gap-4 ${flush ? "" : "px-4 sm:px-6 lg:px-8 xl:px-10"}`}>
+      <div className={`noir-catalog-row mb-10 flex flex-col gap-4 ${flush ? "" : "px-4 sm:px-6 lg:px-8 xl:px-10"}`}>
         <div className="space-y-1">
           <div className="w-48 h-6 bg-white/[0.07] rounded animate-pulse" />
           <div className="w-32 h-4 bg-white/[0.05] rounded animate-pulse" />
@@ -120,23 +120,23 @@ export default function MovieRow({
   }
 
   return (
-    <section className="relative mb-9 flex flex-col md:mb-12 group/row" aria-labelledby={`row-${title.replace(/\s+/g, '-')}`}>
+    <section className="noir-catalog-row relative group/row" aria-labelledby={`row-${title.replace(/\s+/g, '-')}`}>
       {/* Category Header */}
-      <div className={`mb-3.5 flex flex-col text-right ${flush ? "" : "px-4 sm:px-6 lg:px-8 xl:px-10"}`}>
+      <div className={`noir-catalog-heading flex flex-col text-right ${flush ? "" : "px-4 sm:px-6 lg:px-8 xl:px-10"}`}>
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex flex-col text-right">
             {viewAllHash ? (
               <a
                 href={viewAllHash}
                 id={`row-${title.replace(/\s+/g, '-')}`}
-                className="group/title flex cursor-pointer items-center gap-1.5 text-lg font-bold text-white transition-colors hover:text-white/75 md:text-xl"
+                className="group/title noir-catalog-title flex cursor-pointer items-center gap-1.5 text-white"
               >
                 <span>{title}</span>
                 <ChevronLeft className="w-5 h-5 text-white/40 group-hover/title:text-white group-hover/title:-translate-x-0.5 transition-all" />
               </a>
             ) : (
               <>
-                <h2 id={`row-${title.replace(/\s+/g, '-')}`} className="flex items-center text-lg font-bold tracking-[-0.02em] text-white md:text-xl">
+                <h2 id={`row-${title.replace(/\s+/g, '-')}`} className="noir-catalog-title flex items-center text-white">
                   <span>{title}</span>
                 </h2>
                 {subtitle && <p className="mt-1 text-xs text-white/38 sm:text-[13px]">{subtitle}</p>}
@@ -182,7 +182,7 @@ export default function MovieRow({
           onScroll={handleRowScroll}
           data-tv-focus-row
           dir="rtl"
-          className="noir-movie-row-track flex flex-row gap-3.5 overflow-x-auto no-scrollbar py-2 scroll-smooth select-none md:gap-4"
+          className="noir-movie-row-track flex flex-row overflow-x-auto no-scrollbar select-none"
         >
           {items.map((item, idx) => {
             const saved = isSaved?.(item) ?? false;
@@ -205,9 +205,9 @@ export default function MovieRow({
                 data-tv-card
                 aria-label={`فتح ${item.title}`}
                 style={{ animationDelay: `${idx * 45}ms` }}
-                className="group/card card-pop card-cinematic relative flex-none w-[220px] cursor-pointer select-none sm:w-[260px] md:w-[300px] xl:w-[330px]"
+                className="noir-catalog-card group/card card-pop relative flex-none cursor-pointer select-none"
               >
-                <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-[16px] border border-white/[0.065] bg-[#101116] md:rounded-[18px]">
+                <div data-tv-card-artwork className="noir-catalog-artwork relative aspect-video overflow-hidden bg-[#0d0f14]">
                   {onToggleSave && (
                     <WatchlistButton
                       saved={saved}
@@ -236,7 +236,7 @@ export default function MovieRow({
                       loading="lazy"
                       decoding="async"
                       referrerPolicy="no-referrer"
-                      className="h-full w-full select-none object-cover"
+                      className="h-full w-full select-none object-cover transition-transform duration-500"
                     />
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center p-3 text-stone-600 bg-stone-950">
@@ -245,23 +245,19 @@ export default function MovieRow({
                       </span>
                     </div>
                   )}
-                  {ranked && (
-                    <span className="pointer-events-none absolute right-2.5 top-2.5 z-20 rounded-[10px] border border-white/10 bg-black/45 px-2 py-1 text-[11px] font-bold text-white/85 backdrop-blur-md">
-                      #{idx + 1}
-                    </span>
-                  )}
+                  {ranked && <span className="noir-rank-number">{String(idx + 1).padStart(2, '0')}</span>}
                   {/* Watch progression indicator */}
                   {progress > 0 && (
                     <div className="absolute bottom-0 left-3 right-3 h-0.5 overflow-hidden rounded-full bg-white/20">
                       <div
-                        className="h-full bg-[#009FA5] transition-all duration-300"
+                        className="h-full bg-[#ed1c24] transition-all duration-300"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
                   )}
                 </div>
 
-                <div className="px-1 pt-3 text-right">
+                <div className="noir-catalog-meta text-right">
                   <p className="truncate text-sm font-semibold text-white/92">{item.title}</p>
                   <p className="mt-1 text-[11px] font-medium text-white/38">
                     {item.year || '—'} · {item.type === 'movie' ? 'فيلم' : 'مسلسل'}

@@ -52,7 +52,7 @@ function GridCard({
       tabIndex={0}
       data-tv-card
       aria-label={`فتح ${item.title}`}
-      className="group/card card-transition card-cinematic cursor-pointer select-none"
+      className="noir-browse-grid-card group/card card-transition cursor-pointer select-none"
     >
       <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-[18px] bg-black border border-white/[0.06]">
         {onToggleSave && (
@@ -151,9 +151,9 @@ export default function StudioPage({
   }, [page, totalPages, loading, sortBy, loadAll]);
 
   return (
-    <div className="min-h-screen animate-fade-in w-full">
+    <div className="noir-browse-page min-h-screen animate-fade-in w-full">
       {/* Full-width colored header (لون هوية الشركة) */}
-      <div className="relative w-full" style={{ backgroundColor: studio.color }}>
+      <div className="noir-browse-banner relative w-full" style={{ backgroundColor: studio.color }}>
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
         <div dir="rtl" className="relative w-full px-4 sm:px-6 lg:px-8 pt-8 pb-10 sm:pt-10 sm:pb-14">
           {!isTvApp && <button onClick={onBack} className="flex items-center gap-2 text-white/90 hover:text-white text-sm font-semibold mb-5 cursor-pointer transition-colors">

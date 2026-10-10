@@ -89,9 +89,9 @@ export default function ContinueWatchingRow({
   if (!items || items.length === 0) return null;
 
   return (
-    <section className="relative mb-9 flex flex-col md:mb-12 group/row" aria-labelledby="continue-watching-title">
-      <div className="mb-3.5 px-4 sm:px-6 lg:px-8 xl:px-10">
-        <h2 id="continue-watching-title" className="text-lg font-bold tracking-[-0.02em] text-white md:text-xl">{title}</h2>
+    <section className="noir-catalog-row noir-continue-row relative flex flex-col group/row" aria-labelledby="continue-watching-title">
+      <div className="noir-catalog-heading px-4 sm:px-6 lg:px-8 xl:px-10">
+        <h2 id="continue-watching-title" className="noir-catalog-title text-white">{title}</h2>
       </div>
 
       <div className="relative px-4 sm:px-6 lg:px-8 xl:px-10">
@@ -117,7 +117,7 @@ export default function ContinueWatchingRow({
         <div
           ref={rowRef}
           onScroll={handleRowScroll}
-          className="flex flex-row gap-3.5 overflow-x-auto no-scrollbar py-2 scroll-smooth select-none md:gap-4"
+          className="noir-movie-row-track flex flex-row overflow-x-auto no-scrollbar select-none"
         >
           {items.map((item) => {
             const progress = Math.max(0, Math.min(100, Number(item.progress || 0)));
@@ -137,9 +137,9 @@ export default function ContinueWatchingRow({
                 role="button"
                 tabIndex={0}
                 aria-label={`متابعة مشاهدة ${item.title}`}
-                className="group/cw card-cinematic w-[230px] flex-none cursor-pointer sm:w-[270px] md:w-[310px] xl:w-[340px]"
+                className="noir-catalog-card noir-continue-card group/cw flex-none cursor-pointer"
               >
-                <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-[16px] border border-white/[0.065] bg-[#101116] md:rounded-[18px]">
+                <div data-tv-card-artwork className="noir-catalog-artwork relative aspect-video overflow-hidden bg-[#101116]">
                   {img ? (
                     <img
                       src={img}
@@ -199,13 +199,13 @@ export default function ContinueWatchingRow({
                   <div className="absolute inset-x-3 bottom-0">
                     <div className="h-0.5 w-full overflow-hidden rounded-full bg-white/20">
                       <div
-                        className="h-full bg-[#00BDC2] rounded-full"
+                        className="h-full bg-[#ed1c24] rounded-full"
                         style={{ width: `${Math.max(progress, 3)}%` }}
                       />
                     </div>
                   </div>
                 </div>
-                <div className="px-1 pt-3 text-right">
+                <div className="noir-catalog-meta text-right">
                   <h3 className="truncate text-sm font-semibold text-white/92">{item.title || (item as any).name || 'بدون عنوان'}</h3>
                   <p className="mt-1 text-[11px] font-medium text-white/38">
                     {item.type === 'tv' && item.season > 0 && item.episode > 0

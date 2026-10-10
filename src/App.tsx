@@ -2050,7 +2050,7 @@ export default function App() {
 
   return (
     <div className={`min-h-screen text-white flex flex-row font-sans relative tracking-normal antialiased ${
-      isTvApp ? 'bg-[#08080a]' : 'bg-[#08090c]'
+      isTvApp ? 'bg-[#08080a]' : 'bg-[#05070b]'
     }`}>
 
       {/* Desktop cinematic top navigation */}
@@ -2088,6 +2088,7 @@ export default function App() {
           user={user}
           onLogout={handleLogout}
           onOpenProfile={() => setIsProfileModalOpen(true)}
+          onOpenSearch={() => setIsSearchOverlayOpen(true)}
         />
       </div>
 
@@ -2095,7 +2096,7 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0">
 
       {/* Main Orchestration Views Switcher */}
-      <main className={`flex-grow selection:bg-[#00BDC2]/30 ${isTvApp ? ((activeView === 'home' || activeView === 'detail') ? 'pb-0 pt-0' : 'pb-0 pt-24') : `pt-14 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 ${(activeView === 'home' || activeView === 'detail') ? 'lg:pt-0' : 'lg:pt-[68px]'}`}`}>
+      <main className={`flex-grow selection:bg-red-500/30 ${isTvApp ? ((activeView === 'home' || activeView === 'detail') ? 'pb-0 pt-0' : 'pb-0 pt-24') : `pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 ${(activeView === 'home' || activeView === 'detail') ? 'pt-0' : 'pt-14 lg:pt-[68px]'}`}`}>
         {activeView ==='home' && (
           isTvApp ? (
             <TvHome
@@ -2123,6 +2124,19 @@ export default function App() {
 
             {/* Custom Horizontal Cinema Rows */}
             <div className="pb-8 md:pb-14">
+              {topTenItems.length > 0 && (
+                <MovieRow
+                  title="أفضل 10 على نوار"
+                  subtitle="العناوين الأكثر مشاهدة الآن"
+                  items={topTenItems}
+                  ranked
+                  onItemClick={handleTitleClick}
+                  isSaved={isInWatchlist}
+                  onToggleSave={toggleWatchlistItem}
+                  compactSaveButton
+                />
+              )}
+
               {continueWatching.length > 0 && (
                 <div id="continue-watching-section" className="scroll-mt-20">
                   <ContinueWatchingRow
@@ -2136,18 +2150,6 @@ export default function App() {
                     onRestart={restartContinueWatchingItem}
                   />
                 </div>
-              )}
-
-              {topTenItems.length > 0 && (
-                <MovieRow
-                  title="أفضل 10 اليوم"
-                  items={topTenItems}
-                  ranked
-                  onItemClick={handleTitleClick}
-                  isSaved={isInWatchlist}
-                  onToggleSave={toggleWatchlistItem}
-                  compactSaveButton
-                />
               )}
 
               {/* حصري نوار — العناصر المضافة يدوياً بلا قسم مخصص (يظهر أول دائماً) */}
