@@ -146,10 +146,10 @@ export default function MovieRow({
       <div className={`relative ${flush ? "" : "px-4 sm:px-6 lg:px-8 xl:px-10"}`}>
         {/* Edge fade gradients (only when scrollable in that direction) */}
         {showLeftArrow && (
-          <div className="hidden md:block absolute left-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-r from-[#08090c] to-transparent" />
+          <div className="hidden md:block absolute left-0 top-0 bottom-3 w-28 z-30 pointer-events-none bg-gradient-to-r from-[#05070b] via-[#05070b]/70 to-transparent" />
         )}
         {showRightArrow && (
-          <div className="hidden md:block absolute right-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-l from-[#08090c] to-transparent" />
+          <div className="hidden md:block absolute right-0 top-0 bottom-3 w-28 z-30 pointer-events-none bg-gradient-to-l from-[#05070b] via-[#05070b]/70 to-transparent" />
         )}
         {/* Navigation Arrows for desktop hover */}
         {showLeftArrow && (

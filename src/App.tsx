@@ -2138,7 +2138,7 @@ export default function App() {
             />
 
             {/* Custom Horizontal Cinema Rows */}
-            <div className="pb-8 md:pb-14">
+            <div className="pt-8 md:pt-12 pb-8 md:pb-14">
               {topTenItems.length > 0 && (
                 <MovieRow
                   title="TOP 10 on Noir"
@@ -2379,21 +2379,10 @@ export default function App() {
           <div key={searchMode} className="noir-discovery-page noir-section-swipe-in">
             {/* Movy-style hero with a drifting poster collage */}
             <div className="noir-movies-hero">
-              <div className="noir-movies-hero-collage" aria-hidden="true">
-                {[0, 1, 2].map((row) => {
-                  const posters = (searchResults.map((r) => r.poster).filter(Boolean) as string[]).slice(0, 14);
-                  const set = posters.length ? posters : (heroItems.map((h) => h.poster).filter(Boolean) as string[]).slice(0, 14);
-                  const rotated = set.slice(row * 4).concat(set.slice(0, row * 4));
-                  const loop = [...rotated, ...rotated];
-                  return (
-                    <div className="noir-movies-hero-row" key={row}>
-                      {loop.map((src, i) => (
-                        <img key={i} src={src} alt="" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
+              <div
+                className="noir-movies-hero-bg"
+                style={{ backgroundImage: (searchResults[0]?.backdrop || heroItems[0]?.backdrop) ? `url(${searchResults[0]?.backdrop || heroItems[0]?.backdrop})` : undefined }}
+              />
               <div className="noir-movies-hero-scrim" />
               <div className="noir-movies-hero-copy">
                 <h1>{searchMode === 'tv' ? 'Shows' : 'Movies'}</h1>
@@ -2401,7 +2390,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="mx-auto max-w-[1800px] px-4 sm:px-6 lg:px-8 xl:px-10 pb-16">
+            <div className="pb-16">
               {!isTvApp && !fQuery.trim() && searchResults.length > 0 && (
                 <MovieRow
                   title={searchMode === 'movie' ? 'Trending Movies' : 'Trending Shows'}
@@ -2532,7 +2521,7 @@ export default function App() {
                         onClick={() => triggerSearchQuery(true)}
                         disabled={isLoadingMore}
                         data-tv-load-more={isTvApp ? '' : undefined}
-                        className="flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-gray-300 hover:text-white border border-white/5 hover:border-white/10 px-8 py-3 rounded-full text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                        className="noir-glass-btn flex items-center gap-2 text-white px-8 py-3 rounded-full text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
                       >
                         {isLoadingMore ? (
                           <>
@@ -2547,7 +2536,7 @@ export default function App() {
                   )}
                 </div>
               ) : (
-                <div className="py-24 text-center flex flex-col items-center justify-center gap-4 border border-white/5 bg-stone-900/10 rounded-3xl">
+                <div className="noir-browse-edge py-24 text-center flex flex-col items-center justify-center gap-4 border border-white/5 bg-stone-900/10 rounded-3xl">
                   <span className="text-4xl text-stone-600">∅</span>
                   <h3 className="text-sm font-bold text-white">No matching titles found</h3>
                   <p className="text-xs text-gray-500 max-w-xs">

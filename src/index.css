@@ -3,7 +3,7 @@
 
 @theme {
   --font-sans: "IBM Plex Sans Arabic", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-display: "Rubik", "IBM Plex Sans Arabic", sans-serif;
+  --font-display: "Inter", "IBM Plex Sans Arabic", sans-serif;
 }
 
 :root {
@@ -2871,3 +2871,75 @@ html:not(.noir-tv-app) .noir-genre-chips {
   font-size: 12px;
   font-weight: 500;
 }
+
+/* ===== Feedback round: alignment, glass, fonts, nav ===== */
+.noir-movies-hero-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center 18%;
+  background-repeat: no-repeat;
+}
+.noir-movies-hero-copy { left: var(--noir-page-gutter); }
+html:not(.noir-tv-app) .noir-filter-bar { padding-inline: var(--noir-page-gutter); }
+html:not(.noir-tv-app) .noir-movies-grid { padding-inline: var(--noir-page-gutter); }
+.noir-browse-wrap { padding-inline: var(--noir-page-gutter); }
+.noir-browse-edge { margin-inline: var(--noir-page-gutter); }
+
+/* Home hero: actions aligned left, Play first */
+html:not(.noir-tv-app) .noir-cinema-actions { justify-content: flex-start; direction: ltr; }
+
+/* Glass buttons (top highlight -> darker bottom) */
+html:not(.noir-tv-app) .noir-cinema-play {
+  background: linear-gradient(180deg, #ffffff 0%, #eef1f4 55%, #dfe4ea 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 8px 20px -10px rgba(0,0,0,.55);
+}
+html:not(.noir-tv-app) .noir-cinema-info {
+  background: linear-gradient(180deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,.04) 45%, rgba(0,0,0,.14) 100%);
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 8px 20px -10px rgba(0,0,0,.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff;
+}
+.noir-chip select {
+  background: linear-gradient(180deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,.03) 45%, rgba(0,0,0,.12) 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.noir-glass-btn {
+  background: linear-gradient(180deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,.03) 45%, rgba(0,0,0,.14) 100%);
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 8px 20px -10px rgba(0,0,0,.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.noir-glass-btn:hover {
+  border-color: rgba(255,255,255,.24);
+  background: linear-gradient(180deg, rgba(255,255,255,.17) 0%, rgba(255,255,255,.05) 45%, rgba(0,0,0,.12) 100%);
+}
+
+/* Underline-style top nav (shadcn-inspired), our sections */
+html:not(.noir-tv-app) .noir-site-nav {
+  gap: 32px; min-height: 0; padding: 0; border: 0;
+  background: transparent; box-shadow: none;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+html:not(.noir-tv-app) .noir-site-nav button {
+  position: relative; height: 36px; gap: 10px; padding: 0 2px;
+  border-radius: 0; background: transparent;
+  color: rgba(255,255,255,.6); font-size: 14px; font-weight: 500;
+}
+html:not(.noir-tv-app) .noir-site-nav button svg { width: 20px; height: 20px; }
+html:not(.noir-tv-app) .noir-site-nav button::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0;
+  width: auto; height: 2px; border-radius: 0;
+  background: var(--noir-accent); box-shadow: none;
+  transform: scaleX(0); transform-origin: left center;
+  transition: transform .2s ease;
+}
+html:not(.noir-tv-app) .noir-site-nav button:hover,
+html:not(.noir-tv-app) .noir-site-nav button.is-active { color: #fff; background: transparent; }
+html:not(.noir-tv-app) .noir-site-nav button:hover::after,
+html:not(.noir-tv-app) .noir-site-nav button.is-active::after { transform: scaleX(1); }
