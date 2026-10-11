@@ -36,25 +36,22 @@ export default function MovieRow({
   onToggleSave,
   compactSaveButton = false,
   ranked = false,
-  portrait = false,
+  portrait = true,
 }: MovieRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const scrollSaveFrameRef = useRef<number | null>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
 
-  // Check scroll positions to toggling arrows
+  // Check scroll positions to toggle arrows (LTR)
   const checkScroll = () => {
     if (rowRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = rowRef.current;
-
-      // Since RTL scrollLeft is either negative or standard depending on browser representation,
-      // we check mathematically standard indicators
       const absScroll = Math.abs(scrollLeft);
-
-      // Can scroll left (to previous items in RTL) -> scrollLeft is negative closer to 0
-      setShowRightArrow(absScroll > 10);
-      setShowLeftArrow(absScroll + clientWidth < scrollWidth - 10);
+      // Can scroll back toward the start -> left arrow
+      setShowLeftArrow(absScroll > 10);
+      // Can scroll forward toward the end -> right arrow
+      setShowRightArrow(absScroll + clientWidth < scrollWidth - 10);
     }
   };
 
@@ -89,15 +86,11 @@ export default function MovieRow({
   const handleScroll = (direction: 'left' | 'right') => {
     if (rowRef.current) {
       const { clientWidth } = rowRef.current;
-      // Scroll amount (75% of view width)
       const scrollAmount = clientWidth * 0.75;
-
       rowRef.current.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
         behavior: 'smooth',
       });
-
-      // Delay check scroll as layout shifts smoothly
       setTimeout(checkScroll, 350);
     }
   };
@@ -111,9 +104,9 @@ export default function MovieRow({
           <div className="w-32 h-4 bg-white/[0.05] rounded animate-pulse" />
         </div>
         <div className="flex gap-2 overflow-hidden">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex-none w-[220px] sm:w-[260px] md:w-[300px] xl:w-[330px] animate-pulse">
-              <div className="aspect-video w-full rounded-[18px] bg-[#121318] shimmer-bg" />
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex-none w-[150px] sm:w-[165px] animate-pulse">
+              <div className="aspect-[2/3] w-full rounded-[8px] bg-[#121318] shimmer-bg" />
               <div className="mt-3 h-4 w-28 rounded bg-[#15161b]" />
             </div>
           ))}
@@ -125,9 +118,9 @@ export default function MovieRow({
   return (
     <section className="noir-catalog-row relative group/row" aria-labelledby={`row-${title.replace(/\s+/g, '-')}`}>
       {/* Category Header */}
-      <div className={`noir-catalog-heading flex flex-col text-right ${flush ? "" : "px-4 sm:px-6 lg:px-8 xl:px-10"}`}>
+      <div className={`noir-catalog-heading flex flex-col text-left ${flush ? "" : "px-4 sm:px-6 lg:px-8 xl:px-10"}`}>
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex flex-col text-right">
+          <div className="flex flex-col text-left">
             {viewAllHash ? (
               <a
                 href={viewAllHash}
@@ -135,7 +128,7 @@ export default function MovieRow({
                 className="group/title noir-catalog-title flex cursor-pointer items-center gap-1.5 text-white"
               >
                 <span>{title}</span>
-                <ChevronLeft className="w-5 h-5 text-white/40 group-hover/title:text-white group-hover/title:-translate-x-0.5 transition-all" />
+                <ChevronRight className="w-5 h-5 text-white/40 group-hover/title:text-white group-hover/title:translate-x-0.5 transition-all" />
               </a>
             ) : (
               <>
@@ -152,30 +145,30 @@ export default function MovieRow({
       {/* Row Shell with Overlay Arrows */}
       <div className={`relative ${flush ? "" : "px-4 sm:px-6 lg:px-8 xl:px-10"}`}>
         {/* Edge fade gradients (only when scrollable in that direction) */}
-        {showRightArrow && (
-          <div className="hidden md:block absolute right-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-l from-[#08090c] to-transparent" />
-        )}
         {showLeftArrow && (
           <div className="hidden md:block absolute left-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-r from-[#08090c] to-transparent" />
         )}
-         {/* Navigation Arrows for desktop hover */}
         {showRightArrow && (
-          <button
-            onClick={() => handleScroll('right')}
-            className="absolute right-8 top-[41%] z-45 w-9 h-9 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md text-white/90 hover:text-white items-center justify-center cursor-pointer pointer-events-auto transition-all opacity-0 group-hover/row:opacity-100 hidden md:flex"
-            aria-label="Previous titles"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
+          <div className="hidden md:block absolute right-0 top-0 bottom-3 w-24 z-30 pointer-events-none bg-gradient-to-l from-[#08090c] to-transparent" />
         )}
-
+        {/* Navigation Arrows for desktop hover */}
         {showLeftArrow && (
           <button
             onClick={() => handleScroll('left')}
             className="absolute left-8 top-[41%] z-45 w-9 h-9 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md text-white/90 hover:text-white items-center justify-center cursor-pointer pointer-events-auto transition-all opacity-0 group-hover/row:opacity-100 hidden md:flex"
-            aria-label="Next titles"
+            aria-label="Previous titles"
           >
             <ChevronLeft className="w-5 h-5" />
+          </button>
+        )}
+
+        {showRightArrow && (
+          <button
+            onClick={() => handleScroll('right')}
+            className="absolute right-8 top-[41%] z-45 w-9 h-9 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md text-white/90 hover:text-white items-center justify-center cursor-pointer pointer-events-auto transition-all opacity-0 group-hover/row:opacity-100 hidden md:flex"
+            aria-label="Next titles"
+          >
+            <ChevronRight className="w-5 h-5" />
           </button>
         )}
 
@@ -184,7 +177,7 @@ export default function MovieRow({
           ref={rowRef}
           onScroll={handleRowScroll}
           data-tv-focus-row
-          dir="rtl"
+          dir="ltr"
           className="noir-movie-row-track flex flex-row overflow-x-auto no-scrollbar select-none"
         >
           {items.map((item, idx) => {
@@ -192,6 +185,7 @@ export default function MovieRow({
             const progressKey = `noir_progress_${item.type}_${item.id}`;
             const storedProgress = localStorage.getItem(progressKey);
             const progress = storedProgress ? Number(storedProgress) : 0;
+            const isPortrait = ranked ? idx > 0 : portrait;
 
             return (
               <div
@@ -208,9 +202,9 @@ export default function MovieRow({
                 data-tv-card
                 aria-label={`Open ${item.title}`}
                 style={{ animationDelay: `${idx * 45}ms` }}
-                className={`noir-catalog-card group/card card-pop relative flex-none cursor-pointer select-none ${portrait ? 'noir-portrait-card' : ''} ${ranked ? (idx === 0 ? 'noir-top10-featured' : 'noir-top10-poster') : ''}`}
+                className={`noir-catalog-card group/card card-pop relative flex-none cursor-pointer select-none ${portrait && !ranked ? 'noir-portrait-card' : ''} ${ranked ? (idx === 0 ? 'noir-top10-featured' : 'noir-top10-poster') : ''}`}
               >
-                <div data-tv-card-artwork className={`noir-catalog-artwork relative overflow-hidden bg-[#0d0f14] ${(ranked && idx > 0) || portrait ? 'aspect-[2/3]' : 'aspect-video'}`}>
+                <div data-tv-card-artwork className={`noir-catalog-artwork relative overflow-hidden bg-[#0d0f14] ${isPortrait ? 'aspect-[2/3]' : 'aspect-video'}`}>
                   {onToggleSave && (
                     <WatchlistButton
                       saved={saved}
@@ -226,15 +220,15 @@ export default function MovieRow({
                         e.preventDefault();
                         onRemove(item);
                       }}
-                      className="absolute top-2 left-2 z-10 w-8 h-8 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-all hover:bg-white/20 cursor-pointer"
+                      className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-all hover:bg-white/20 cursor-pointer"
                       title="Remove from Watchlist"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   )}
-                  {item.backdrop || item.poster ? (
+                  {(isPortrait ? item.poster : item.backdrop) || item.poster || item.backdrop ? (
                     <img
-                      src={((ranked && idx > 0) || portrait ? item.poster : item.backdrop) || item.poster || item.backdrop || undefined}
+                      src={(isPortrait ? item.poster : item.backdrop) || item.poster || item.backdrop || undefined}
                       alt={item.title}
                       loading="lazy"
                       decoding="async"
@@ -276,7 +270,7 @@ export default function MovieRow({
                   )}
                 </div>
 
-                <div className={`noir-catalog-meta text-right ${ranked && idx === 0 ? 'is-featured' : ''}`}>
+                <div className={`noir-catalog-meta text-left ${ranked && idx === 0 ? 'is-featured' : ''}`}>
                   <p className="truncate text-sm font-semibold text-white/92">{item.title}</p>
                   <p className="mt-1 text-[11px] font-medium text-white/38">
                     {item.rating > 0 && <><Star className="inline h-3 w-3 fill-current text-[var(--noir-accent)]" /> {item.rating.toFixed(1)} · </>}{item.year || '—'} · {item.type === 'movie' ? 'Movie' : 'TV Show'}

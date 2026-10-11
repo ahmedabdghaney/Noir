@@ -99,7 +99,7 @@ export default function ContinueWatchingRow({
           <button
             onClick={() => handleScroll('right')}
             className="hidden md:flex absolute right-12 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md text-white/90 hover:text-white items-center justify-center opacity-0 group-hover/row:opacity-100 transition-all cursor-pointer"
-            aria-label="السابق"
+            aria-label="Previous"
           >
             <ChevronRight className="w-5 h-5" />
           </button>
@@ -108,7 +108,7 @@ export default function ContinueWatchingRow({
           <button
             onClick={() => handleScroll('left')}
             className="hidden md:flex absolute left-12 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md text-white/90 hover:text-white items-center justify-center opacity-0 group-hover/row:opacity-100 transition-all cursor-pointer"
-            aria-label="التالي"
+            aria-label="Next"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -136,7 +136,7 @@ export default function ContinueWatchingRow({
                 }}
                 role="button"
                 tabIndex={0}
-                aria-label={`متابعة مشاهدة ${item.title}`}
+                aria-label={`Continue watching ${item.title}`}
                 className="noir-catalog-card noir-continue-card group/cw flex-none cursor-pointer"
               >
                 <div data-tv-card-artwork className="noir-catalog-artwork relative aspect-video overflow-hidden bg-[#101116]">
@@ -173,8 +173,8 @@ export default function ContinueWatchingRow({
                             onRestart(item);
                           }}
                           className="w-8 h-8 rounded-full glass flex items-center justify-center text-white/80 hover:text-white hover:bg-white/20 cursor-pointer"
-                          title="المشاهدة من البداية"
-                          aria-label={`مشاهدة ${item.title} من البداية`}
+                          title="Watch from the beginning"
+                          aria-label={`Watch ${item.title} from the beginning`}
                         >
                           <RotateCcw className="w-3.5 h-3.5" />
                         </button>
@@ -187,8 +187,8 @@ export default function ContinueWatchingRow({
                             onRemove(item);
                           }}
                           className="w-8 h-8 rounded-full glass flex items-center justify-center text-white/80 hover:text-white hover:bg-white/20 cursor-pointer"
-                          title="إزالة من المتابعة"
-                          aria-label={`إزالة ${item.title} من أكمل المشاهدة`}
+                          title="Remove from Continue Watching"
+                          aria-label={`Remove ${item.title} from Continue Watching`}
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -205,12 +205,12 @@ export default function ContinueWatchingRow({
                     </div>
                   </div>
                 </div>
-                <div className="noir-catalog-meta text-right">
-                  <h3 className="truncate text-sm font-semibold text-white/92">{item.title || (item as any).name || 'بدون عنوان'}</h3>
+                <div className="noir-catalog-meta text-left">
+                  <h3 className="truncate text-sm font-semibold text-white/92">{item.title || (item as any).name || 'Untitled'}</h3>
                   <p className="mt-1 text-[11px] font-medium text-white/38">
                     {item.type === 'tv' && item.season > 0 && item.episode > 0
-                      ? `الموسم ${item.season} · الحلقة ${item.episode}`
-                      : `${Math.max(1, Math.ceil((item.durationSeconds - item.positionSeconds) / 60))} دقيقة متبقية`}
+                      ? `Season ${item.season} · Episode ${item.episode}`
+                      : `${Math.max(1, Math.ceil((item.durationSeconds - item.positionSeconds) / 60))} min left`}
                   </p>
                 </div>
               </div>

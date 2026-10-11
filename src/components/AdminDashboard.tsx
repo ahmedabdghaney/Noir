@@ -33,18 +33,18 @@ interface AdminDashboardProps {
   siteSections?: SiteSection[];
   hiddenIds?: string[];
   onToggleHidden?: (type: 'movie' | 'tv', id: number, hide: boolean) => void;
-  heroItems?: MovieOrShow[];        // كل عناصر الهيرو الحالية (للعرض والترتيب)
+  heroItems?: MovieOrShow[];        // كل عناصر Hero الحالية (للعرض والترتيب)
   heroHiddenIds?: string[];
   onToggleHeroHidden?: (type: 'movie' | 'tv', id: number, hide: boolean) => void;
 }
 
-// الأقسام الأصلية الثابتة (مفاتيحها + أسماؤها) — تظهر بقائمة الترتيب لكن ما تنعدّل
+// Sections الOriginalة الثابتة (مفاتيحها + أسماؤها) — تظهر بقائمة الترتيب لكن ما تنعدّل
 const NATIVE_SECTIONS: { key: string; title: string }[] = [
-  { key: 'trending', title: 'الرائج هذا الأسبوع' },
-  { key: 'upcoming', title: 'قريباً' },
-  { key: 'nowPlaying', title: 'جديد دور السينما' },
-  { key: 'popularTV', title: 'المسلسلات الموصى بها' },
-  { key: 'popularMovies', title: 'أفلام شعبية مميزة' },
+  { key: 'trending', title: 'Trending This Week' },
+  { key: 'upcoming', title: 'Coming Soon' },
+  { key: 'nowPlaying', title: 'New in Theaters' },
+  { key: 'popularTV', title: 'Recommended Shows' },
+  { key: 'popularMovies', title: 'Popular Movies' },
 ];
 
 type Tab = 'library' | 'hero' | 'site' | 'add' | 'sections';
@@ -89,19 +89,19 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
 
   // أقسام مخصصة
   const [order, setOrderState] = useState<string[]>([]);
-  // محرر القسم (null = مغلق). نميّز جديد/تعديل بوجود key
+  // محرر القسم (null = مغلق). نميّز جديد/Edit بوجود key
   const [secForm, setSecForm] = useState<Partial<CustomSection> | null>(null);
   const [secPreview, setSecPreview] = useState<MovieOrShow[]>([]);
   const [previewing, setPreviewing] = useState(false);
 
-  // الهيرو: عناصر مضافة + ترتيب + بحث الإضافة
+  // Hero: عناصر Addedة + ترتيب + بحث الإضافة
   const [heroExtra, setHeroExtra] = useState<HeroExtra[]>([]);
   const [heroOrder, setHeroOrderState] = useState<string[]>([]);
   const [heroQuery, setHeroQuery] = useState('');
   const [heroResults, setHeroResults] = useState<MovieOrShow[]>([]);
   const [heroSearching, setHeroSearching] = useState(false);
 
-  // محتوى الموقع: بحث TMDB مباشر + فرز
+  // Site content: بحث TMDB مباشر + فرز
   const [siteQuery, setSiteQuery] = useState('');
   const [siteSort, setSiteSort] = useState<'default' | 'az' | 'year' | 'rating'>('default');
   const [siteResults, setSiteResults] = useState<MovieOrShow[]>([]);
@@ -116,7 +116,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
     return () => { u1(); u2(); u3(); u4(); u5(); };
   }, []);
 
-  // بحث الهيرو
+  // بحث Hero
   useEffect(() => {
     if (!heroQuery.trim()) { setHeroResults([]); return; }
     const t = setTimeout(async () => {
@@ -128,7 +128,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
     return () => clearTimeout(t);
   }, [heroQuery]);
 
-  // بحث TMDB لمحتوى الموقع (مباشر — مو محصور بالأقسام)
+  // بحث TMDB لSite content (مباشر — مو محصور بSections)
   useEffect(() => {
     if (!siteQuery.trim()) { setSiteResults([]); return; }
     const t = setTimeout(async () => {
@@ -152,7 +152,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
   }, [query]);
 
   const allSections = [
-    { key: 'manual', title: 'حصري نوار' },
+    { key: 'manual', title: 'Noir Exclusive' },
     ...CATEGORIES.map((c) => ({ key: c.key, title: c.title })),
     ...sections.map((s) => ({ key: s.key, title: s.title })),
   ];
@@ -160,7 +160,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
 
   // ── إجراءات ──
 
-  // استيراد من TMDB → يملأ الفورم بكل الحقول ويفتحه للتعديل
+  // Import from TMDB → يملأ الفورم بكل الحقول ويفتحه للEdit
   const handleImport = async (item: MovieOrShow) => {
     setImporting(item.id);
     const data: TmdbImport | null = await importFromTmdb(item.type, item.id);
@@ -176,7 +176,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
       poster: data.poster,
       backdrop: data.backdrop,
       rating: data.rating,
-      autoRating: true,       // افتراضياً التقييم يتحدث تلقائياً للمستورد
+      autoRating: true,       // افتراضياً Rating يتحدث Autoاً للمستورد
       year: data.year,
       genres: data.genres,
       director: data.director,
@@ -202,8 +202,8 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
     await removeManualItem(manualKey(it));
   };
 
-  // القائمة الموحّدة لكل الأقسام (أصلية + مخصصة) مرتّبة حسب order المحفوظ.
-  // الأقسام اللي مو بالـ order تنحط بالنهاية بترتيبها الطبيعي.
+  // القائمة الموحّدة لكل Sections (Originalة + مخصصة) مرتّبة حسب order المحفوظ.
+  // Sections اللي مو بالـ order تنحط بالنهاية بترتيبها الطبيعي.
   const orderedSections = (() => {
     const native = NATIVE_SECTIONS.map((s) => ({ ...s, custom: false as const }));
     const custom = sections.map((s) => ({ key: s.key, title: s.title, custom: true as const, data: s }));
@@ -215,9 +215,9 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
     return all.sort((a, b) => idx(a.key) - idx(b.key));
   })();
 
-  // حرّك قسم صعود/نزول ويحفظ الترتيب الجديد
-  // ── السحب والإفلات (drag & drop) — مشترك للأقسام والهيرو ──
-  // نخزن المفتاح المسحوب، وعند الإفلات نعيد ترتيب المصفوفة ونحفظ
+  // حرّك قسم صعود/نزول ويSave الترتيب الجديد
+  // ── السحب والإفلات (drag & drop) — مشترك للأقسام وHero ──
+  // نخزن المفتاح المسحوب، وعند الإفلات نعيد ترتيب المصفوفة ونSave
   const dragKey = useRef<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
 
@@ -233,7 +233,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
     return arr;
   };
 
-  // فتح محرر قسم مخصص (جديد أو تعديل)
+  // فتح محرر قسم مخصص (جديد أو Edit)
   const openSectionEditor = (sec?: CustomSection) => {
     setSecPreview([]);
     setSecForm(sec ? { ...sec } : { title: '', kind: 'manual', mediaType: 'movie' });
@@ -242,7 +242,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
   const setSF = <K extends keyof CustomSection>(k: K, v: CustomSection[K]) =>
     setSecForm((f) => (f ? { ...f, [k]: v } : f));
 
-  // معاينة نتائج التصنيف+الفلاتر قبل الحفظ
+  // Preview نتائج Genre+الفلاتر قبل الSave
   const previewSection = async () => {
     if (!secForm) return;
     setPreviewing(true);
@@ -307,8 +307,8 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
     reader.readAsDataURL(file);
   };
 
-  // ── الهيرو ──
-  // قائمة الهيرو المرتّبة حسب heroOrder المحفوظ
+  // ── Hero ──
+  // قائمة Hero المرتّبة حسب heroOrder المحفوظ
   const orderedHero = (() => {
     const idx = (k: string) => {
       const i = heroOrder.indexOf(k);
@@ -317,7 +317,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
     return [...heroItems].sort((a, b) => idx(itemKey(a.type, a.id)) - idx(itemKey(b.type, b.id)));
   })();
 
-  // إفلات قسم على قسم آخر → إعادة ترتيب وحفظ
+  // إفلات قسم على قسم آخر → إعادة ترتيب وSave
   const dropSection = async (toKey: string) => {
     const from = dragKey.current;
     dragKey.current = null;
@@ -329,7 +329,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
     await setSectionOrder(next);
   };
 
-  // إفلات عنصر هيرو على آخر → إعادة ترتيب وحفظ
+  // إفلات عنصر Hero على آخر → إعادة ترتيب وSave
   const dropHero = async (toKey: string) => {
     const from = dragKey.current;
     dragKey.current = null;
@@ -356,35 +356,35 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
   // حارس الوصول
   if (!isAdmin(userEmail)) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-4 text-center px-6" dir="rtl">
+      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-4 text-center px-6" dir="ltr">
         <div className="w-16 h-16 rounded-full bg-[#A0C9CB]/10 flex items-center justify-center">
           <EyeOff className="w-8 h-8 text-[#A0C9CB]" />
         </div>
-        <h2 className="text-xl font-black text-white">غير مصرّح</h2>
-        <p className="text-gray-400 text-sm">هذي الصفحة للإدارة فقط</p>
+        <h2 className="text-xl font-black text-white">Not authorized</h2>
+        <p className="text-gray-400 text-sm">This page is for admins only</p>
         <button onClick={onBack} className="mt-2 flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-white px-6 py-3 rounded-full text-sm font-bold cursor-pointer transition-all">
-          <ArrowRight className="w-4 h-4" /> رجوع للموقع
+          <ArrowRight className="w-4 h-4" /> Back to site
         </button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 animate-fade-in" dir="rtl">
+    <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 animate-fade-in" dir="ltr">
       {/* رأس */}
       <div className="flex items-center justify-between mb-8">
-        <div className="text-right">
-          <h1 className="font-display text-2xl md:text-3xl font-black text-white">لوحة تحكم نوار</h1>
+        <div className="text-left">
+          <h1 className="font-display text-2xl md:text-3xl font-black text-white">Noir Control Panel</h1>
           <p className="text-gray-500 text-xs mt-1 font-semibold">{userEmail}</p>
         </div>
         <button onClick={onBack} className="flex items-center gap-2 bg-stone-900 hover:bg-stone-800 border border-white/5 text-white px-5 py-2.5 rounded-full text-xs font-bold cursor-pointer transition-all">
-          <ArrowRight className="w-4 h-4" /> الموقع
+          <ArrowRight className="w-4 h-4" /> Site
         </button>
       </div>
 
       {/* تبويبات */}
       <div className="flex gap-2 mb-8 border-b border-white/5 pb-3">
-        {([['library', 'المكتبة'], ['hero', 'الهيرو'], ['site', 'محتوى الموقع'], ['add', form ? 'تحرير' : 'إضافة'], ['sections', 'الأقسام']] as [Tab, string][]).map(([k, label]) => (
+        {([['library', 'Library'], ['hero', 'Hero'], ['site', 'Site content'], ['add', form ? 'Edit' : 'Add'], ['sections', 'Sections']] as [Tab, string][]).map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
             className={`px-4 py-2 rounded-full text-xs font-bold cursor-pointer transition-all ${tab === k ? 'bg-[#A0C9CB] text-white' : 'bg-stone-900 text-gray-400 hover:text-white'}`}>
             {label}
@@ -392,22 +392,22 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
         ))}
       </div>
 
-      {/* ══ المكتبة ══ */}
+      {/* ══ Library ══ */}
       {tab === 'library' && (
         <div>
           <div className="flex gap-2 mb-6">
             <button onClick={handleManualNew} className="flex items-center gap-2 bg-[#A0C9CB] hover:bg-[#A0C9CB] text-white px-5 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-all">
-              <PenLine className="w-4 h-4" /> إضافة يدوية
+              <PenLine className="w-4 h-4" /> Add manually
             </button>
             <button onClick={() => { setForm(null); setTab('add'); }} className="flex items-center gap-2 bg-stone-900 hover:bg-stone-800 border border-white/8 text-white px-5 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-all">
-              <Import className="w-4 h-4" /> استيراد من TMDB
+              <Import className="w-4 h-4" /> Import from TMDB
             </button>
           </div>
 
           {items.length === 0 ? (
             <div className="text-center py-20">
               <Film className="w-12 h-12 text-gray-700 mx-auto mb-3" />
-              <p className="text-gray-500 text-sm">ما في محتوى مضاف بعد. ابدأ بإضافة يدوية أو استيراد من TMDB.</p>
+              <p className="text-gray-500 text-sm">No content added yet. Start by adding manually or importing from TMDB.</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -416,18 +416,18 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                   <div className="relative aspect-[2/3] bg-stone-900">
                     {it.poster && <img src={it.poster} alt={it.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />}
                     {it.inHero && (
-                      <span className="absolute top-2 right-2 bg-[#A0C9CB] text-white text-[9px] font-black px-2 py-0.5 rounded-full">هيرو</span>
+                      <span className="absolute top-2 right-2 bg-[#A0C9CB] text-white text-[9px] font-black px-2 py-0.5 rounded-full">Hero</span>
                     )}
                     <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2">
-                      <button onClick={() => handleEdit(it)} className="w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white cursor-pointer" title="تعديل">
+                      <button onClick={() => handleEdit(it)} className="w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white cursor-pointer" title="Edit">
                         <Edit3 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(it)} className="w-10 h-10 rounded-full bg-[#A0C9CB]/30 hover:bg-[#A0C9CB]/50 flex items-center justify-center text-white cursor-pointer" title="حذف">
+                      <button onClick={() => handleDelete(it)} className="w-10 h-10 rounded-full bg-[#A0C9CB]/30 hover:bg-[#A0C9CB]/50 flex items-center justify-center text-white cursor-pointer" title="Delete">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
-                  <div className="p-2.5 text-right">
+                  <div className="p-2.5 text-left">
                     <p className="text-white text-xs font-bold line-clamp-1">{it.title}</p>
                     <p className="text-gray-500 text-[10px] mt-0.5">{it.year} · {sectionTitle(it.section)}</p>
                     <div className="flex items-center gap-1 mt-1 justify-end">
@@ -442,15 +442,15 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
         </div>
       )}
 
-      {/* ══ الهيرو (الكاروسيل الكبير) ══ */}
+      {/* ══ Hero (الكاروسيل الكبير) ══ */}
       {tab === 'hero' && (
         <div>
-          {/* بحث وإضافة للهيرو */}
+          {/* بحث وإضافة للHero */}
           <div className="bg-[#141417] border border-white/8 rounded-2xl p-4 mb-6">
-            <label className="text-white text-xs font-bold mb-2 block">أضف فلم أو مسلسل للكاروسيل الكبير</label>
+            <label className="text-white text-xs font-bold mb-2 block">Add a movie or show to the main carousel</label>
             <div className="relative">
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-              <input value={heroQuery} onChange={(e) => setHeroQuery(e.target.value)} placeholder="دور بـ TMDB..."
+              <input value={heroQuery} onChange={(e) => setHeroQuery(e.target.value)} placeholder="Search TMDB..."
                 className="w-full bg-stone-900 border border-white/10 focus:border-[#A0C9CB]/60 outline-none text-white text-sm font-semibold py-3 pr-12 pl-4 rounded-xl transition-all placeholder-gray-600" />
               {heroSearching && <Loader className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A0C9CB] animate-spin" />}
             </div>
@@ -473,13 +473,13 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
           </div>
 
           <p className="text-gray-400 text-xs mb-4 leading-relaxed">
-            عناصر الكاروسيل الحالية بالترتيب. رتّب بالأسهم، أخفِ بالعين، وعناصرك المضافة تقدر تلغيها بالسلة.
+            Current carousel items in order. Reorder with the arrows, hide with the eye, and remove the ones you added with the trash.
           </p>
 
           {orderedHero.length === 0 ? (
             <div className="text-center py-16">
               <Loader className="w-8 h-8 text-gray-600 mx-auto mb-3 animate-spin" />
-              <p className="text-gray-500 text-sm">جاري التحميل...</p>
+              <p className="text-gray-500 text-sm">Loading...</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -496,7 +496,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                     onDrop={(e) => { e.preventDefault(); dropHero(key); }}
                     className={`flex items-center gap-3 bg-[#141417] border rounded-xl p-2.5 transition-all ${dragOver === key ? 'border-[#A0C9CB] bg-[#A0C9CB]/5' : 'border-white/8'}`}>
                     {/* مقبض السحب */}
-                    <div className="shrink-0 cursor-grab active:cursor-grabbing text-gray-500 hover:text-white px-1" title="اسحب للترتيب">
+                    <div className="shrink-0 cursor-grab active:cursor-grabbing text-gray-500 hover:text-white px-1" title="Drag to reorder">
                       <GripVertical className="w-5 h-5" />
                     </div>
                     {/* صورة مصغرة */}
@@ -504,28 +504,28 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                       {(item.backdrop || item.poster) && <img src={item.backdrop || item.poster || ''} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />}
                     </div>
                     {/* المعلومات */}
-                    <div className="flex-1 text-right min-w-0">
+                    <div className="flex-1 text-left min-w-0">
                       <p className="text-white text-sm font-bold line-clamp-1">{item.title}</p>
                       <div className="flex items-center gap-2 justify-start mt-0.5">
                         <span className="text-gray-500 text-[11px]">{item.year}</span>
                         {isExtra ? (
-                          <span className="bg-[#A0C9CB]/20 text-[#A0C9CB] text-[9px] font-black px-2 py-0.5 rounded-full">مضاف</span>
+                          <span className="bg-[#A0C9CB]/20 text-[#A0C9CB] text-[9px] font-black px-2 py-0.5 rounded-full">Added</span>
                         ) : (
-                          <span className="bg-white/5 text-gray-400 text-[9px] font-black px-2 py-0.5 rounded-full">تلقائي</span>
+                          <span className="bg-white/5 text-gray-400 text-[9px] font-black px-2 py-0.5 rounded-full">Auto</span>
                         )}
-                        {isHidden && <span className="text-gray-500 text-[10px]">مخفي</span>}
+                        {isHidden && <span className="text-gray-500 text-[10px]">Hidden</span>}
                       </div>
                     </div>
                     {/* أزرار */}
                     <div className="flex gap-1.5 shrink-0">
                       <button onClick={() => onToggleHeroHidden?.(item.type, item.id, !isHidden)}
                         className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-300 cursor-pointer"
-                        title={isHidden ? 'إظهار' : 'إخفاء'}>
+                        title={isHidden ? 'Show' : 'Hide'}>
                         {isHidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                       {isExtra && (
                         <button onClick={() => removeHeroExtra(item.type, item.id)}
-                          className="w-9 h-9 rounded-full bg-[#A0C9CB]/10 hover:bg-[#A0C9CB]/20 flex items-center justify-center text-[#A0C9CB] cursor-pointer" title="إلغاء من الهيرو">
+                          className="w-9 h-9 rounded-full bg-[#A0C9CB]/10 hover:bg-[#A0C9CB]/20 flex items-center justify-center text-[#A0C9CB] cursor-pointer" title="Remove from hero">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       )}
@@ -538,25 +538,25 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
         </div>
       )}
 
-      {/* ══ محتوى الموقع — بحث TMDB مباشر + فرز ══ */}
+      {/* ══ Site content — بحث TMDB مباشر + فرز ══ */}
       {tab === 'site' && (
         <div>
           <p className="text-gray-400 text-xs mb-4 leading-relaxed">
-            دور عن أي فلم أو مسلسل بـ TMDB (مو محصور بأقسام الرئيسية) وأخفِه من الموقع. بدون بحث تشوف محتوى الرئيسية.
+            Search any movie or show on TMDB (not limited to home sections) and hide it from the site. With no search you see the home content.
           </p>
           <div className="flex flex-col sm:flex-row gap-2 mb-5">
             <div className="relative flex-1">
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-              <input value={siteQuery} onChange={(e) => setSiteQuery(e.target.value)} placeholder="دور عن أي فلم أو مسلسل..."
+              <input value={siteQuery} onChange={(e) => setSiteQuery(e.target.value)} placeholder="Search any movie or show..."
                 className="w-full bg-[#141417] border border-white/10 focus:border-[#A0C9CB]/60 outline-none text-white text-sm font-semibold py-2.5 pr-12 pl-4 rounded-xl transition-all placeholder-gray-600" />
               {siteSearching && <Loader className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A0C9CB] animate-spin" />}
             </div>
             <select value={siteSort} onChange={(e) => setSiteSort(e.target.value as any)}
               className="bg-[#141417] border border-white/10 text-white text-sm font-semibold py-2.5 px-4 rounded-xl outline-none cursor-pointer">
-              <option value="default">الترتيب الافتراضي</option>
-              <option value="az">أبجدي (أ-ي)</option>
-              <option value="year">الأحدث سنة</option>
-              <option value="rating">الأعلى تقييم</option>
+              <option value="default">Default order</option>
+              <option value="az">Alphabetical (A-Z)</option>
+              <option value="year">Newest year</option>
+              <option value="rating">Top rated</option>
             </select>
           </div>
 
@@ -574,11 +574,11 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                 return <div className="text-center py-16"><Loader className="w-8 h-8 text-gray-600 mx-auto animate-spin" /></div>;
               }
               if (list.length === 0) {
-                return <p className="text-gray-600 text-sm text-center py-12">ما في نتائج</p>;
+                return <p className="text-gray-600 text-sm text-center py-12">No results</p>;
               }
               return (
                 <div>
-                  <p className="text-gray-500 text-xs mb-3">{list.length} نتيجة</p>
+                  <p className="text-gray-500 text-xs mb-3">{list.length} results</p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                     {list.map((item) => {
                       const key = itemKey(item.type, item.id);
@@ -589,12 +589,12 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                             {item.poster && <img src={item.poster} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />}
                             <button onClick={() => onToggleHidden?.(item.type, item.id, !isHidden)}
                               className="absolute top-1.5 right-1.5 w-8 h-8 rounded-full glass flex items-center justify-center text-white cursor-pointer hover:bg-white/25 transition-all"
-                              title={isHidden ? 'إظهار' : 'إخفاء'}>
+                              title={isHidden ? 'Show' : 'Hide'}>
                               {isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                             </button>
                           </div>
-                          <p className="text-white text-[10px] font-semibold mt-1 line-clamp-1 text-right">{item.title}</p>
-                          <p className="text-gray-500 text-[9px] text-right">{item.year} · {item.type === 'tv' ? 'مسلسل' : 'فلم'}</p>
+                          <p className="text-white text-[10px] font-semibold mt-1 line-clamp-1 text-left">{item.title}</p>
+                          <p className="text-gray-500 text-[9px] text-left">{item.year} · {item.type === 'tv' ? 'TV Show' : 'Movie'}</p>
                         </div>
                       );
                     })}
@@ -603,9 +603,9 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
               );
             }
 
-            // بدون بحث: محتوى الرئيسية بالأقسام
+            // بدون بحث: محتوى الرئيسية بSections
             if (siteSections.every((s) => s.items.length === 0)) {
-              return <div className="text-center py-20"><Loader className="w-8 h-8 text-gray-600 mx-auto mb-3 animate-spin" /><p className="text-gray-500 text-sm">جاري التحميل...</p></div>;
+              return <div className="text-center py-20"><Loader className="w-8 h-8 text-gray-600 mx-auto mb-3 animate-spin" /><p className="text-gray-500 text-sm">Loading...</p></div>;
             }
             return siteSections.map((sec) => (
               sec.items.length > 0 && (
@@ -621,11 +621,11 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                             {item.poster && <img src={item.poster} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />}
                             <button onClick={() => onToggleHidden?.(item.type, item.id, !isHidden)}
                               className="absolute top-1.5 right-1.5 w-8 h-8 rounded-full glass flex items-center justify-center text-white cursor-pointer hover:bg-white/25 transition-all"
-                              title={isHidden ? 'إظهار' : 'إخفاء'}>
+                              title={isHidden ? 'Show' : 'Hide'}>
                               {isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                             </button>
                           </div>
-                          <p className="text-white text-[10px] font-semibold mt-1 line-clamp-1 text-right">{item.title}</p>
+                          <p className="text-white text-[10px] font-semibold mt-1 line-clamp-1 text-left">{item.title}</p>
                         </div>
                       );
                     })}
@@ -642,10 +642,10 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
           {/* لو مافي فورم مفتوح: نعرض بحث TMDB للاستيراد */}
           {!form && (
             <div>
-              <p className="text-gray-400 text-xs mb-4">دور عن فلم أو مسلسل لاستيراد كل تفاصيله من TMDB، أو <button onClick={handleManualNew} className="text-[#A0C9CB] underline cursor-pointer">أضف يدوياً</button>.</p>
+              <p className="text-gray-400 text-xs mb-4">Search a movie or show to import all its details from TMDB, or <button onClick={handleManualNew} className="text-[#A0C9CB] underline cursor-pointer">add manually</button>.</p>
               <div className="relative mb-5">
                 <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="اسم الفلم أو المسلسل..."
+                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Movie or show name..."
                   className="w-full bg-[#141417] border border-white/10 focus:border-[#A0C9CB]/60 outline-none text-white text-sm font-semibold py-3.5 pr-12 pl-4 rounded-xl transition-all placeholder-gray-600" />
                 {searching && <Loader className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A0C9CB] animate-spin" />}
               </div>
@@ -669,7 +669,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-white font-black text-lg flex items-center gap-2">
                   {form.tmdbId ? <Import className="w-5 h-5 text-[#A0C9CB]" /> : <PenLine className="w-5 h-5 text-[#A0C9CB]" />}
-                  {form.tmdbId ? 'مستورد من TMDB' : 'إضافة يدوية'}
+                  {form.tmdbId ? 'Imported from TMDB' : 'Manual entry'}
                 </h3>
                 <button onClick={() => setForm(null)} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 cursor-pointer">
                   <X className="w-4 h-4" />
@@ -680,73 +680,73 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                 {/* عمود الصور */}
                 <div className="space-y-4">
                   <div>
-                    <label className="text-white text-xs font-bold mb-1.5 block">الكفر (بوستر عمودي)</label>
+                    <label className="text-white text-xs font-bold mb-1.5 block">Poster (vertical)</label>
                     <div className="flex gap-3">
                       <div className="w-20 h-28 rounded-lg overflow-hidden bg-stone-900 border border-white/8 shrink-0">
                         {form.poster && <img src={form.poster} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
                       </div>
                       <div className="flex-1 space-y-2">
-                        <input value={form.poster?.startsWith('data:') ? '' : (form.poster || '')} onChange={(e) => setF('poster', e.target.value || null)} placeholder="الصق رابط الصورة https://..."
+                        <input value={form.poster?.startsWith('data:') ? '' : (form.poster || '')} onChange={(e) => setF('poster', e.target.value || null)} placeholder="Paste image URL https://..."
                           className="w-full bg-stone-900 border border-white/10 focus:border-[#A0C9CB]/60 outline-none text-white text-xs py-2.5 px-3 rounded-lg" dir="ltr" />
                         <label className="flex items-center justify-center gap-1.5 bg-stone-800 hover:bg-stone-700 border border-white/10 text-white text-xs font-bold py-2 rounded-lg cursor-pointer transition-all">
-                          <Upload className="w-3.5 h-3.5" /> رفع من الجهاز
+                          <Upload className="w-3.5 h-3.5" /> Upload from device
                           <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f, 'poster'); e.target.value = ''; }} />
                         </label>
-                        <p className="text-gray-500 text-[10px] leading-relaxed">المقاس المثالي 500×750 (نسبة 2:3). أي حجم يشتغل — تنضغط تلقائياً.</p>
+                        <p className="text-gray-500 text-[10px] leading-relaxed">Ideal size 500×750 (2:3 ratio). Any size works — auto-compressed.</p>
                       </div>
                     </div>
                   </div>
                   <div>
-                    <label className="text-white text-xs font-bold mb-1.5 block">صورة الهيرو (خلفية عريضة)</label>
+                    <label className="text-white text-xs font-bold mb-1.5 block">Hero image (wide backdrop)</label>
                     <div className="w-full h-24 rounded-lg overflow-hidden bg-stone-900 border border-white/8 mb-2">
                       {form.backdrop && <img src={form.backdrop} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
                     </div>
-                    <input value={form.backdrop?.startsWith('data:') ? '' : (form.backdrop || '')} onChange={(e) => setF('backdrop', e.target.value || null)} placeholder="الصق رابط الصورة https://..."
+                    <input value={form.backdrop?.startsWith('data:') ? '' : (form.backdrop || '')} onChange={(e) => setF('backdrop', e.target.value || null)} placeholder="Paste image URL https://..."
                       className="w-full bg-stone-900 border border-white/10 focus:border-[#A0C9CB]/60 outline-none text-white text-xs py-2.5 px-3 rounded-lg mb-2" dir="ltr" />
                     <label className="flex items-center justify-center gap-1.5 bg-stone-800 hover:bg-stone-700 border border-white/10 text-white text-xs font-bold py-2 rounded-lg cursor-pointer transition-all">
-                      <Upload className="w-3.5 h-3.5" /> رفع من الجهاز
+                      <Upload className="w-3.5 h-3.5" /> Upload from device
                       <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f, 'backdrop'); e.target.value = ''; }} />
                     </label>
-                    <p className="text-gray-500 text-[10px] leading-relaxed mt-1.5">المقاس المثالي 1280×720 (نسبة 16:9). أي حجم يشتغل — تنضغط تلقائياً.</p>
+                    <p className="text-gray-500 text-[10px] leading-relaxed mt-1.5">Ideal size 1280×720 (16:9 ratio). Any size works — auto-compressed.</p>
                   </div>
                 </div>
 
                 {/* عمود الحقول */}
                 <div className="space-y-3">
-                  <Field label="العنوان" value={form.title} onChange={(v) => setF('title', v)} />
+                  <Field label="Title" value={form.title} onChange={(v) => setF('title', v)} />
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-white text-xs font-bold mb-1.5 block">النوع</label>
+                      <label className="text-white text-xs font-bold mb-1.5 block">Type</label>
                       <select value={form.type} onChange={(e) => setF('type', e.target.value as 'movie' | 'tv')}
                         className="w-full bg-stone-900 border border-white/10 text-white text-sm py-2.5 px-3 rounded-lg outline-none cursor-pointer">
-                        <option value="movie">فلم</option>
-                        <option value="tv">مسلسل</option>
+                        <option value="movie">Movie</option>
+                        <option value="tv">TV Show</option>
                       </select>
                     </div>
-                    <Field label="السنة" value={form.year} onChange={(v) => setF('year', v)} />
+                    <Field label="Year" value={form.year} onChange={(v) => setF('year', v)} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-white text-xs font-bold mb-1.5 flex items-center justify-between">
-                        <span>التقييم</span>
+                        <span>Rating</span>
                         <label className="flex items-center gap-1 text-[10px] text-gray-400 font-normal cursor-pointer">
                           <input type="checkbox" checked={form.autoRating} disabled={!form.tmdbId} onChange={(e) => setF('autoRating', e.target.checked)} className="accent-[#A0C9CB]" />
-                          تلقائي
+                          Auto
                         </label>
                       </label>
                       <input type="number" step="0.1" min="0" max="10" value={form.rating} disabled={form.autoRating}
                         onChange={(e) => setF('rating', Number(e.target.value))}
                         className="w-full bg-stone-900 border border-white/10 focus:border-[#A0C9CB]/60 outline-none text-white text-sm py-2.5 px-3 rounded-lg disabled:opacity-50" dir="ltr" />
                     </div>
-                    <Field label="المخرج" value={form.director} onChange={(v) => setF('director', v)} />
+                    <Field label="Director" value={form.director} onChange={(v) => setF('director', v)} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <Field label="دولة الإنتاج" value={form.country} onChange={(v) => setF('country', v)} />
-                    <Field label="اللغة الأصلية" value={form.language} onChange={(v) => setF('language', v)} />
+                    <Field label="Country" value={form.country} onChange={(v) => setF('country', v)} />
+                    <Field label="Original language" value={form.language} onChange={(v) => setF('language', v)} />
                   </div>
                   <div>
                     <label className="text-white text-xs font-bold mb-1.5 block">
-                      نهاية المقدمة بالثواني
+                      Intro end (seconds)
                     </label>
                     <input
                       type="number"
@@ -758,17 +758,17 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                       dir="ltr"
                     />
                     <p className="mt-1 text-[10px] text-white/35">
-                      اكتب 0 لإخفاء زر تخطي المقدمة.
+                      Enter 0 to hide the skip-intro button.
                     </p>
                   </div>
-                  <Field label="التصنيفات (افصل بفاصلة)" value={form.genres.join('، ')}
+                  <Field label="Genres (comma-separated)" value={form.genres.join(', ')}
                     onChange={(v) => setF('genres', v.split(/[،,]/).map((s) => s.trim()).filter(Boolean))} />
                 </div>
               </div>
 
-              {/* الوصف */}
+              {/* Description */}
               <div className="mt-4">
-                <label className="text-white text-xs font-bold mb-1.5 block">الوصف</label>
+                <label className="text-white text-xs font-bold mb-1.5 block">Description</label>
                 <textarea value={form.overview} onChange={(e) => setF('overview', e.target.value)} rows={3}
                   className="w-full bg-stone-900 border border-white/10 focus:border-[#A0C9CB]/60 outline-none text-white text-sm py-2.5 px-3 rounded-lg resize-none" />
               </div>
@@ -776,7 +776,7 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
               {/* التوزيع */}
               <div className="grid md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/5">
                 <div>
-                  <label className="text-white text-xs font-bold mb-1.5 block">القسم بالصفحة الرئيسية</label>
+                  <label className="text-white text-xs font-bold mb-1.5 block">Home section</label>
                   <select value={form.section} onChange={(e) => setF('section', e.target.value)}
                     className="w-full bg-stone-900 border border-white/10 text-white text-sm py-2.5 px-3 rounded-lg outline-none cursor-pointer">
                     {allSections.map((s) => <option key={s.key} value={s.key}>{s.title}</option>)}
@@ -785,20 +785,20 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                 <div className="flex items-end">
                   <label className="flex items-center gap-2 text-white text-sm font-bold cursor-pointer bg-stone-900 border border-white/10 py-2.5 px-4 rounded-lg w-full">
                     <input type="checkbox" checked={form.inHero} onChange={(e) => setF('inHero', e.target.checked)} className="accent-[#A0C9CB] w-4 h-4" />
-                    يظهر بالكاروسيل الكبير (الهيرو)
+                    Show in the main carousel (hero)
                   </label>
                 </div>
               </div>
 
-              {/* حفظ */}
+              {/* Save */}
               <div className="flex gap-3 mt-6">
                 <button onClick={handleSave} disabled={saving || !form.title.trim()}
                   className="flex items-center gap-2 bg-[#A0C9CB] hover:bg-[#A0C9CB] disabled:opacity-40 text-white px-8 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all">
                   {saving ? <Loader className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                  حفظ
+                  Save
                 </button>
                 <button onClick={() => setForm(null)} className="bg-stone-900 hover:bg-stone-800 text-gray-300 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all">
-                  إلغاء
+                  Cancel
                 </button>
               </div>
             </div>
@@ -806,87 +806,87 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
         </div>
       )}
 
-      {/* ══ الأقسام ══ */}
+      {/* ══ Sections ══ */}
       {tab === 'sections' && (
         <div>
           {/* المحرر (يطفو فوق القائمة لما يكون مفتوح) */}
           {secForm ? (
             <div className="bg-[#141417] border border-white/8 rounded-2xl p-5 md:p-6">
               <div className="flex items-center justify-between mb-5">
-                <h3 className="text-white font-black text-lg">{secForm.key ? 'تعديل قسم' : 'قسم جديد'}</h3>
+                <h3 className="text-white font-black text-lg">{secForm.key ? 'Edit section' : 'New section'}</h3>
                 <button onClick={() => { setSecForm(null); setSecPreview([]); }} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 cursor-pointer">
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
               <div className="space-y-4">
-                <Field label="اسم القسم" value={secForm.title || ''} onChange={(v) => setSF('title', v)} />
+                <Field label="Section name" value={secForm.title || ''} onChange={(v) => setSF('title', v)} />
 
                 {/* نوع القسم */}
                 <div>
-                  <label className="text-white text-xs font-bold mb-2 block">طريقة التعبئة</label>
+                  <label className="text-white text-xs font-bold mb-2 block">Fill method</label>
                   <div className="flex gap-2">
                     <button onClick={() => setSF('kind', 'manual')}
                       className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${(secForm.kind || 'manual') === 'manual' ? 'bg-[#A0C9CB] text-white' : 'bg-stone-900 text-gray-400 hover:text-white'}`}>
-                      <PenLine className="w-3.5 h-3.5" /> يدوي
+                      <PenLine className="w-3.5 h-3.5" /> Manual
                     </button>
                     <button onClick={() => setSF('kind', 'genre')}
                       className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${secForm.kind === 'genre' ? 'bg-[#A0C9CB] text-white' : 'bg-stone-900 text-gray-400 hover:text-white'}`}>
-                      <Film className="w-3.5 h-3.5" /> تصنيف تلقائي
+                      <Film className="w-3.5 h-3.5" /> Auto genre
                     </button>
                   </div>
                   <p className="text-gray-500 text-[10px] mt-1.5 leading-relaxed">
                     {secForm.kind === 'genre'
-                      ? 'يتعبّى تلقائياً من TMDB حسب التصنيف والفلاتر، وتقدر تضيف عناصر يدوية فوقه من تبويب الإضافة.'
-                      : 'تضيف الأفلام والمسلسلات يدوياً من تبويب الإضافة.'}
+                      ? 'Filled automatically from TMDB by genre and filters; you can add manual items on top from the Add tab.'
+                      : 'Add movies and shows manually from the Add tab.'}
                   </p>
                 </div>
 
-                {/* حقول التصنيف — بس لو النوع genre */}
+                {/* حقول Genre — بس لو Type genre */}
                 {secForm.kind === 'genre' && (
                   <div className="bg-stone-900/50 border border-white/5 rounded-xl p-4 space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="text-white text-xs font-bold mb-1.5 block">النوع</label>
+                        <label className="text-white text-xs font-bold mb-1.5 block">Type</label>
                         <select value={secForm.mediaType || 'movie'} onChange={(e) => setSF('mediaType', e.target.value as 'movie' | 'tv')}
                           className="w-full bg-stone-900 border border-white/10 text-white text-sm py-2.5 px-3 rounded-lg outline-none cursor-pointer">
-                          <option value="movie">أفلام</option>
-                          <option value="tv">مسلسلات</option>
+                          <option value="movie">Movies</option>
+                          <option value="tv">TV Shows</option>
                         </select>
                       </div>
                       <div>
-                        <label className="text-white text-xs font-bold mb-1.5 block">التصنيف</label>
+                        <label className="text-white text-xs font-bold mb-1.5 block">Genre</label>
                         <select value={secForm.genreId || ''} onChange={(e) => setSF('genreId', e.target.value ? Number(e.target.value) : undefined)}
                           className="w-full bg-stone-900 border border-white/10 text-white text-sm py-2.5 px-3 rounded-lg outline-none cursor-pointer">
-                          <option value="">اختر تصنيف</option>
+                          <option value="">Choose a genre</option>
                           {CATEGORIES.map((c) => <option key={c.key} value={c.primaryGenre}>{c.title}</option>)}
                         </select>
                       </div>
                     </div>
                     <div className="grid grid-cols-3 gap-3">
-                      <NumField label="من سنة" value={secForm.minYear} onChange={(v) => setSF('minYear', v)} placeholder="1990" />
-                      <NumField label="إلى سنة" value={secForm.maxYear} onChange={(v) => setSF('maxYear', v)} placeholder="2026" />
-                      <NumField label="أقل تقييم" value={secForm.minRating} onChange={(v) => setSF('minRating', v)} placeholder="7" step="0.1" />
+                      <NumField label="From year" value={secForm.minYear} onChange={(v) => setSF('minYear', v)} placeholder="1990" />
+                      <NumField label="To year" value={secForm.maxYear} onChange={(v) => setSF('maxYear', v)} placeholder="2026" />
+                      <NumField label="Min rating" value={secForm.minRating} onChange={(v) => setSF('minRating', v)} placeholder="7" step="0.1" />
                     </div>
                     <div>
-                      <label className="text-white text-xs font-bold mb-1.5 block">اللغة الأصلية (اختياري)</label>
+                      <label className="text-white text-xs font-bold mb-1.5 block">Original language (optional)</label>
                       <select value={secForm.language || ''} onChange={(e) => setSF('language', e.target.value || undefined)}
                         className="w-full bg-stone-900 border border-white/10 text-white text-sm py-2.5 px-3 rounded-lg outline-none cursor-pointer">
-                        <option value="">الكل</option>
-                        <option value="ar">العربية</option>
-                        <option value="en">الإنجليزية</option>
-                        <option value="tr">التركية</option>
-                        <option value="ko">الكورية</option>
-                        <option value="ja">اليابانية</option>
-                        <option value="hi">الهندية</option>
-                        <option value="fr">الفرنسية</option>
-                        <option value="es">الإسبانية</option>
+                        <option value="">All</option>
+                        <option value="ar">Arabic</option>
+                        <option value="en">English</option>
+                        <option value="tr">Turkish</option>
+                        <option value="ko">Korean</option>
+                        <option value="ja">Japanese</option>
+                        <option value="hi">Hindi</option>
+                        <option value="fr">French</option>
+                        <option value="es">Spanish</option>
                       </select>
                     </div>
 
                     <button onClick={previewSection} disabled={previewing || !secForm.genreId}
                       className="flex items-center gap-2 bg-stone-800 hover:bg-stone-700 disabled:opacity-40 text-white px-4 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all">
-                      {previewing ? <Loader className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />} معاينة النتائج
+                      {previewing ? <Loader className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />} Preview results
                     </button>
 
                     {secPreview.length > 0 && (
@@ -904,18 +904,18 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                 <div className="flex gap-3 pt-2">
                   <button onClick={saveSectionEditor} disabled={!secForm.title?.trim() || (secForm.kind === 'genre' && !secForm.genreId)}
                     className="flex items-center gap-2 bg-[#A0C9CB] hover:bg-[#A0C9CB] disabled:opacity-40 text-white px-8 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all">
-                    <Plus className="w-4 h-4" /> حفظ
+                    <Plus className="w-4 h-4" /> Save
                   </button>
-                  <button onClick={() => { setSecForm(null); setSecPreview([]); }} className="bg-stone-900 hover:bg-stone-800 text-gray-300 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all">إلغاء</button>
+                  <button onClick={() => { setSecForm(null); setSecPreview([]); }} className="bg-stone-900 hover:bg-stone-800 text-gray-300 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all">Cancel</button>
                 </div>
               </div>
             </div>
           ) : (
             <div>
               <div className="flex items-center justify-between mb-5">
-                <p className="text-gray-400 text-xs leading-relaxed max-w-md">كل أقسام الصفحة الرئيسية. رتّبها بالأسهم، عدّل المخصصة، والأصلية معلّمة "أصلي" وثابتة.</p>
+                <p className="text-gray-400 text-xs leading-relaxed max-w-md">All home sections. Reorder with the arrows, edit custom ones; originals are marked "Original" and fixed.</p>
                 <button onClick={() => openSectionEditor()} className="flex items-center gap-1.5 bg-[#A0C9CB] hover:bg-[#A0C9CB] text-white px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-all whitespace-nowrap shrink-0">
-                  <FolderPlus className="w-4 h-4" /> قسم جديد
+                  <FolderPlus className="w-4 h-4" /> New section
                 </button>
               </div>
 
@@ -932,31 +932,31 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
                       onDrop={(e) => { e.preventDefault(); dropSection(s.key); }}
                       className={`flex items-center gap-3 bg-[#141417] border rounded-xl px-3 py-3 transition-all ${dragOver === s.key ? 'border-[#A0C9CB] bg-[#A0C9CB]/5' : 'border-white/8'}`}>
                       {/* مقبض السحب */}
-                      <div className="shrink-0 cursor-grab active:cursor-grabbing text-gray-500 hover:text-white px-1" title="اسحب للترتيب">
+                      <div className="shrink-0 cursor-grab active:cursor-grabbing text-gray-500 hover:text-white px-1" title="Drag to reorder">
                         <GripVertical className="w-5 h-5" />
                       </div>
 
                       {/* المعلومات */}
-                      <div className="flex-1 text-right">
+                      <div className="flex-1 text-left">
                         <div className="flex items-center gap-2 justify-start">
                           <p className="text-white text-sm font-bold">{s.title}</p>
                           {s.custom ? (
-                            <span className="bg-[#A0C9CB]/20 text-[#A0C9CB] text-[9px] font-black px-2 py-0.5 rounded-full">مضاف من قبلك</span>
+                            <span className="bg-[#A0C9CB]/20 text-[#A0C9CB] text-[9px] font-black px-2 py-0.5 rounded-full">Added by you</span>
                           ) : (
-                            <span className="bg-white/5 text-gray-400 text-[9px] font-black px-2 py-0.5 rounded-full">أصلي</span>
+                            <span className="bg-white/5 text-gray-400 text-[9px] font-black px-2 py-0.5 rounded-full">Original</span>
                           )}
-                          {isGenre && <span className="bg-blue-600/20 text-blue-400 text-[9px] font-black px-2 py-0.5 rounded-full">تصنيف تلقائي</span>}
+                          {isGenre && <span className="bg-blue-600/20 text-blue-400 text-[9px] font-black px-2 py-0.5 rounded-full">Auto genre</span>}
                         </div>
-                        {s.custom && <p className="text-gray-500 text-[11px] mt-0.5">{isGenre ? 'يتعبّى تلقائياً' : `${count} عنصر يدوي`}</p>}
+                        {s.custom && <p className="text-gray-500 text-[11px] mt-0.5">{isGenre ? 'Auto-filled' : `${count} manual items`}</p>}
                       </div>
 
-                      {/* أزرار التعديل/الحذف — بس للمخصصة */}
+                      {/* أزرار الEdit/الDelete — بس للمخصصة */}
                       {s.custom && (
                         <div className="flex gap-1.5 shrink-0">
-                          <button onClick={() => openSectionEditor((s as any).data)} className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-300 cursor-pointer" title="تعديل">
+                          <button onClick={() => openSectionEditor((s as any).data)} className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-300 cursor-pointer" title="Edit">
                             <Edit3 className="w-4 h-4" />
                           </button>
-                          <button onClick={() => removeCustomSection(s.key)} className="w-9 h-9 rounded-full bg-[#A0C9CB]/10 hover:bg-[#A0C9CB]/20 flex items-center justify-center text-[#A0C9CB] cursor-pointer" title="حذف">
+                          <button onClick={() => removeCustomSection(s.key)} className="w-9 h-9 rounded-full bg-[#A0C9CB]/10 hover:bg-[#A0C9CB]/20 flex items-center justify-center text-[#A0C9CB] cursor-pointer" title="Delete">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>

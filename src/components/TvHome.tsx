@@ -134,7 +134,7 @@ export default function TvHome({
           <div className="noir-tv-hero-bottom-scrim absolute inset-0" />
         </div>
 
-        <div className="noir-tv-hero-copy absolute bottom-[13.5rem] right-[5vw] z-10 flex w-[min(33rem,36vw)] flex-col items-start text-right" dir="rtl">
+        <div className="noir-tv-hero-copy absolute bottom-[13.5rem] right-[5vw] z-10 flex w-[min(33rem,36vw)] flex-col items-start text-left" dir="ltr">
           <div key={`content-${hero.type}-${hero.id}`} className="noir-tv-hero-content flex w-full flex-col items-start">
             {heroLogo ? (
               <img
@@ -150,7 +150,7 @@ export default function TvHome({
             )}
 
             <div className="flex flex-wrap items-center gap-2.5 text-[1rem] font-semibold text-white/78">
-              <span>{hero.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
+              <span>{hero.type === 'movie' ? 'Movie' : 'TV Show'}</span>
               {heroGenres.map((genre) => <span key={genre}>• {genre}</span>)}
               {hero.year && <span>• {hero.year}</span>}
               {hero.rating > 0 && (
@@ -167,7 +167,7 @@ export default function TvHome({
             )}
           </div>
 
-          <div data-tv-focus-row data-tv-top-actions className="noir-tv-hero-actions mt-6 flex items-center gap-4" dir="rtl">
+          <div data-tv-focus-row data-tv-top-actions className="noir-tv-hero-actions mt-6 flex items-center gap-4" dir="ltr">
             <button
               ref={playButtonRef}
               type="button"
@@ -176,10 +176,10 @@ export default function TvHome({
               data-tv-focus-key={`home:hero:play:${hero.type}_${hero.id}`}
               onClick={() => onPlay(hero)}
               className="noir-tv-hero-play flex h-14 items-center gap-3 rounded-full bg-white px-8 text-lg font-bold text-black"
-              aria-label={`تشغيل ${hero.title}`}
+              aria-label={`Play ${hero.title}`}
             >
               <Play className="h-6 w-6 fill-current" />
-              <span>تشغيل</span>
+              <span>Play</span>
             </button>
             <button
               type="button"
@@ -187,7 +187,7 @@ export default function TvHome({
               data-tv-focus-key={`home:hero:save:${hero.type}_${hero.id}`}
               onClick={() => onToggleSave(hero)}
               className="noir-tv-hero-circle flex h-14 w-14 items-center justify-center rounded-full border border-white/18 bg-black/45 text-white backdrop-blur-xl"
-              aria-label={saved ? `إزالة ${hero.title} من قائمتي` : `إضافة ${hero.title} إلى قائمتي`}
+              aria-label={saved ? `Remove ${hero.title} from my list` : `Add ${hero.title} to my list`}
             >
               {saved ? <Check className="h-7 w-7" /> : <Plus className="h-7 w-7" />}
             </button>
@@ -198,7 +198,7 @@ export default function TvHome({
                 data-tv-focus-key="home:hero:next"
                 onClick={() => setActiveHero((current) => (current - 1 + heroes.length) % heroes.length)}
                 className="noir-tv-hero-circle flex h-14 w-14 items-center justify-center rounded-full border border-white/18 bg-black/45 text-white backdrop-blur-xl"
-                aria-label="العنوان التالي"
+                aria-label="Next title"
               >
                 <ChevronRight className="h-8 w-8" strokeWidth={2.3} />
               </button>
@@ -220,7 +220,7 @@ export default function TvHome({
       <div className="noir-tv-home-rows relative z-20 -mt-[7rem]">
         {continueWatching.length > 0 && (
           <TvRow
-            title="أكمل المشاهدة"
+            title="Continue Watching"
             items={continueWatching}
             onSelect={(item) => onContinue(item as ContinueWatchingItem)}
             progress
@@ -298,7 +298,7 @@ function TvRow({
         ref={rowRef}
         data-tv-focus-row
         className={`noir-tv-card-track flex overflow-x-auto px-[5vw] no-scrollbar scroll-smooth ${progress ? 'noir-tv-continue-track' : ''}`}
-        dir="rtl"
+        dir="ltr"
       >
         {visibleItems.map((item, index) => {
           const continueItem = item as ContinueWatchingItem;
@@ -317,14 +317,14 @@ function TvRow({
               data-tv-card-artwork
               data-tv-focus-key={`home:${title}:${item.type}_${item.id}`}
               onClick={() => onSelect(item)}
-              className={`group relative shrink-0 overflow-hidden bg-[#151518] text-right ${
+              className={`group relative shrink-0 overflow-hidden bg-[#151518] text-left ${
                 portrait
                   ? 'noir-tv-portrait-card aspect-[2/3] w-[clamp(11rem,12vw,14rem)] rounded-[1.1rem]'
                   : progress
                     ? 'noir-tv-continue-card aspect-video w-[clamp(18rem,19vw,22.5rem)] rounded-[1.15rem]'
                     : 'noir-tv-landscape-card aspect-video w-[clamp(17rem,18vw,21.5rem)] rounded-[1.15rem]'
               }`}
-              aria-label={`فتح ${item.title}`}
+              aria-label={`Open ${item.title}`}
             >
               {image && <img src={image} alt="" loading={index < 5 ? 'eager' : 'lazy'} className="absolute inset-0 h-full w-full object-cover" referrerPolicy="no-referrer" />}
               <div className={`absolute inset-0 ${progress ? 'bg-gradient-to-t from-black/95 via-black/20 to-transparent' : 'bg-gradient-to-t from-black/88 via-black/5 to-transparent'}`} />
@@ -333,7 +333,7 @@ function TvRow({
                   {index + 1}
                 </span>
               )}
-              <div className="absolute inset-x-0 bottom-0 z-10 p-4" dir="rtl">
+              <div className="absolute inset-x-0 bottom-0 z-10 p-4" dir="ltr">
                 <h3 className={`${progress ? 'noir-tv-continue-title text-[clamp(.82rem,.82vw,.95rem)]' : 'text-lg'} truncate font-bold text-white`}>{item.title}</h3>
                 {progress ? (
                   <>
@@ -341,7 +341,7 @@ function TvRow({
                       <span className="flex items-center gap-2">
                         <Play className="h-4 w-4 fill-current" />
                         {continueItem.type === 'tv' && continueItem.episode > 0
-                          ? `الحلقة ${continueItem.episode}`
+                          ? `Episode ${continueItem.episode}`
                           : formatElapsed(continueItem.positionSeconds)}
                       </span>
                       <span>{formatRemaining(continueItem.durationSeconds, continueItem.positionSeconds)}</span>
@@ -352,7 +352,7 @@ function TvRow({
                   </>
                 ) : (
                   <div className="mt-1 flex items-center gap-2 text-sm text-white/70">
-                    <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
+                    <span>{item.type === 'movie' ? 'Movie' : 'TV Show'}</span>
                     {item.year && <><span>•</span><span>{item.year}</span></>}
                     {item.rating > 0 && <><span>•</span><span>{item.rating.toFixed(1)}</span></>}
                   </div>
@@ -370,13 +370,13 @@ function formatElapsed(seconds: number): string {
   const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
   const hours = Math.floor(safeSeconds / 3600);
   const minutes = Math.floor((safeSeconds % 3600) / 60);
-  return hours > 0 ? `${hours} س ${minutes} د` : `${minutes} د`;
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 
 function formatRemaining(durationSeconds: number, positionSeconds: number): string {
   const remaining = Math.max(0, (Number(durationSeconds) || 0) - (Number(positionSeconds) || 0));
-  if (!remaining) return 'متبقي قليل';
-  return `باقي ${formatElapsed(remaining)}`;
+  if (!remaining) return 'Almost done';
+  return `${formatElapsed(remaining)} left`;
 }
 
 function responsiveArtwork(url: string, kind: 'hero' | 'poster' | 'landscape'): string {

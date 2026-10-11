@@ -20,10 +20,10 @@ interface StudioPageProps {
 type SortKey = 'popularity' | 'rating' | 'year' | 'az';
 
 const SORT_LABELS: Record<SortKey, string> = {
-  popularity: 'الأكثر رواجاً',
-  rating: 'الأعلى تقييماً',
-  year: 'الأحدث',
-  az: 'أبجدياً',
+  popularity: 'Most popular',
+  rating: 'Top rated',
+  year: 'Newest',
+  az: 'Alphabetical',
 };
 
 // بطاقة أفقية مطابقة لصفوف الواجهة الرئيسية
@@ -50,7 +50,7 @@ function GridCard({
       role="button"
       tabIndex={0}
       data-tv-card
-      aria-label={`فتح ${item.title}`}
+      aria-label={`Open ${item.title}`}
       className="noir-browse-grid-card group/card card-transition cursor-pointer select-none"
     >
       <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-[18px] bg-black border border-white/[0.06]">
@@ -64,12 +64,12 @@ function GridCard({
         {item.backdrop || item.poster ? (
           <img src={item.backdrop || item.poster || undefined} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-stone-600 text-xs">بدون صورة</div>
+          <div className="w-full h-full flex items-center justify-center text-stone-600 text-xs">No image</div>
         )}
       </div>
-      <div className="px-1 pt-3 text-right">
+      <div className="px-1 pt-3 text-left">
         <h3 className="text-white text-sm font-bold line-clamp-1">{item.title}</h3>
-        <p className="mt-1 text-white/40 text-[11px] font-medium">{item.type === 'movie' ? 'فيلم' : 'مسلسل'} · {item.year || '—'}</p>
+        <p className="mt-1 text-white/40 text-[11px] font-medium">{item.type === 'movie' ? 'Movie' : 'TV Show'} · {item.year || '—'}</p>
       </div>
     </div>
   );
@@ -153,8 +153,8 @@ export default function StudioPage({
       {/* Full-width colored header (لون هوية الشركة) */}
       <div className="noir-browse-banner relative w-full" style={{ backgroundColor: studio.color }}>
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
-        <div dir="rtl" className="relative w-full px-4 sm:px-6 lg:px-8 pt-8 pb-10 sm:pt-10 sm:pb-14">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white drop-shadow-lg text-right">
+        <div dir="ltr" className="relative w-full px-4 sm:px-6 lg:px-8 pt-8 pb-10 sm:pt-10 sm:pb-14">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white drop-shadow-lg text-left">
             {studio.title}
           </h1>
         </div>
@@ -162,8 +162,8 @@ export default function StudioPage({
 
       <div className="w-full py-8 sm:py-10 px-4 sm:px-6 lg:px-8">
         {/* Sort control */}
-        <div dir="rtl" className="flex items-center justify-between mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-white">كل أعمال {studio.title}</h2>
+        <div dir="ltr" className="flex items-center justify-between mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-white">All titles from {studio.title}</h2>
           {!isTvApp && <div className="relative">
             <button
               onClick={() => setSortOpen((o) => !o)}
@@ -178,7 +178,7 @@ export default function StudioPage({
                   <button
                     key={k}
                     onClick={() => { setSortBy(k); setSortOpen(false); }}
-                    className={`w-full text-right px-4 py-2.5 text-xs sm:text-sm transition-colors cursor-pointer ${sortBy === k ? 'text-white bg-white/10 font-bold' : 'text-stone-300 hover:bg-white/5'}`}
+                    className={`w-full text-left px-4 py-2.5 text-xs sm:text-sm transition-colors cursor-pointer ${sortBy === k ? 'text-white bg-white/10 font-bold' : 'text-stone-300 hover:bg-white/5'}`}
                   >
                     {SORT_LABELS[k]}
                   </button>
@@ -189,7 +189,7 @@ export default function StudioPage({
         </div>
 
         {/* Grid */}
-        <div dir="rtl" className="grid grid-cols-1 gap-x-4 gap-y-9 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+        <div dir="ltr" className="grid grid-cols-1 gap-x-4 gap-y-9 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {allItems.map((item) => (
             <div key={`${item.type}-${item.id}`}>
               <GridCard
@@ -203,7 +203,7 @@ export default function StudioPage({
         </div>
 
         {allItems.length === 0 && !loading && (
-          <div className="py-16 text-center text-stone-500 text-sm">لا توجد نتائج لهذه الشركة حالياً.</div>
+          <div className="py-16 text-center text-stone-500 text-sm">No results for this studio right now.</div>
         )}
 
         <div ref={loaderRef} className="h-16 flex items-center justify-center mt-4">

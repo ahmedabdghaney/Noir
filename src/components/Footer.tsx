@@ -13,10 +13,10 @@ interface FooterProps {
 
 export default function Footer({ goHome, setSearchMode }: FooterProps) {
   return (
-    <footer className="border-t border-white/5 bg-stone-950/40 text-stone-500 py-12 md:py-16 mt-16 select-none leading-relaxed">
+    <footer className="border-t border-white/5 bg-stone-950/40 text-stone-500 py-12 md:py-16 mt-16 select-none leading-relaxed" dir="ltr">
       <div className="max-w-6xl mx-auto px-6 md:px-12">
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 text-right">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 text-left">
 
           {/* Brand Info */}
           <div className="space-y-4">
@@ -25,11 +25,11 @@ export default function Footer({ goHome, setSearchMode }: FooterProps) {
               className="inline-flex items-center gap-2 cursor-pointer text-white font-bold text-lg tracking-tight"
             >
               <LogoIcon className="w-5 h-5 text-[#A0C9CB]" />
-              <span>نوار</span>
-              <span className="text-gray-500 font-normal text-xs mr-1 bg-white/5 px-1.5 py-0.5 rounded">سينما</span>
+              <span>Noir</span>
+              <span className="text-gray-500 font-normal text-xs ml-1 bg-white/5 px-1.5 py-0.5 rounded">Cinema</span>
             </div>
-            <p className="text-xs text-stone-400 font-medium max-w-xl leading-6" dir="ltr">
-              Movy does not host, upload, or store any files. Titles shown here are indexed automatically from public sources and third-party services. The media stays on those platforms — we only provide links.
+            <p className="text-xs text-stone-400 font-medium max-w-xl leading-6">
+              Noir Cinema does not host, upload, or store any files. Titles shown here are indexed automatically from public sources and third-party services. The media stays on those platforms — we only provide links.
             </p>
             <div className="flex gap-2.5">
               <a
@@ -61,17 +61,17 @@ export default function Footer({ goHome, setSearchMode }: FooterProps) {
           </div>
 
           {/* Quick links */}
-          <div className="space-y-3">
-            <h5 className="text-xs font-bold text-white uppercase tracking-wider">تصفّح العناوين</h5>
+          <div className="space-y-3 md:text-right">
+            <h5 className="text-xs font-bold text-white uppercase tracking-wider">Browse titles</h5>
             <div className="flex flex-col gap-2 text-xs">
-              <button onClick={goHome} className="text-right hover:text-white transition-colors cursor-pointer">
-                الرئيسية
+              <button onClick={goHome} className="text-left md:text-right hover:text-white transition-colors cursor-pointer">
+                Home
               </button>
-              <button onClick={() => setSearchMode('movie')} className="text-right hover:text-white transition-colors cursor-pointer">
-                أحدث الأفلام
+              <button onClick={() => setSearchMode('movie')} className="text-left md:text-right hover:text-white transition-colors cursor-pointer">
+                Latest Movies
               </button>
-              <button onClick={() => setSearchMode('tv')} className="text-right hover:text-white transition-colors cursor-pointer">
-                المسلسلات التلفزيونية
+              <button onClick={() => setSearchMode('tv')} className="text-left md:text-right hover:text-white transition-colors cursor-pointer">
+                TV Shows
               </button>
             </div>
           </div>
@@ -81,10 +81,10 @@ export default function Footer({ goHome, setSearchMode }: FooterProps) {
         {/* Footer Bottom copyright notes */}
         <div className="border-t border-white/5 pt-6 flex flex-wrap justify-between items-center text-[11px] text-stone-600 gap-4">
           <span>
-            © 2026 نوار سينما — للاستخدام العائلي والترفيه الشخصي التجريبي. كافة الحقوق محفوظة.
+            © {new Date().getFullYear()} Noir Cinema — for personal, family and experimental entertainment use. All rights reserved.
           </span>
           <span className="font-medium tracking-wide">
-            صُنع برزانة وبلغة جمالية رمادية هادئة للعين.
+            Crafted with care in a calm, easy-on-the-eyes grey aesthetic.
           </span>
         </div>
 

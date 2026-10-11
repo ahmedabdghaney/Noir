@@ -69,14 +69,14 @@ export function normalizeItem(item: any, customType?: 'movie' | 'tv'): MovieOrSh
   const isTV = customType === 'tv' || item.media_type === 'tv' || (!item.title && item.name);
   const ids: number[] = item.genre_ids || (item.genres ? item.genres.map((g: any) => g.id) : []);
   
-  let itemTitle = 'غير معروف';
+  let itemTitle = 'Unknown';
   // Option: Arabic content shows Arabic, foreign content keeps its ORIGINAL name.
   // original_title/original_name is Arabic for Arabic films and the native name
   // (e.g. English) for foreign films — exactly what we want for both cases.
   if (!isTV) {
-    itemTitle = item.original_title || item.title || 'غير معروف';
+    itemTitle = item.original_title || item.title || 'Unknown';
   } else {
-    itemTitle = item.original_name || item.name || 'غير معروف';
+    itemTitle = item.original_name || item.name || 'Unknown';
   }
 
   // Force English name for Obsession movie specifically
@@ -196,10 +196,10 @@ export interface TmdbImport {
 
 // خريطة أكواد اللغات الشائعة للعربي
 const LANG_AR: Record<string, string> = {
-  en: 'الإنجليزية', ar: 'العربية', fr: 'الفرنسية', es: 'الإسبانية',
-  de: 'الألمانية', it: 'الإيطالية', ja: 'اليابانية', ko: 'الكورية',
-  zh: 'الصينية', hi: 'الهندية', tr: 'التركية', ru: 'الروسية',
-  pt: 'البرتغالية', fa: 'الفارسية', ur: 'الأردية',
+  en: 'English', ar: 'Arabic', fr: 'French', es: 'Spanish',
+  de: 'German', it: 'Italian', ja: 'Japanese', ko: 'Korean',
+  zh: 'Chinese', hi: 'Hindi', tr: 'Turkish', ru: 'Russian',
+  pt: 'Portuguese', fa: 'Persian', ur: 'Urdu',
 };
 
 export async function importFromTmdb(type: 'movie' | 'tv', id: number): Promise<TmdbImport | null> {
@@ -313,7 +313,7 @@ export async function fetchTitleLogo(
 }
 
 // يجيب IMDb ID لفيلم/مسلسل من TMDB عبر /external_ids — يُستخدم لتجهيز الترجمة
-// العربية (OpenSubtitles يطابق بالـ IMDb). يرجع null لو ما توفر. نكاش النتيجة
+// Arabic (OpenSubtitles يطابق بالـ IMDb). يرجع null لو ما توفر. نكاش النتيجة
 // بالـ responseCache تلقائياً لأنه يمر عبر tmdbFetch.
 export async function fetchImdbId(type: 'movie' | 'tv', id: number): Promise<string | null> {
   try {
@@ -351,7 +351,7 @@ export async function fetchSeasonEpisodes(tvId: number, seasonNumber: number): P
       const overview = (e.overview && e.overview.trim()) ? e.overview : (enE.overview || '');
       return {
         episode_number: e.episode_number,
-        name: e.name || enE.name || `الحلقة ${e.episode_number}`,
+        name: e.name || enE.name || `Episode ${e.episode_number}`,
         overview,
         still_path: e.still_path || enE.still_path || null,
         runtime: e.runtime || enE.runtime || null,

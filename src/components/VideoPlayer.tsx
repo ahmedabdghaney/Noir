@@ -56,8 +56,8 @@ interface VideoPlayerProps {
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 const CDN_BASE_URL = 'https://d269k7J205s3hx.cloudfront.net/';
 
-// أحجام الترجمة الأربعة (مطابقة لتطبيق iOS) — كل اسم يقابل نسبة تُطبّق على
-// طبقة الترجمة المخصصة. القيم اختيرت لتعطي فروقاً واضحة ومريحة.
+// أحجام Subtitles الأربعة (مطابقة لتطبيق iOS) — كل اسم يقابل نسبة تُطبّق على
+// طبقة Subtitles المخصصة. القيم اختيرت لتعطي فروقاً واضحة ومريحة.
 type SubSizeKey = 'sm' | 'md' | 'lg' | 'xl';
 const SUB_SIZES: { key: SubSizeKey; label: string; pct: number }[] = [
   { key: 'sm', label: 'Small',       pct: 70 },
@@ -166,10 +166,10 @@ export default function VideoPlayer({
   const [volume,          setVolume]          = useState(1);
   const [isMuted,         setIsMuted]         = useState(false);
   const [subEnabled,      setSubEnabled]      = useState(true);
-  const [subSize,         setSubSize]         = useState(100); // نسبة حجم الترجمة % (مشتقّة من الحجم المسمّى)
-  const [subSheetOpen,    setSubSheetOpen]    = useState(false); // Bottom Sheet إعدادات الترجمة
-  const [subOffset,       setSubOffset]       = useState(0);  // تأخير الترجمة بالثانية (+/-) — مُبقى داخلياً
-  const [cueText,         setCueText]         = useState('');  // نص الترجمة الحالي
+  const [subSize,         setSubSize]         = useState(100); // نسبة حجم Subtitles % (مشتقّة من الحجم المسمّى)
+  const [subSheetOpen,    setSubSheetOpen]    = useState(false); // Bottom Sheet إعدادات Subtitles
+  const [subOffset,       setSubOffset]       = useState(0);  // Subtitle delay بالثانية (+/-) — مُبقى داخلياً
+  const [cueText,         setCueText]         = useState('');  // نص Subtitles الحالي
   const [speed,           setSpeed]           = useState(1);
   // مستويات جودة HLS: {index الفعلي بـ hls.levels, height} — -1 = Auto
   const [qualityLevels, setQualityLevels] = useState<{ index: number; height: number }[]>([]);
@@ -202,7 +202,7 @@ export default function VideoPlayer({
   const [isScrubbing, setIsScrubbing] = useState(false);
   // فلاش السيك (مثل اليوتيوب لما تدبل تاب)
   const [seekFlash, setSeekFlash] = useState<{ dir: 'fwd' | 'back'; amount: number } | null>(null);
-  // مؤشر الوقف/التشغيل بالوسط
+  // مؤشر الوقف/الPlay بالوسط
   const [playPulse, setPlayPulse] = useState<{ kind: 'play' | 'pause'; key: number } | null>(null);
   // الضغط المستمر بالكيبورد للسيك (تبقى الأيقونة ظاهرة)
   const [seekHold, setSeekHold] = useState<'fwd' | 'back' | null>(null);
@@ -225,7 +225,7 @@ export default function VideoPlayer({
   const hlsUrl = currentSource?.url || null;
   const arabicReady = currentSource?.arabicReady ?? false;
 
-  // السطوع: المتصفح ما يغيّر سطوع الجهاز الحقيقي، فنطبّقه بصرياً على الفيديو فقط
+  // Brightness: المتصفح ما يغيّر سطوع الجهاز الحقيقي، فنطبّقه بصرياً على الفيديو فقط
   // عبر CSS filter: brightness() — دون المساس ببقية الواجهة والأزرار.
   const [brightness, setBrightness] = useState(1);        // 0.3 .. 1
   // Fit = احتواء كامل (contain) · Fill = ملء الإطار (cover)
@@ -236,8 +236,8 @@ export default function VideoPlayer({
   // صحيح لما يتوفر مصدر native ولم نتحوّل للـ embed الاحتياطي.
   const isNative = playMode === 'movie' && !!hlsUrl && !useEmbed && !useVidApi;
   // Vidy داخل iframe من نطاق مختلف، لذلك الموقع لا يستطيع تعديل ترجمته مباشرة.
-  // على iPhone نمنع زر Vidy من فتح مشغل Apple الأصلي (الذي يشوّه الترجمة)،
-  // ونستخدم ملء شاشة CSS يبقي الفيديو والترجمة داخل مشغل Vidy نفسه.
+  // على iPhone نمنع زر Vidy من فتح مشغل Apple الأصلي (الذي يشوّه Subtitles)،
+  // ونستخدم ملء شاشة CSS يبقي الفيديو وSubtitles داخل مشغل Vidy نفسه.
   const isIPhoneBrowser =
     typeof navigator !== 'undefined' && /iPhone|iPod/i.test(navigator.userAgent);
   const useMobileVidyFullscreen =
@@ -290,7 +290,7 @@ export default function VideoPlayer({
   const customMp4 = undefined;
   const vttSrc    = '';
 
-  /* نفحص وجود MP4 أولاً. الخطأ المؤكد يحوّل تلقائياً إلى VidAPI،
+  /* نفحص وجود MP4 أولاً. الخطأ المؤكد يحوّل Autoاً إلى VidAPI،
      أما فشل HEAD بسبب CORS/الشبكة فيترك عنصر الفيديو يجرب بنفسه. */
   useEffect(() => {
     if (playMode !== 'movie' || !customMp4) {
@@ -319,7 +319,7 @@ export default function VideoPlayer({
         }
       })
       .catch(() => {
-        // بعض مخازن الفيديو تمنع HEAD رغم أن تشغيل GET مسموح.
+        // بعض مخازن الفيديو تمنع HEAD رغم أن Play GET مسموح.
       })
       .finally(() => {
         window.clearTimeout(timeout);
@@ -375,7 +375,7 @@ export default function VideoPlayer({
     try {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: title || '',
-        artist: type === 'tv' ? `الموسم ${season} • الحلقة ${episode}` : 'NOIR',
+        artist: type === 'tv' ? `Season ${season} • Episode ${episode}` : 'NOIR',
         album: 'NOIR',
         artwork,
       });
@@ -408,9 +408,9 @@ export default function VideoPlayer({
     }
   }, [id, isNative, episode, season, startAt, type]);
 
-  // تحميل HLS البطيء ليس فشل مصدر — لا نحوّل تلقائياً لـ embed بسببه (قاعدة #9).
+  // تحميل HLS البطيء ليس فشل مصدر — لا نحوّل Autoاً لـ embed بسببه (قاعدة #9).
   // hls.js يتولّى إعادة محاولة التحميل عند تذبذب الشبكة، وشاشة التحميل تبقى
-  // حتى يبدأ التشغيل أو يرجع خطأ fatal (يُعالَج بـ ERROR handler بالأعلى).
+  // حتى يبدأ الPlay أو يرجع خطأ fatal (يُعالَج بـ ERROR handler بالأعلى).
 
   /* ── postMessage ── */
   const lastWatchedRef   = useRef(0);
@@ -555,9 +555,9 @@ export default function VideoPlayer({
     };
   }, [type, id, season, episode, playMode, activateAutomaticFallback]);
 
-  /* ── resolve Noir playback: يجيب المصادر من الخادم ويجهّز الترجمة العربية ──
+  /* ── resolve Noir playback: يجيب المصادر من الخادم ويجهّز Subtitles العربية ──
      يُشغَّل عند فتح المشغل بوضع الفيلم، ويعيد الطلب عند تغيّر العنوان/الحلقة.
-     فشل الخادم نفسه يعرض خطأ + إعادة محاولة (resolveError) ولا يتحوّل تلقائياً
+     فشل الخادم نفسه يعرض خطأ + إعادة محاولة (resolveError) ولا يتحوّل Autoاً
      لـ embed. التحوّل لـ embed يصير فقط لما ما يرجع أي HLS native. */
   const resolveNonceRef = useRef(0);
   const runResolve = useCallback(() => {
@@ -582,7 +582,7 @@ export default function VideoPlayer({
         if (result.sources.length > 0) {
           setSources(result.sources);
           setSourceIndex(0);
-          setSubEnabled(result.sources[0].arabicReady); // العربية تلقائياً لو جاهزة
+          setSubEnabled(result.sources[0].arabicReady); // العربية Autoاً لو جاهزة
         } else if (result.embeds.length > 0) {
           // ما في مصدر native — ننتقل للـ embed الاحتياطي (Vidy).
           setUseEmbed(true);
@@ -593,7 +593,7 @@ export default function VideoPlayer({
       })
       .catch(() => {
         if (nonce !== resolveNonceRef.current) return;
-        // خطأ بالخادم نفسه — خطأ واضح، لا تحوّل تلقائي لـ embed.
+        // خطأ بالخادم نفسه — خطأ واضح، لا تحوّل Auto لـ embed.
         setResolveError(true);
         setIsLoading(false);
       });
@@ -602,7 +602,7 @@ export default function VideoPlayer({
   }, [type, id, season, episode, playMode]);
 
   /* ينتقل للمصدر native التالي عند فشل الحالي؛ وإذا خلصت المصادر ينتقل
-     تلقائياً إلى embed احتياطي أو VidAPI بدون إظهار اختيار للمستخدم. */
+     Autoاً إلى embed احتياطي أو VidAPI بدون إظهار اختيار للمستخدم. */
   const tryNextSource = useCallback(() => {
     setSourceIndex((idx) => {
       const next = idx + 1;
@@ -674,7 +674,7 @@ export default function VideoPlayer({
     return () => window.removeEventListener('noir_playback_settings_sync', handleCloudSync);
   }, []);
 
-  /* ملاحظة: إغلاق الإعدادات يتم عبر الـ overlay (onPointerDown) — يشتغل ماوس ولمس */
+  /* ملاحظة: Close Settings يتم عبر الـ overlay (onPointerDown) — يشتغل ماوس ولمس */
 
   const persistPlaybackSettings = (
     nextAutoplay: boolean,
@@ -693,7 +693,7 @@ export default function VideoPlayer({
     }));
   };
 
-  // يضبط حجم الترجمة بالاسم (Small/Medium/Large/XL) ويحفظه.
+  // يضبط حجم Subtitles بالاسم (Small/Medium/Large/XL) ويحفظه.
   const setSubSizeByKey = (key: SubSizeKey) => {
     const pct = subKeyToPct(key);
     setSubSize(pct);
@@ -766,7 +766,7 @@ export default function VideoPlayer({
         setShowSettings(false);
         window.requestAnimationFrame(() => {
           containerRef.current
-            ?.querySelector<HTMLElement>('[aria-label="الإعدادات"]')
+            ?.querySelector<HTMLElement>('[aria-label="Settings"]')
             ?.focus({ preventScroll: true });
         });
         return;
@@ -1035,7 +1035,7 @@ export default function VideoPlayer({
             if (isTvAndroidApp) {
               window.requestAnimationFrame(() => {
                 containerRef.current
-                  ?.querySelector<HTMLElement>('[aria-label="الإعدادات"]')
+                  ?.querySelector<HTMLElement>('[aria-label="Settings"]')
                   ?.focus({ preventScroll: true });
               });
             }
@@ -1102,7 +1102,7 @@ export default function VideoPlayer({
           // كان boost — نوقفه
           endSpeedBoost();
         } else if (spaceHeldRef.current) {
-          // كانت ضغطة قصيرة — play/pause عادي
+          // كانت ضغطة قصيرة — play/pause Normal
           togglePlay();
         }
         spaceHeldRef.current = false;
@@ -1145,9 +1145,9 @@ export default function VideoPlayer({
 
   /* ── ربط hls.js / HLS الأصلي بعنصر الفيديو ──
      Safari (وأي متصفح فيه دعم HLS أصلي): نمرّر الرابط لـ video.src مباشرة.
-     Chrome/Firefox: نستخدم hls.js. بالحالتين الترجمة تجي من video.textTracks
+     Chrome/Firefox: نستخدم hls.js. بالحالتين Subtitles تجي من video.textTracks
      (مدموجة بالـ master.m3u8) ويرسمها Noir من activeCues.
-     اختيار الصوت: الإنجليزي تلقائياً عند توفره (ما نخلي إيطالي يبدأ لو عدنا إنجليزي). */
+     اختيار الصوت: الإنجليزي Autoاً عند توفره (ما نخلي إيطالي يبدأ لو عدنا إنجليزي). */
   useEffect(() => {
     const v = videoRef.current;
     if (!v || !isNative || !hlsUrl) return;
@@ -1189,11 +1189,11 @@ export default function VideoPlayer({
     }
 
     if (Hls.isSupported()) {
-      // Chrome / Firefox — hls.js مع دعم مسارات الترجمة.
-      // renderTextTracksNatively:true — hls.js يضيف الترجمة لـ video.textTracks
+      // Chrome / Firefox — hls.js مع دعم مسارات Subtitles.
+      // renderTextTracksNatively:true — hls.js يضيف Subtitles لـ video.textTracks
       // بشكل قياسي (مع حدث addtrack)، ونحن نضبط المسار hidden فيقرأ Noir
       // activeCues بدون أن يرسمها المتصفح. (false يجعل hls.js يدير المسار
-      // داخلياً فلا يظهر بـ textTracks إطلاقاً — وهذا سبب اختفاء الترجمة.)
+      // داخلياً فلا يظهر بـ textTracks إطلاقاً — وهذا سبب اختفاء Subtitles.)
       const hls = new Hls({
         enableWebVTT: true,
         renderTextTracksNatively: true,
@@ -1202,7 +1202,7 @@ export default function VideoPlayer({
       hlsRef.current = hls;
       hls.loadSource(hlsUrl);
       hls.attachMedia(v);
-      // يفعّل مسار الترجمة بـ hls.js حتى تُحمّل الـ cues، ويفضّل العربي.
+      // يفعّل مسار Subtitles بـ hls.js حتى تُحمّل الـ cues، ويفضّل العربي.
       const enableArabicSubtitle = () => {
         const tracks = hls.subtitleTracks || [];
         if (tracks.length === 0) return;
@@ -1210,7 +1210,7 @@ export default function VideoPlayer({
           (t) => /^ar/i.test(t.lang || '') || /arabic|عرب/i.test(t.name || ''),
         );
         const target = arIdx >= 0 ? arIdx : 0;
-        // display=false: hls.js لا يرسم الترجمة بنفسه، Noir يرسمها من activeCues.
+        // display=false: hls.js لا يرسم Subtitles بنفسه، Noir يرسمها من activeCues.
         hls.subtitleDisplay = false;
         if (hls.subtitleTrack !== target) hls.subtitleTrack = target;
       };
@@ -1218,7 +1218,7 @@ export default function VideoPlayer({
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         pickEnglishAudio(hls);
         enableArabicSubtitle();
-        // اجمع مستويات الجودة الفريدة (حسب الارتفاع) للعرض بقائمة الإعدادات.
+        // اجمع مستويات Quality الفريدة (حسب الارتفاع) للعرض بقائمة Settings.
         const levels = (hls.levels || [])
           .map((lv, i) => ({ index: i, height: lv.height || 0 }))
           .filter((lv) => lv.height > 0)
@@ -1268,7 +1268,7 @@ export default function VideoPlayer({
   }, [isNative, hlsUrl, tryNextSource]);
 
   /* ── helpers ── */
-  // يختار مسار الترجمة الفعلي (عربي أولاً) من بين كل المسارات.
+  // يختار مسار Subtitles الفعلي (عربي أولاً) من بين كل المسارات.
   const getSubtitleTrack = useCallback((): TextTrack | null => {
     const v = videoRef.current;
     if (!v?.textTracks?.length) return null;
@@ -1305,7 +1305,7 @@ export default function VideoPlayer({
   };
 
   /* ── custom subtitle rendering: اقرأ الـ cue الحالي وارسمه بنفسنا ──
-     مع hls.js مسار الترجمة (المدموج بالـ master) يُضاف متأخراً، فنتابع
+     مع hls.js مسار Subtitles (المدموج بالـ master) يُضاف متأخراً، فنتابع
      video.textTracks بحدث addtrack ونعيد الربط كل ما تغيّر عددها. */
   useEffect(() => {
     const vid = videoRef.current;
@@ -1371,7 +1371,7 @@ export default function VideoPlayer({
   const changeQuality = (index: number) => {
     const hls = hlsRef.current;
     if (hls) {
-      // -1 يعيد الوضع التلقائي (ABR) بـ hls.js.
+      // -1 يعيد الوضع الAuto (ABR) بـ hls.js.
       hls.currentLevel = index;
       setCurrentLevel(index);
     }
@@ -1379,7 +1379,7 @@ export default function VideoPlayer({
     setShowSettings(false);
   };
 
-  /* ── iPhone native fullscreen: ارفع الترجمة من قاع الشاشة (cue.line) ── */
+  /* ── iPhone native fullscreen: ارفع Subtitles من قاع الشاشة (cue.line) ── */
   useEffect(() => {
     if (!iosNativeFs) return;
     const track = getSubtitleTrack();
@@ -1490,7 +1490,7 @@ export default function VideoPlayer({
 
     // ── الدخول ──
     // iPhone — لازم fullscreen على عنصر <video> نفسه (الوحيد المدعوم)
-    // نحوّل الـ track لـ showing عشان iOS يعرض الترجمة بكنترولاته (الـ offset مطبّق أصلاً على الـ cues)
+    // نحوّل الـ track لـ showing عشان iOS يعرض Subtitles بكنترولاته (الـ offset مطبّق أصلاً على الـ cues)
     if (isIPhone && vid?.webkitEnterFullscreen) {
       const subTrack = getSubtitleTrack();
       if (subEnabled && subTrack) subTrack.mode = 'showing';
@@ -1524,8 +1524,8 @@ export default function VideoPlayer({
 
   const toggleMobileVidyFullscreen = () => {
     // لا نستخدم Fullscreen API هنا عمداً: على iPhone يحوّل Vidy إلى مشغل
-    // Apple الأصلي ويعيد مشكلة تشويه الترجمة. الوضع الثابت يملأ الـ viewport
-    // مع إبقاء iframe والترجمة كما يرسمهما Vidy.
+    // Apple الأصلي ويعيد مشكلة تشويه Subtitles. الوضع الثابت يملأ الـ viewport
+    // مع إبقاء iframe وSubtitles كما يرسمهما Vidy.
     setIsFullscreen((current) => !current);
   };
 
@@ -1626,8 +1626,8 @@ export default function VideoPlayer({
     }, 320);
   };
 
-  /* ── مثل YouTube: ضغطة تظهر/تخفي الأدوات ولا توقف الفيلم.
-     التشغيل والإيقاف يتمان فقط من الزر الأوسط، والدبل تاب على الجوانب للسيك. ── */
+  /* ── مثل YouTube: ضغطة تظهر/تخفي الأدوات ولا Stop الفيلم.
+     الPlay والإيقاف يتمان فقط من الزر الأوسط، والدبل تاب على الجوانب للسيك. ── */
   const handleVideoClick = (e: ReactMouseEvent) => {
     if (!isNative) return;
     e.stopPropagation();
@@ -1725,7 +1725,7 @@ export default function VideoPlayer({
     }
   };
 
-  /* ── سلايدر السطوع العمودي (بصري فقط على الفيديو) ──
+  /* ── سلايدر Brightness العمودي (بصري فقط على الفيديو) ──
      الأعلى = أسطع (1)، الأسفل = أعتم (0.3). نحسب من موضع اللمس العمودي. */
   const updateBrightnessFromPointer = (clientY: number, track: HTMLDivElement) => {
     const rect = track.getBoundingClientRect();
@@ -1815,8 +1815,8 @@ export default function VideoPlayer({
 
   /* ══════════════════════════════════════ render ══ */
 
-  // نخفي native cue بس لما يكون الـ overlay المخصّص شغال (المشغّل العادي)
-  // وقت iPhone native fullscreen: iOS يعرض الترجمة الأصلية — نتحكم بحجمها عبر ::cue
+  // نخفي native cue بس لما يكون الـ overlay المخصّص شغال (المشغّل الNormal)
+  // وقت iPhone native fullscreen: iOS يعرض Subtitles الأصلية — نتحكم بحجمها عبر ::cue
   // (موضعها يُتحكم بـ track.cues[].line اللي نضبطه بـ effect منفصل)
   const hideCueStyle = iosNativeFs
     ? `video::cue { font-size: calc(${subSize / 100} * (1.1em + 0.4vw)) !important; background: rgba(0,0,0,0.55) !important; }`
@@ -1884,19 +1884,19 @@ export default function VideoPlayer({
           {playMode === 'trailer' ? (
             <iframe src={getTrailerUrl()} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen className="w-full h-full border-0" onLoad={() => setIsLoading(false)} />
 
-          /* خطأ بالخادم — لا تحوّل تلقائي لـ embed؛ خطأ واضح + إعادة محاولة. */
+          /* خطأ بالخادم — لا تحوّل Auto لـ embed؛ خطأ واضح + إعادة محاولة. */
           ) : resolveError ? (
-            <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-black px-6 text-center" dir="rtl">
+            <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-black px-6 text-center" dir="ltr">
               <span className="text-4xl">⚠</span>
               <p className="text-sm text-white/70 max-w-xs leading-6">
-                تعذّر الاتصال بخادم المشاهدة. تأكد من الاتصال وحاول مرة أخرى.
+                Could not connect to the streaming server. Check your connection and try again.
               </p>
               <button
                 type="button"
                 onClick={() => runResolve()}
                 className="rounded-full bg-white px-6 py-2.5 text-sm font-bold text-black transition-colors hover:bg-white/90"
               >
-                إعادة المحاولة
+                Retry
               </button>
             </div>
 
@@ -1989,7 +1989,7 @@ export default function VideoPlayer({
               }}
             />
 
-          /* Vidy هو العرض الأساسي. المصادر الأخرى تعمل كاسترجاع تلقائي صامت. */
+          /* Vidy هو العرض الأساسي. المصادر الأخرى تعمل كاسترجاع Auto صامت. */
           ) : useEmbed || useVidApi ? (
             <>
             <iframe
@@ -2025,7 +2025,7 @@ export default function VideoPlayer({
               <button
                 type="button"
                 onClick={toggleMobileVidyFullscreen}
-                aria-label={isFullscreen ? 'الخروج من ملء الشاشة' : 'ملء الشاشة'}
+                aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
                 className="absolute bottom-[max(.75rem,env(safe-area-inset-bottom))] right-[max(.75rem,env(safe-area-inset-right))] z-50 flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-black/70 text-white backdrop-blur-md active:scale-95 transition-transform"
               >
                 {isFullscreen
@@ -2039,7 +2039,7 @@ export default function VideoPlayer({
                 <button
                   type="button"
                   onClick={closePlayer}
-                  aria-label="إغلاق المشغل"
+                  aria-label="Close player"
                   className="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 backdrop-blur-md border border-white/10 text-white/85 hover:text-white transition-colors"
                 >
                   <X className="w-5 h-5" />
@@ -2050,8 +2050,8 @@ export default function VideoPlayer({
 
           /* No playable source was selected. */
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-black text-sm text-white/55" dir="rtl">
-              هذا العنوان غير متاح حالياً
+            <div className="flex h-full w-full items-center justify-center bg-black text-sm text-white/55" dir="ltr">
+              This title is not available right now
             </div>
           )}
 
@@ -2059,7 +2059,7 @@ export default function VideoPlayer({
           {isNative && subEnabled && cueText && (
             <div
               className={`absolute inset-x-0 z-20 flex justify-center pointer-events-none transition-all duration-300 ${controlsVisible ? 'bottom-24' : 'bottom-8'}`}
-              dir="rtl"
+              dir="ltr"
             >
               <div
                 className="max-w-[90%] text-center leading-snug"
@@ -2088,20 +2088,20 @@ export default function VideoPlayer({
             <div className={`absolute inset-x-0 top-0 z-30 transition-opacity duration-200 ease-out ${controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
               <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-transparent pointer-events-none h-24" />
               <div className="relative flex items-center gap-3 px-4 pt-3">
-                <div className="min-w-0 flex-1" dir="rtl">
+                <div className="min-w-0 flex-1" dir="ltr">
                   <h2 className="text-white text-sm md:text-base font-semibold truncate drop-shadow">{title}</h2>
                   {type === 'tv' && (
-                    <p className="text-white/50 text-[11px] md:text-xs truncate">الموسم {season} • الحلقة {episode}</p>
+                    <p className="text-white/50 text-[11px] md:text-xs truncate">Season {season} • Episode {episode}</p>
                   )}
                 </div>
                 {youtubeKey && !isTvAndroidApp && (
                   <button onClick={() => onSwitchMode('trailer')}
-                    className="noir-player-top-action shrink-0 text-[11px] md:text-xs text-white/80 hover:text-white bg-white/5 hover:bg-white/15 backdrop-blur-md border border-white/10 rounded-full px-3 py-1.5 transition-all" dir="rtl">
-                    التريلر
+                    className="noir-player-top-action shrink-0 text-[11px] md:text-xs text-white/80 hover:text-white bg-white/5 hover:bg-white/15 backdrop-blur-md border border-white/10 rounded-full px-3 py-1.5 transition-all" dir="ltr">
+                    Trailer
                   </button>
                 )}
                 {isDedicatedAndroidPlayer && !isTvAndroidApp && (
-                  <Btn onClick={closePlayer} label="إغلاق المشغل">
+                  <Btn onClick={closePlayer} label="Close player">
                     <X className="w-5 h-5" />
                   </Btn>
                 )}
@@ -2109,7 +2109,7 @@ export default function VideoPlayer({
             </div>
           )}
 
-          {/* ══ سلايدر السطوع العمودي (يمين المشغل، خط فقط بدون thumb) ══ */}
+          {/* ══ سلايدر Brightness العمودي (يمين المشغل، خط فقط بدون thumb) ══ */}
           {isNative && (
             <div
               className={`absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 z-30 flex flex-col items-center transition-opacity duration-200 ease-out ${controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
@@ -2117,7 +2117,7 @@ export default function VideoPlayer({
               <div
                 className="group/bright h-32 sm:h-40 w-8 flex items-end justify-center cursor-pointer touch-none py-2"
                 role="slider"
-                aria-label="السطوع"
+                aria-label="Brightness"
                 aria-valuemin={30}
                 aria-valuemax={100}
                 aria-valuenow={Math.round(((brightness - 0.3) / 0.7) * 70 + 30)}
@@ -2147,7 +2147,7 @@ export default function VideoPlayer({
                     ? <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 5v14l8-7zM4 5v14l8-7z" fill="currentColor" /></svg>
                     : <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5v14l-8-7zM20 5v14l-8-7z" fill="currentColor" /></svg>}
                 </div>
-                <span className="text-xs font-semibold">{seekFlash?.amount ?? (seekHold === 'fwd' ? 5 : 5)} ثانية</span>
+                <span className="text-xs font-semibold">{seekFlash?.amount ?? (seekHold === 'fwd' ? 5 : 5)} s</span>
               </div>
             </div>
           )}
@@ -2163,7 +2163,7 @@ export default function VideoPlayer({
             </div>
           )}
 
-          {/* زر تشغيل/إيقاف ثابت بمنتصف الشاشة وقت ظهور الأدوات — لمس الشاشة وحده لا يوقف الفيلم. */}
+          {/* زر Play/إيقاف ثابت بمنتصف الشاشة وقت ظهور الأدوات — لمس الشاشة وحده لا يوقف الفيلم. */}
           {isNative && controlsVisible && !playPulse && !isLoading && !isBuffering && (!isTvAndroidApp || !isPlaying) && (
             <button
               type="button"
@@ -2174,7 +2174,7 @@ export default function VideoPlayer({
                 togglePlay();
               }}
               className="absolute left-1/2 top-1/2 z-30 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/45 text-white shadow-[0_10px_36px_rgba(0,0,0,.4)] backdrop-blur-xl transition-transform active:scale-90 sm:h-[72px] sm:w-[72px]"
-              aria-label={isPlaying ? 'إيقاف مؤقت' : 'تشغيل'}
+              aria-label={isPlaying ? 'Pause' : 'Play'}
             >
               {isPlaying
                 ? <Pause className="h-8 w-8 fill-white" />
@@ -2186,7 +2186,7 @@ export default function VideoPlayer({
           {isNative && speedBoost && (
             <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
               <div className="px-4 py-1.5 rounded-full bg-black/50 backdrop-blur-xl border border-white/20 text-white text-sm font-semibold tracking-wide">
-                ⚡ أسرع بمرتين
+                ⚡ 2× speed
               </div>
             </div>
           )}
@@ -2203,22 +2203,22 @@ export default function VideoPlayer({
                 onSeek?.(video.currentTime);
               }}
               className="absolute bottom-24 right-4 sm:right-7 z-30 inline-flex items-center gap-2 rounded-lg border border-white/70 bg-black/70 px-4 py-2.5 text-sm font-bold text-white backdrop-blur-lg hover:bg-white hover:text-black transition-colors cursor-pointer"
-              dir="rtl"
+              dir="ltr"
             >
               <SkipForward className="w-4 h-4" />
-              تخطي المقدمة
+              Skip intro
             </button>
           )}
 
           {isNative && nextEpisodeCountdown != null && (
             <div
               className="absolute inset-0 z-30 flex items-end justify-end bg-gradient-to-t from-black/90 via-black/20 to-transparent p-4 sm:p-7"
-              dir="rtl"
+              dir="ltr"
             >
               <div className="w-full sm:w-auto sm:min-w-[320px] rounded-[22px] border border-white/12 bg-black/70 backdrop-blur-2xl p-4 sm:p-5 shadow-2xl">
-                <p className="text-xs font-semibold text-white/55">الحلقة التالية</p>
+                <p className="text-xs font-semibold text-white/55">Next episode</p>
                 <h3 className="mt-1 text-lg font-bold text-white">
-                  تبدأ خلال {nextEpisodeCountdown} ثواني
+                  Starts in {nextEpisodeCountdown}s
                 </h3>
                 <div className="mt-4 flex items-center gap-2">
                   <button
@@ -2230,7 +2230,7 @@ export default function VideoPlayer({
                     }}
                     className="noir-button-primary flex-1 cursor-pointer"
                   >
-                    تشغيل الآن
+                    Play now
                   </button>
                   <button
                     type="button"
@@ -2240,7 +2240,7 @@ export default function VideoPlayer({
                     }}
                     className="noir-button-secondary flex-1 cursor-pointer"
                   >
-                    إلغاء
+                    Cancel
                   </button>
                 </div>
               </div>
@@ -2250,12 +2250,12 @@ export default function VideoPlayer({
           {isNative && showStillWatching && (
             <div
               className="absolute inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-sm p-5"
-              dir="rtl"
+              dir="ltr"
             >
               <div className="w-full max-w-sm rounded-[24px] border border-white/12 bg-[#151518] p-6 text-center shadow-2xl">
-                <h3 className="text-xl font-bold text-white">بعدك تشاهد؟</h3>
+                <h3 className="text-xl font-bold text-white">Still watching?</h3>
                 <p className="mt-2 text-sm leading-6 text-white/55">
-                  أوقفنا التشغيل التلقائي حتى ما تستمر الحلقات بدونك.
+                  We paused autoplay so episodes do not keep playing without you.
                 </p>
                 <div className="mt-5 flex gap-2">
                   <button
@@ -2267,7 +2267,7 @@ export default function VideoPlayer({
                     }}
                     className="noir-button-primary flex-1 cursor-pointer"
                   >
-                    نعم، أكمل
+                    Yes, continue
                   </button>
                   <button
                     type="button"
@@ -2277,7 +2277,7 @@ export default function VideoPlayer({
                     }}
                     className="noir-button-secondary flex-1 cursor-pointer"
                   >
-                    توقف
+                    Stop
                   </button>
                 </div>
               </div>
@@ -2286,15 +2286,15 @@ export default function VideoPlayer({
 
           {/* host paused overlay */}
           {isPausedByHost && playMode === 'movie' && (
-            <div className="absolute inset-0 z-20 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center gap-4 select-none" dir="rtl">
+            <div className="absolute inset-0 z-20 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center gap-4 select-none" dir="ltr">
               <div className="w-16 h-16 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center">
                 <Pause className="w-7 h-7 text-amber-400 fill-amber-400" />
               </div>
               <div className="text-center px-6">
-                <h3 className="text-white text-base md:text-lg font-bold mb-1">أوقف المنظم التشغيل</h3>
-                {hostPauseByName && <p className="text-gray-400 text-xs md:text-sm">بانتظار <span className="text-amber-400 font-semibold">{hostPauseByName}</span></p>}
-                {isLiveHost && <p className="text-gray-500 text-[11px] mt-3">اضغط زر الاستئناف لإكمال المشاهدة</p>}
-                {!isLiveHost && isLiveSession && <p className="text-gray-500 text-[11px] mt-3 flex items-center justify-center gap-1.5"><Lock className="w-3 h-3" /> التحكم بيد المنظم فقط</p>}
+                <h3 className="text-white text-base md:text-lg font-bold mb-1">The host paused playback</h3>
+                {hostPauseByName && <p className="text-gray-400 text-xs md:text-sm">Waiting for <span className="text-amber-400 font-semibold">{hostPauseByName}</span></p>}
+                {isLiveHost && <p className="text-gray-500 text-[11px] mt-3">Press resume to keep watching</p>}
+                {!isLiveHost && isLiveSession && <p className="text-gray-500 text-[11px] mt-3 flex items-center justify-center gap-1.5"><Lock className="w-3 h-3" /> Only the host has control</p>}
               </div>
             </div>
           )}
@@ -2316,11 +2316,11 @@ export default function VideoPlayer({
                   className="group/bar w-full py-3 sm:py-2 cursor-pointer relative touch-none"
                   role="slider"
                   tabIndex={0}
-                  aria-label="موضع التشغيل"
+                  aria-label="Playback position"
                   aria-valuemin={0}
                   aria-valuemax={Math.max(0, Math.floor(duration))}
                   aria-valuenow={Math.max(0, Math.floor(currentTime))}
-                  aria-valuetext={`${formatTime(currentTime)} من ${formatTime(duration)}`}
+                  aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
                   onPointerDown={startScrub}
                   onPointerMove={moveScrub}
                   onPointerUp={endScrub}
@@ -2366,20 +2366,20 @@ export default function VideoPlayer({
                 >
 
                   {/* play/pause */}
-                  <Btn onClick={togglePlay} label={isPlaying ? 'إيقاف مؤقت' : 'تشغيل'} big tvControl={isTvAndroidApp}>
+                  <Btn onClick={togglePlay} label={isPlaying ? 'Pause' : 'Play'} big tvControl={isTvAndroidApp}>
                     {isPlaying ? <Pause className="w-6 h-6 fill-white" /> : <Play className="w-6 h-6 fill-white" />}
                   </Btn>
 
                   {/* next episode */}
                   {hasNextEp && (
-                    <Btn onClick={() => { markUserActive(); setNextEpisodeCountdown(null); onNextEpisode?.(); }} label="الحلقة التالية" tvControl={isTvAndroidApp}>
+                    <Btn onClick={() => { markUserActive(); setNextEpisodeCountdown(null); onNextEpisode?.(); }} label="Next episode" tvControl={isTvAndroidApp}>
                       <SkipForward className="w-5 h-5 fill-white" />
                     </Btn>
                   )}
 
                   {/* volume */}
                   {!isTvAndroidApp && <div className="relative flex items-center">
-                    <Btn onClick={toggleMute} label={isMuted ? 'تشغيل الصوت' : 'كتم الصوت'}>
+                    <Btn onClick={toggleMute} label={isMuted ? 'Unmute' : 'Mute'}>
                       <VolumeIcon className="w-5 h-5" />
                     </Btn>
                     <div className="noir-volume-track flex items-center opacity-100">
@@ -2387,7 +2387,7 @@ export default function VideoPlayer({
                         className="group/vol w-full py-3 cursor-pointer relative touch-none"
                         role="slider"
                         tabIndex={0}
-                        aria-label="مستوى الصوت"
+                        aria-label="Volume"
                         aria-valuemin={0}
                         aria-valuemax={100}
                         aria-valuenow={Math.round((isMuted ? 0 : volume) * 100)}
@@ -2418,10 +2418,10 @@ export default function VideoPlayer({
 
                   <div className="flex-1" />
 
-                  {/* subtitle — يفتح Bottom Sheet إعدادات الترجمة */}
+                  {/* subtitle — يفتح Bottom Sheet إعدادات Subtitles */}
                   <Btn
                     onClick={() => { setSubSheetOpen(true); setShowSettings(false); }}
-                    label="الترجمة"
+                    label="Subtitles"
                     active={subEnabled}
                     tvControl={isTvAndroidApp}
                   >
@@ -2430,38 +2430,38 @@ export default function VideoPlayer({
 
                   {/* settings */}
                   <div className="relative">
-                    <Btn onClick={() => { setShowSettings(p => !p); setShowSpeedMenu(false); setShowQualityMenu(false); }} label="الإعدادات" active={showSettings} tvControl={isTvAndroidApp}>
+                    <Btn onClick={() => { setShowSettings(p => !p); setShowSpeedMenu(false); setShowQualityMenu(false); }} label="Settings" active={showSettings} tvControl={isTvAndroidApp}>
                       <Settings className="w-5 h-5" />
                     </Btn>
                     {showSettings && (
                       <>
                         {/* overlay شفاف يغطي كل الشاشة (z-40) فوق شريط الأدوات.
-                            أي ضغطة عليه — حتى على زر الإعدادات تحته — تسد القائمة */}
+                            أي ضغطة عليه — حتى على زر Settings تحته — تسد القائمة */}
                         <div
                           className="fixed inset-0 z-40"
                           onPointerDown={(e) => { e.stopPropagation(); setShowSettings(false); setShowSpeedMenu(false); setShowQualityMenu(false); }}
                         />
                       <div
-                        dir="rtl"
+                        dir="ltr"
                         data-tv-player-settings={isTvAndroidApp ? '' : undefined}
                         className="fixed sm:absolute inset-x-3 sm:inset-x-auto sm:right-0 bottom-[max(.75rem,env(safe-area-inset-bottom))] sm:bottom-full sm:mb-3 bg-[#111]/95 sm:bg-black/75 backdrop-blur-2xl border border-white/15 rounded-[22px] sm:rounded-2xl shadow-2xl w-auto sm:w-60 max-h-[min(70vh,28rem)] overflow-y-auto z-50"
                       >
                         <div className="sm:hidden flex justify-center pt-2">
                           <span className="w-9 h-1 rounded-full bg-white/20" />
                         </div>
-                        <div className="px-3.5 py-2.5 text-[10px] text-white/40 uppercase tracking-widest border-b border-white/10 text-right">الإعدادات</div>
+                        <div className="px-3.5 py-2.5 text-[10px] text-white/40 uppercase tracking-widest border-b border-white/10 text-left">Settings</div>
                         <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => setShowSpeedMenu(p => !p)} className="w-full flex items-center justify-between px-3.5 py-3 text-sm text-white hover:bg-white/10 transition-colors">
                           <span className="flex items-center gap-1 text-[#A0C9CB] font-semibold text-xs">
-                            {speed === 1 ? 'عادي' : `${speed}×`}
+                            {speed === 1 ? 'Normal' : `${speed}×`}
                             <ChevronDown className={`w-3 h-3 transition-transform ${showSpeedMenu ? 'rotate-180' : ''}`} />
                           </span>
-                          <span>السرعة</span>
+                          <span>Speed</span>
                         </button>
                         {showSpeedMenu && (
                           <div className="border-t border-white/10 max-h-48 overflow-y-auto">
                             {SPEEDS.map(s => (
-                              <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} key={s} onClick={() => changeSpeed(s)} className={`w-full text-right px-3.5 py-2.5 text-sm transition-colors ${speed === s ? 'text-[#A0C9CB] bg-[#A0C9CB]/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
-                                {s === 1 ? 'عادي (1×)' : `${s}×`}
+                              <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} key={s} onClick={() => changeSpeed(s)} className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors ${speed === s ? 'text-[#A0C9CB] bg-[#A0C9CB]/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
+                                {s === 1 ? 'Normal (1×)' : `${s}×`}
                               </button>
                             ))}
                           </div>
@@ -2471,19 +2471,19 @@ export default function VideoPlayer({
                             <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => setShowQualityMenu(p => !p)} className="w-full border-t border-white/10 flex items-center justify-between px-3.5 py-3 text-sm text-white hover:bg-white/10 transition-colors">
                               <span className="flex items-center gap-1 text-[#A0C9CB] font-semibold text-xs">
                                 {currentLevel === -1
-                                  ? 'تلقائي'
+                                  ? 'Auto'
                                   : `${qualityLevels.find((l) => l.index === currentLevel)?.height || ''}p`}
                                 <ChevronDown className={`w-3 h-3 transition-transform ${showQualityMenu ? 'rotate-180' : ''}`} />
                               </span>
-                              <span>الجودة</span>
+                              <span>Quality</span>
                             </button>
                             {showQualityMenu && (
                               <div className="border-t border-white/10 max-h-48 overflow-y-auto">
-                                <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeQuality(-1)} className={`w-full text-right px-3.5 py-2.5 text-sm transition-colors ${currentLevel === -1 ? 'text-[#A0C9CB] bg-[#A0C9CB]/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
-                                  تلقائي
+                                <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeQuality(-1)} className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors ${currentLevel === -1 ? 'text-[#A0C9CB] bg-[#A0C9CB]/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
+                                  Auto
                                 </button>
                                 {qualityLevels.map((lv) => (
-                                  <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} key={lv.index} onClick={() => changeQuality(lv.index)} className={`w-full text-right px-3.5 py-2.5 text-sm transition-colors ${currentLevel === lv.index ? 'text-[#A0C9CB] bg-[#A0C9CB]/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
+                                  <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} key={lv.index} onClick={() => changeQuality(lv.index)} className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors ${currentLevel === lv.index ? 'text-[#A0C9CB] bg-[#A0C9CB]/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
                                     {lv.height}p
                                   </button>
                                 ))}
@@ -2522,14 +2522,14 @@ export default function VideoPlayer({
                               />
                             </span>
                             <span className="flex flex-1 items-center justify-between">
-                              <span>تشغيل الحلقة التالية تلقائياً</span>
+                              <span>Autoplay next episode</span>
                               <span className={autoplayNext ? 'text-[#A0C9CB]' : 'text-white/40'}>
-                                {autoplayNext ? 'مفعّل' : 'متوقف'}
+                                {autoplayNext ? 'On' : 'Off'}
                               </span>
                             </span>
                           </button>
                         )}
-                        {/* تأخير الترجمة */}
+                        {/* Subtitle delay */}
                         <div className="border-t border-white/10 px-3.5 py-3 flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
                             <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeSubOffset(0.5)} className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="+0.5s">
@@ -2542,7 +2542,7 @@ export default function VideoPlayer({
                               <Minus className="w-3 h-3" />
                             </button>
                           </div>
-                          <span className="text-sm text-white">تأخير الترجمة</span>
+                          <span className="text-sm text-white">Subtitle delay</span>
                         </div>
                       </div>
                       </>
@@ -2553,7 +2553,7 @@ export default function VideoPlayer({
                   {!isTvAndroidApp && (
                     <Btn
                       onClick={() => setVideoFit((f) => (f === 'contain' ? 'cover' : 'contain'))}
-                      label={videoFit === 'contain' ? 'ملء الفيديو' : 'احتواء الفيديو'}
+                      label={videoFit === 'contain' ? 'Fill video' : 'Fit video'}
                       active={videoFit === 'cover'}
                     >
                       {videoFit === 'contain' ? (
@@ -2566,7 +2566,7 @@ export default function VideoPlayer({
 
                   {/* fullscreen */}
                   {!isTvAndroidApp && (
-                    <Btn onClick={toggleFullscreen} label={isFullscreen ? 'الخروج من ملء الشاشة' : 'ملء الشاشة'}>
+                    <Btn onClick={toggleFullscreen} label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
                       {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
                     </Btn>
                   )}
@@ -2576,9 +2576,9 @@ export default function VideoPlayer({
             </div>
           )}
 
-          {/* ══ Bottom Sheet: إعدادات الترجمة (Wheel Picker على الهاتف) ══ */}
+          {/* ══ Bottom Sheet: إعدادات Subtitles (Wheel Picker على الهاتف) ══ */}
           {isNative && subSheetOpen && (
-            <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center" dir="rtl">
+            <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center" dir="ltr">
               {/* خلفية معتمة — الضغط عليها يغلق الشيت */}
               <div
                 className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -2589,11 +2589,11 @@ export default function VideoPlayer({
                   <span className="h-1 w-10 rounded-full bg-white/20" />
                 </div>
                 <div className="flex items-center justify-between px-5 pt-4 pb-3">
-                  <h3 className="text-base font-bold text-white">الترجمة</h3>
+                  <h3 className="text-base font-bold text-white">Subtitles</h3>
                   <button
                     type="button"
                     onClick={() => { setSubSheetOpen(false); resetHideTimer(); }}
-                    aria-label="إغلاق"
+                    aria-label="Close"
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/80 hover:bg-white/20 active:scale-90 transition-all"
                   >
                     <X className="w-4 h-4" />
@@ -2601,7 +2601,7 @@ export default function VideoPlayer({
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 px-5 pb-5">
-                  {/* عمود: حجم الترجمة */}
+                  {/* عمود: حجم Subtitles */}
                   <div className="flex flex-col">
                     <span className="mb-2 text-center text-[11px] uppercase tracking-wider text-white/40">Subtitles size</span>
                     <div className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
@@ -2612,7 +2612,7 @@ export default function VideoPlayer({
                             key={s.key}
                             type="button"
                             onClick={() => {
-                              // اختيار حجم يفعّل الترجمة لو كانت Off.
+                              // اختيار حجم يفعّل Subtitles لو كانت Off.
                               if (!subEnabled) { syncSubtitleTrackMode(true); setSubEnabled(true); }
                               setSubSizeByKey(s.key);
                               resetHideTimer();
@@ -2630,7 +2630,7 @@ export default function VideoPlayer({
                     </div>
                   </div>
 
-                  {/* عمود: اختيار الترجمة (Off / Arabic / مسارات أخرى حقيقية) */}
+                  {/* عمود: اختيار Subtitles (Off / Arabic / مسارات أخرى حقيقية) */}
                   <div className="flex flex-col">
                     <span className="mb-2 text-center text-[11px] uppercase tracking-wider text-white/40">Subtitle</span>
                     <div className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">

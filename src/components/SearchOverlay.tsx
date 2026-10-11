@@ -12,24 +12,14 @@ import { NoirPlayer } from '../lib/noirPlayer';
 import WatchlistButton from './WatchlistButton';
 
 const LANGUAGE_SEARCH_TERMS: Record<string, string> = {
-  عربي: 'ar',
-  عربية: 'ar',
-  العربية: 'ar',
-  انكليزي: 'en',
-  انجليزي: 'en',
-  إنجليزي: 'en',
-  كوري: 'ko',
-  كورية: 'ko',
-  ياباني: 'ja',
-  يابانية: 'ja',
-  هندي: 'hi',
-  هندية: 'hi',
-  فرنسي: 'fr',
-  فرنسية: 'fr',
-  اسباني: 'es',
-  إسباني: 'es',
-  تركي: 'tr',
-  تركية: 'tr',
+  arabic: 'ar',
+  english: 'en',
+  korean: 'ko',
+  japanese: 'ja',
+  hindi: 'hi',
+  french: 'fr',
+  spanish: 'es',
+  turkish: 'tr',
 };
 
 interface SearchOverlayProps {

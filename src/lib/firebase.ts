@@ -99,7 +99,7 @@ export const loginWithGoogle = async () => {
       });
       const idToken = nativeResult.credential?.idToken;
       if (!idToken) {
-        throw new Error('لم يرجع Google رمز تسجيل الدخول المطلوب');
+        throw new Error('Google did not return the required sign-in token');
       }
       const credential = GoogleAuthProvider.credential(idToken);
       const result = await signInWithCredential(auth, credential);
@@ -135,25 +135,25 @@ export const translateAuthError = (err: any): string => {
   const code = err?.code || '';
   switch (code) {
     case 'auth/email-already-in-use':
-      return 'هذا البريد مسجّل مسبقاً، جرّب تسجيل الدخول';
+      return 'This email is already registered, try signing in';
     case 'auth/invalid-email':
-      return 'صيغة البريد الإلكتروني غير صحيحة';
+      return 'Invalid email format';
     case 'auth/weak-password':
-      return 'كلمة السر ضعيفة، استعمل 6 خانات على الأقل';
+      return 'Weak password, use at least 6 characters';
     case 'auth/user-not-found':
     case 'auth/wrong-password':
     case 'auth/invalid-credential':
-      return 'البريد أو كلمة السر غير صحيحة';
+      return 'Incorrect email or password';
     case 'auth/too-many-requests':
-      return 'محاولات كثيرة، جرّب بعد قليل';
+      return 'Too many attempts, try again shortly';
     case 'auth/network-request-failed':
-      return 'تعذّر الاتصال بالشبكة';
+      return 'Could not connect to the network';
     case 'auth/missing-password':
-      return 'أدخل كلمة السر';
+      return 'Enter your password';
     case 'auth/password-does-not-meet-requirements':
-      return 'كلمة السر ضعيفة: لازم تحتوي حرف كبير (A-Z) وحرف صغير (a-z) و 6 خانات على الأقل';
+      return 'Weak password: it must contain an uppercase letter (A-Z), a lowercase letter (a-z) and at least 6 characters';
     default:
-      return err?.message || 'حدث خطأ غير متوقع';
+      return err?.message || 'An unexpected error occurred';
   }
 };
 

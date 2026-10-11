@@ -58,6 +58,7 @@ import {
 
 // Component Imports
 import Header from './components/Header';
+import CategoryRow from './components/CategoryRow';
 import Sidebar from './components/Sidebar';
 import Hero from './components/Hero';
 import MovieRow from './components/MovieRow';
@@ -219,7 +220,7 @@ export default function App() {
 
   // Authentication Management State
   const [user, setUser] = useState<{ name: string; email?: string; photoURL?: string; type: 'guest' | 'google' | 'email' } | null>(() => {
-    const guestUser = { name: 'زائر', type: 'guest' as const };
+    const guestUser = { name: 'Guest', type: 'guest' as const };
     try {
       const stored = localStorage.getItem('noir_user');
       if (stored) {
@@ -282,7 +283,7 @@ export default function App() {
           item.id &&
           item.title &&
           item.title.trim() &&
-          item.title !== 'بدون عنوان' &&
+          item.title !== 'Untitled' &&
           Number(item.positionSeconds) > 0 &&
           Number(item.durationSeconds) > 0 &&
           Number(item.progress) < 95,
@@ -310,7 +311,7 @@ export default function App() {
             item.id &&
             (item.type === 'movie' || item.type === 'tv') &&
             item.title &&
-            item.title !== 'بدون عنوان' &&
+            item.title !== 'Untitled' &&
             Number(item.positionSeconds) > 0 &&
             Number(item.durationSeconds) > 0 &&
             Number(item.progress) < 95,
@@ -470,7 +471,7 @@ export default function App() {
           console.error("Background auto-login failed: ", err);
           localStorage.removeItem('noir_credentials');
           localStorage.removeItem('noir_user');
-          const guestUser = { name: 'زائر', type: 'guest' as const };
+          const guestUser = { name: 'Guest', type: 'guest' as const };
           localStorage.setItem('noir_user', JSON.stringify(guestUser));
           setUser(guestUser);
           loadWatchlist();
@@ -499,7 +500,7 @@ export default function App() {
       if (firebaseUser) {
         const isEmailOnly = firebaseUser.providerData?.[0]?.providerId === 'password';
         const userData = {
-          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'مستخدم نوار',
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Noir user',
           email: firebaseUser.email || undefined,
           photoURL: firebaseUser.photoURL || undefined,
           type: (isEmailOnly ? 'email' : 'google') as 'email' | 'google',
@@ -575,13 +576,13 @@ export default function App() {
           try {
             const parsed = JSON.parse(stored);
             if (parsed.type === 'google' || parsed.type === 'email') {
-              const guestUser = { name: 'زائر', type: 'guest' as const };
+              const guestUser = { name: 'Guest', type: 'guest' as const };
               localStorage.setItem('noir_user', JSON.stringify(guestUser));
               setUser(guestUser);
               loadWatchlist();
             }
           } catch {
-            const guestUser = { name: 'زائر', type: 'guest' as const };
+            const guestUser = { name: 'Guest', type: 'guest' as const };
             localStorage.setItem('noir_user', JSON.stringify(guestUser));
             setUser(guestUser);
             loadWatchlist();
@@ -622,7 +623,7 @@ export default function App() {
   const [manualItems, setManualItems] = useState<ManualItem[]>([]);
   const [customSections, setCustomSections] = useState<CustomSection[]>([]);
   const [sectionOrder, setSectionOrder] = useState<string[]>([]);
-  // نتائج أقسام التصنيف التلقائية: key القسم -> عناصره من TMDB
+  // نتائج أقسام Genre التلقائية: key القسم -> عناصره من TMDB
   const [genreSectionData, setGenreSectionData] = useState<Record<string, MovieOrShow[]>>({});
   const [isHomeLoading, setIsHomeLoading] = useState(true);
 
@@ -683,7 +684,7 @@ export default function App() {
       try {
         const firebaseUser = await loginWithGoogle();
         const userData = {
-          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'مستخدم نوار',
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Noir user',
           email: firebaseUser.email || undefined,
           photoURL: firebaseUser.photoURL || undefined,
           type: 'google' as const,
@@ -694,14 +695,14 @@ export default function App() {
         }
         localStorage.setItem('noir_user', JSON.stringify(userData));
         setUser(userData);
-        showToast('تم تسجيل الدخول بجوجل بنجاح');
+        showToast('Signed in with Google successfully');
       } catch (error: any) {
         console.error("Google login failed: ", error);
         const errMsg = translateAuthError(error);
         if (error?.code === 'auth/operation-not-allowed') {
-          showToast('فشل: يرجى تفعيل تسجيل الدخول بجوجل في لوحة تحكم Firebase');
+          showToast('Failed: please enable Google sign-in in the Firebase console');
         } else {
-          showToast(`فشل تسجيل الدخول بجوجل: ${errMsg}`);
+          showToast(`Google sign-in failed: ${errMsg}`);
         }
       } finally {
         setIsAuthLoading(false);
@@ -709,7 +710,7 @@ export default function App() {
       }
     } else {
       setTimeout(() => {
-        const newUser = { name: 'زائر كريم', type: 'guest' as const };
+        const newUser = { name: 'Valued guest', type: 'guest' as const };
         const continueWatchingOwner = localStorage.getItem('noir_continue_watching_owner');
         if (continueWatchingOwner && continueWatchingOwner !== 'guest') {
           localStorage.removeItem('noir_continue_watching_list');
@@ -720,14 +721,14 @@ export default function App() {
         setUser(newUser);
         setIsAuthLoading(false);
         setAuthMethod(null);
-        showToast('مرحباً بك كضيف في نوار سينما');
+        showToast('Welcome to Noir Cinema as a guest');
       }, 850);
     }
   };
 
   const handleEmailSignIn = async () => {
     if (!authEmail || !authPassword) {
-      setAuthError('أدخل البريد وكلمة السر');
+      setAuthError('Enter your email and password');
       return;
     }
     setAuthError('');
@@ -737,7 +738,7 @@ export default function App() {
       await signInWithEmail(authEmail, authPassword);
       // Save credentials for persistent session in sandboxed iframe environment
       localStorage.setItem('noir_credentials', JSON.stringify({ email: authEmail, password: authPassword }));
-      showToast('أهلاً بك من جديد');
+      showToast('Welcome back');
       setAuthEmail('');
       setAuthPassword('');
       setAuthName('');
@@ -751,19 +752,19 @@ export default function App() {
 
   const handleEmailSignUp = async () => {
     if (!authEmail || !authPassword || !authName) {
-      setAuthError('أكمل كل الحقول');
+      setAuthError('Please fill in all fields');
       return;
     }
     if (authPassword.length < 6) {
-      setAuthError('كلمة السر لازم 6 خانات على الأقل');
+      setAuthError('Password must be at least 6 characters');
       return;
     }
     if (!/[A-Z]/.test(authPassword)) {
-      setAuthError('كلمة السر لازم تحتوي حرف كبير (A-Z)');
+      setAuthError('Password must contain an uppercase letter (A-Z)');
       return;
     }
     if (!/[a-z]/.test(authPassword)) {
-      setAuthError('كلمة السر لازم تحتوي حرف صغير (a-z)');
+      setAuthError('Password must contain a lowercase letter (a-z)');
       return;
     }
     setAuthError('');
@@ -775,7 +776,7 @@ export default function App() {
       // Save credentials for persistent session in sandboxed iframe environment
       localStorage.setItem('noir_credentials', JSON.stringify({ email: authEmail, password: authPassword }));
       setShowOnboarding(true);
-      showToast('تم إنشاء حسابك، أهلاً بك');
+      showToast('Your account has been created, welcome');
       setAuthEmail('');
       setAuthPassword('');
       setAuthName('');
@@ -789,7 +790,7 @@ export default function App() {
 
   const handleResetPassword = async () => {
     if (!authEmail) {
-      setAuthError('أدخل البريد الإلكتروني');
+      setAuthError('Enter your email address');
       return;
     }
     setAuthError('');
@@ -800,14 +801,14 @@ export default function App() {
       try {
         const methods = await checkSignInMethods(authEmail);
         if (methods.length > 0 && !methods.includes('password') && methods.includes('google.com')) {
-          setAuthError('هذا البريد مسجّل عبر Google، رجاءً سجّل دخولك بزر Google مباشرة');
+          setAuthError('This email is registered via Google, please sign in with the Google button');
           return;
         }
       } catch {
         // Ignore — fall through to sending reset
       }
       await resetPassword(authEmail);
-      showToast('لو البريد مسجّل عندنا، راح يوصلك رابط الاستعادة (افحص السبام)');
+      showToast('If this email is registered, a reset link will be sent (check your spam)');
       setAuthView('signin');
       setAuthEmail('');
     } catch (e) {
@@ -829,21 +830,21 @@ export default function App() {
         console.error("Logout from Firebase failed: ", e);
       }
     }
-    const guestUser = { name: 'زائر', type: 'guest' as const };
+    const guestUser = { name: 'Guest', type: 'guest' as const };
     localStorage.setItem('noir_user', JSON.stringify(guestUser));
     localStorage.removeItem('noir_credentials');
     setUser(guestUser);
-    showToast('تم تسجيل الخروج بنجاح');
+    showToast('Signed out successfully');
   };
 
   const handleSendVerificationEmail = async () => {
     setIsSendingVerification(true);
     try {
       await sendVerification();
-      showToast('تم إرسال رابط التفعيل إلى بريدك الإلكتروني بنجاح (افحص البريد المزعج/السبام)');
+      showToast('A verification link has been sent to your email (check junk/spam)');
     } catch (e: any) {
       console.error(e);
-      showToast('فشل في إرسال رابط التفعيل، يرجى المحاولة لاحقاً');
+      showToast('Failed to send the verification link, please try again later');
     } finally {
       setIsSendingVerification(false);
     }
@@ -1100,7 +1101,7 @@ export default function App() {
     return () => { u1(); u2(); u3(); u4(); u5(); u6(); u7(); };
   }, []);
 
-  // جلب محتوى أقسام التصنيف التلقائية من TMDB (تتحدّث لما تتغير الأقسام)
+  // جلب محتوى أقسام Genre التلقائية من TMDB (تتحدّث لما تتغير الأقسام)
   useEffect(() => {
     const genreSecs = customSections.filter((s) => s.kind === 'genre' && s.genreId);
     if (genreSecs.length === 0) { setGenreSectionData({}); return; }
@@ -1475,7 +1476,7 @@ export default function App() {
     setSelectedLanguage(null);
     setSelectedRuntime(null);
     setFQuery('');
-    showToast('تم مسح جميع فلاتر التصفية');
+    showToast('All filters cleared');
   };
 
   const authScreen = !user ? (() => {
@@ -1504,7 +1505,7 @@ export default function App() {
       }`}>
 
         {!isTvAuth && (
-          <button type="button" className="noir-auth-back" onClick={() => handleLogin('guest')} aria-label="العودة إلى الموقع">
+          <button type="button" className="noir-auth-back" onClick={() => handleLogin('guest')} aria-label="Back to site">
             <ArrowLeft />
           </button>
         )}
@@ -1554,16 +1555,16 @@ export default function App() {
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent z-1" />
 
             {/* Content Top */}
-            <div className="relative z-10" dir="rtl">
+            <div className="relative z-10" dir="ltr">
               <div className="flex items-center gap-2.5 mb-8 justify-end">
-                <span className="text-lg font-black tracking-tight text-white m-0">نوار <span className="text-[#A0C9CB]">سينما</span></span>
+                <span className="text-lg font-black tracking-tight text-white m-0">Noir <span className="text-[#A0C9CB]">Cinema</span></span>
                 <div className="w-10 h-10 rounded-xl bg-[#A0C9CB] flex items-center justify-center shadow-lg shadow-[#A0C9CB]/30">
                   <LogoIcon className="w-5 h-5 text-white shrink-0" />
                 </div>
               </div>
 
-              <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2 block">بكل بساطة وسرور</span>
-              <h2 className="text-2xl font-extrabold text-white leading-snug">بوابتك لمشاهدة الأفلام والعروض جماعياً مع أصدقائك بلمسة واحدة</h2>
+              <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2 block">Simple and delightful</span>
+              <h2 className="text-2xl font-extrabold text-white leading-snug">Your gateway to watch movies and shows together with your friends in one tap</h2>
             </div>
 
             {/* Empty space at bottom layout to replace deleted tech stack footer */}
@@ -1573,31 +1574,31 @@ export default function App() {
           {/* RIGHT COLUMN: Stylish Login / Signup Input Form */}
           <div className={`noir-auth-form col-span-1 flex flex-col justify-center select-none relative z-10 ${
             isTvAuth ? 'p-12 bg-[#101012]' : 'lg:col-span-7 p-7 sm:p-12 md:p-16 bg-[#0c0c0c]'
-          }`} dir="rtl">
+          }`} dir="ltr">
             {isTvAuth && (
               <div className="mb-8 flex items-center justify-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#A0C9CB]">
                   <LogoIcon className="h-6 w-6 text-white" />
                 </div>
-                <span className="text-xl font-black text-white">نوار سينما</span>
+                <span className="text-xl font-black text-white">Noir Cinema</span>
               </div>
             )}
 
             {/* Form Header */}
             <div className={`noir-auth-form-header ${isTvAuth ? 'mb-7 text-center' : 'text-center mb-8'}`}>
               <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
-                {authView === 'signin' && (isTvAuth ? 'سجل الدخول بجوجل' : 'مرحباً بعودتك إلى نوار')}
-                {authView === 'signup' && 'أنشئ حساب نوار'}
-                {authView === 'reset' && 'استعادة كلمة السر'}
+                {authView === 'signin' && (isTvAuth ? 'Sign in with Google' : 'Welcome back to Noir')}
+                {authView === 'signup' && 'Create your Noir account'}
+                {authView === 'reset' && 'Reset password'}
               </h1>
               <p className="text-gray-400 text-sm mt-2 leading-relaxed font-medium">
                 {authView === 'signin' && (
                   isTvAuth
-                    ? 'استخدم حساب جوجل للمتابعة ومزامنة قائمتك ومشاهداتك.'
-                    : 'أدخل بريدك وكلمة السر حتى تكمل المشاهدة.'
+                    ? 'Use your Google account to continue and sync your list and watch history.'
+                    : 'Enter your email and password to keep watching.'
                 )}
-                {authView === 'signup' && 'قم بملء البيانات التالية لتسجيل حسابك الجديد.'}
-                {authView === 'reset' && 'أدخل بريدك الإلكتروني وسنقوم بإرسال رابط الاستعادة.'}
+                {authView === 'signup' && 'Fill in the details below to create your new account.'}
+                {authView === 'reset' && 'Enter your email and we will send a reset link.'}
               </p>
             </div>
 
@@ -1606,28 +1607,28 @@ export default function App() {
 
               {/* Name Field (Sign up only) */}
               {authView === 'signup' && (
-                <div className="flex flex-col gap-1.5 text-right w-full">
-                  <label className="sr-only">اسم المستخدم</label>
+                <div className="flex flex-col gap-1.5 text-left w-full">
+                  <label className="sr-only">Username</label>
                   <input
                     type="text"
                     value={authName}
                     onChange={(e) => setAuthName(e.target.value)}
-                    placeholder="اسم المستخدم"
-                    className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#A0C9CB]/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-[#A0C9CB]/20"
-                    dir="rtl"
+                    placeholder="Username"
+                    className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#A0C9CB]/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-left placeholder-gray-500 focus:ring-1 focus:ring-[#A0C9CB]/20"
+                    dir="ltr"
                   />
                 </div>
               )}
 
               {/* Email address field */}
-              {!isTvAuth && <div className="flex flex-col gap-1.5 text-right w-full">
-                <label className="sr-only">البريد الإلكتروني</label>
+              {!isTvAuth && <div className="flex flex-col gap-1.5 text-left w-full">
+                <label className="sr-only">Email address</label>
                 <input
                   type="email"
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
-                  placeholder="البريد الإلكتروني"
-                  className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#A0C9CB]/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-[#A0C9CB]/20"
+                  placeholder="Email address"
+                  className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#A0C9CB]/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-left placeholder-gray-500 focus:ring-1 focus:ring-[#A0C9CB]/20"
                   dir="ltr"
                 />
               </div>}
@@ -1636,16 +1637,16 @@ export default function App() {
               {!isTvAuth && authView !== 'reset' && (
                 <div className="flex flex-col gap-1.5 w-full">
                   <div className="flex items-center justify-between mr-1 ml-1 text-xs">
-                    <label className="sr-only">كلمة السر</label>
+                    <label className="sr-only">Password</label>
                   </div>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={authPassword}
                       onChange={(e) => setAuthPassword(e.target.value)}
-                      placeholder="كلمة السر"
-                      className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#A0C9CB]/70 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-500"
-                      dir="rtl"
+                      placeholder="Password"
+                      className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#A0C9CB]/70 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-xl transition-all text-left placeholder-gray-500"
+                      dir="ltr"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           if (authView === 'signin') handleEmailSignIn();
@@ -1658,7 +1659,7 @@ export default function App() {
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer p-1"
-                        title={showPassword ? 'إخفاء' : 'إظهار'}
+                        title={showPassword ? 'Hide' : 'Show'}
                       >
                         {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                       </button>
@@ -1669,7 +1670,7 @@ export default function App() {
 
               {/* Form Validation Errors alerts */}
               {authError && (
-                <div className="text-[#A0C9CB] text-xs font-semibold bg-[#A0C9CB]/10 border border-[#A0C9CB]/20 rounded-xl py-3 px-4 text-right leading-relaxed animate-fade-in">
+                <div className="text-[#A0C9CB] text-xs font-semibold bg-[#A0C9CB]/10 border border-[#A0C9CB]/20 rounded-xl py-3 px-4 text-left leading-relaxed animate-fade-in">
                   {authError}
                 </div>
               )}
@@ -1688,9 +1689,9 @@ export default function App() {
                   <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                 ) : (
                   <span>
-                    {authView === 'signin' && 'تسجيل الدخول'}
-                    {authView === 'signup' && 'إنشاء حساب جديد'}
-                    {authView === 'reset' && 'إرسال رابط استعادة'}
+                    {authView === 'signin' && 'Sign in'}
+                    {authView === 'signup' && 'Create account'}
+                    {authView === 'reset' && 'Send reset link'}
                   </span>
                 )}
               </button>}
@@ -1699,23 +1700,23 @@ export default function App() {
               {!isTvAuth && <div className="text-center text-xs my-2.5">
                 {authView === 'signin' && (
                   <>
-                    <span className="text-gray-500 font-medium">ليس لديك حساب؟ </span>
+                    <span className="text-gray-500 font-medium">Don't have an account? </span>
                     <button
                       onClick={() => { setAuthView('signup'); setAuthError(''); setAuthPassword(''); }}
                       className="text-[#A0C9CB] hover:text-[#A0C9CB] font-bold transition-colors cursor-pointer"
                     >
-                      أنشئ حساباً جديداً
+                      Create a new account
                     </button>
                   </>
                 )}
                 {authView === 'signup' && (
                   <>
-                    <span className="text-gray-500 font-medium">لديك حساب بالفعل؟ </span>
+                    <span className="text-gray-500 font-medium">Already have an account? </span>
                     <button
                       onClick={() => { setAuthView('signin'); setAuthError(''); setAuthPassword(''); }}
                       className="text-[#A0C9CB] hover:text-[#A0C9CB] font-bold transition-colors cursor-pointer"
                     >
-                      سجل دخولك
+                      Sign in
                     </button>
                   </>
                 )}
@@ -1724,7 +1725,7 @@ export default function App() {
                     onClick={() => { setAuthView('signin'); setAuthError(''); }}
                     className="text-gray-400 hover:text-white font-semibold transition-colors cursor-pointer text-[11px]"
                   >
-                    ← العودة لصفحة تسجيل الدخول
+                    ← Back to Sign in
                   </button>
                 )}
               </div>}
@@ -1751,7 +1752,7 @@ export default function App() {
                       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                     </svg>
                   )}
-                  <span>{isTvAuth ? 'المتابعة باستخدام جوجل' : 'دخول بجوجل'}</span>
+                  <span>{isTvAuth ? 'Continue with Google' : 'Sign in with Google'}</span>
                 </button>
               )}
 
@@ -1760,7 +1761,7 @@ export default function App() {
             {/* Bottom mini disclaimer footer */}
             {!isTvAuth && (
               <div className="noir-auth-legal mt-10 pt-4 border-t border-white/5 flex items-center justify-center gap-1.5 text-[11px] text-gray-500">
-                <span>تطبق شروط الاستخدام والأمان الكاملة © {new Date().getFullYear()} نوار سينما</span>
+                <span>Full terms of use and security apply © {new Date().getFullYear()} Noir Cinema</span>
               </div>
             )}
           </div>
@@ -1770,7 +1771,7 @@ export default function App() {
         {/* Toast notifications on the login screen */}
         {toastMessage && (
           <div className="fixed bottom-6 left-0 right-0 z-[600] flex justify-center pointer-events-none px-4">
-            <div className="pointer-events-auto glass-strong text-white text-xs font-semibold rounded-2xl py-3 px-5 shadow-2xl flex items-center gap-2.5 select-none animate-slide-up [direction:rtl]">
+            <div className="pointer-events-auto glass-strong text-white text-xs font-semibold rounded-2xl py-3 px-5 shadow-2xl flex items-center gap-2.5 select-none animate-slide-up [direction:ltr]">
               <LogoIcon className="w-4 h-4 text-[#A0C9CB] shrink-0" />
               <span>{toastMessage}</span>
             </div>
@@ -1894,23 +1895,23 @@ export default function App() {
 
   // أقسام الموقع التلقائية — تُمرّر للداشبورد عشان الأدمن يخفي/يظهر منها
   const siteSectionsForAdmin = useMemo(() => [
-    { key: 'trending', title: 'الرائج هذا الأسبوع', items: trendingWeek },
-    { key: 'upcoming', title: 'قريباً', items: upcoming },
-    { key: 'nowPlaying', title: 'جديد دور السينما', items: nowPlaying },
-    { key: 'popularTV', title: 'المسلسلات الموصى بها', items: popularTV },
-    { key: 'popularMovies', title: 'أفلام شعبية مميزة', items: popularMovies },
+    { key: 'trending', title: 'Trending This Week', items: trendingWeek },
+    { key: 'upcoming', title: 'Coming Soon', items: upcoming },
+    { key: 'nowPlaying', title: 'New in Theaters', items: nowPlaying },
+    { key: 'popularTV', title: 'Recommended Shows', items: popularTV },
+    { key: 'popularMovies', title: 'Popular Movies', items: popularMovies },
   ], [trendingWeek, upcoming, nowPlaying, popularTV, popularMovies]);
 
-  // بناء كل أقسام الرئيسية بشكل موحّد، ثم ترتيبها حسب sectionOrder من الداشبورد.
+  // بناء كل أقسام Home بشكل موحّد، ثم ترتيبها حسب sectionOrder من الداشبورد.
   // كل قسم: { key, title, items }. الأقسام الفاضية تُحذف عند العرض.
   const renderableSections = useMemo(() => {
     // الأصلية
     const native: { key: string; title: string; items: MovieOrShow[] }[] = [
-      { key: 'trending', title: 'الرائج هذا الأسبوع', items: applyHidden(trendingWeek) },
-      { key: 'upcoming', title: 'قريباً', items: applyHidden(upcoming) },
-      { key: 'nowPlaying', title: 'جديد دور السينما', items: applyHidden(nowPlaying) },
-      { key: 'popularTV', title: 'المسلسلات الموصى بها', items: applyHidden(popularTV) },
-      { key: 'popularMovies', title: 'أفلام شعبية مميزة', items: applyHidden(popularMovies) },
+      { key: 'trending', title: 'Trending This Week', items: applyHidden(trendingWeek) },
+      { key: 'upcoming', title: 'Coming Soon', items: applyHidden(upcoming) },
+      { key: 'nowPlaying', title: 'New in Theaters', items: applyHidden(nowPlaying) },
+      { key: 'popularTV', title: 'Recommended Shows', items: applyHidden(popularTV) },
+      { key: 'popularMovies', title: 'Popular Movies', items: applyHidden(popularMovies) },
     ];
 
     // المخصصة: يدوية + تصنيف. للتصنيف ندمج العناصر اليدوية فوق نتائج TMDB.
@@ -1919,7 +1920,7 @@ export default function App() {
       let items: MovieOrShow[] = manual;
       if (sec.kind === 'genre') {
         const genreItems = applyHidden(genreSectionData[sec.key] || []);
-        // العناصر اليدوية أولاً، بعدها التصنيف (بدون تكرار)
+        // العناصر اليدوية أولاً، بعدها Genre (بدون تكرار)
         const seen = new Set(manual.map((m) => `${m.type}_${m.id}`));
         items = [...manual, ...genreItems.filter((g) => !seen.has(`${g.type}_${g.id}`))];
       }
@@ -1999,15 +2000,15 @@ export default function App() {
     if (topTenItems.length) {
       sections.push({
         key: 'top-ten',
-        title: 'أفضل 10 اليوم',
-        subtitle: 'الأكثر رواجاً ومشاهدة الآن',
+        title: 'TOP 10 Today',
+        subtitle: 'The most popular and watched right now',
         items: topTenItems,
       });
     }
     if ((manualBySection.manual?.length ?? 0) > 0) {
       sections.push({
         key: 'manual',
-        title: 'حصري نوار',
+        title: 'Noir Exclusive',
         items: manualBySection.manual,
       });
     }
@@ -2100,9 +2101,9 @@ export default function App() {
 
       {!isTvApp && !isPlayerWindow && activeView !== 'home' && (
         <div className="noir-global-back" dir="ltr">
-          <button type="button" onClick={() => { if (window.history.length > 1) window.history.back(); else navigateToHome(); }} aria-label="رجوع"><ArrowLeft /></button>
+          <button type="button" onClick={() => { if (window.history.length > 1) window.history.back(); else navigateToHome(); }} aria-label="Back"><ArrowLeft /></button>
           <span />
-          <button type="button" onClick={navigateToHome} aria-label="الرئيسية"><Home /></button>
+          <button type="button" onClick={navigateToHome} aria-label="Home"><Home /></button>
         </div>
       )}
 
@@ -2140,8 +2141,8 @@ export default function App() {
             <div className="pb-8 md:pb-14">
               {topTenItems.length > 0 && (
                 <MovieRow
-                  title="أفضل 10 على نوار"
-                  subtitle="العناوين الأكثر مشاهدة الآن"
+                  title="TOP 10 on Noir"
+                  subtitle="The most watched titles right now"
                   items={topTenItems}
                   ranked
                   onItemClick={handleTitleClick}
@@ -2154,7 +2155,7 @@ export default function App() {
               {continueWatching.length > 0 && (
                 <div id="continue-watching-section" className="scroll-mt-20">
                   <ContinueWatchingRow
-                    title="أكمل المشاهدة"
+                    title="Continue Watching"
                     items={continueWatching}
                     onItemClick={handleContinueWatchingClick}
                     isSaved={isInWatchlist}
@@ -2167,16 +2168,16 @@ export default function App() {
               )}
 
               <StudiosRow
-                title="فقط على"
+                title="Only on"
                 onSelectTitle={handleTitleClick}
                 isSaved={isInWatchlist}
                 onToggleSave={toggleWatchlistItem}
               />
 
-              {/* حصري نوار — العناصر المضافة يدوياً بلا قسم مخصص (يظهر أول دائماً) */}
+              {/* Noir Exclusive — العناصر المضافة يدوياً بلا قسم مخصص (يظهر أول دائماً) */}
               {(manualBySection['manual']?.length ?? 0) > 0 && (
                 <MovieRow
-                  title="حصري نوار"
+                  title="Noir Exclusive"
                   items={manualBySection['manual']}
                   onItemClick={handleTitleClick}
                   isSaved={isInWatchlist}
@@ -2201,10 +2202,12 @@ export default function App() {
                 )
               ))}
 
+              <CategoryRow onSelect={(key) => { window.location.hash = `#category/${key}`; }} />
+
               {isHomeLoading && (
                 <>
-                  <MovieRow title="جاري تجهيز اقتراحاتك" items={[]} onItemClick={handleTitleClick} />
-                  <MovieRow title="الأكثر مشاهدة" items={[]} onItemClick={handleTitleClick} />
+                  <MovieRow title="Preparing your recommendations" items={[]} onItemClick={handleTitleClick} />
+                  <MovieRow title="Most Watched" items={[]} onItemClick={handleTitleClick} />
                 </>
               )}
 </div>
@@ -2222,14 +2225,14 @@ export default function App() {
           }
 
           return (
-            <div className="mx-auto max-w-[1800px] px-4 py-10 sm:px-6 lg:px-8 xl:px-10 lg:py-14 animate-fade-in text-right">
+            <div className="mx-auto max-w-[1800px] px-4 py-10 sm:px-6 lg:px-8 xl:px-10 lg:py-14 animate-fade-in text-left">
               {/* Header section on Dedicated Watchlist View */}
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12 select-none">
                 <div className="space-y-3">
                   <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight leading-tight">
-                    قائمتي الخاصة
+                    My List
 </h1>
-                  <p className="text-white/45 text-sm">كل ما حفظته بمكان واحد.</p>
+                  <p className="text-white/45 text-sm">Everything you saved in one place.</p>
 </div>
 
                 {!isTvApp && watchlist.length > 0 && (
@@ -2242,7 +2245,7 @@ export default function App() {
                           watchlistFilter ==='all' ?'bg-[#A0C9CB] text-black' :'text-white/50 hover:text-white'
                         }`}
                       >
-                        الكل
+                        All
 </button>
                       <button
                         onClick={() => setWatchlistFilter('movie')}
@@ -2250,7 +2253,7 @@ export default function App() {
                           watchlistFilter ==='movie' ?'bg-[#A0C9CB] text-black' :'text-white/50 hover:text-white'
                         }`}
                       >
-                        أفلام
+                        Movies
 </button>
                       <button
                         onClick={() => setWatchlistFilter('tv')}
@@ -2258,7 +2261,7 @@ export default function App() {
                           watchlistFilter ==='tv' ?'bg-[#A0C9CB] text-black' :'text-white/50 hover:text-white'
                         }`}
                       >
-                        مسلسلات
+                        TV Shows
 </button>
 </div>
 </div>
@@ -2268,23 +2271,23 @@ export default function App() {
               {watchlist.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-12 text-center bg-stone-950 border border-white/5 rounded-3xl mt-6 min-h-[300px]">
                   <span className="text-5xl mb-4"></span>
-                  <h3 className="text-lg font-bold text-white mb-2">قائمتك فارغة حالياً!</h3>
+                  <h3 className="text-lg font-bold text-white mb-2">Your list is empty!</h3>
                   <p className="text-xs text-gray-400 max-w-sm leading-relaxed">
-                    تصفّح العروض والمسلسلات في الصفحة الرئيسية وأضفها بالضغط على زر الحفظ في تفاصيل الفيلم.
+                    Browse movies and shows on the home page and add them with the save button on the title details.
 </p>
                   <button
                     onClick={navigateToHome}
                     className="mt-6 bg-white hover:bg-white/90 text-black text-xs font-bold px-6 py-3 rounded-full cursor-pointer transition-all"
                   >
-                    الذهاب للرئيسية وتصفّح العروض
+                    Go home and browse titles
 </button>
 </div>
               ) : processedItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-12 text-center bg-stone-950 border border-white/5 rounded-3xl mt-6 min-h-[250px]">
                   <span className="text-4xl mb-3"></span>
-                  <h3 className="text-base font-bold text-white mb-1">لا توجد نتائج مطابقة!</h3>
+                  <h3 className="text-base font-bold text-white mb-1">No matching results!</h3>
                   <p className="text-xs text-gray-400 max-w-sm">
-                    لم نجد أي أعمال تطابق الفلاتر المختارة في قائمتك الخاصة.
+                    We could not find any titles matching the selected filters in your list.
 </p>
 </div>
               ) : (
@@ -2308,7 +2311,7 @@ export default function App() {
                         role="button"
                         tabIndex={0}
                         data-tv-card={isTvApp ? '' : undefined}
-                        aria-label={`فتح ${item.title}`}
+                        aria-label={`Open ${item.title}`}
                         style={{ animationDelay: `${idx * 40}ms` }}
                         className="group/card card-transition card-cinematic cursor-pointer select-none"
                       >
@@ -2345,10 +2348,10 @@ export default function App() {
                           )}
 </div>
 
-                        <div className="px-1 pt-3 text-right">
+                        <div className="px-1 pt-3 text-left">
                           <p className="text-white text-sm font-bold line-clamp-1">{item.title}</p>
                           <p className="mt-1 text-[11px] font-medium text-white/40">
-                            {item.type === 'movie' ? 'فيلم' : 'مسلسل'} · {item.year || '—'}
+                            {item.type === 'movie' ? 'Movie' : 'TV Show'} · {item.year || '—'}
                           </p>
                         </div>
 
@@ -2380,16 +2383,16 @@ export default function App() {
               style={{ backgroundImage: searchResults[0]?.backdrop ? `linear-gradient(90deg, rgba(5,7,11,.96), rgba(5,7,11,.18), rgba(5,7,11,.78)), url(${searchResults[0].backdrop})` : undefined }}
             >
               <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight leading-tight mb-3">
-                {searchMode ==='tv' ?'دليل المسلسلات' :'دليل الأفلام'}
+                {searchMode ==='tv' ?'Browse Shows' :'Browse Movies'}
 </h1>
               <p className="text-white/45 text-sm">
-                اكتشف أعمالاً جديدة واختر ما يناسبك.
+                Discover new titles and pick what suits you.
 </p>
 </div>
 
             {!isTvApp && !fQuery.trim() && searchResults.length > 0 && (
               <MovieRow
-                title={searchMode === 'movie' ? 'الأفلام الرائجة' : 'المسلسلات الرائجة'}
+                title={searchMode === 'movie' ? 'Trending Movies' : 'Trending Shows'}
                 items={searchResults.slice(0, 14)}
                 portrait
                 onItemClick={handleTitleClick}
@@ -2399,7 +2402,7 @@ export default function App() {
               />
             )}
 
-            {/* Direct Input Filter bar — البحث العام في TV موجود بالسايدبار فقط. */}
+            {/* Direct input filter bar — global search on TV lives in the sidebar only. */}
             {!isTvApp && (
             <div className="flex gap-3 mb-10 relative z-10 select-none">
               <div className="flex-1 flex items-center gap-3 noir-surface focus-within:border-white/20 px-4 min-h-14 transition-all">
@@ -2408,8 +2411,8 @@ export default function App() {
                   type="text"
                   value={fQuery}
                   onChange={(e) => setFQuery(e.target.value)}
-                  placeholder="ابحث بالعنوان، الكلمات المفتاحية..."
-                  className="flex-1 bg-transparent border-0 outline-none text-white text-sm md:text-base font-medium placeholder-gray-500 text-right"
+                  placeholder="Search by title, keywords..."
+                  className="flex-1 bg-transparent border-0 outline-none text-white text-sm md:text-base font-medium placeholder-gray-500 text-left"
                 />
 </div>
 
@@ -2423,7 +2426,7 @@ export default function App() {
                 }`}
               >
                 <Filter className="w-4 h-4" />
-                <span>التصفية</span>
+                <span>Filters</span>
 </button>
 </div>
             )}
@@ -2437,7 +2440,7 @@ export default function App() {
                 {/* Search Sorting Metrics controller */}
                 <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
                   <span className="text-xs text-stone-400 font-medium">
-                    {searchResults.length > 0 ?`تم العثور على ${searchResults.length} عنوان` :'لا توجد نتائج مناسبة'}
+                    {searchResults.length > 0 ?`Found ${searchResults.length} titles` :'No matching results'}
 </span>
 
                   {!isTvApp && (
@@ -2448,10 +2451,10 @@ export default function App() {
                       onChange={(e) => setFSort(e.target.value)}
                       className="bg-stone-900 text-white border border-white/5 hover:border-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
                     >
-                      <option value="trend">الرائج عالمياً</option>
-                      <option value="rating">الأعلى تقييماً</option>
-                      <option value="year">تاريخ الإصدار</option>
-                      <option value="az">ترتيب أبجدي (A-Z)</option>
+                      <option value="trend">Trending worldwide</option>
+                      <option value="rating">Top rated</option>
+                      <option value="year">Release date</option>
+                      <option value="az">Alphabetical (A-Z)</option>
 </select>
 </div>
                   )}
@@ -2484,7 +2487,7 @@ export default function App() {
                           tabIndex={0}
                           data-tv-card={isTvApp ? '' : undefined}
                           data-search-result-index={idx}
-                          aria-label={`فتح ${item.title}`}
+                          aria-label={`Open ${item.title}`}
                           style={{ animationDelay: `${idx * 40}ms` }}
                           className="noir-discovery-card group/card card-transition card-cinematic cursor-pointer select-none"
                         >
@@ -2512,10 +2515,10 @@ export default function App() {
 
 </div>
 
-                          <div className="px-1 pt-3 text-right">
+                          <div className="px-1 pt-3 text-left">
                             <p className="text-white text-sm font-bold line-clamp-1">{item.title}</p>
                             <p className="mt-1 text-[11px] font-medium text-white/40">
-                              {item.type === 'movie' ? 'فيلم' : 'مسلسل'} · {item.year || '—'}
+                              {item.type === 'movie' ? 'Movie' : 'TV Show'} · {item.year || '—'}
                             </p>
                           </div>
 
@@ -2535,10 +2538,10 @@ export default function App() {
                           {isLoadingMore ? (
                             <>
                               <Loader className="w-4 h-4 text-[#A0C9CB] animate-spin" />
-                              <span>جاري التحميل...</span>
+                              <span>Loading...</span>
 </>
                           ) : (
-                            <span>عرض المزيد من العناوين</span>
+                            <span>Show more titles</span>
                           )}
 </button>
 </div>
@@ -2547,9 +2550,9 @@ export default function App() {
                 ) : (
                   <div className="py-24 text-center flex flex-col items-center justify-center gap-4 border border-white/5 bg-stone-900/10 rounded-3xl">
                     <span className="text-4xl text-stone-600">∅</span>
-                    <h3 className="text-sm font-bold text-white">لم نجد أي عناوين مطابقة</h3>
+                    <h3 className="text-sm font-bold text-white">No matching titles found</h3>
                     <p className="text-xs text-gray-500 max-w-xs">
-                      جرب تغيير عوامل التصفية المختارة، أو اختصر العناوين في مربع البحث للوصول لنتائج أفضل.
+                      Try changing the selected filters, or shorten your search query for better results.
 </p>
 </div>
                 )}
@@ -2564,15 +2567,15 @@ export default function App() {
                     :'hidden lg:block'
                 }`}
               >
-                <div className="space-y-6 text-right select-none">
+                <div className="space-y-6 text-left select-none">
                   {/* Close button for mobile panel overlay */}
                   <div className="flex justify-between items-center mb-2 lg:hidden">
-                    <h3 className="text-lg font-extrabold text-white">خيارات التصفية</h3>
+                    <h3 className="text-lg font-extrabold text-white">Filter options</h3>
                     <button
                       onClick={() => setIsFilterSidebarOpen(false)}
                       className="px-4 py-2 bg-stone-800 hover:bg-stone-700 text-white text-xs font-bold rounded-xl cursor-pointer"
                     >
-                      إغلاق
+                      Close
 </button>
 </div>
 
@@ -2580,22 +2583,22 @@ export default function App() {
                   <div className="hidden lg:flex justify-between items-baseline border-b border-white/5 pb-3">
                     <h3 className="text-sm font-bold text-gray-300 flex items-center gap-1.5">
                       <Filter className="w-4 h-4 text-gray-400" />
-                      <span>عوامل التصفية</span>
+                      <span>Filters</span>
 </h3>
                     <button
                       onClick={handleResetFilters}
                       className="bg-transparent text-gray-400 hover:text-white transition-colors cursor-pointer text-xs font-semibold flex items-center gap-1"
-                      title="مسح جميع فلاتر التصفية"
+                      title="Clear all filters"
                     >
                       <Trash2 className="w-3.5 h-3.5 text-stone-500" />
-                      <span>مسح الكل</span>
+                      <span>Clear all</span>
 </button>
 </div>
 
                   {/* Select Dropdown: Genres */}
                   {MOVIE_GENRES.length > 0 && !fQuery.trim() && (
                     <div className="space-y-2">
-                      <label className="text-xs text-gray-400 font-bold">التصنيف</label>
+                      <label className="text-xs text-gray-400 font-bold">Genre</label>
                       <select
                         onChange={(e) => {
                           const id = Number(e.target.value);
@@ -2606,7 +2609,7 @@ export default function App() {
                         value={Array.from(selectedGenres)[0] ||""}
                         className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
                       >
-                        <option value="">كل التصنيفات</option>
+                        <option value="">All genres</option>
                         {MOVIE_GENRES.map((g) => (
                           <option key={g.id} value={g.id}>{g.name}</option>
                         ))}
@@ -2617,13 +2620,13 @@ export default function App() {
                   {/* Select Dropdown: Release Year */}
                   {!fQuery.trim() && (
                     <div className="space-y-2">
-                      <label className="text-xs text-gray-400 font-bold">سنة الإصدار</label>
+                      <label className="text-xs text-gray-400 font-bold">Release year</label>
                       <select
                         value={selectedYear ||""}
                         onChange={(e) => setSelectedYear(e.target.value || null)}
                         className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
                       >
-                        <option value="">كل السنوات</option>
+                        <option value="">All years</option>
                         {YEARS.map((y) => (
                           <option key={y} value={y}>{y}</option>
                         ))}
@@ -2634,13 +2637,13 @@ export default function App() {
                   {/* Select Dropdown: Rating */}
                   {!fQuery.trim() && (
                     <div className="space-y-2">
-                      <label className="text-xs text-gray-400 font-bold">الحد الأدنى للتقييم</label>
+                      <label className="text-xs text-gray-400 font-bold">Minimum rating</label>
                       <select
                         value={selectedRating ||""}
                         onChange={(e) => setSelectedRating(e.target.value || null)}
                         className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
                       >
-                        <option value="">كل التقييمات</option>
+                        <option value="">All ratings</option>
                         {RATINGS.map(([val, label]) => (
                           <option key={val} value={val}>{label}</option>
                         ))}
@@ -2651,13 +2654,13 @@ export default function App() {
                   {/* Select Dropdown: Country of origin */}
                   {!fQuery.trim() && (
                     <div className="space-y-2">
-                      <label className="text-xs text-gray-400 font-bold">جهة الإنتاج</label>
+                      <label className="text-xs text-gray-400 font-bold">Studio</label>
                       <select
                         value={selectedCountry ||""}
                         onChange={(e) => setSelectedCountry(e.target.value || null)}
                         className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
                       >
-                        <option value="">كل جهات الإنتاج</option>
+                        <option value="">All studios</option>
                         {COUNTRIES.map(([val, label]) => (
                           <option key={val} value={val}>{label}</option>
                         ))}
@@ -2668,13 +2671,13 @@ export default function App() {
                   {/* Select Dropdown: Language */}
                   {!fQuery.trim() && (
                     <div className="space-y-2">
-                      <label className="text-xs text-gray-400 font-bold">اللغة الصوتية</label>
+                      <label className="text-xs text-gray-400 font-bold">Audio language</label>
                       <select
                         value={selectedLanguage ||""}
                         onChange={(e) => setSelectedLanguage(e.target.value || null)}
                         className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
                       >
-                        <option value="">كل اللغات</option>
+                        <option value="">All languages</option>
                         {LANGS.map(([val, label]) => (
                           <option key={val} value={val}>{label}</option>
                         ))}
@@ -2685,13 +2688,13 @@ export default function App() {
                   {/* Select Dropdown: Duration */}
                   {!fQuery.trim() && (
                     <div className="space-y-2.5 pb-6">
-                      <label className="text-xs text-gray-400 font-bold">مدة العرض</label>
+                      <label className="text-xs text-gray-400 font-bold">Runtime</label>
                       <select
                         value={selectedRuntime ||""}
                         onChange={(e) => setSelectedRuntime(e.target.value || null)}
                         className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
                       >
-                        <option value="">كل المدد</option>
+                        <option value="">All runtimes</option>
                         {RUNTIMES.map(([val, label]) => (
                           <option key={val} value={val}>{label}</option>
                         ))}
@@ -2828,7 +2831,7 @@ export default function App() {
 
       {/* Google Account Profile Details Dialog Modal */}
       {isProfileModalOpen && user && (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 text-right" role="dialog" aria-modal="true" aria-label="الملف الشخصي">
+        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 text-left" role="dialog" aria-modal="true" aria-label="Profile">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/85 backdrop-blur-md cursor-pointer animate-fade-in"
@@ -2843,7 +2846,7 @@ export default function App() {
               <button
                 onClick={() => setIsProfileModalOpen(false)}
                 className="absolute top-4 left-4 hidden h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-white/8 hover:text-white lg:flex"
-                aria-label="إغلاق"
+                aria-label="Close"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -2874,34 +2877,34 @@ export default function App() {
                 )}
                 {user.type ==='guest' ? (
                   <span className="inline-block bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full mt-1">
-                    أنت مسجل حالياً كضيف
+                    You are currently signed in as a guest
 </span>
                 ) : user.type === 'email' ? (
                   <div className="flex flex-col items-center gap-2 mt-1">
                     <span className="inline-block bg-[#A0C9CB]/10 border border-[#A0C9CB]/25 text-[#A0C9CB] text-[10px] font-bold px-2.5 py-0.5 rounded-full">
-                      حساب نوار سينما
+                      Noir Cinema account
                     </span>
                     {auth.currentUser?.emailVerified === false && (
                       <div className="mt-1 flex flex-col items-center gap-1.5 p-2 bg-amber-500/10 border border-amber-500/20 rounded-xl max-w-[240px] mx-auto">
                         <p className="text-[10px] text-amber-400 font-bold leading-normal">
-                          البريد الإلكتروني غير مفعّل ⚠️
+                          Email not verified ⚠️
                         </p>
                         <p className="text-[9px] text-gray-400 leading-normal">
-                          السحابة تمنع الحفظ لغير المفعّلين لحماية بياناتك.
+                          The cloud blocks saving for unverified accounts to protect your data.
                         </p>
                         {!isTvApp && <button
                           onClick={handleSendVerificationEmail}
                           disabled={isSendingVerification}
                           className="text-[10px] text-indigo-400 hover:text-indigo-300 underline font-extrabold cursor-pointer disabled:opacity-50"
                         >
-                          {isSendingVerification ? 'جاري الإرسال...' : 'إرسال رابط تفعيل البريد'}
+                          {isSendingVerification ? 'Sending...' : 'Send verification email'}
                         </button>}
                       </div>
                     )}
                   </div>
                 ) : !isTvApp ? (
                   <span className="inline-block bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full mt-1">
-                    حساب جوجل مفعل وموثق
+                    Google account active and verified
 </span>
                 ) : null}
 </div>
@@ -2910,13 +2913,13 @@ export default function App() {
 
 
             {/* Restrict warning or list status */}
-            <div className="mt-8 p-3.5 rounded-sm bg-black/35 border border-white/5 text-right space-y-1">
-              <p className="text-[10px] text-gray-500 font-bold leading-normal">إحصائيات القائمة والنشاط</p>
+            <div className="mt-8 p-3.5 rounded-sm bg-black/35 border border-white/5 text-left space-y-1">
+              <p className="text-[10px] text-gray-500 font-bold leading-normal">List and activity stats</p>
               <div className="text-xs text-gray-300 font-semibold leading-relaxed">
                 {user.type ==='guest' ? (
-                  <span className="text-amber-500 font-bold block">حساب الزائر محدود ميزات الحفظ والمشاهدة الجماعية. سجل دخولك بجوجل لتفعيلهم!</span>
+                  <span className="text-amber-500 font-bold block">Guest accounts have limited saving and watch-party features. Sign in with Google to enable them!</span>
                 ) : (
-                  <span>مجموع العناوين المضافة لقائمتك الخاصة: <strong className="text-[#A0C9CB]">{watchlist.length} عنوان</strong></span>
+                  <span>Total titles added to your list: <strong className="text-[#A0C9CB]">{watchlist.length} titles</strong></span>
                 )}
 </div>
 </div>
@@ -2929,7 +2932,7 @@ export default function App() {
                 onClick={handleViewHistory}
                 className="w-full bg-white/8 border border-white/8 hover:bg-white/14 text-white font-bold py-3 rounded-sm transition-colors cursor-pointer text-xs flex items-center justify-center gap-2"
               >
-                <span>سجل المشاهدة</span>
+                <span>Watch history</span>
                 <span className="text-white/45">({viewingHistory.length})</span>
               </button>
               {user.type ==='guest' && !isTvApp && (
@@ -2941,7 +2944,7 @@ export default function App() {
                   }}
                   className="w-full bg-white hover:bg-white/85 text-black font-bold py-3 rounded-sm transition-all cursor-pointer text-xs"
                 >
-                  ربط تسجيل الدخول بجوجل
+                  Link Google sign-in
 </button>
               )}
               <button
@@ -2952,7 +2955,7 @@ export default function App() {
                 className="w-full bg-black/40 border border-white/8 hover:border-[#A0C9CB]/60 text-[#A0C9CB] hover:text-[#55DADD] font-bold py-3 rounded-sm transition-all cursor-pointer text-xs flex items-center justify-center gap-2"
               >
                 <span></span>
-                <span>تسجيل الخروج من الحساب</span>
+                <span>Sign out</span>
 </button>
 </div>
 </div>
@@ -2962,7 +2965,7 @@ export default function App() {
       {/* Floating Success Indicator Toast notifications */}
       {toastMessage && (
         <div className="fixed bottom-20 md:bottom-6 left-0 right-0 z-[600] flex justify-center pointer-events-none px-4">
-          <div className="pointer-events-auto glass-strong text-white text-xs font-semibold rounded-full py-3 px-6 shadow-2xl flex items-center gap-2.5 select-none animate-slide-up [direction:rtl]">
+          <div className="pointer-events-auto glass-strong text-white text-xs font-semibold rounded-full py-3 px-6 shadow-2xl flex items-center gap-2.5 select-none animate-slide-up [direction:ltr]">
             <LogoIcon className="w-4 h-4 text-[#A0C9CB] shrink-0" />
             <span>{toastMessage}</span>
           </div>

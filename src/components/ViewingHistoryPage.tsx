@@ -14,14 +14,14 @@ export default function ViewingHistoryPage({
 }: ViewingHistoryPageProps) {
   const isTvApp = document.documentElement.classList.contains('noir-tv-app');
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in" dir="rtl">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in" dir="ltr">
       <div className="flex items-end justify-between gap-4 border-b border-white/5 pb-6 mb-8">
         <div>
           <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight">
-            سجل المشاهدة
+            Watch history
           </h1>
           <p className="mt-2 text-sm text-white/45">
-            أعمالك المكتملة والتي بدأت مشاهدتها، متزامنة بين أجهزتك.
+            Titles you finished or started watching, synced across your devices.
           </p>
         </div>
       </div>
@@ -29,8 +29,8 @@ export default function ViewingHistoryPage({
       {items.length === 0 ? (
         <div className="min-h-[320px] rounded-[26px] border border-white/8 bg-black/15 flex flex-col items-center justify-center text-center p-8">
           <Clock3 className="w-10 h-10 text-white/20" />
-          <h2 className="mt-4 text-lg font-bold text-white">سجل المشاهدة فارغ</h2>
-          <p className="mt-2 text-sm text-white/45">ابدأ مشاهدة أي فيلم أو مسلسل وسيظهر هنا.</p>
+          <h2 className="mt-4 text-lg font-bold text-white">Your watch history is empty</h2>
+          <p className="mt-2 text-sm text-white/45">Start watching any movie or show and it will appear here.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2">
@@ -40,7 +40,7 @@ export default function ViewingHistoryPage({
                 type="button"
                 onClick={() => onItemClick(item)}
                 data-tv-card={isTvApp ? '' : undefined}
-                className="block w-full text-right cursor-pointer"
+                className="block w-full text-left cursor-pointer"
               >
                 <div data-tv-card-artwork={isTvApp ? '' : undefined} className="relative aspect-video overflow-hidden rounded-sm bg-black border border-white/[0.06]">
                   {item.backdrop || item.poster ? (
@@ -63,7 +63,7 @@ export default function ViewingHistoryPage({
                       {item.completed ? (
                         <>
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                          مكتمل
+                          Completed
                         </>
                       ) : (
                         <>
@@ -79,7 +79,7 @@ export default function ViewingHistoryPage({
                 type="button"
                 onClick={() => onRemove(item)}
                 className="absolute top-2 left-2 w-9 h-9 rounded-full bg-black/65 backdrop-blur-md border border-white/10 text-white/75 hover:text-white flex items-center justify-center cursor-pointer opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                aria-label={`حذف ${item.title} من سجل المشاهدة`}
+                aria-label={`Delete ${item.title} from watch history`}
               >
                 <Trash2 className="w-4 h-4" />
               </button>

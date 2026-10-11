@@ -24,9 +24,9 @@ export default function MobileNav({
 }: MobileNavProps) {
   return (
     <nav
-      aria-label="التنقل الرئيسي"
+      aria-label="Main navigation"
       className="fixed bottom-3 left-3 right-3 z-[200] flex h-[62px] items-center justify-around rounded-[20px] border border-white/[0.09] bg-[#0b0c0f]/92 px-1 shadow-[0_20px_48px_-20px_black] backdrop-blur-2xl selection:bg-transparent lg:hidden"
-      dir="rtl"
+      dir="ltr"
     >
 
       {/* Home Button */}
@@ -38,7 +38,7 @@ export default function MobileNav({
         aria-current={activeView === 'home' ? 'page' : undefined}
       >
         <Home className="w-5 h-5 transition-transform" />
-        <span className="text-[11px] font-semibold leading-none">الرئيسية</span>
+        <span className="text-[11px] font-semibold leading-none">Home</span>
       </button>
 
       {/* Search Button */}
@@ -50,7 +50,7 @@ export default function MobileNav({
         aria-current={isSearchOpen ? 'page' : undefined}
       >
         <Search className="w-5 h-5 transition-transform" />
-        <span className="text-[11px] font-semibold leading-none">البحث</span>
+        <span className="text-[11px] font-semibold leading-none">Search</span>
       </button>
 
       {/* My List / Watchlist Button */}
@@ -62,7 +62,7 @@ export default function MobileNav({
         aria-current={activeView === 'watchlist' ? 'page' : undefined}
       >
         <Bookmark className="w-5 h-5 transition-transform" />
-        <span className="text-[11px] font-semibold leading-none">قائمتي</span>
+        <span className="text-[11px] font-semibold leading-none">My List</span>
       </button>
 
       {/* Profile Button */}
@@ -71,7 +71,7 @@ export default function MobileNav({
         className="flex h-12 flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-[14px] py-1 text-center text-gray-500 transition-all hover:bg-white/[0.05] hover:text-white"
       >
         <CircleUserRound className="w-5 h-5 transition-transform" />
-        <span className="text-[11px] font-semibold leading-none">حسابي</span>
+        <span className="text-[11px] font-semibold leading-none">Account</span>
       </button>
 
     </nav>

@@ -177,15 +177,15 @@ export default function DetailView({
   const [wtNewMsg, setWtNewMsg] = useState('');
   const [wtCopied, setWtCopied] = useState(false);
 
-  // اسم تبويب المتصفح = اسم الفلم/المسلسل ويرجع لـ "نوار سينما" عند الإغلاق
+  // اسم تبويب المتصفح = اسم الفلم/المسلسل ويرجع لـ "Noir Cinema" عند الإغلاق
   // نستخدم data?.title لأن data قد تكون null في بداية التحميل
   useEffect(() => {
     const pageTitle = data?.title || (data as any)?.name;
-    if (pageTitle) document.title = `${pageTitle} — نوار سينما`;
-    return () => { document.title = 'نوار سينما'; };
+    if (pageTitle) document.title = `${pageTitle} — Noir Cinema`;
+    return () => { document.title = 'Noir Cinema'; };
   }, [data]);
 
-  const wtName = user?.name || 'زائر';
+  const wtName = user?.name || 'Guest';
   const {
     connected: wtConnected,
     isHost: wtIsHost,
@@ -212,7 +212,7 @@ export default function DetailView({
       } else if (sig.action === 'pause') {
         setIsPausedByHost(true);
         setHostPauseByName(sig.byName);
-        showToast(`${sig.byName} أوقف التشغيل مؤقتاً`);
+        showToast(`${sig.byName} paused playback`);
       } else if (sig.action === 'seek') {
         // Host scrubbed the timeline. Reload the iframe at the new position.
         const t = Math.max(0, Math.floor(sig.time || 0));
@@ -222,7 +222,7 @@ export default function DetailView({
           setIsPlayerOpen(true);
           setPlayerMode('movie');
         }
-        showToast(`${sig.byName} انتقل إلى ${formatHms(t)}`);
+        showToast(`${sig.byName} jumped to ${formatHms(t)}`);
       }
     },
   });
@@ -311,7 +311,7 @@ export default function DetailView({
         const historyItem: ViewingHistoryItem = {
           id,
           type,
-          title: data.title || (data as any).name || 'بدون عنوان',
+          title: data.title || (data as any).name || 'Untitled',
           overview: data.overview || '',
           poster:
             (data as any)._manualPoster ||
@@ -365,7 +365,7 @@ export default function DetailView({
       const item: ContinueWatchingItem = {
         id,
         type,
-        title: data.title || (data as any).name || 'بدون عنوان',
+        title: data.title || (data as any).name || 'Untitled',
         overview: data.overview || '',
         poster:
           (data as any)._manualPoster ||
@@ -618,7 +618,7 @@ export default function DetailView({
             : (details.seasons.find((s) => s.season_number > 0) || details.seasons[0]);
           setSelectedSeason(targetSeason.season_number);
           setEpisodesCount(targetSeason.episode_count || 1);
-          // احترم حلقة الـ URL إذا ضمن نطاق الموسم؛ وإلا الحلقة 1
+          // احترم episodes الـ URL إذا ضمن نطاق الموسم؛ وإلا Episode 1
           if (urlSeasonValid && initialEpisode && initialEpisode <= (targetSeason.episode_count || 1)) {
             setSelectedEpisode(initialEpisode);
           } else {
@@ -750,7 +750,7 @@ export default function DetailView({
     return (
       <div className="w-full min-h-[60vh] flex flex-col items-center justify-center gap-4 py-20">
         <div className="w-10 h-10 border-4 border-[#A0C9CB]/20 border-t-[#A0C9CB] rounded-full animate-spin" />
-        <span className="text-gray-400 font-medium text-sm">جاري التحميل...</span>
+        <span className="text-gray-400 font-medium text-sm">Loading...</span>
 </div>
     );
   }
@@ -759,13 +759,13 @@ export default function DetailView({
     return (
       <div className="w-full min-h-[50vh] flex flex-col items-center justify-center text-center py-20 px-6 gap-4">
         <span className="text-5xl">⚠</span>
-        <h3 className="text-xl font-bold text-white">عذراً، فشل تحميل تفاصيل العنوان</h3>
-        <p className="text-gray-400 text-sm max-w-sm">يرجى التحقق من اتصالك بالإنترنت، لم نستطع الاتصال بمزود البيانات TMDB.</p>
+        <h3 className="text-xl font-bold text-white">Sorry, failed to load title details</h3>
+        <p className="text-gray-400 text-sm max-w-sm">Please check your internet connection; we could not reach the TMDB data provider.</p>
 </div>
     );
   }
 
-  const title = data.title || (data as any).name ||'غير معروف';
+  const title = data.title || (data as any).name ||'Unknown';
   const titleLogo = getTitleLogoUrl(data);
 
   // للعناصر اليدوية: نفضّل الروابط الجاهزة اللي مرّرناها
@@ -781,14 +781,14 @@ export default function DetailView({
   const cast = data.credits?.cast ? data.credits.cast.slice(0, 12) : [];
   const crew = data.credits?.crew || [];
   const directors = crew.filter((c) => c.job ==='Director').map((c) => c.name);
-  const director = directors.length > 0 ? directors.join('،') : (data.created_by && data.created_by[0] ? data.created_by[0].name :'غير محدد');
+  const director = directors.length > 0 ? directors.join(', ') : (data.created_by && data.created_by[0] ? data.created_by[0].name :'Not specified');
 
-  const country = data.production_countries && data.production_countries[0] ? data.production_countries[0].name :'غير معروف';
-  const mainLang = data.spoken_languages && data.spoken_languages[0] ? data.spoken_languages[0].name :'الأصلية';
+  const country = data.production_countries && data.production_countries[0] ? data.production_countries[0].name :'Unknown';
+  const mainLang = data.spoken_languages && data.spoken_languages[0] ? data.spoken_languages[0].name :'Original';
 
   const handlePreference = (nextPreference: TitlePreference) => {
     if (!auth.currentUser || user?.type === 'guest') {
-      showToast('سجّل دخولك حتى تضيف تقييمك');
+      showToast('Sign in to add your rating');
       return;
     }
     onPreference?.({
@@ -807,7 +807,7 @@ export default function DetailView({
 
   const handleToggleSave = async () => {
     if (user?.type === 'guest') {
-      showToast('يجب تسجيل الدخول باستخدام حساب جوجل أو بريد إلكتروني لإضافة عناوين لقائمتك');
+      showToast('You must sign in with a Google or email account to add titles to your list');
       return;
     }
     if (!data) return;
@@ -823,10 +823,10 @@ export default function DetailView({
         if (curUser) {
           try {
             await removeFromFirestoreWatchlist(curUser.uid, type, id);
-            showToast('تمت الإزالة من قائمتك بنجاح');
+            showToast('Removed from your list');
           } catch (cloudErr: any) {
             console.error("Failed to remove item from Cloud Watchlist: ", cloudErr);
-            let errMsg = 'حدث خطأ في الاتصال بالسحابة';
+            let errMsg = 'A cloud connection error occurred';
             if (cloudErr) {
               if (cloudErr.message) {
                 try {
@@ -847,12 +847,12 @@ export default function DetailView({
               }
             }
             if (errMsg.includes('Missing or insufficient permissions') && curUser?.emailVerified === false) {
-              errMsg = 'يرجى تفعيل بريدك الإلكتروني من الملف الشخصي لإتمام العملية';
+              errMsg = 'Please verify your email from your profile to complete this action';
             }
-            showToast(`تمت الإزالة محلياً (${errMsg})`);
+            showToast(`Removed locally (${errMsg})`);
           }
         } else {
-          showToast('تمت الإزالة من قائمتك بنجاح');
+          showToast('Removed from your list');
         }
       } else {
         const newItem = {
@@ -869,10 +869,10 @@ export default function DetailView({
         if (curUser) {
           try {
             await addToFirestoreWatchlist(curUser.uid, newItem);
-            showToast('تم الحفظ في قائمتك بنجاح');
+            showToast('Saved to your list');
           } catch (cloudErr: any) {
             console.error("Failed to add item to Cloud Watchlist: ", cloudErr);
-            let errMsg = 'حدث خطأ في الاتصال بالسحابة';
+            let errMsg = 'A cloud connection error occurred';
             if (cloudErr) {
               if (cloudErr.message) {
                 try {
@@ -893,12 +893,12 @@ export default function DetailView({
               }
             }
             if (errMsg.includes('Missing or insufficient permissions') && curUser?.emailVerified === false) {
-              errMsg = 'يرجى تفعيل بريدك الإلكتروني من الملف الشخصي ليتم الحفظ سحابياً';
+              errMsg = 'Please verify your email from your profile to save to the cloud';
             }
-            showToast(`تم الحفظ محلياً (${errMsg})`);
+            showToast(`Saved locally (${errMsg})`);
           }
         } else {
-          showToast('تم الحفظ في قائمتك بنجاح');
+          showToast('Saved to your list');
         }
       }
       localStorage.setItem('noir_watchlist', JSON.stringify(list));
@@ -922,7 +922,7 @@ export default function DetailView({
           ...r,
           id: r.id,
           type: type, // recommendations match current category
-          title: r.title || r.name ||'غير معروف',
+          title: r.title || r.name ||'Unknown',
           overview: r.overview ||'',
           poster: getPosterUrl(r.poster_path),
           backdrop: getBackdropUrl(r.backdrop_path),
@@ -934,7 +934,7 @@ export default function DetailView({
     : [];
 
   return (
-    <div className="noir-web-detail noir-simple-detail w-full text-right detail-enter">
+    <div className="noir-web-detail noir-simple-detail w-full text-left detail-enter">
 
       {/* Immersive backdrop background section */}
       <div className={`noir-detail-backdrop-stage relative w-full select-none ${isTvApp ? 'h-[35vh] md:h-[45vh] mb-4 overflow-visible' : 'h-[72svh] min-h-[560px] max-h-[840px] overflow-hidden'}`}>
@@ -956,7 +956,7 @@ export default function DetailView({
         <div className={`grid grid-cols-1 gap-6 items-end ${isTvApp ? 'md:grid-cols-[240px_1fr] md:gap-12' : ''}`}>
 
           {/* Text Information pane (Right side in standard RTL layouts) */}
-          <div className={`noir-detail-summary order-2 flex flex-col items-start text-right min-w-0 w-full ${isTvApp ? 'md:order-2 md:pr-4' : 'max-w-3xl'}`}>
+          <div className={`noir-detail-summary order-2 flex flex-col items-start text-left min-w-0 w-full ${isTvApp ? 'md:order-2 md:pr-4' : 'max-w-3xl'}`}>
 
             {titleLogo ? (
               <img
@@ -977,31 +977,31 @@ export default function DetailView({
             <div className="flex flex-wrap items-center gap-x-2 gap-y-2 text-xs sm:text-sm text-stone-300 font-medium mb-3 leading-relaxed">
               <span className="flex items-center gap-1.5 text-[#f5c518]">
                 <Star className="w-4 h-4 fill-current" />
-                {data.vote_average ? data.vote_average.toFixed(1) :'غ/م'}
+                {data.vote_average ? data.vote_average.toFixed(1) :'N/A'}
               </span>
               <span aria-hidden="true" className="text-stone-600">•</span>
               <span>{year ||'—'}</span>
               {runtime > 0 && (
                 <>
                   <span aria-hidden="true" className="text-stone-600">•</span>
-                  <span>{runtime} دقيقة</span>
+                  <span>{runtime} min</span>
                 </>
               )}
               <span aria-hidden="true" className="text-stone-600">•</span>
-              <span>{type ==='movie' ?'فيلم' :'مسلسل'}</span>
-              {director && director !== 'غير محدد' && (
+              <span>{type ==='movie' ?'Movie' :'TV Show'}</span>
+              {director && director !== 'Not specified' && (
                 <>
                   <span aria-hidden="true" className="text-stone-600">•</span>
-                  <span>إخراج: {director}</span>
+                  <span>Director: {director}</span>
                 </>
               )}
-              {country && country !== 'غير معروف' && (
+              {country && country !== 'Unknown' && (
                 <>
                   <span aria-hidden="true" className="text-stone-600">•</span>
                   <span>{country}</span>
                 </>
               )}
-              {mainLang && mainLang !== 'الأصلية' && (
+              {mainLang && mainLang !== 'Original' && (
                 <>
                   <span aria-hidden="true" className="text-stone-600">•</span>
                   <span>{mainLang}</span>
@@ -1024,9 +1024,9 @@ export default function DetailView({
             )}
 
             {/* Synopsis placed right below Details bar and tags */}
-            <div className="noir-detail-overview mb-4 sm:mb-6 max-w-2xl text-right leading-relaxed select-text">
+            <div className="noir-detail-overview mb-4 sm:mb-6 max-w-2xl text-left leading-relaxed select-text">
               <p className="text-gray-350 text-xs sm:text-sm md:text-base font-medium leading-relaxed">
-                {data.overview ||'لا يوجد وصف.'}
+                {data.overview ||'No description available.'}
 </p>
 </div>
 
@@ -1044,7 +1044,7 @@ export default function DetailView({
                     className="noir-button-primary flex items-center gap-2 text-sm"
                   >
                     <Play className="w-3.5 h-3.5 fill-white text-white" />
-                    <span>إكمال المشاهدة</span>
+                    <span>Continue Watching</span>
 </button>
 
                   <button
@@ -1053,7 +1053,7 @@ export default function DetailView({
                     className="noir-button-secondary flex items-center gap-2 text-sm"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
-                    <span>البدء من البداية</span>
+                    <span>Start from the beginning</span>
 </button>
 </>
               ) : (
@@ -1065,7 +1065,7 @@ export default function DetailView({
                   className="noir-button-primary flex items-center gap-2 text-sm"
                 >
                   <Play className="w-3.5 h-3.5 fill-white text-white" />
-                  <span>المشاهدة الآن</span>
+                  <span>Watch now</span>
 </button>
               )}
 
@@ -1078,15 +1078,15 @@ export default function DetailView({
                     <rect width="28" height="20" rx="5" fill="#FF0000" />
                     <path d="M11 6 L19 10 L11 14 Z" fill="white" />
                   </svg>
-                  <span>الإعلان</span>
+                  <span>Trailer</span>
 </button>
               )}
 
               <button
                 onClick={handleToggleSave}
                 data-tv-save={isTvApp ? '' : undefined}
-                title={isSaved ? 'محفوظ في قائمتي' : 'حفظ في قائمتي'}
-                aria-label={isSaved ? 'إزالة من قائمتي' : 'إضافة إلى قائمتي'}
+                title={isSaved ? 'Saved to my list' : 'Save to my list'}
+                aria-label={isSaved ? 'Remove from my list' : 'Add to my list'}
                 className={`noir-icon-button shrink-0 ${
                   isSaved
                     ?'!border-[#A0C9CB]/40 !bg-[#A0C9CB] !text-white'
@@ -1106,7 +1106,7 @@ export default function DetailView({
                       ? 'bg-white text-black'
                       : 'text-white/85 hover:bg-white/12'
                   }`}
-                  aria-label={`أعجبني، ${reactionCounts.likes}`}
+                  aria-label={`Like, ${reactionCounts.likes}`}
                   aria-pressed={preference === 'like'}
                 >
                   <ThumbsUp className="w-4 h-4" />
@@ -1121,7 +1121,7 @@ export default function DetailView({
                       ? 'bg-white text-black'
                       : 'text-white/85 hover:bg-white/12'
                   }`}
-                  aria-label={`لم يعجبني، ${reactionCounts.dislikes}`}
+                  aria-label={`Dislike, ${reactionCounts.dislikes}`}
                   aria-pressed={preference === 'dislike'}
                 >
                   <ThumbsDown className="w-4 h-4" />
@@ -1133,8 +1133,8 @@ export default function DetailView({
               <button
                 onClick={() => onOpenShare(`${window.location.origin}/${type}/${id}`)}
                 className="noir-icon-button shrink-0"
-                title="مشاركة الرابط الحالي"
-                aria-label="مشاركة الرابط الحالي"
+                title="Share current link"
+                aria-label="Share current link"
               >
                 <Share2 className="w-4 h-4" />
 </button>
@@ -1164,20 +1164,20 @@ export default function DetailView({
 
         {/* Watch Together Live Synchronization Panel */}
         {isWatchTogetherOpen && (
-          <div className="mt-8 bg-stone-950 border border-white/5 rounded-3xl p-4 sm:p-6 md:p-8 space-y-6 text-right animate-fade-in max-w-4xl mx-auto selection:bg-[#A0C9CB]/25">
+          <div className="mt-8 bg-stone-950 border border-white/5 rounded-3xl p-4 sm:p-6 md:p-8 space-y-6 text-left animate-fade-in max-w-4xl mx-auto selection:bg-[#A0C9CB]/25">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/5 pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-[#A0C9CB]/10 border border-[#A0C9CB]/20 flex items-center justify-center">
                   <Users className="w-5 h-5 text-[#A0C9CB]" />
 </div>
-                <div className="flex flex-col text-right">
-                  <h3 className="text-white font-bold text-sm sm:text-base">استوديو المشاهدة الجماعية</h3>
+                <div className="flex flex-col text-left">
+                  <h3 className="text-white font-bold text-sm sm:text-base">Watch Party</h3>
                   <p className="text-gray-400 text-[10px] sm:text-xs">
                     {wtConnected
-                      ? 'متصل مباشرة الآن. شارك الرابط مع أصدقائك لينضموا إليك فعلياً.'
+                      ? 'Live now. Share the link with your friends so they can join you.'
                       : wtError
                         ? wtError
-                        : 'جارٍ الاتصال بخادم المشاهدة الجماعية...'}
+                        : 'Connecting to the watch-party server...'}
                   </p>
                 </div>
               </div>
@@ -1196,7 +1196,7 @@ export default function DetailView({
                   className="flex items-center gap-1 bg-white hover:bg-white/90 text-black font-bold text-xs px-3.5 py-1.5 rounded-full transition-all cursor-pointer"
                 >
                   <Copy className="w-3 h-3" />
-                  <span>{wtCopied ?'تم النسخ!' :'نسخ الرابط'}</span>
+                  <span>{wtCopied ?'Copied!' :'Copy link'}</span>
 </button>
 </div>
 </div>
@@ -1214,7 +1214,7 @@ export default function DetailView({
                           ? 'mr-auto items-start text-left'
                           : msg.type === 'system'
                             ? 'mx-auto text-center items-center bg-white/5 border border-white/5 rounded-lg py-1 px-3 text-[10px] text-gray-400 w-full'
-                            : 'ml-auto items-end text-right'
+                            : 'ml-auto items-end text-left'
                       }`}
                     >
                       {msg.type !== 'system' && (
@@ -1239,8 +1239,8 @@ export default function DetailView({
                     type="text"
                     value={wtNewMsg}
                     onChange={(e) => setWtNewMsg(e.target.value)}
-                    placeholder="اكتب رسالة لأفراد الغرفة المشاهدين..."
-                    className="flex-grow bg-stone-900 text-white text-xs px-3.5 py-2.5 rounded-xl border border-white/5 focus:outline-none focus:border-[#A0C9CB] text-right font-medium"
+                    placeholder="Write a message to everyone in the room..."
+                    className="flex-grow bg-stone-900 text-white text-xs px-3.5 py-2.5 rounded-xl border border-white/5 focus:outline-none focus:border-[#A0C9CB] text-left font-medium"
                   />
                   <button
                     type="submit"
@@ -1252,11 +1252,11 @@ export default function DetailView({
 </div>
 
               {/* Members status bar */}
-              <div className="bg-stone-900 border border-white/5 p-4 rounded-2xl flex flex-col gap-3 text-right">
-                <span className="text-xs text-gray-500 font-bold border-b border-white/5 pb-2 block">المتصلون الآن ({wtMembers.length})</span>
+              <div className="bg-stone-900 border border-white/5 p-4 rounded-2xl flex flex-col gap-3 text-left">
+                <span className="text-xs text-gray-500 font-bold border-b border-white/5 pb-2 block">Online now ({wtMembers.length})</span>
                 <div className="flex flex-col gap-2.5">
                   {wtMembers.length === 0 && (
-                    <span className="text-[11px] text-gray-600 font-medium">لا يوجد أحد بعد. انسخ الرابط وأرسله لأصدقائك.</span>
+                    <span className="text-[11px] text-gray-600 font-medium">No one yet. Copy the link and send it to your friends.</span>
                   )}
                   {wtMembers.map((member) => (
                     <div key={member.id} className="flex items-center gap-2 justify-between">
@@ -1265,7 +1265,7 @@ export default function DetailView({
                         <span className="text-white text-xs font-bold">{member.name}</span>
                       </div>
                       <span className="text-[10px] text-emerald-400 font-bold">
-                        {member.isHost ? 'المنظم' : 'متصل'}
+                        {member.isHost ? 'Host' : 'Online'}
                       </span>
 </div>
                   ))}
@@ -1290,7 +1290,7 @@ export default function DetailView({
                       aria-haspopup="dialog"
                       className="flex items-center gap-2 rounded-full border border-transparent px-5 py-3 text-white text-lg sm:text-xl font-bold hover:text-white/80 transition-all cursor-pointer"
                     >
-                      <span>الموسم {selectedSeason}</span>
+                      <span>Season {selectedSeason}</span>
                       <ChevronsUpDown className="w-4 h-4 text-stone-400" />
                     </button>
 
@@ -1304,7 +1304,7 @@ export default function DetailView({
                         <div
                           role="dialog"
                           aria-modal="true"
-                          aria-label="اختيار الموسم"
+                          aria-label="Select season"
                           data-tv-season-menu={isTvApp ? '' : undefined}
                           className="absolute top-full right-0 mt-2 z-[90] min-w-[180px] max-h-80 overflow-y-auto no-scrollbar glass-strong rounded-2xl p-1.5 shadow-2xl noir-fade-up"
                         >
@@ -1325,20 +1325,20 @@ export default function DetailView({
                                     seasonButtonRef.current?.focus({ preventScroll: true });
                                   });
                                 }}
-                                className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-bold transition-colors ${
+                                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold transition-colors ${
                                   selectedSeason === s.season_number
                                     ? 'bg-white/[0.18] text-white'
                                     : 'text-stone-200 hover:bg-white/10'
                                 }`}
                               >
-                                الموسم {s.season_number}
+                                Season {s.season_number}
                               </button>
                             ))}
                         </div>
                       </>
                     )}
                   </div>
-                  <span className="text-stone-500 text-xs font-semibold">{episodesCount} حلقة</span>
+                  <span className="text-stone-500 text-xs font-semibold">{episodesCount} episodes</span>
                 </div>
 
                 {/* Episode cards row */}
@@ -1358,7 +1358,7 @@ export default function DetailView({
                       <button
                         onClick={() => scrollEpisodes('right')}
                         className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/eprow:opacity-100 transition-all cursor-pointer -mr-2"
-                        aria-label="السابق"
+                        aria-label="Previous"
                       >
                         <ChevronRight className="w-5 h-5" />
                       </button>
@@ -1367,7 +1367,7 @@ export default function DetailView({
                       <button
                         onClick={() => scrollEpisodes('left')}
                         className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/eprow:opacity-100 transition-all cursor-pointer -ml-2"
-                        aria-label="التالي"
+                        aria-label="Next"
                       >
                         <ChevronLeft className="w-5 h-5" />
                       </button>
@@ -1381,13 +1381,13 @@ export default function DetailView({
                       className={`flex overflow-x-auto no-scrollbar scroll-smooth ${
                         isTvApp ? '-mx-8 gap-7 px-8 py-5' : '-mx-1 gap-4 px-1 pb-3'
                       }`}
-                      dir="rtl"
+                      dir="ltr"
                     >
                     {(episodes.length > 0
                       ? episodes
                       : Array.from({ length: episodesCount }).map((_, i) => ({
                           episode_number: i + 1,
-                          name: `الحلقة ${i + 1}`,
+                          name: `Episode ${i + 1}`,
                           overview: '',
                           still_path: null,
                           runtime: null,
@@ -1404,7 +1404,7 @@ export default function DetailView({
                             setSelectedEpisode(ep.episode_number);
                             handlePlayClick('movie');
                           }}
-                          className={`group/ep flex-none text-right snap-start cursor-pointer ${
+                          className={`group/ep flex-none text-left snap-start cursor-pointer ${
                             isTvApp ? 'w-[330px]' : 'w-[300px] sm:w-[380px]'
                           }`}
                         >
@@ -1445,9 +1445,9 @@ export default function DetailView({
                             </div>
 
                             {/* Overlaid text content */}
-                            <div className="absolute inset-x-0 bottom-0 z-10 p-4 text-right">
+                            <div className="absolute inset-x-0 bottom-0 z-10 p-4 text-left">
                               <span className="text-xs font-semibold text-white/65 block mb-1">
-                                الحلقة {ep.episode_number}
+                                Episode {ep.episode_number}
                               </span>
                               <h4 className="text-white font-bold text-sm sm:text-base leading-tight line-clamp-1 mb-1">{ep.name}</h4>
 
@@ -1456,7 +1456,7 @@ export default function DetailView({
                                 {ep.runtime ? (
                                   <span className="flex items-center gap-1.5 text-xs font-bold text-white">
                                     <Play className="w-3 h-3 fill-current" />
-                                    {ep.runtime}د
+                                    {ep.runtime}m
                                   </span>
                                 ) : <span />}
                               </div>
@@ -1474,12 +1474,12 @@ export default function DetailView({
         {/* Bottom Synopsis and Cast grids */}
         <div className="mt-8">
 
-          <div className="space-y-12 text-right min-w-0">
+          <div className="space-y-12 text-left min-w-0">
             {/* Cast roster row component */}
             {!isTvApp && cast.length > 0 && (
               <div className="space-y-4">
-                <h3 className="text-lg sm:text-xl font-bold text-white">طاقم العمل</h3>
-                <div className="flex gap-5 sm:gap-8 overflow-x-auto no-scrollbar pb-4 -mx-1 px-1" dir="rtl">
+                <h3 className="text-lg sm:text-xl font-bold text-white">Cast</h3>
+                <div className="flex gap-5 sm:gap-8 overflow-x-auto no-scrollbar pb-4 -mx-1 px-1" dir="ltr">
                   {cast.map((c: CastMember) => (
                     <div
                       key={c.id}
@@ -1555,7 +1555,7 @@ export default function DetailView({
         {recommendations.length > 0 && (
           <div className="border-t border-white/5 pt-12 mt-12">
             <MovieRow
-              title="عناوين وتوصيات مشابهة"
+              title="More like this"
               items={recommendations}
               onItemClick={onItemClick}
               isSaved={(item) => watchlist.some((savedItem) => savedItem.id === item.id && savedItem.type === item.type)}

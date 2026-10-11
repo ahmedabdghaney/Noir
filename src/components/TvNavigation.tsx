@@ -64,11 +64,11 @@ export default function TvNavigation({
   }, []);
 
   const items = [
-    { key: 'search', label: 'البحث', icon: Search, active: isSearchOpen, action: openSearch },
-    { key: 'home', label: 'الرئيسية', icon: Home, active: !isSearchOpen && activeView === 'home', action: goHome },
-    { key: 'movies', label: 'الأفلام', icon: Film, active: !isSearchOpen && activeView === 'search' && searchMode === 'movie', action: () => setSearchMode('movie') },
-    { key: 'tv', label: 'المسلسلات', icon: Tv, active: !isSearchOpen && activeView === 'search' && searchMode === 'tv', action: () => setSearchMode('tv') },
-    { key: 'watchlist', label: 'قائمتي', icon: Bookmark, active: !isSearchOpen && activeView === 'watchlist', action: openWatchlist },
+    { key: 'search', label: 'Search', icon: Search, active: isSearchOpen, action: openSearch },
+    { key: 'home', label: 'Home', icon: Home, active: !isSearchOpen && activeView === 'home', action: goHome },
+    { key: 'movies', label: 'Movies', icon: Film, active: !isSearchOpen && activeView === 'search' && searchMode === 'movie', action: () => setSearchMode('movie') },
+    { key: 'tv', label: 'TV Shows', icon: Tv, active: !isSearchOpen && activeView === 'search' && searchMode === 'tv', action: () => setSearchMode('tv') },
+    { key: 'watchlist', label: 'My List', icon: Bookmark, active: !isSearchOpen && activeView === 'watchlist', action: openWatchlist },
   ];
 
   return (
@@ -77,7 +77,7 @@ export default function TvNavigation({
       data-tv-navigation
       data-tv-navigation-hidden={isHidden ? '' : undefined}
       className={`noir-tv-navigation pointer-events-none fixed inset-x-0 top-0 z-[210] h-[4.25rem] px-[4vw] ${isHidden ? 'is-hidden' : ''}`}
-      dir="rtl"
+      dir="ltr"
     >
       <div
         className="noir-tv-navigation-brand pointer-events-none absolute right-[4vw] top-1/2 flex items-center gap-2 text-white"
@@ -85,13 +85,13 @@ export default function TvNavigation({
         aria-hidden="true"
       >
           <LogoIcon className="h-5 w-5 shrink-0 text-[#A0C9CB]" />
-          <span className="whitespace-nowrap font-display text-lg font-bold">نوار</span>
+          <span className="whitespace-nowrap font-display text-lg font-bold">Noir</span>
       </div>
 
       <nav
         className="noir-tv-top-navigation pointer-events-auto absolute flex items-center gap-0.5 rounded-full border border-white/15 p-1"
         style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
-        aria-label="التنقل الرئيسي"
+        aria-label="Main navigation"
       >
           {items.map(({ key, label, icon: Icon, active, action }) => (
             <button
@@ -117,7 +117,7 @@ export default function TvNavigation({
             data-tv-nav-item="profile"
             className="noir-tv-navigation-profile pointer-events-auto absolute left-[4vw] top-1/2 flex h-9 w-9 items-center justify-center rounded-full text-white/70"
             style={{ transform: 'translateY(-50%)' }}
-            aria-label="فتح الملف الشخصي"
+            aria-label="Open profile"
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/8">
               {user.photoURL

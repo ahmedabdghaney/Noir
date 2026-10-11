@@ -59,7 +59,7 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
     if (!enabled || !room) return;
 
     if (!WS_URL) {
-      setError('لم يتم ضبط رابط خادم المشاهدة الجماعية (VITE_WS_URL)');
+      setError('The watch-party server URL is not set (VITE_WS_URL)');
       return;
     }
 
@@ -71,7 +71,7 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
       try {
         ws = new WebSocket(WS_URL);
       } catch {
-        setError('تعذّر الاتصال بخادم المشاهدة الجماعية');
+        setError('Could not connect to the watch-party server');
         return;
       }
       wsRef.current = ws;
@@ -103,12 +103,12 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
           pushMessage({
             sender: msg.name,
             text: msg.text,
-            time: 'الآن',
+            time: 'now',
             type: 'chat',
             self: msg.id === selfIdRef.current,
           });
         } else if (msg.type === 'system') {
-          pushMessage({ sender: 'نظام نوار سينما', text: msg.text, time: 'الآن', type: 'system' });
+          pushMessage({ sender: 'Noir Cinema system', text: msg.text, time: 'now', type: 'system' });
         } else if (msg.type === 'player') {
           if (typeof msg.time === 'number') setHostTime(msg.time);
           signalRef.current?.({ action: msg.action, time: msg.time, byName: msg.byName });
@@ -125,7 +125,7 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
       };
 
       ws.onerror = () => {
-        setError('انقطع الاتصال بالخادم، تتم إعادة المحاولة...');
+        setError('Connection lost, retrying...');
       };
     };
 
