@@ -2943,3 +2943,38 @@ html:not(.noir-tv-app) .noir-site-nav button:hover,
 html:not(.noir-tv-app) .noir-site-nav button.is-active { color: #fff; background: transparent; }
 html:not(.noir-tv-app) .noir-site-nav button:hover::after,
 html:not(.noir-tv-app) .noir-site-nav button.is-active::after { transform: scaleX(1); }
+
+/* ===== Round 5 fixes ===== */
+/* search page: full-bleed sides (gutter handled per-child) */
+html:not(.noir-tv-app) .noir-discovery-page { padding-inline: 0 !important; }
+
+/* remove the rectangle behind the top nav */
+html:not(.noir-tv-app) .noir-site-nav-shell {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* underline nav: make sure the bar actually shows (override earlier display:none) */
+html:not(.noir-tv-app) .noir-site-nav button::after { display: block; }
+html:not(.noir-tv-app) .noir-site-nav button:hover::after,
+html:not(.noir-tv-app) .noir-site-nav button.is-active::after { display: block; transform: scaleX(1); }
+html:not(.noir-tv-app) .noir-site-nav button:hover,
+html:not(.noir-tv-app) .noir-site-nav button.is-active { background: transparent; }
+
+/* glass buttons: blend bottom into the site color, not black */
+html:not(.noir-tv-app) .noir-cinema-info,
+.noir-chip select,
+.noir-glass-btn {
+  background: linear-gradient(180deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,.02) 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18) !important;
+}
+html:not(.noir-tv-app) .noir-glass-btn:hover,
+.noir-chip select:hover {
+  background: linear-gradient(180deg, rgba(255,255,255,.17) 0%, rgba(255,255,255,.05) 100%) !important;
+}
+
+/* home hero: details read left-to-right */
+html:not(.noir-tv-app) .noir-cinema-hero-content { direction: ltr; }

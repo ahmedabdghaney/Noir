@@ -87,10 +87,6 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
             </div>
           </motion.div>
 
-          <div className="noir-cinema-badges">
-            <span>{activeItem.type === 'movie' ? 'Movie' : 'TV Show'}</span>
-            {activeItem.rating >= 8 && <span>Most watched</span>}
-          </div>
         </motion.div>
       </AnimatePresence>
 

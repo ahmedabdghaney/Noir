@@ -144,34 +144,6 @@ export default function MovieRow({
 
       {/* Row Shell with Overlay Arrows */}
       <div className={`relative ${flush ? "" : "px-4 sm:px-6 lg:px-8 xl:px-10"}`}>
-        {/* Edge fade gradients (only when scrollable in that direction) */}
-        {showLeftArrow && (
-          <div className="hidden md:block absolute left-0 top-0 bottom-3 w-28 z-30 pointer-events-none bg-gradient-to-r from-[#05070b] via-[#05070b]/70 to-transparent" />
-        )}
-        {showRightArrow && (
-          <div className="hidden md:block absolute right-0 top-0 bottom-3 w-28 z-30 pointer-events-none bg-gradient-to-l from-[#05070b] via-[#05070b]/70 to-transparent" />
-        )}
-        {/* Navigation Arrows for desktop hover */}
-        {showLeftArrow && (
-          <button
-            onClick={() => handleScroll('left')}
-            className="absolute left-8 top-[41%] z-45 w-9 h-9 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md text-white/90 hover:text-white items-center justify-center cursor-pointer pointer-events-auto transition-all opacity-0 group-hover/row:opacity-100 hidden md:flex"
-            aria-label="Previous titles"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-        )}
-
-        {showRightArrow && (
-          <button
-            onClick={() => handleScroll('right')}
-            className="absolute right-8 top-[41%] z-45 w-9 h-9 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md text-white/90 hover:text-white items-center justify-center cursor-pointer pointer-events-auto transition-all opacity-0 group-hover/row:opacity-100 hidden md:flex"
-            aria-label="Next titles"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-        )}
-
         {/* Dynamic Carousel Area */}
         <div
           ref={rowRef}

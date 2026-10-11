@@ -1318,13 +1318,6 @@ export default function App() {
     const transitionDocument = document as Document & {
       startViewTransition?: (callback: () => void | Promise<void>) => unknown;
     };
-    if (transitionDocument.startViewTransition && activeView === 'search' && searchMode !== mode) {
-      transitionDocument.startViewTransition(async () => {
-        applyNavigation();
-        await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
-      });
-      return;
-    }
     applyNavigation();
   };
 
@@ -2376,7 +2369,7 @@ export default function App() {
 
 
         {activeView ==='search' && (
-          <div key={searchMode} className="noir-discovery-page noir-section-swipe-in">
+          <div className="noir-discovery-page noir-section-swipe-in">
             {/* Movy-style hero with a drifting poster collage */}
             <div className="noir-movies-hero">
               <div

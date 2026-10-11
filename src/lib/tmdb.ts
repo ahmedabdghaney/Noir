@@ -104,8 +104,8 @@ export function normalizeItem(item: any, customType?: 'movie' | 'tv'): MovieOrSh
 export async function initializeGenres(): Promise<void> {
   try {
     const [movieRes, tvRes] = await Promise.all([
-      tmdbFetch('/genre/movie/list', { language: 'ar' }),
-      tmdbFetch('/genre/tv/list', { language: 'ar' }),
+      tmdbFetch('/genre/movie/list', { language: 'en-US' }),
+      tmdbFetch('/genre/tv/list', { language: 'en-US' }),
     ]);
 
     MOVIE_GENRES = movieRes.genres || [];
@@ -265,7 +265,7 @@ export async function fetchDetailedTitle(type: 'movie' | 'tv', id: number): Prom
     tmdbFetch(`/${type}/${id}`, {
       append_to_response: 'videos,credits,similar,images',
       include_image_language: 'en,null',
-      language: 'ar',
+      language: 'en-US',
     }),
     tmdbFetch(`/${type}/${id}`, {
       append_to_response: 'videos,credits,similar,images',
@@ -338,7 +338,7 @@ export interface EpisodeInfo {
 export async function fetchSeasonEpisodes(tvId: number, seasonNumber: number): Promise<EpisodeInfo[]> {
   try {
     const [ar, en] = await Promise.all([
-      tmdbFetch(`/tv/${tvId}/season/${seasonNumber}`, { language: 'ar' }),
+      tmdbFetch(`/tv/${tvId}/season/${seasonNumber}`, { language: 'en-US' }),
       tmdbFetch(`/tv/${tvId}/season/${seasonNumber}`, { language: 'en-US' }),
     ]);
     const enEps: any[] = en.episodes || [];
