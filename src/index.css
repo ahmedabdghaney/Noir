@@ -3026,3 +3026,19 @@ html:not(.noir-tv-app) .noir-site-header::before {
   background: linear-gradient(180deg, rgba(255,255,255,.17) 0%, rgba(255,255,255,.05) 100%) !important;
 }
 .noir-icon-button { height: 46px; }
+
+/* Kill the hard-edged nav band + its drop shadow on desktop: one smooth top fade only */
+html:not(.noir-tv-app) .noir-site-header::before { box-shadow: none !important; }
+@media (min-width: 1024px) {
+  html:not(.noir-tv-app) .noir-site-header::before {
+    height: 190px !important;
+    box-shadow: none !important;
+    background: linear-gradient(180deg,
+      rgba(0,0,0,.95) 0%,
+      rgba(0,0,0,.74) 20%,
+      rgba(0,0,0,.46) 44%,
+      rgba(0,0,0,.20) 68%,
+      rgba(0,0,0,.06) 86%,
+      transparent 100%) !important;
+  }
+}
