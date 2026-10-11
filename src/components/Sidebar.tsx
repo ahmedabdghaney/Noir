@@ -32,6 +32,7 @@ export default function Sidebar({
   onOpenProfile,
 }: SidebarProps) {
   const [profileOpen, setProfileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const [showAds, setShowAds] = useState(() => localStorage.getItem('noir_show_ads') !== 'false');
   const profileAvatar = localStorage.getItem('noir_profile_avatar');
   const menuRef = useRef<HTMLDivElement>(null);
@@ -45,6 +46,13 @@ export default function Sidebar({
     return () => window.removeEventListener('mousedown', close);
   }, [profileOpen]);
 
+  useEffect(() => {
+    const update = () => setScrolled(window.scrollY > 12);
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    return () => window.removeEventListener('scroll', update);
+  }, []);
+
   const items = [
     { id: 'home', label: 'الرئيسية', icon: Home, active: activeView === 'home', action: goHome },
     { id: 'movies', label: 'الأفلام', icon: Film, active: activeView === 'search' && searchMode === 'movie', action: () => setSearchMode('movie') },
@@ -53,7 +61,7 @@ export default function Sidebar({
   ];
 
   return (
-    <header className="noir-site-header" dir="rtl">
+    <header className={`noir-site-header ${scrolled ? 'is-scrolled' : ''}`} dir="rtl">
       <div className="noir-site-header-inner">
         <button type="button" onClick={goHome} className="noir-site-brand" aria-label="العودة إلى الرئيسية">
           <LogoIcon className="h-8 w-8 text-[var(--noir-accent)]" />

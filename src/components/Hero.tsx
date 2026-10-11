@@ -3,6 +3,7 @@ import { Check, ChevronLeft, ChevronRight, Info, Play, Plus, Star } from 'lucide
 import { AnimatePresence, motion } from 'motion/react';
 import { MovieOrShow } from '../types';
 import { getBackdropUrl } from '../lib/tmdb';
+import TitleLogo from './TitleLogo';
 
 interface HeroProps {
   trendingItems: MovieOrShow[];
@@ -59,7 +60,15 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick, isSaved,
             transition={{ duration: 0.55, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
           >
             <div className="noir-cinema-kicker">عرض مختار لك</div>
-            <h1>{activeItem.title}</h1>
+            <h1 className="noir-cinema-title-lockup">
+              <TitleLogo
+                type={activeItem.type}
+                id={activeItem.id}
+                title={activeItem.title}
+                className="noir-cinema-title-logo"
+                fallbackClassName="noir-cinema-title-text"
+              />
+            </h1>
             <div className="noir-cinema-meta">
               {activeItem.rating > 0 && <span><Star className="h-3.5 w-3.5 fill-[#A0C9CB] text-[#A0C9CB]" />{activeItem.rating.toFixed(1)}</span>}
               {activeItem.year && <span>{activeItem.year}</span>}

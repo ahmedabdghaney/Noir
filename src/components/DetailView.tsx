@@ -660,7 +660,15 @@ export default function DetailView({
       playUrl.hash = type === 'tv'
         ? `#tv/${id}/s${selectedSeason}/e${selectedEpisode}`
         : `#movie/${id}`;
-      window.open(playUrl.toString(), 'noir-player', 'popup=yes,width=1440,height=900,resizable=yes,scrollbars=yes');
+      const width = Math.min(1440, window.screen.availWidth - 60);
+      const height = Math.min(900, window.screen.availHeight - 60);
+      const left = Math.max(0, Math.round((window.screen.availWidth - width) / 2));
+      const top = Math.max(0, Math.round((window.screen.availHeight - height) / 2));
+      window.open(
+        playUrl.toString(),
+        'noir-player',
+        `popup=yes,toolbar=no,location=no,status=no,menubar=no,scrollbars=no,resizable=yes,width=${width},height=${height},left=${left},top=${top}`,
+      );
       return;
     }
     setPlayerMode(mode);
@@ -1550,7 +1558,13 @@ export default function DetailView({
             onSeek={handleSeek}
             onHostPause={handleHostPause}
             onHostResume={handleHostResume}
-            onClose={() => setIsPlayerOpen(false)}
+            onClose={() => {
+              if (new URLSearchParams(window.location.search).get('play') === '1' && window.opener) {
+                window.close();
+                return;
+              }
+              setIsPlayerOpen(false);
+            }}
             onSwitchMode={(mode) => setPlayerMode(mode)}
             onNextEpisode={handleNextEpisode}
           />

@@ -4,7 +4,7 @@
  */
 
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, X } from 'lucide-react';
+import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, X, ArrowLeft } from 'lucide-react';
 import LogoIcon from './components/LogoIcon';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
@@ -70,6 +70,7 @@ import ContinueWatchingRow from './components/ContinueWatchingRow';
 import SearchOverlay from './components/SearchOverlay';
 import ShareModal from './components/ShareModal';
 import MobileNav from './components/MobileNav';
+import Footer from './components/Footer';
 import WatchlistButton from './components/WatchlistButton';
 import TvHome from './components/TvHome';
 import TvNavigation from './components/TvNavigation';
@@ -238,11 +239,9 @@ export default function App() {
   const [authView, setAuthView] = useState<'menu' | 'signin' | 'signup' | 'reset'>('signin');
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
-  const [authPasswordConfirm, setAuthPasswordConfirm] = useState('');
   const [authName, setAuthName] = useState('');
   const [authError, setAuthError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(
     () => localStorage.getItem('noir_onboarding_pending') === '1',
   );
@@ -751,12 +750,8 @@ export default function App() {
   };
 
   const handleEmailSignUp = async () => {
-    if (!authEmail || !authPassword || !authName || !authPasswordConfirm) {
+    if (!authEmail || !authPassword || !authName) {
       setAuthError('أكمل كل الحقول');
-      return;
-    }
-    if (authPassword !== authPasswordConfirm) {
-      setAuthError('كلمة السر والتأكيد غير متطابقتين');
       return;
     }
     if (authPassword.length < 6) {
@@ -783,7 +778,6 @@ export default function App() {
       showToast('تم إنشاء حسابك، أهلاً بك');
       setAuthEmail('');
       setAuthPassword('');
-      setAuthPasswordConfirm('');
       setAuthName('');
     } catch (e) {
       setAuthError(translateAuthError(e));
@@ -1355,7 +1349,15 @@ export default function App() {
     const playUrl = new URL(window.location.href);
     playUrl.searchParams.set('play', '1');
     playUrl.hash = `#${item.type}/${item.id}`;
-    window.open(playUrl.toString(), 'noir-player', 'popup=yes,width=1440,height=900,resizable=yes,scrollbars=yes');
+    const width = Math.min(1440, window.screen.availWidth - 60);
+    const height = Math.min(900, window.screen.availHeight - 60);
+    const left = Math.max(0, Math.round((window.screen.availWidth - width) / 2));
+    const top = Math.max(0, Math.round((window.screen.availHeight - height) / 2));
+    window.open(
+      playUrl.toString(),
+      'noir-player',
+      `popup=yes,toolbar=no,location=no,status=no,menubar=no,scrollbars=no,resizable=yes,width=${width},height=${height},left=${left},top=${top}`,
+    );
   };
 
   const handleContinueWatchingClick = (item: ContinueWatchingItem) => {
@@ -1496,6 +1498,12 @@ export default function App() {
         isTvAuth ? 'bg-[#08080a] p-10' : 'bg-[#070707] p-3.5 sm:p-6 md:p-10'
       }`}>
 
+        {!isTvAuth && (
+          <button type="button" className="noir-auth-back" onClick={() => handleLogin('guest')} aria-label="العودة إلى الموقع">
+            <ArrowLeft />
+          </button>
+        )}
+
         {/* Main Double-Pane Card Layout */}
         <div className={`noir-auth-frame relative z-10 w-full border border-white/[0.08] shadow-2xl overflow-hidden grid grid-cols-1 animate-pop-in ${
           isTvAuth
@@ -1571,10 +1579,10 @@ export default function App() {
             )}
 
             {/* Form Header */}
-            <div className={`${isTvAuth ? 'mb-7 text-center' : 'text-right mb-8'}`}>
+            <div className={`noir-auth-form-header ${isTvAuth ? 'mb-7 text-center' : 'text-center mb-8'}`}>
               <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
                 {authView === 'signin' && (isTvAuth ? 'سجل الدخول بجوجل' : 'مرحباً بعودتك إلى نوار')}
-                {authView === 'signup' && 'ابدأ حسابك الآن'}
+                {authView === 'signup' && 'أنشئ حساب نوار'}
                 {authView === 'reset' && 'استعادة كلمة السر'}
               </h1>
               <p className="text-gray-400 text-sm mt-2 leading-relaxed font-medium">
@@ -1589,17 +1597,17 @@ export default function App() {
             </div>
 
             {/* Actual Input form fields */}
-            <div className="flex flex-col gap-4 w-full">
+            <div className="noir-auth-fields flex flex-col gap-4 w-full">
 
               {/* Name Field (Sign up only) */}
               {authView === 'signup' && (
                 <div className="flex flex-col gap-1.5 text-right w-full">
-                  <label className="text-gray-400 text-xs font-bold mr-1">الاسم</label>
+                  <label className="sr-only">اسم المستخدم</label>
                   <input
                     type="text"
                     value={authName}
                     onChange={(e) => setAuthName(e.target.value)}
-                    placeholder="ادخل اسمك الكامل..."
+                    placeholder="اسم المستخدم"
                     className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#A0C9CB]/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-[#A0C9CB]/20"
                     dir="rtl"
                   />
@@ -1608,12 +1616,12 @@ export default function App() {
 
               {/* Email address field */}
               {!isTvAuth && <div className="flex flex-col gap-1.5 text-right w-full">
-                <label className="text-gray-400 text-xs font-bold mr-1">البريد الإلكتروني</label>
+                <label className="sr-only">البريد الإلكتروني</label>
                 <input
                   type="email"
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
-                  placeholder="name@example.com"
+                  placeholder="البريد الإلكتروني"
                   className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#A0C9CB]/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-[#A0C9CB]/20"
                   dir="ltr"
                 />
@@ -1623,14 +1631,14 @@ export default function App() {
               {!isTvAuth && authView !== 'reset' && (
                 <div className="flex flex-col gap-1.5 w-full">
                   <div className="flex items-center justify-between mr-1 ml-1 text-xs">
-                    <label className="text-gray-400 font-bold block">كلمة السر</label>
+                    <label className="sr-only">كلمة السر</label>
                   </div>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={authPassword}
                       onChange={(e) => setAuthPassword(e.target.value)}
-                      placeholder="••••••••"
+                      placeholder="كلمة السر"
                       className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#A0C9CB]/70 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-500"
                       dir="rtl"
                       onKeyDown={(e) => {
@@ -1653,41 +1661,6 @@ export default function App() {
                   </div>
                 </div>
               )}
-
-              {/* Confirm Password Field (Sign up only) */}
-              {authView === 'signup' && (
-                <div className="flex flex-col gap-1.5 w-full">
-                  <div className="flex items-center justify-between mr-1 text-xs">
-                    <label className="text-gray-400 font-bold block">تأكيد كلمة السر</label>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type={showPasswordConfirm ? 'text' : 'password'}
-                      value={authPasswordConfirm}
-                      onChange={(e) => setAuthPasswordConfirm(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#A0C9CB]/70 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-500"
-                      dir="rtl"
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleEmailSignUp(); }}
-                    />
-                    {!isTvAuth && (
-                      <button
-                        type="button"
-                        onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer p-1"
-                        title={showPasswordConfirm ? 'إخفاء' : 'إظهار'}
-                      >
-                        {showPasswordConfirm ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-gray-500 text-[10px] leading-relaxed text-right -mt-0.5 mr-1">
-                    6 خانات على الأقل، حرف كبير وحرف صغير
-                  </p>
-                </div>
-              )}
-
-
 
               {/* Form Validation Errors alerts */}
               {authError && (
@@ -1751,17 +1724,8 @@ export default function App() {
                 )}
               </div>}
 
-              {/* OR Divider Line exactly matching mockup "Or" layout */}
-              {!isTvAuth && authView !== 'reset' && (
-                <div className="flex items-center gap-3 my-2.5">
-                  <div className="h-px flex-1 bg-white/5" />
-                  <span className="text-[10px] text-gray-500 uppercase font-black">أو</span>
-                  <div className="h-px flex-1 bg-white/5" />
-                </div>
-              )}
-
-              {/* Google Social login button styled with full width */}
-              {authView !== 'reset' && (
+              {/* Apple TV keeps the system account action; web follows the compact reference form. */}
+              {isTvAuth && authView !== 'reset' && (
                 <button
                   onClick={() => handleLogin('google')}
                   disabled={isAuthLoading}
@@ -1790,7 +1754,7 @@ export default function App() {
 
             {/* Bottom mini disclaimer footer */}
             {!isTvAuth && (
-              <div className="mt-10 pt-4 border-t border-white/5 flex items-center justify-center gap-1.5 text-[11px] text-gray-500">
+              <div className="noir-auth-legal mt-10 pt-4 border-t border-white/5 flex items-center justify-center gap-1.5 text-[11px] text-gray-500">
                 <span>تطبق شروط الاستخدام والأمان الكاملة © {new Date().getFullYear()} نوار سينما</span>
               </div>
             )}
@@ -2070,14 +2034,15 @@ export default function App() {
   }
 
   const isTvApp = document.documentElement.classList.contains('noir-tv-app');
+  const isPlayerWindow = !isTvApp && new URLSearchParams(window.location.search).get('play') === '1';
 
   return (
     <div className={`min-h-screen text-white flex flex-row font-sans relative tracking-normal antialiased ${
       isTvApp ? 'bg-[#08080a]' : 'bg-[#05070b]'
-    }`}>
+    } ${isPlayerWindow ? 'noir-player-window' : ''}`}>
 
       {/* Desktop cinematic top navigation */}
-      {!isTvApp && (
+      {!isTvApp && !isPlayerWindow && (
         <Sidebar
           activeView={activeView}
           searchMode={searchMode}
@@ -2117,7 +2082,7 @@ export default function App() {
       )}
 
       {/* Compact top header — mobile and tablet */}
-      <div className={isTvApp ? 'hidden' : 'lg:hidden'}>
+      <div className={isTvApp || isPlayerWindow ? 'hidden' : 'lg:hidden'}>
         <Header
           goHome={navigateToHome}
           user={user}
@@ -2131,7 +2096,7 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0">
 
       {/* Main Orchestration Views Switcher */}
-      <main className={`flex-grow selection:bg-[#A0C9CB]/30 ${isTvApp ? ((activeView === 'home' || activeView === 'detail') ? 'pb-0 pt-0' : 'pb-0 pt-24') : `pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 ${(activeView === 'home' || activeView === 'detail') ? 'pt-0' : 'pt-14 lg:pt-[68px]'}`}`}>
+      <main className={`flex-grow selection:bg-[#A0C9CB]/30 ${isPlayerWindow ? 'p-0' : isTvApp ? ((activeView === 'home' || activeView === 'detail') ? 'pb-0 pt-0' : 'pb-0 pt-24') : `pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 ${(activeView === 'home' || activeView === 'detail') ? 'pt-0' : 'pt-14 lg:pt-[68px]'}`}`}>
         {activeView ==='home' && (
           isTvApp ? (
             <TvHome
@@ -2810,12 +2775,14 @@ export default function App() {
 </main>
 
       {/* Global Minimalist Footer and disclaimer notes */}
-
+      {!isTvApp && !isPlayerWindow && activeView !== 'admin' && (
+        <Footer goHome={navigateToHome} setSearchMode={handleSetSearchMode} />
+      )}
 
       </div>{/* end main content wrapper */}
 
       {/* iOS/Android style bottom navigation bar on touchscreens */}
-      {!isTvApp && (
+      {!isTvApp && !isPlayerWindow && (
         <MobileNav
           activeView={activeView}
           goHome={navigateToHome}
@@ -2827,7 +2794,7 @@ export default function App() {
       )}
 
       {/* Cmd+K QuickSearch predicting suggestions overlay */}
-      <SearchOverlay
+      {!isPlayerWindow && <SearchOverlay
         isOpen={isSearchOverlayOpen}
         onClose={() => setIsSearchOverlayOpen(false)}
         onSelectTitle={handleQuickSelectTitle}
@@ -2837,10 +2804,10 @@ export default function App() {
           setIsSearchOverlayOpen(false);
           window.location.hash = `#category/${key}`;
         }}
-      />
+      />}
 
       {/* Browser URL Share Dialog */}
-      {!isTvApp && <ShareModal
+      {!isTvApp && !isPlayerWindow && <ShareModal
         isOpen={isShareModalOpen}
         url={shareUrl}
         onClose={() => setIsShareModalOpen(false)}

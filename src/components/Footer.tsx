@@ -28,8 +28,8 @@ export default function Footer({ goHome, setSearchMode }: FooterProps) {
               <span>نوار</span>
               <span className="text-gray-500 font-normal text-xs mr-1 bg-white/5 px-1.5 py-0.5 rounded">سينما</span>
             </div>
-            <p className="text-xs text-stone-400 font-medium max-w-sm">
-              تجربة بثّ راقية صُمّمت لمحبّي السينما وعائلاتهم. مجموعات منسّقة، استعراض فائق السرعة، ومستوى راقٍ خالٍ من الفوضى والإعلانات المزعجة.
+            <p className="text-xs text-stone-400 font-medium max-w-xl leading-6" dir="ltr">
+              Movy does not host, upload, or store any files. Titles shown here are indexed automatically from public sources and third-party services. The media stays on those platforms — we only provide links.
             </p>
             <div className="flex gap-2.5">
               <a

@@ -7,6 +7,7 @@ import { useRef, useState, useEffect } from 'react';
 import { ChevronRight, ChevronLeft, Play, Star, X } from 'lucide-react';
 import { MovieOrShow } from '../types';
 import WatchlistButton from './WatchlistButton';
+import TitleLogo from './TitleLogo';
 
 interface MovieRowProps {
   title: string;
@@ -251,7 +252,15 @@ export default function MovieRow({
                   {ranked && idx === 0 && (
                     <div className="noir-top10-featured-copy">
                       <span className="noir-top10-badge">TOP 1</span>
-                      <h3>{item.title}</h3>
+                      <h3 className="noir-top10-title-lockup">
+                        <TitleLogo
+                          type={item.type}
+                          id={item.id}
+                          title={item.title}
+                          className="noir-top10-title-logo"
+                          fallbackClassName="noir-top10-title-text"
+                        />
+                      </h3>
                       <p>{item.overview}</p>
                       <button type="button" onClick={(event) => { event.stopPropagation(); onItemClick(item); }}><Play /> شاهد الآن</button>
                     </div>

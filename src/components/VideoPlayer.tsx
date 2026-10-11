@@ -114,6 +114,10 @@ export default function VideoPlayer({
     document.documentElement.classList.contains('noir-android-app') &&
     document.documentElement.classList.contains('noir-tv-capabilities');
   const isDedicatedAndroidPlayer = isMobileAndroidApp || isTvAndroidApp;
+  const isDedicatedPopupPlayer =
+    !document.documentElement.classList.contains('noir-tv-app') &&
+    new URLSearchParams(window.location.search).get('play') === '1';
+  const isDedicatedPlayer = isDedicatedAndroidPlayer || isDedicatedPopupPlayer;
 
   const containerRef  = useRef<HTMLDivElement>(null);
   const videoRef      = useRef<HTMLVideoElement>(null);
@@ -176,7 +180,7 @@ export default function VideoPlayer({
   const showSettingsRef = useRef(false);
   const showSpeedMenuRef = useRef(false);
   const subSheetOpenRef = useRef(false);
-  const [isFullscreen,    setIsFullscreen]    = useState(isDedicatedAndroidPlayer);
+  const [isFullscreen,    setIsFullscreen]    = useState(isDedicatedPlayer);
   const [iosNativeFs,     setIosNativeFs]     = useState(false); // iPhone native video fullscreen
   const [autoplayNext, setAutoplayNext] = useState(
     () => localStorage.getItem('noir_autoplay_next') !== 'false',
@@ -2670,7 +2674,7 @@ export default function VideoPlayer({
     </div>
   );
 
-  return isDedicatedAndroidPlayer ? createPortal(player, document.body) : player;
+  return isDedicatedPlayer ? createPortal(player, document.body) : player;
 }
 
 function Btn({ onClick, label, children, active = false, small = false, big = false, tvControl = false }: {

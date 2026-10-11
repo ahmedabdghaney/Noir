@@ -520,6 +520,110 @@ button, a {
   .card-cinematic { transition: none; }
 }
 
+/* Final web polish: supplied platform marks, compact rows, auth split and player popup. */
+html:not(.noir-tv-app) .noir-site-header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  height: 112px;
+  background: linear-gradient(180deg, rgba(0,0,0,.78) 0%, rgba(0,0,0,.30) 58%, transparent 100%);
+  opacity: 0;
+  transition: opacity .24s ease;
+  pointer-events: none;
+}
+html:not(.noir-tv-app) .noir-site-header.is-scrolled::before { opacity: 1; }
+html:not(.noir-tv-app) .noir-site-header-inner { z-index: 1; }
+
+html:not(.noir-tv-app) .noir-catalog-row { margin-bottom: 44px; }
+html:not(.noir-tv-app) .noir-movie-row-track { gap: 8px; }
+
+html:not(.noir-tv-app) .noir-auth-form::before {
+  content: "";
+  position: fixed;
+  inset: 0 47% 0 0;
+  z-index: -1;
+  opacity: .18;
+  background-image: radial-gradient(rgba(255,255,255,.28) .7px, transparent .7px);
+  background-size: 18px 18px;
+  pointer-events: none;
+}
+.noir-auth-back {
+  position: fixed;
+  top: 32px;
+  left: 32px;
+  z-index: 50;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 50%;
+  color: rgba(255,255,255,.70);
+  background: rgba(8,10,14,.54);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: color .2s ease, background-color .2s ease, transform .2s ease;
+}
+.noir-auth-back:hover { color: #fff; background: rgba(255,255,255,.10); transform: translateX(-2px); }
+.noir-auth-back svg { width: 19px; height: 19px; }
+html:not(.noir-tv-app) .noir-auth-form-header { max-width: 430px; width: 100%; margin-inline: auto; }
+html:not(.noir-tv-app) .noir-auth-fields { max-width: 430px; margin-inline: auto; }
+html:not(.noir-tv-app) .noir-auth-fields input { height: 42px; padding-block: 0; font-size: 12px; }
+html:not(.noir-tv-app) .noir-auth-legal { position: absolute; right: 50px; bottom: 24px; left: 50px; border: 0; }
+
+html:not(.noir-tv-app) .noir-platforms-row { margin-block: 28px 42px; }
+html:not(.noir-tv-app) .noir-platform-card { width: clamp(210px, 15vw, 285px); text-align: center; }
+html:not(.noir-tv-app) .noir-platform-card-surface {
+  height: 74px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 8px;
+  background: #090c11;
+  transition: border-color .22s ease, background-color .22s ease;
+}
+html:not(.noir-tv-app) .noir-platform-card:hover .noir-platform-card-surface { border-color: rgba(160,201,203,.48); background: #0b1015; }
+html:not(.noir-tv-app) .noir-platform-logo {
+  width: 62%;
+  height: 54%;
+  display: block;
+  background-color: rgba(255,255,255,.75);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  transition: background-color .22s ease;
+}
+html:not(.noir-tv-app) .noir-platform-card:hover .noir-platform-logo { background-color: var(--noir-accent); }
+
+.noir-cinema-title-lockup { min-height: 76px; display: flex; align-items: flex-end; }
+.noir-cinema-title-logo { width: auto; max-width: min(480px, 100%); max-height: 115px; object-fit: contain; object-position: right bottom; filter: drop-shadow(0 8px 28px rgba(0,0,0,.55)); }
+.noir-cinema-title-text { display: block; }
+.noir-top10-title-lockup { min-height: 48px; display: flex; align-items: flex-end; }
+.noir-top10-title-logo { max-width: 230px; max-height: 72px; object-fit: contain; object-position: left bottom; }
+.noir-top10-title-text { display: block; }
+
+.noir-player-window { min-height: 100vh; background: #000 !important; }
+.noir-player-window main { min-height: 100vh; background: #000; }
+.noir-player-window .noir-web-detail { visibility: hidden; min-height: 100vh; background: #000; }
+body:has(.noir-player-window) { overflow: hidden; background: #000; }
+
+@media (max-width: 1023px) {
+  html:not(.noir-tv-app) .noir-auth-form::before { inset: 0; }
+  .noir-auth-back { top: 18px; left: 18px; }
+  html:not(.noir-tv-app) .noir-auth-legal { position: static; margin-top: 32px; }
+}
+
+@media (max-width: 639px) {
+  html:not(.noir-tv-app) .noir-movie-row-track { gap: 7px; }
+  html:not(.noir-tv-app) .noir-platform-card { width: 185px; }
+  .noir-cinema-title-lockup { min-height: 58px; }
+  .noir-cinema-title-logo { max-height: 78px; }
+}
+
 /* ستايلات الهيرو الجديد فقط — بقية نظام التصميم بقي كما كان. */
 .noir-button-primary,
 .noir-button-secondary,
