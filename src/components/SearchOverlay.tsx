@@ -227,6 +227,7 @@ export default function SearchOverlay({
             event.preventDefault();
             submitTvSearch();
           }}
+          dir={isTvApp ? undefined : 'ltr'}
           className={`flex items-center gap-3 px-4 sm:px-5 noir-surface mb-7 backdrop-blur-xl ${isTvApp ? 'min-h-20 rounded-2xl' : 'min-h-14'}`}
         >
           <Search className={`${isTvApp ? 'w-7 h-7' : 'w-5 h-5'} text-gray-400 shrink-0`} />
@@ -254,25 +255,17 @@ export default function SearchOverlay({
                   ?.focus({ preventScroll: true });
               }
             }}
-            placeholder="ابحث عن فيلم أو مسلسل..."
+            placeholder="Search movies, shows, and anime"
             aria-label="ابحث عن فيلم أو مسلسل"
             enterKeyHint="search"
-            className={`flex-1 bg-transparent border-0 outline-none text-white font-medium placeholder-gray-500 text-right font-sans ${isTvApp ? 'text-2xl' : 'text-base md:text-lg'}`}
+            className={`flex-1 bg-transparent border-0 outline-none text-white font-medium placeholder-gray-500 font-sans ${isTvApp ? 'text-2xl text-right' : 'text-sm text-left'}`}
             autoComplete="off"
           />
-          {isLoading ? (
-            <Loader className="w-4 h-4 text-[#A0C9CB] animate-spin shrink-0" />
-          ) : (
-            query && !isTvApp && (
-              <button
-                type="button"
-                onClick={() => setQuery('')}
-                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center cursor-pointer"
-                aria-label="مسح البحث"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )
+          {isLoading && <Loader className="w-4 h-4 text-[#A0C9CB] animate-spin shrink-0" />}
+          {!isTvApp && (
+            <button type="button" onClick={onClose} className="noir-search-close-button" aria-label="إغلاق البحث">
+              <X className="w-4 h-4" />
+            </button>
           )}
         </form>
 

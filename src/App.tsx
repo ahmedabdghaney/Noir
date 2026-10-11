@@ -4,7 +4,7 @@
  */
 
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, X, ArrowLeft } from 'lucide-react';
+import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, X, ArrowLeft, Home } from 'lucide-react';
 import LogoIcon from './components/LogoIcon';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
@@ -1306,12 +1306,25 @@ export default function App() {
   }, []);
 
   const handleSetSearchMode = (mode: 'movie' | 'tv') => {
-    rememberHomeScroll();
-    setIsSearchOverlayOpen(false);
-    setSearchMode(mode);
-    setActiveView('search');
-    setSelectedTitle(null);
-    window.location.hash = mode ==='tv' ?'#tv' :'#movies';
+    const applyNavigation = () => {
+      rememberHomeScroll();
+      setIsSearchOverlayOpen(false);
+      setSearchMode(mode);
+      setActiveView('search');
+      setSelectedTitle(null);
+      window.location.hash = mode ==='tv' ?'#tv' :'#movies';
+    };
+    const transitionDocument = document as Document & {
+      startViewTransition?: (callback: () => void | Promise<void>) => unknown;
+    };
+    if (transitionDocument.startViewTransition && activeView === 'search' && searchMode !== mode) {
+      transitionDocument.startViewTransition(async () => {
+        applyNavigation();
+        await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      });
+      return;
+    }
+    applyNavigation();
   };
 
   const handleTitleClick = (item: MovieOrShow) => {
@@ -1349,15 +1362,7 @@ export default function App() {
     const playUrl = new URL(window.location.href);
     playUrl.searchParams.set('play', '1');
     playUrl.hash = `#${item.type}/${item.id}`;
-    const width = Math.min(1440, window.screen.availWidth - 60);
-    const height = Math.min(900, window.screen.availHeight - 60);
-    const left = Math.max(0, Math.round((window.screen.availWidth - width) / 2));
-    const top = Math.max(0, Math.round((window.screen.availHeight - height) / 2));
-    window.open(
-      playUrl.toString(),
-      'noir-player',
-      `popup=yes,toolbar=no,location=no,status=no,menubar=no,scrollbars=no,resizable=yes,width=${width},height=${height},left=${left},top=${top}`,
-    );
+    window.open(playUrl.toString(), '_blank');
   };
 
   const handleContinueWatchingClick = (item: ContinueWatchingItem) => {
@@ -2049,6 +2054,7 @@ export default function App() {
           setSearchMode={handleSetSearchMode}
           goHome={navigateToHome}
           openSearchOverlay={() => setIsSearchOverlayOpen((open) => !open)}
+          isSearchOpen={isSearchOverlayOpen}
           onViewWatchlist={handleViewWatchlist}
           onViewHistory={handleViewHistory}
           onLogout={handleLogout}
@@ -2091,6 +2097,14 @@ export default function App() {
           onOpenSearch={() => setIsSearchOverlayOpen(true)}
         />
       </div>
+
+      {!isTvApp && !isPlayerWindow && activeView !== 'home' && (
+        <div className="noir-global-back" dir="ltr">
+          <button type="button" onClick={() => { if (window.history.length > 1) window.history.back(); else navigateToHome(); }} aria-label="رجوع"><ArrowLeft /></button>
+          <span />
+          <button type="button" onClick={navigateToHome} aria-label="الرئيسية"><Home /></button>
+        </div>
+      )}
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -2153,8 +2167,10 @@ export default function App() {
               )}
 
               <StudiosRow
-                title="حصري على المنصات"
-                onSelect={(key) => { window.location.hash = `#studio/${key}`; }}
+                title="فقط على"
+                onSelectTitle={handleTitleClick}
+                isSaved={isInWatchlist}
+                onToggleSave={toggleWatchlistItem}
               />
 
               {/* حصري نوار — العناصر المضافة يدوياً بلا قسم مخصص (يظهر أول دائماً) */}
@@ -2351,14 +2367,13 @@ export default function App() {
               items={viewingHistory}
               onItemClick={handleTitleClick}
               onRemove={removeViewingHistoryItem}
-              onBack={navigateToHome}
             />
           </Suspense>
         )}
 
 
         {activeView ==='search' && (
-          <div className="noir-discovery-page mx-auto max-w-[1800px] px-4 py-10 sm:px-6 lg:px-8 xl:px-10 lg:py-14 animate-fade-in">
+          <div key={searchMode} className="noir-discovery-page noir-section-swipe-in mx-auto max-w-[1800px] px-4 py-10 sm:px-6 lg:px-8 xl:px-10 lg:py-14">
             {/* Header section on Dedicated Search View */}
             <div
               className="noir-discovery-banner mb-10"
@@ -2701,7 +2716,6 @@ export default function App() {
               initialSeason={selectedEpisodeRoute?.season}
               initialEpisode={selectedEpisodeRoute?.episode}
               onEpisodeChange={handleEpisodeRouteChange}
-              onBackClick={navigateToHome}
               onItemClick={handleTitleClick}
               onOpenShare={handleOpenShare}
               user={user}
@@ -2737,7 +2751,6 @@ export default function App() {
             <CategoryPage
               category={getCategoryByKey(selectedCategoryKey)!}
               onItemClick={handleTitleClick}
-              onBack={navigateToHome}
               showAllMode={categoryAllMode}
               onOpenAll={(key) => { window.location.hash = `#category/${key}/all`; }}
               isSaved={isInWatchlist}
@@ -2751,7 +2764,6 @@ export default function App() {
             <StudioPage
               studio={getStudioByKey(selectedStudioKey)!}
               onItemClick={handleTitleClick}
-              onBack={navigateToHome}
               isSaved={isInWatchlist}
               onToggleSave={toggleWatchlistItem}
             />

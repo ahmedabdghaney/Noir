@@ -56,14 +56,13 @@ async function tmdbFetch(path: string, params: Record<string, any> = {}): Promis
 }
 
 // Helpers for images
-// w500 remains crisp for the 112–240px cards (including Retina screens) while
-// avoiding the cost of downloading w780 artwork for every carousel item.
-export const getPosterUrl = (path: string | null) => path ? `${IMG_BASE}/w500${path}` : null;
-export const getLargePosterUrl = (path: string | null) => path ? `${IMG_BASE}/w780${path}` : null;
-export const getBackdropUrl = (path: string | null) => path ? `${IMG_BASE}/w1280${path}` : null;
+// Keep the source artwork at TMDB's original size; layout CSS handles display size.
+export const getPosterUrl = (path: string | null) => path ? `${IMG_BASE}/original${path}` : null;
+export const getLargePosterUrl = (path: string | null) => path ? `${IMG_BASE}/original${path}` : null;
+export const getBackdropUrl = (path: string | null) => path ? `${IMG_BASE}/original${path}` : null;
 export const getOriginalBackdropUrl = (path: string | null) => path ? `${IMG_BASE}/original${path}` : null;
-export const getProfileUrl = (path: string | null) => path ? `${IMG_BASE}/w185${path}` : null;
-export const getStillUrl = (path: string | null) => path ? `${IMG_BASE}/w780${path}` : null;
+export const getProfileUrl = (path: string | null) => path ? `${IMG_BASE}/original${path}` : null;
+export const getStillUrl = (path: string | null) => path ? `${IMG_BASE}/original${path}` : null;
 
 // Normalize utility
 export function normalizeItem(item: any, customType?: 'movie' | 'tv'): MovieOrShow {
@@ -286,7 +285,7 @@ export const getTitleLogoUrl = (data: any): string | null => {
   if (!logos || logos.length === 0) return null;
   const en = logos.find((l: any) => l.iso_639_1 === 'en');
   const chosen = en || logos[0];
-  return chosen?.file_path ? `${IMG_BASE}/w500${chosen.file_path}` : null;
+  return chosen?.file_path ? `${IMG_BASE}/original${chosen.file_path}` : null;
 };
 
 // Lightweight logo query for the TV home hero. Keeping it separate from the
@@ -307,7 +306,7 @@ export async function fetchTitleLogo(
       logos.find((logo) => logo.iso_639_1 === null) ||
       logos.find((logo) => logo.iso_639_1 === 'ar') ||
       logos[0];
-    return chosen?.file_path ? `${IMG_BASE}/w500${chosen.file_path}` : null;
+    return chosen?.file_path ? `${IMG_BASE}/original${chosen.file_path}` : null;
   } catch {
     return null;
   }
@@ -493,12 +492,12 @@ export async function fetchStudioLogo(opts: { companyId?: number; networkId?: nu
       const noLang = pool.find((l: any) => !l.iso_639_1);
       const en = pool.find((l: any) => l.iso_639_1 === 'en');
       const chosen = noLang || en || pool[0];
-      if (chosen?.file_path) return `${IMG_BASE}/w500${chosen.file_path}`;
+      if (chosen?.file_path) return `${IMG_BASE}/original${chosen.file_path}`;
     }
 
     // احتياطي: logo_path المباشر من endpoint التفاصيل العادي
     const detail = await tmdbFetch(base, {});
-    return detail?.logo_path ? `${IMG_BASE}/w500${detail.logo_path}` : null;
+    return detail?.logo_path ? `${IMG_BASE}/original${detail.logo_path}` : null;
   } catch {
     return null;
   }

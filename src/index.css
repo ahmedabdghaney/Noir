@@ -2324,3 +2324,319 @@ html:not(.noir-tv-app) .card-cinematic:hover > div + div > p:first-child { color
   .noir-top10-poster { width: 42vw; }
   .noir-platform-card { width: 190px; }
 }
+
+/* Final desktop alignment and Movy navigation behavior. */
+html:not(.noir-tv-app) {
+  --noir-page-gutter: clamp(18px, 4.5vw, 74px);
+}
+
+@media (min-width: 1024px) {
+  html:not(.noir-tv-app) .noir-site-header {
+    height: 68px;
+    padding: 0;
+  }
+
+  html:not(.noir-tv-app) .noir-site-header::before {
+    height: 66px;
+    background: rgba(0, 0, 0, .18);
+    box-shadow: 0 17px 30px rgba(0, 0, 0, .34);
+  }
+
+  html:not(.noir-tv-app) .noir-site-header-inner {
+    width: 100%;
+    max-width: none;
+    height: 68px;
+    margin: 0;
+  }
+
+  html:not(.noir-tv-app) .noir-site-nav-shell {
+    position: fixed;
+    top: 16px;
+    right: var(--noir-page-gutter);
+    z-index: 222;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px 5px;
+    border: 1px solid rgba(255, 255, 255, .13);
+    border-radius: 13px;
+    background: rgba(26, 29, 31, .76);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, .32), inset 0 1px rgba(255, 255, 255, .05);
+    backdrop-filter: blur(24px) saturate(145%);
+    -webkit-backdrop-filter: blur(24px) saturate(145%);
+    transition: opacity .18s ease, transform .24s cubic-bezier(.22, 1, .36, 1);
+  }
+
+  html:not(.noir-tv-app) .noir-site-nav-shell.is-searching {
+    opacity: 0;
+    transform: translateY(-7px) scale(.98);
+    pointer-events: none;
+  }
+
+  html:not(.noir-tv-app) .noir-site-nav {
+    position: static;
+    min-height: 34px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  html:not(.noir-tv-app) .noir-site-nav button {
+    height: 32px;
+    gap: 6px;
+    padding: 0 11px;
+    border-radius: 9px;
+    color: rgba(255, 255, 255, .64);
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  html:not(.noir-tv-app) .noir-site-nav button:hover,
+  html:not(.noir-tv-app) .noir-site-nav button.is-active {
+    color: #fff;
+    background: rgba(255, 255, 255, .14);
+  }
+
+  html:not(.noir-tv-app) .noir-site-nav button.is-active::after { display: none; }
+
+  html:not(.noir-tv-app) .noir-site-nav-divider {
+    width: 1px;
+    height: 21px;
+    margin-inline: 5px 3px;
+    background: rgba(255, 255, 255, .16);
+  }
+
+  html:not(.noir-tv-app) .noir-site-search-button,
+  html:not(.noir-tv-app) .noir-profile-anchor > button {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    color: rgba(255, 255, 255, .72);
+  }
+
+  html:not(.noir-tv-app) .noir-site-search-button:hover,
+  html:not(.noir-tv-app) .noir-profile-anchor > button:hover,
+  html:not(.noir-tv-app) .noir-profile-anchor > button[aria-expanded="true"] {
+    color: #fff;
+    background: rgba(255, 255, 255, .12);
+  }
+
+  html:not(.noir-tv-app) .noir-profile-anchor {
+    position: relative;
+    display: flex;
+  }
+
+  html:not(.noir-tv-app) .noir-profile-anchor img {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  html:not(.noir-tv-app) .noir-desktop-profile-menu {
+    top: 39px;
+    right: 0;
+  }
+
+  html:not(.noir-tv-app) .noir-search-panel {
+    top: 16px;
+    right: var(--noir-page-gutter);
+    width: 430px;
+  }
+
+  html:not(.noir-tv-app) .noir-search-panel > form {
+    min-height: 40px;
+    padding-inline: 12px;
+    gap: 9px;
+    border-radius: 12px;
+    background: rgba(26, 29, 31, .90);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, .34), inset 0 1px rgba(255, 255, 255, .04);
+  }
+}
+
+.noir-search-close-button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, .65);
+}
+
+.noir-search-close-button:hover { color: #fff; background: rgba(255, 255, 255, .10); }
+
+.noir-global-back {
+  position: fixed;
+  top: 16px;
+  left: var(--noir-page-gutter);
+  z-index: 225;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 3px 5px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 999px;
+  background: rgba(25, 28, 31, .75);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .30), inset 0 1px rgba(255, 255, 255, .045);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+}
+
+.noir-global-back button {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, .76);
+}
+
+.noir-global-back button:hover { color: #fff; background: rgba(255, 255, 255, .11); }
+.noir-global-back button svg { width: 16px; height: 16px; }
+.noir-global-back > span { width: 1px; height: 18px; background: rgba(255, 255, 255, .14); }
+
+/* One shared content line for home rows and discovery sections. */
+html:not(.noir-tv-app) .noir-catalog-heading,
+html:not(.noir-tv-app) .noir-catalog-row > .relative,
+html:not(.noir-tv-app) .noir-platforms-heading,
+html:not(.noir-tv-app) .noir-platforms-row > .relative {
+  padding-inline: var(--noir-page-gutter) !important;
+}
+
+html:not(.noir-tv-app) .noir-catalog-heading::after {
+  right: var(--noir-page-gutter);
+}
+
+html:not(.noir-tv-app) .noir-discovery-page {
+  width: 100%;
+  max-width: none;
+  padding-inline: var(--noir-page-gutter) !important;
+}
+
+html:not(.noir-tv-app) .noir-discovery-banner {
+  margin-inline: calc(var(--noir-page-gutter) * -1);
+  padding-inline: var(--noir-page-gutter);
+}
+
+/* Platform changes stay on the home page and update the row below. */
+html:not(.noir-tv-app) .noir-platforms-row { margin-block: 28px 18px; }
+html:not(.noir-tv-app) .noir-platforms-heading h2 span { color: var(--noir-accent); }
+html:not(.noir-tv-app) .noir-platform-card.is-active .noir-platform-card-surface {
+  border-color: rgba(160, 201, 203, .46);
+  background: #0b1015;
+  box-shadow: inset 0 -14px 28px rgba(160, 201, 203, .07);
+}
+html:not(.noir-tv-app) .noir-platform-card.is-active .noir-platform-logo { background-color: var(--noir-accent); }
+html:not(.noir-tv-app) .noir-platform-results .noir-catalog-row { margin-bottom: 48px; }
+
+/* Top 10 cards share one visual height. */
+html:not(.noir-tv-app) .noir-top10-featured .noir-catalog-artwork {
+  height: clamp(218px, 18vw, 293px);
+  aspect-ratio: auto;
+}
+
+/* Card hover keeps only the requested zoom and accent title. */
+html:not(.noir-tv-app) .noir-catalog-card:hover .noir-catalog-artwork,
+html:not(.noir-tv-app) .card-cinematic:hover [data-tv-card-artwork] {
+  border-color: rgba(255, 255, 255, .095) !important;
+  box-shadow: 0 16px 35px -28px rgba(0, 0, 0, .95) !important;
+}
+
+html:not(.noir-tv-app) .card-cinematic [data-tv-card-artwork]::after { display: none !important; }
+html:not(.noir-tv-app) .noir-platform-card:hover .noir-platform-card-surface {
+  border-color: rgba(255, 255, 255, .10);
+}
+html:not(.noir-tv-app) .noir-platform-card.is-active:hover .noir-platform-card-surface {
+  border-color: rgba(160, 201, 203, .46);
+}
+
+html:not(.noir-tv-app) .noir-genre-card:hover,
+html:not(.noir-tv-app) .noir-web-search-overlay [data-tv-card]:hover {
+  border-color: rgba(255, 255, 255, .09) !important;
+}
+
+/* Simple full-art movie details. */
+@media (min-width: 1024px) {
+  html:not(.noir-tv-app) .noir-simple-detail .noir-detail-backdrop-stage {
+    height: min(900px, 88svh);
+    min-height: 700px;
+  }
+
+  html:not(.noir-tv-app) .noir-simple-detail > .noir-detail-backdrop-stage + div {
+    max-width: none;
+    padding-inline: var(--noir-page-gutter);
+  }
+
+  html:not(.noir-tv-app) .noir-simple-detail .noir-detail-summary {
+    width: min(520px, 42vw);
+    max-width: 520px;
+  }
+
+  html:not(.noir-tv-app) .noir-simple-detail .noir-detail-summary > img {
+    max-width: 330px;
+    max-height: 112px;
+  }
+
+  html:not(.noir-tv-app) .noir-simple-detail .noir-detail-overview p {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    font-size: 13px;
+    color: rgba(255, 255, 255, .68);
+  }
+
+  html:not(.noir-tv-app) .noir-simple-detail .noir-detail-genres span {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    color: rgba(255, 255, 255, .55);
+  }
+
+  html:not(.noir-tv-app) .noir-simple-detail .noir-detail-trailer-action,
+  html:not(.noir-tv-app) .noir-simple-detail .noir-detail-reactions {
+    display: none;
+  }
+}
+
+@keyframes noirSectionSwipeIn {
+  from { opacity: 0; transform: translate3d(52px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+.noir-section-swipe-in {
+  animation: noirSectionSwipeIn .42s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+html:not(.noir-tv-app) main { view-transition-name: noir-content; }
+
+::view-transition-old(noir-content) {
+  animation: .24s cubic-bezier(.4, 0, 1, 1) both noirContentOut;
+}
+
+::view-transition-new(noir-content) {
+  animation: .36s cubic-bezier(.22, 1, .36, 1) both noirContentIn;
+}
+
+@keyframes noirContentOut {
+  to { opacity: 0; transform: translate3d(-54px, 0, 0); }
+}
+
+@keyframes noirContentIn {
+  from { opacity: 0; transform: translate3d(54px, 0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .noir-section-swipe-in { animation: none; }
+  ::view-transition-old(noir-content),
+  ::view-transition-new(noir-content) { animation: none; }
+}

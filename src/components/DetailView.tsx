@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Star, ArrowRight, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle, ChevronsUpDown, ChevronLeft, ChevronRight, ThumbsDown, ThumbsUp } from 'lucide-react';
+import { Play, Star, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle, ChevronsUpDown, ChevronLeft, ChevronRight, ThumbsDown, ThumbsUp } from 'lucide-react';
 import {
   CastMember,
   ContinueWatchingItem,
@@ -32,7 +32,6 @@ interface DetailViewProps {
   initialSeason?: number;
   initialEpisode?: number;
   onEpisodeChange?: (season: number, episode: number) => void;
-  onBackClick: () => void;
   onItemClick: (item: MovieOrShow) => void;
   onOpenShare: (url: string) => void;
   user: { name: string; email?: string; type: 'guest' | 'google' | 'email' } | null;
@@ -80,7 +79,6 @@ export default function DetailView({
   initialSeason,
   initialEpisode,
   onEpisodeChange,
-  onBackClick,
   onItemClick,
   onOpenShare,
   user,
@@ -660,15 +658,7 @@ export default function DetailView({
       playUrl.hash = type === 'tv'
         ? `#tv/${id}/s${selectedSeason}/e${selectedEpisode}`
         : `#movie/${id}`;
-      const width = Math.min(1440, window.screen.availWidth - 60);
-      const height = Math.min(900, window.screen.availHeight - 60);
-      const left = Math.max(0, Math.round((window.screen.availWidth - width) / 2));
-      const top = Math.max(0, Math.round((window.screen.availHeight - height) / 2));
-      window.open(
-        playUrl.toString(),
-        'noir-player',
-        `popup=yes,toolbar=no,location=no,status=no,menubar=no,scrollbars=no,resizable=yes,width=${width},height=${height},left=${left},top=${top}`,
-      );
+      window.open(playUrl.toString(), '_blank');
       return;
     }
     setPlayerMode(mode);
@@ -771,15 +761,6 @@ export default function DetailView({
         <span className="text-5xl">⚠</span>
         <h3 className="text-xl font-bold text-white">عذراً، فشل تحميل تفاصيل العنوان</h3>
         <p className="text-gray-400 text-sm max-w-sm">يرجى التحقق من اتصالك بالإنترنت، لم نستطع الاتصال بمزود البيانات TMDB.</p>
-        {!isTvApp && (
-          <button
-            onClick={onBackClick}
-            className="flex items-center gap-2 bg-stone-800 text-white px-6 py-2.5 rounded-full text-sm font-medium hover:bg-stone-700 transition-colors cursor-pointer"
-          >
-            <ArrowRight className="w-4 h-4 ml-1" />
-            الرجوع للرئيسية
-          </button>
-        )}
 </div>
     );
   }
@@ -953,7 +934,7 @@ export default function DetailView({
     : [];
 
   return (
-    <div className="noir-web-detail w-full text-right detail-enter">
+    <div className="noir-web-detail noir-simple-detail w-full text-right detail-enter">
 
       {/* Immersive backdrop background section */}
       <div className={`noir-detail-backdrop-stage relative w-full select-none ${isTvApp ? 'h-[35vh] md:h-[45vh] mb-4 overflow-visible' : 'h-[72svh] min-h-[560px] max-h-[840px] overflow-hidden'}`}>
@@ -975,7 +956,7 @@ export default function DetailView({
         <div className={`grid grid-cols-1 gap-6 items-end ${isTvApp ? 'md:grid-cols-[240px_1fr] md:gap-12' : ''}`}>
 
           {/* Text Information pane (Right side in standard RTL layouts) */}
-          <div className={`order-2 flex flex-col items-start text-right min-w-0 w-full ${isTvApp ? 'md:order-2 md:pr-4' : 'max-w-3xl'}`}>
+          <div className={`noir-detail-summary order-2 flex flex-col items-start text-right min-w-0 w-full ${isTvApp ? 'md:order-2 md:pr-4' : 'max-w-3xl'}`}>
 
             {titleLogo ? (
               <img
@@ -1030,7 +1011,7 @@ export default function DetailView({
 
             {/* Genre Tags List */}
             {genres.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-3 sm:mb-4">
+              <div className="noir-detail-genres flex flex-wrap gap-2 mb-3 sm:mb-4">
                 {genres.map((g, idx) => (
                   <span
                     key={idx}
@@ -1043,7 +1024,7 @@ export default function DetailView({
             )}
 
             {/* Synopsis placed right below Details bar and tags */}
-            <div className="mb-4 sm:mb-6 max-w-2xl text-right leading-relaxed select-text">
+            <div className="noir-detail-overview mb-4 sm:mb-6 max-w-2xl text-right leading-relaxed select-text">
               <p className="text-gray-350 text-xs sm:text-sm md:text-base font-medium leading-relaxed">
                 {data.overview ||'لا يوجد وصف.'}
 </p>
@@ -1052,7 +1033,7 @@ export default function DetailView({
 
 
             {/* Action buttons: Resume/Play -> Start over -> Trailer -> Save(+) -> Share */}
-            <div data-tv-focus-row={isTvApp ? '' : undefined} data-tv-top-actions={isTvApp ? '' : undefined} className="flex flex-wrap items-center gap-2 sm:gap-3 w-full">
+            <div data-tv-focus-row={isTvApp ? '' : undefined} data-tv-top-actions={isTvApp ? '' : undefined} className="noir-detail-actions flex flex-wrap items-center gap-2 sm:gap-3 w-full">
               {savedProgressPercent > 0 ? (
                 <>
                   <button
@@ -1091,7 +1072,7 @@ export default function DetailView({
               {youtubeKey && !isTvApp && (
                 <button
                   onClick={() => handlePlayClick('trailer')}
-                  className="noir-button-secondary flex items-center gap-2 text-sm"
+                  className="noir-detail-trailer-action noir-button-secondary flex items-center gap-2 text-sm"
                 >
                   <svg viewBox="0 0 28 20" className="w-6 h-[18px] shrink-0" xmlns="http://www.w3.org/2000/svg">
                     <rect width="28" height="20" rx="5" fill="#FF0000" />
@@ -1115,7 +1096,7 @@ export default function DetailView({
                 {isSaved ? <Check className="w-5 h-5 text-black" strokeWidth={3} /> : <Plus className="w-5 h-5" />}
 </button>
 
-              <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1">
+              <div className="noir-detail-reactions flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1">
                 <button
                   type="button"
                   data-tv-reaction={isTvApp ? '' : undefined}
@@ -1559,7 +1540,7 @@ export default function DetailView({
             onHostPause={handleHostPause}
             onHostResume={handleHostResume}
             onClose={() => {
-              if (new URLSearchParams(window.location.search).get('play') === '1' && window.opener) {
+              if (new URLSearchParams(window.location.search).get('play') === '1') {
                 window.close();
                 return;
               }
@@ -1583,17 +1564,6 @@ export default function DetailView({
             />
 </div>
         )}
-
-        {/* Explicit back route */}
-        {!isTvApp && <div className="py-12 text-center">
-          <button
-            onClick={onBackClick}
-            className="inline-flex items-center gap-2 bg-white hover:bg-white/90 text-black text-sm font-bold px-6 py-3 rounded-full transition-all cursor-pointer"
-          >
-            <ArrowRight className="w-4 h-4" />
-            <span>العودة للرئيسية</span>
-</button>
-</div>}
 
 </div>
 </div>

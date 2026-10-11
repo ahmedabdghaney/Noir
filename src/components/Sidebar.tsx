@@ -1,6 +1,5 @@
 import { Bookmark, Clock3, Film, Home, LogOut, Megaphone, Search, Sparkles, Tv, UserRound, UsersRound } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import LogoIcon from './LogoIcon';
 
 interface SidebarProps {
   activeView: string;
@@ -8,6 +7,7 @@ interface SidebarProps {
   setSearchMode: (mode: 'movie' | 'tv') => void;
   goHome: () => void;
   openSearchOverlay: () => void;
+  isSearchOpen: boolean;
   onViewWatchlist: () => void;
   onViewHistory: () => void;
   onLogout: () => void;
@@ -23,6 +23,7 @@ export default function Sidebar({
   setSearchMode,
   goHome,
   openSearchOverlay,
+  isSearchOpen,
   onViewWatchlist,
   onViewHistory,
   onLogout,
@@ -36,6 +37,7 @@ export default function Sidebar({
   const [showAds, setShowAds] = useState(() => localStorage.getItem('noir_show_ads') !== 'false');
   const profileAvatar = localStorage.getItem('noir_profile_avatar');
   const menuRef = useRef<HTMLDivElement>(null);
+  const profileTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!profileOpen) return;
@@ -60,49 +62,41 @@ export default function Sidebar({
     { id: 'anime', label: 'أنمي', icon: Sparkles, active: activeView === 'category' && window.location.hash === '#category/animation', action: () => { window.location.hash = '#category/animation'; } },
   ];
 
+  const openProfile = () => {
+    if (profileTimerRef.current) window.clearTimeout(profileTimerRef.current);
+    setProfileOpen(true);
+  };
+
+  const closeProfileSoon = () => {
+    if (profileTimerRef.current) window.clearTimeout(profileTimerRef.current);
+    profileTimerRef.current = window.setTimeout(() => setProfileOpen(false), 120);
+  };
+
   return (
     <header className={`noir-site-header ${scrolled ? 'is-scrolled' : ''}`} dir="rtl">
       <div className="noir-site-header-inner">
-        <button type="button" onClick={goHome} className="noir-site-brand" aria-label="العودة إلى الرئيسية">
-          <LogoIcon className="h-8 w-8 text-[var(--noir-accent)]" />
-          <span>نوار</span>
-        </button>
-
-        <nav className="noir-site-nav" aria-label="التنقل الرئيسي">
-          {items.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={item.action}
-                className={item.active ? 'is-active' : ''}
-                aria-current={item.active ? 'page' : undefined}
-              >
-                <Icon className="h-4 w-4" />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="noir-site-actions" ref={menuRef}>
-          <button type="button" onClick={openSearchOverlay} aria-label="البحث">
+        <div className={`noir-site-nav-shell ${isSearchOpen ? 'is-searching' : ''}`} ref={menuRef}>
+          <nav className="noir-site-nav" aria-label="التنقل الرئيسي">
+            {items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button key={item.id} type="button" onClick={item.action} className={item.active ? 'is-active' : ''} aria-current={item.active ? 'page' : undefined}>
+                  <Icon className="h-4 w-4" />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+          <span className="noir-site-nav-divider" />
+          <button type="button" className="noir-site-search-button" onClick={openSearchOverlay} aria-label="البحث">
             <Search className="h-5 w-5" />
           </button>
-          {user && (
-            <button type="button" onClick={() => setProfileOpen((open) => !open)} aria-label="فتح قائمة الملف الشخصي" aria-expanded={profileOpen}>
-              {user.photoURL ? (
-                <img src={user.photoURL} alt={user.name} referrerPolicy="no-referrer" />
-              ) : profileAvatar ? (
-                <span className="noir-nav-avatar" aria-hidden="true">{profileAvatar}</span>
-              ) : (
-                <UserRound className="h-5 w-5" />
-              )}
+          {user && <div className="noir-profile-anchor" onMouseEnter={openProfile} onMouseLeave={closeProfileSoon}>
+            <button type="button" onFocus={openProfile} onClick={() => setProfileOpen((open) => !open)} aria-label="فتح قائمة الملف الشخصي" aria-expanded={profileOpen}>
+              {user.photoURL ? <img src={user.photoURL} alt={user.name} referrerPolicy="no-referrer" /> : profileAvatar ? <span className="noir-nav-avatar" aria-hidden="true">{profileAvatar}</span> : <UserRound className="h-5 w-5" />}
             </button>
-          )}
           {profileOpen && (
-            <div className="noir-desktop-profile-menu" role="menu">
+            <div className="noir-desktop-profile-menu" role="menu" onMouseEnter={openProfile} onMouseLeave={closeProfileSoon}>
               <button type="button" onClick={() => { onViewHistory(); setProfileOpen(false); }} role="menuitem">
                 <Clock3 /><span>سجل المشاهدة</span>
               </button>
@@ -140,6 +134,7 @@ export default function Sidebar({
               </div>
             </div>
           )}
+          </div>}
         </div>
       </div>
     </header>

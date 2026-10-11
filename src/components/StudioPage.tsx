@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowRight, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { MovieOrShow } from '../types';
 import { Studio } from '../lib/studios';
 import { discoverTitles } from '../lib/tmdb';
@@ -13,7 +13,6 @@ import WatchlistButton from './WatchlistButton';
 interface StudioPageProps {
   studio: Studio;
   onItemClick: (item: MovieOrShow) => void;
-  onBack: () => void;
   isSaved?: (item: MovieOrShow) => boolean;
   onToggleSave?: (item: MovieOrShow) => void;
 }
@@ -79,7 +78,6 @@ function GridCard({
 export default function StudioPage({
   studio,
   onItemClick,
-  onBack,
   isSaved,
   onToggleSave,
 }: StudioPageProps) {
@@ -156,10 +154,6 @@ export default function StudioPage({
       <div className="noir-browse-banner relative w-full" style={{ backgroundColor: studio.color }}>
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
         <div dir="rtl" className="relative w-full px-4 sm:px-6 lg:px-8 pt-8 pb-10 sm:pt-10 sm:pb-14">
-          {!isTvApp && <button onClick={onBack} className="flex items-center gap-2 text-white/90 hover:text-white text-sm font-semibold mb-5 cursor-pointer transition-colors">
-            <ArrowRight className="w-4 h-4" />
-            <span>الرئيسية</span>
-          </button>}
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white drop-shadow-lg text-right">
             {studio.title}
           </h1>

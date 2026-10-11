@@ -5,14 +5,12 @@ interface ViewingHistoryPageProps {
   items: ViewingHistoryItem[];
   onItemClick: (item: ViewingHistoryItem) => void;
   onRemove: (item: ViewingHistoryItem) => void;
-  onBack: () => void;
 }
 
 export default function ViewingHistoryPage({
   items,
   onItemClick,
   onRemove,
-  onBack,
 }: ViewingHistoryPageProps) {
   const isTvApp = document.documentElement.classList.contains('noir-tv-app');
   return (
@@ -26,9 +24,6 @@ export default function ViewingHistoryPage({
             أعمالك المكتملة والتي بدأت مشاهدتها، متزامنة بين أجهزتك.
           </p>
         </div>
-        {!isTvApp && <button type="button" onClick={onBack} className="noir-button-secondary cursor-pointer">
-          الرئيسية
-        </button>}
       </div>
 
       {items.length === 0 ? (

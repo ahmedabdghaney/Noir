@@ -14,7 +14,6 @@ import WatchlistButton from './WatchlistButton';
 interface CategoryPageProps {
   category: Category;
   onItemClick: (item: MovieOrShow) => void;
-  onBack: () => void;
   showAllMode?: boolean;             // when true, render only the full "All" grid page
   onOpenAll?: (key: string) => void; // open the dedicated All page
   isSaved?: (item: MovieOrShow) => boolean;
@@ -122,7 +121,6 @@ function GridCard({
 export default function CategoryPage({
   category,
   onItemClick,
-  onBack,
   showAllMode = false,
   onOpenAll,
   isSaved,
@@ -195,10 +193,6 @@ export default function CategoryPage({
       <div className="noir-browse-banner relative w-full" style={{ backgroundColor: category.overlay.replace(/0\.\d+\)/, '1)') }}>
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
         <div dir="rtl" className="relative w-full px-4 sm:px-6 lg:px-8 pt-8 pb-10 sm:pt-10 sm:pb-14">
-          {!isTvApp && <button onClick={onBack} className="flex items-center gap-2 text-white/90 hover:text-white text-sm font-semibold mb-5 cursor-pointer transition-colors">
-            <ArrowRight className="w-4 h-4" />
-            <span>الرئيسية</span>
-          </button>}
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white drop-shadow-lg text-right">
             {category.title}{showAllMode ? ' — الكل' : ''}
           </h1>
