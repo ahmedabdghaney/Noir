@@ -19,12 +19,13 @@ export default function StudiosRow({ title = 'تصفّح حسب الشركة ا�
   const [showRightArrow, setShowRightArrow] = useState(false);
   // شعار رسمي شفاف لكل شركة من TMDB
   const [logos, setLogos] = useState<Record<string, string>>({});
+  const platforms = STUDIOS.slice(0, 7);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const entries = await Promise.all(
-        STUDIOS.map(async (s) => {
+        platforms.map(async (s) => {
           const logo = await fetchStudioLogo({ companyId: s.companyId, networkId: s.networkId });
           return [s.key, logo || ''] as [string, string];
         })
@@ -60,9 +61,10 @@ export default function StudiosRow({ title = 'تصفّح حسب الشركة ا�
   };
 
   return (
-    <section className="mb-6 md:mb-8 relative flex flex-col group/row" aria-labelledby="studios-row-title">
+    <section className="noir-platforms-row mb-6 md:mb-8 relative flex flex-col group/row" aria-labelledby="studios-row-title">
       <div className="px-4 sm:px-6 lg:px-12 mb-2.5">
         <h2 id="studios-row-title" className="text-lg md:text-xl font-bold text-white">{title}</h2>
+        <p>أشهر العناوين على منصات البث</p>
       </div>
 
       <div className="relative px-4 sm:px-6 lg:px-12">
@@ -92,7 +94,7 @@ export default function StudiosRow({ title = 'تصفّح حسب الشركة ا�
           dir="rtl"
           className="flex flex-row gap-1.5 md:gap-2 overflow-x-auto overflow-y-visible no-scrollbar py-2 scroll-smooth select-none"
         >
-          {STUDIOS.map((s) => (
+          {platforms.map((s, index) => (
             <div
               key={s.key}
               onClick={() => onSelect(s.key)}
@@ -105,7 +107,7 @@ export default function StudiosRow({ title = 'تصفّح حسب الشركة ا�
               role="button"
               tabIndex={0}
               aria-label={`فتح أعمال ${s.title}`}
-              className="group/st card-cinematic flex-none w-[170px] sm:w-[220px] md:w-[248px] xl:w-[278px] cursor-pointer"
+              className={`noir-platform-card group/st card-cinematic flex-none cursor-pointer ${index === 0 ? 'is-active' : ''}`}
             >
               {/* بطاقة زجاجية فاتحة شوي عن الخلفية — بدون stroke (نلغي بوردر glass-hover)، بدون صورة، بدون اسم نصي */}
               <div className="relative aspect-video rounded-sm overflow-hidden bg-[#151515] border border-white/[0.055]">

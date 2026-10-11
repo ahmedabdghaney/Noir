@@ -61,7 +61,7 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick, isSaved,
             <div className="noir-cinema-kicker">عرض مختار لك</div>
             <h1>{activeItem.title}</h1>
             <div className="noir-cinema-meta">
-              {activeItem.rating > 0 && <span><Star className="h-3.5 w-3.5 fill-[#ed1c24] text-[#ed1c24]" />{activeItem.rating.toFixed(1)}</span>}
+              {activeItem.rating > 0 && <span><Star className="h-3.5 w-3.5 fill-[#A0C9CB] text-[#A0C9CB]" />{activeItem.rating.toFixed(1)}</span>}
               {activeItem.year && <span>{activeItem.year}</span>}
               <span>{activeItem.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
               {genres.map((genre) => <span key={genre}>{genre}</span>)}

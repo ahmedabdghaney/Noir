@@ -18,17 +18,18 @@ export interface Studio {
 
 // منصات البث الكبرى أولاً (آبل، نتفلكس، أمازون)، وبعدين شركات الإنتاج
 export const STUDIOS: Studio[] = [
-  { key: 'apple',     title: 'آبل TV+',       companyId: 420521, networkId: 2552, color: '#1d1d1f' },
   { key: 'netflix',   title: 'نتفلكس',        companyId: 178464, networkId: 213,  color: '#8c0a0a' },
   { key: 'amazon',    title: 'أمازون برايم',  companyId: 20580,  networkId: 1024, color: '#0d2538' },
   { key: 'hbo',       title: 'HBO',           companyId: 3268,   networkId: 49,   color: '#1a1a2e' },
-  { key: 'disney',    title: 'ديزني',         companyId: 2,      color: '#0b3d91' },
+  { key: 'disney',    title: 'ديزني+',        companyId: 2,      networkId: 2739, color: '#0b3d91' },
+  { key: 'apple',     title: 'آبل TV+',       companyId: 420521, networkId: 2552, color: '#1d1d1f' },
+  { key: 'paramount', title: 'باراماونت+',    companyId: 4,      networkId: 4330, color: '#003a8c' },
+  { key: 'hulu',      title: 'Hulu',           networkId: 453,    color: '#1ce783' },
   { key: 'pixar',     title: 'بيكسار',        companyId: 3,      color: '#1452a3' },
   { key: 'marvel',    title: 'مارفل',         companyId: 420,    color: '#7a0c0c' },
   { key: 'lucasfilm', title: 'لوكاس فيلم',    companyId: 1,      color: '#1c1c1c' },
   { key: 'warner',    title: 'وارنر براذرز',  companyId: 174,    color: '#003a70' },
   { key: 'universal', title: 'يونيفرسال',     companyId: 33,     color: '#0e1a33' },
-  { key: 'paramount', title: 'باراماونت',     companyId: 4,      color: '#003a8c' },
   { key: 'sony',      title: 'سوني',          companyId: 34,     color: '#1c1c1c' },
   { key: 'a24',       title: 'A24',           companyId: 41077,  color: '#202020' },
   { key: 'fx',        title: 'FX',            networkId: 88,     color: '#3a0a0a' },

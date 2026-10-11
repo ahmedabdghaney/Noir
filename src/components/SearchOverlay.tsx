@@ -50,6 +50,10 @@ export default function SearchOverlay({
   onToggleSave,
 }: SearchOverlayProps) {
   const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<'all' | 'movie' | 'tv' | 'anime'>('all');
+  const [recent, setRecent] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('noir_recent_searches') || '[]'); } catch { return []; }
+  });
   const [results, setResults] = useState<MovieOrShow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [catImages, setCatImages] = useState<Record<string, string>>({});
@@ -105,7 +109,6 @@ export default function SearchOverlay({
           void NoirPlayer.showKeyboard().catch(() => {});
         }
       }, 120);
-      localStorage.removeItem('noir_recent_titles');
       return () => window.clearTimeout(focusTimer);
     }
   }, [isOpen, isTvApp]);
@@ -173,6 +176,20 @@ export default function SearchOverlay({
 
   if (!isOpen) return null;
 
+  const visibleResults = results.filter((item) => {
+    if (filter === 'all') return true;
+    if (filter === 'anime') return item.genres.some((genre) => /anime|animation|رسوم/i.test(genre));
+    return item.type === filter;
+  });
+
+  const rememberQuery = () => {
+    const value = query.trim();
+    if (!value) return;
+    const next = [value, ...recent.filter((entry) => entry !== value)].slice(0, 5);
+    setRecent(next);
+    localStorage.setItem('noir_recent_searches', JSON.stringify(next));
+  };
+
   return (
     <div
       role="dialog"
@@ -184,7 +201,8 @@ export default function SearchOverlay({
           : 'z-[190] pt-16 lg:z-[230] lg:pt-24 px-4 sm:px-6 lg:px-12'
       }`}
     >
-      <div className="w-full max-w-7xl mx-auto">
+      <button type="button" className="noir-search-backdrop" onClick={onClose} aria-label="إغلاق البحث" />
+      <div className="noir-search-panel w-full max-w-7xl mx-auto">
         <div className={`flex items-center justify-between gap-4 ${isTvApp ? 'mb-7' : 'mb-4'}`}>
           <div>
             <h1 id="search-overlay-title" className={`${isTvApp ? 'text-4xl' : 'text-xl sm:text-2xl'} font-bold text-white`}>البحث</h1>
@@ -243,7 +261,7 @@ export default function SearchOverlay({
             autoComplete="off"
           />
           {isLoading ? (
-            <Loader className="w-4 h-4 text-[#ed1c24] animate-spin shrink-0" />
+            <Loader className="w-4 h-4 text-[#A0C9CB] animate-spin shrink-0" />
           ) : (
             query && !isTvApp && (
               <button
@@ -257,6 +275,22 @@ export default function SearchOverlay({
             )
           )}
         </form>
+
+        {!isTvApp && (
+          <div className="noir-search-quick-panel">
+            <div className="noir-search-tabs">
+              {([['all', 'الكل'], ['movie', 'أفلام'], ['tv', 'مسلسلات'], ['anime', 'أنمي']] as const).map(([value, label]) => (
+                <button key={value} type="button" className={filter === value ? 'is-active' : ''} onClick={() => setFilter(value)}>{label}</button>
+              ))}
+            </div>
+            {!query.trim() && recent.length > 0 && (
+              <div className="noir-recent-searches">
+                <div><strong>الأخيرة</strong><button type="button" onClick={() => { setRecent([]); localStorage.removeItem('noir_recent_searches'); }}>مسح</button></div>
+                {recent.map((entry) => <button type="button" key={entry} onClick={() => setQuery(entry)}>{entry}</button>)}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Body */}
         <div className="pb-20">
@@ -296,21 +330,23 @@ export default function SearchOverlay({
         {/* Suggestion Lists Body */}
         <div className="overflow-y-auto py-2">
           {query.trim() ? (
-            results.length > 0 ? (
+            visibleResults.length > 0 ? (
               <div className={isTvApp ? 'grid grid-cols-3 gap-4' : 'space-y-0.5'}>
                 <div className={`font-bold text-gray-500 px-5 py-1.5 text-right select-none uppercase ${isTvApp ? 'col-span-3 text-sm' : 'text-[10px]'}`}>
-                   نتائج البحث ({results.length})
+                   نتائج البحث ({visibleResults.length})
                 </div>
-                {results.slice(0, isTvApp ? 18 : 8).map((item) => (
+                {visibleResults.slice(0, isTvApp ? 18 : 8).map((item) => (
                   <div
                     key={`${item.type}-${item.id}`}
                     onClick={() => {
+                      rememberQuery();
                       onSelectTitle(item.type, item.id);
                       onClose();
                     }}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
+                        rememberQuery();
                         onSelectTitle(item.type, item.id);
                         onClose();
                       }

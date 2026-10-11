@@ -4,7 +4,7 @@
  */
 
 import { useRef, useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, X } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Play, Star, X } from 'lucide-react';
 import { MovieOrShow } from '../types';
 import WatchlistButton from './WatchlistButton';
 
@@ -20,6 +20,7 @@ interface MovieRowProps {
   onToggleSave?: (item: MovieOrShow) => void;
   compactSaveButton?: boolean;
   ranked?: boolean;
+  portrait?: boolean;
 }
 
 export default function MovieRow({
@@ -34,6 +35,7 @@ export default function MovieRow({
   onToggleSave,
   compactSaveButton = false,
   ranked = false,
+  portrait = false,
 }: MovieRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const scrollSaveFrameRef = useRef<number | null>(null);
@@ -205,9 +207,9 @@ export default function MovieRow({
                 data-tv-card
                 aria-label={`فتح ${item.title}`}
                 style={{ animationDelay: `${idx * 45}ms` }}
-                className="noir-catalog-card group/card card-pop relative flex-none cursor-pointer select-none"
+                className={`noir-catalog-card group/card card-pop relative flex-none cursor-pointer select-none ${portrait ? 'noir-portrait-card' : ''} ${ranked ? (idx === 0 ? 'noir-top10-featured' : 'noir-top10-poster') : ''}`}
               >
-                <div data-tv-card-artwork className="noir-catalog-artwork relative aspect-video overflow-hidden bg-[#0d0f14]">
+                <div data-tv-card-artwork className={`noir-catalog-artwork relative overflow-hidden bg-[#0d0f14] ${(ranked && idx > 0) || portrait ? 'aspect-[2/3]' : 'aspect-video'}`}>
                   {onToggleSave && (
                     <WatchlistButton
                       saved={saved}
@@ -231,7 +233,7 @@ export default function MovieRow({
                   )}
                   {item.backdrop || item.poster ? (
                     <img
-                      src={item.backdrop || item.poster || undefined}
+                      src={((ranked && idx > 0) || portrait ? item.poster : item.backdrop) || item.poster || item.backdrop || undefined}
                       alt={item.title}
                       loading="lazy"
                       decoding="async"
@@ -245,22 +247,30 @@ export default function MovieRow({
                       </span>
                     </div>
                   )}
-                  {ranked && <span className="noir-rank-number">{String(idx + 1).padStart(2, '0')}</span>}
+                  {ranked && idx > 0 && <span className="noir-rank-number"><small>TOP</small>{idx + 1}</span>}
+                  {ranked && idx === 0 && (
+                    <div className="noir-top10-featured-copy">
+                      <span className="noir-top10-badge">TOP 1</span>
+                      <h3>{item.title}</h3>
+                      <p>{item.overview}</p>
+                      <button type="button" onClick={(event) => { event.stopPropagation(); onItemClick(item); }}><Play /> شاهد الآن</button>
+                    </div>
+                  )}
                   {/* Watch progression indicator */}
                   {progress > 0 && (
                     <div className="absolute bottom-0 left-3 right-3 h-0.5 overflow-hidden rounded-full bg-white/20">
                       <div
-                        className="h-full bg-[#ed1c24] transition-all duration-300"
+                        className="h-full bg-[#A0C9CB] transition-all duration-300"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
                   )}
                 </div>
 
-                <div className="noir-catalog-meta text-right">
+                <div className={`noir-catalog-meta text-right ${ranked && idx === 0 ? 'is-featured' : ''}`}>
                   <p className="truncate text-sm font-semibold text-white/92">{item.title}</p>
                   <p className="mt-1 text-[11px] font-medium text-white/38">
-                    {item.year || '—'} · {item.type === 'movie' ? 'فيلم' : 'مسلسل'}
+                    {item.rating > 0 && <><Star className="inline h-3 w-3 fill-current text-[var(--noir-accent)]" /> {item.rating.toFixed(1)} · </>}{item.year || '—'} · {item.type === 'movie' ? 'فيلم' : 'مسلسل'}
                   </p>
                 </div>
 

@@ -199,7 +199,7 @@ export default function ContinueWatchingRow({
                   <div className="absolute inset-x-3 bottom-0">
                     <div className="h-0.5 w-full overflow-hidden rounded-full bg-white/20">
                       <div
-                        className="h-full bg-[#ed1c24] rounded-full"
+                        className="h-full bg-[#A0C9CB] rounded-full"
                         style={{ width: `${Math.max(progress, 3)}%` }}
                       />
                     </div>

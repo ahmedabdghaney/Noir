@@ -35,7 +35,7 @@ export default function Header({ goHome, user, onLogout, onOpenProfile, onOpenSe
   return (
     <header className={`noir-mobile-header ${isScrolled ? 'is-scrolled' : ''}`} dir="rtl">
       <button type="button" onClick={goHome} className="noir-mobile-brand" aria-label="العودة إلى الرئيسية">
-        <LogoIcon className="h-6 w-6 text-[#ed1c24]" />
+        <LogoIcon className="h-6 w-6 text-[#A0C9CB]" />
         <span>نوار</span>
       </button>
 

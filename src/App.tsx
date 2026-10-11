@@ -61,6 +61,8 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import Hero from './components/Hero';
 import MovieRow from './components/MovieRow';
+import StudiosRow from './components/StudiosRow';
+import OnboardingFlow from './components/OnboardingFlow';
 import PullToRefresh from './components/PullToRefresh';
 import { getCategoryByKey } from './lib/categories';
 import { getStudioByKey } from './lib/studios';
@@ -87,7 +89,7 @@ const ViewingHistoryPage = lazy(() => import('./components/ViewingHistoryPage'))
 function DeferredViewFallback() {
   return (
     <div className="flex min-h-[55vh] items-center justify-center text-white/55" aria-label="جاري فتح الصفحة">
-      <Loader className="h-8 w-8 animate-spin text-[#00BDC2]" />
+      <Loader className="h-8 w-8 animate-spin text-[#A0C9CB]" />
     </div>
   );
 }
@@ -241,6 +243,9 @@ export default function App() {
   const [authError, setAuthError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => localStorage.getItem('noir_onboarding_pending') === '1',
+  );
 
   // Bookmark / Watchlist feeds
   const [watchlist, setWatchlist] = useState<MovieOrShow[]>([]);
@@ -770,9 +775,11 @@ export default function App() {
     setIsAuthLoading(true);
     setAuthMethod('email');
     try {
+      localStorage.setItem('noir_onboarding_pending', '1');
       await signUpWithEmail(authEmail, authPassword, authName);
       // Save credentials for persistent session in sandboxed iframe environment
       localStorage.setItem('noir_credentials', JSON.stringify({ email: authEmail, password: authPassword }));
+      setShowOnboarding(true);
       showToast('تم إنشاء حسابك، أهلاً بك');
       setAuthEmail('');
       setAuthPassword('');
@@ -948,9 +955,11 @@ export default function App() {
         if (movieMatch) {
           setSelectedTitle({ type: 'movie', id: Number(movieMatch[1]) });
           setSelectedEpisodeRoute(null);
+          setAutoPlayRequested(new URLSearchParams(window.location.search).get('play') === '1');
           setActiveView('detail');
         } else if (tvMatch) {
           setSelectedTitle({ type: 'tv', id: Number(tvMatch[1]) });
+          setAutoPlayRequested(new URLSearchParams(window.location.search).get('play') === '1');
           // إذا الـ URL فيه موسم/حلقة، خزنهم لتمريرهم لـ DetailView
           if (tvMatch[2] && tvMatch[3]) {
             setSelectedEpisodeRoute({ season: Number(tvMatch[2]), episode: Number(tvMatch[3]) });
@@ -1343,9 +1352,10 @@ export default function App() {
 
   const handlePlayTitle = (item: MovieOrShow) => {
     rememberHomeScroll();
-    setAutoResumeRequested(false);
-    setAutoPlayRequested(true);
-    window.location.hash = `#${item.type}/${item.id}`;
+    const playUrl = new URL(window.location.href);
+    playUrl.searchParams.set('play', '1');
+    playUrl.hash = `#${item.type}/${item.id}`;
+    window.open(playUrl.toString(), 'noir-player', 'popup=yes,width=1440,height=900,resizable=yes,scrollbars=yes');
   };
 
   const handleContinueWatchingClick = (item: ContinueWatchingItem) => {
@@ -1482,22 +1492,22 @@ export default function App() {
     const col1PostersReverse = [...col1Posters].reverse();
 
     return (
-      <div className={`noir-tv-auth-screen relative min-h-screen text-white flex items-center justify-center font-sans overflow-hidden select-none ${
+      <div className={`noir-tv-auth-screen noir-auth-shell relative min-h-screen text-white flex items-center justify-center font-sans overflow-hidden select-none ${
         isTvAuth ? 'bg-[#08080a] p-10' : 'bg-[#070707] p-3.5 sm:p-6 md:p-10'
       }`}>
 
         {/* Main Double-Pane Card Layout */}
-        <div className={`relative z-10 w-full border border-white/[0.08] shadow-2xl overflow-hidden grid grid-cols-1 animate-pop-in ${
+        <div className={`noir-auth-frame relative z-10 w-full border border-white/[0.08] shadow-2xl overflow-hidden grid grid-cols-1 animate-pop-in ${
           isTvAuth
             ? 'max-w-xl min-h-0 rounded-[32px] bg-[#101012]'
             : 'max-w-5xl min-h-[620px] rounded-[18px] bg-[#0c0c0c] lg:grid-cols-12'
         }`} dir="ltr">
 
           {/* LEFT COLUMN: Tilted & Scrolling Movie Covers Pattern */}
-          <div className={`${isTvAuth ? 'hidden' : 'hidden lg:flex'} lg:col-span-5 relative flex-col justify-between p-12 overflow-hidden bg-[#080808] border-r border-white/[0.07]`}>
+          <div className={`noir-auth-poster ${isTvAuth ? 'hidden' : 'hidden lg:flex'} lg:col-span-5 relative flex-col justify-between p-12 overflow-hidden bg-[#080808] border-r border-white/[0.07]`}>
             {/* Tilted Poster Grid container rotated 30 degrees */}
-            <div className="absolute inset-0 z-0 pointer-events-none select-none opacity-25">
-              <div className="absolute -inset-10 flex gap-4 rotate-[30deg] scale-125 justify-center">
+            <div className="noir-auth-poster-grid absolute inset-0 z-0 pointer-events-none select-none opacity-25">
+              <div className="noir-auth-poster-columns absolute -inset-10 flex gap-4 rotate-[30deg] scale-125 justify-center">
                 {/* Column 1: Moves upward */}
                 <div className="flex flex-col gap-4 animate-marquee-up shrink-0">
                   {[...col1Posters, ...col1Posters].map((url, index) => (
@@ -1533,8 +1543,8 @@ export default function App() {
             {/* Content Top */}
             <div className="relative z-10" dir="rtl">
               <div className="flex items-center gap-2.5 mb-8 justify-end">
-                <span className="text-lg font-black tracking-tight text-white m-0">نوار <span className="text-[#00BDC2]">سينما</span></span>
-                <div className="w-10 h-10 rounded-xl bg-[#009FA5] flex items-center justify-center shadow-lg shadow-[#009FA5]/30">
+                <span className="text-lg font-black tracking-tight text-white m-0">نوار <span className="text-[#A0C9CB]">سينما</span></span>
+                <div className="w-10 h-10 rounded-xl bg-[#A0C9CB] flex items-center justify-center shadow-lg shadow-[#A0C9CB]/30">
                   <LogoIcon className="w-5 h-5 text-white shrink-0" />
                 </div>
               </div>
@@ -1548,12 +1558,12 @@ export default function App() {
           </div>
 
           {/* RIGHT COLUMN: Stylish Login / Signup Input Form */}
-          <div className={`col-span-1 flex flex-col justify-center select-none relative z-10 ${
+          <div className={`noir-auth-form col-span-1 flex flex-col justify-center select-none relative z-10 ${
             isTvAuth ? 'p-12 bg-[#101012]' : 'lg:col-span-7 p-7 sm:p-12 md:p-16 bg-[#0c0c0c]'
           }`} dir="rtl">
             {isTvAuth && (
               <div className="mb-8 flex items-center justify-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#009FA5]">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#A0C9CB]">
                   <LogoIcon className="h-6 w-6 text-white" />
                 </div>
                 <span className="text-xl font-black text-white">نوار سينما</span>
@@ -1563,7 +1573,7 @@ export default function App() {
             {/* Form Header */}
             <div className={`${isTvAuth ? 'mb-7 text-center' : 'text-right mb-8'}`}>
               <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
-                {authView === 'signin' && (isTvAuth ? 'سجل الدخول بجوجل' : 'سجل الدخول الآن')}
+                {authView === 'signin' && (isTvAuth ? 'سجل الدخول بجوجل' : 'مرحباً بعودتك إلى نوار')}
                 {authView === 'signup' && 'ابدأ حسابك الآن'}
                 {authView === 'reset' && 'استعادة كلمة السر'}
               </h1>
@@ -1571,7 +1581,7 @@ export default function App() {
                 {authView === 'signin' && (
                   isTvAuth
                     ? 'استخدم حساب جوجل للمتابعة ومزامنة قائمتك ومشاهداتك.'
-                    : 'من فضلك قم بتسجيل الدخول إلى حسابك للاستمرار.'
+                    : 'أدخل بريدك وكلمة السر حتى تكمل المشاهدة.'
                 )}
                 {authView === 'signup' && 'قم بملء البيانات التالية لتسجيل حسابك الجديد.'}
                 {authView === 'reset' && 'أدخل بريدك الإلكتروني وسنقوم بإرسال رابط الاستعادة.'}
@@ -1590,7 +1600,7 @@ export default function App() {
                     value={authName}
                     onChange={(e) => setAuthName(e.target.value)}
                     placeholder="ادخل اسمك الكامل..."
-                    className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#00BDC2]/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-[#00BDC2]/20"
+                    className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#A0C9CB]/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-[#A0C9CB]/20"
                     dir="rtl"
                   />
                 </div>
@@ -1604,7 +1614,7 @@ export default function App() {
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#00BDC2]/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-[#00BDC2]/20"
+                  className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#A0C9CB]/70 outline-none text-white text-sm font-medium py-3.5 px-4 rounded-xl transition-all text-right placeholder-gray-500 focus:ring-1 focus:ring-[#A0C9CB]/20"
                   dir="ltr"
                 />
               </div>}
@@ -1621,7 +1631,7 @@ export default function App() {
                       value={authPassword}
                       onChange={(e) => setAuthPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#00BDC2]/70 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-500"
+                      className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#A0C9CB]/70 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-500"
                       dir="rtl"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
@@ -1656,7 +1666,7 @@ export default function App() {
                       value={authPasswordConfirm}
                       onChange={(e) => setAuthPasswordConfirm(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#00BDC2]/70 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-500"
+                      className="w-full bg-[#151515] border border-white/[0.09] hover:border-white/20 focus:border-[#A0C9CB]/70 outline-none text-white text-sm font-medium py-3.5 pr-4 pl-11 rounded-xl transition-all text-right placeholder-gray-500"
                       dir="rtl"
                       onKeyDown={(e) => { if (e.key === 'Enter') handleEmailSignUp(); }}
                     />
@@ -1681,7 +1691,7 @@ export default function App() {
 
               {/* Form Validation Errors alerts */}
               {authError && (
-                <div className="text-[#22CDD0] text-xs font-semibold bg-[#00BDC2]/10 border border-[#00BDC2]/20 rounded-xl py-3 px-4 text-right leading-relaxed animate-fade-in">
+                <div className="text-[#A0C9CB] text-xs font-semibold bg-[#A0C9CB]/10 border border-[#A0C9CB]/20 rounded-xl py-3 px-4 text-right leading-relaxed animate-fade-in">
                   {authError}
                 </div>
               )}
@@ -1694,7 +1704,7 @@ export default function App() {
                   else if (authView === 'reset') handleResetPassword();
                 }}
                 disabled={isAuthLoading}
-                  className="w-full flex items-center justify-center gap-2 bg-[#009FA5] hover:bg-[#00BDC2] disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl transition-all cursor-pointer text-sm mt-2 shadow-[0_12px_30px_-16px_rgba(0,189,194,.9)]"
+                  className="w-full flex items-center justify-center gap-2 bg-[#A0C9CB] hover:bg-[#A0C9CB] disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl transition-all cursor-pointer text-sm mt-2 shadow-[0_12px_30px_-16px_rgba(160,201,203,.9)]"
               >
                 {isAuthLoading && authMethod === 'email' ? (
                   <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -1714,7 +1724,7 @@ export default function App() {
                     <span className="text-gray-500 font-medium">ليس لديك حساب؟ </span>
                     <button
                       onClick={() => { setAuthView('signup'); setAuthError(''); setAuthPassword(''); }}
-                      className="text-[#009FA5] hover:text-[#22CDD0] font-bold transition-colors cursor-pointer"
+                      className="text-[#A0C9CB] hover:text-[#A0C9CB] font-bold transition-colors cursor-pointer"
                     >
                       أنشئ حساباً جديداً
                     </button>
@@ -1725,7 +1735,7 @@ export default function App() {
                     <span className="text-gray-500 font-medium">لديك حساب بالفعل؟ </span>
                     <button
                       onClick={() => { setAuthView('signin'); setAuthError(''); setAuthPassword(''); }}
-                      className="text-[#009FA5] hover:text-[#22CDD0] font-bold transition-colors cursor-pointer"
+                      className="text-[#A0C9CB] hover:text-[#A0C9CB] font-bold transition-colors cursor-pointer"
                     >
                       سجل دخولك
                     </button>
@@ -1792,7 +1802,7 @@ export default function App() {
         {toastMessage && (
           <div className="fixed bottom-6 left-0 right-0 z-[600] flex justify-center pointer-events-none px-4">
             <div className="pointer-events-auto glass-strong text-white text-xs font-semibold rounded-2xl py-3 px-5 shadow-2xl flex items-center gap-2.5 select-none animate-slide-up [direction:rtl]">
-              <LogoIcon className="w-4 h-4 text-[#00BDC2] shrink-0" />
+              <LogoIcon className="w-4 h-4 text-[#A0C9CB] shrink-0" />
               <span>{toastMessage}</span>
             </div>
           </div>
@@ -2046,6 +2056,19 @@ export default function App() {
     return authScreen;
   }
 
+  if (user && showOnboarding) {
+    return (
+      <OnboardingFlow
+        initialName={user.name}
+        onComplete={() => {
+          localStorage.removeItem('noir_onboarding_pending');
+          localStorage.setItem('noir_onboarding_complete', '1');
+          setShowOnboarding(false);
+        }}
+      />
+    );
+  }
+
   const isTvApp = document.documentElement.classList.contains('noir-tv-app');
 
   return (
@@ -2062,6 +2085,18 @@ export default function App() {
           goHome={navigateToHome}
           openSearchOverlay={() => setIsSearchOverlayOpen((open) => !open)}
           onViewWatchlist={handleViewWatchlist}
+          onViewHistory={handleViewHistory}
+          onLogout={handleLogout}
+          onLogin={() => {
+            localStorage.removeItem('noir_user');
+            setAuthView('signin');
+            setUser(null);
+          }}
+          onSignUp={() => {
+            localStorage.removeItem('noir_user');
+            setAuthView('signup');
+            setUser(null);
+          }}
           user={user}
           onOpenProfile={() => setIsProfileModalOpen(true)}
         />
@@ -2096,7 +2131,7 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0">
 
       {/* Main Orchestration Views Switcher */}
-      <main className={`flex-grow selection:bg-red-500/30 ${isTvApp ? ((activeView === 'home' || activeView === 'detail') ? 'pb-0 pt-0' : 'pb-0 pt-24') : `pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 ${(activeView === 'home' || activeView === 'detail') ? 'pt-0' : 'pt-14 lg:pt-[68px]'}`}`}>
+      <main className={`flex-grow selection:bg-[#A0C9CB]/30 ${isTvApp ? ((activeView === 'home' || activeView === 'detail') ? 'pb-0 pt-0' : 'pb-0 pt-24') : `pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 ${(activeView === 'home' || activeView === 'detail') ? 'pt-0' : 'pt-14 lg:pt-[68px]'}`}`}>
         {activeView ==='home' && (
           isTvApp ? (
             <TvHome
@@ -2151,6 +2186,11 @@ export default function App() {
                   />
                 </div>
               )}
+
+              <StudiosRow
+                title="حصري على المنصات"
+                onSelect={(key) => { window.location.hash = `#studio/${key}`; }}
+              />
 
               {/* حصري نوار — العناصر المضافة يدوياً بلا قسم مخصص (يظهر أول دائماً) */}
               {(manualBySection['manual']?.length ?? 0) > 0 && (
@@ -2218,7 +2258,7 @@ export default function App() {
                       <button
                         onClick={() => setWatchlistFilter('all')}
                         className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${
-                          watchlistFilter ==='all' ?'bg-[#009FA5] text-black' :'text-white/50 hover:text-white'
+                          watchlistFilter ==='all' ?'bg-[#A0C9CB] text-black' :'text-white/50 hover:text-white'
                         }`}
                       >
                         الكل
@@ -2226,7 +2266,7 @@ export default function App() {
                       <button
                         onClick={() => setWatchlistFilter('movie')}
                         className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${
-                          watchlistFilter ==='movie' ?'bg-[#009FA5] text-black' :'text-white/50 hover:text-white'
+                          watchlistFilter ==='movie' ?'bg-[#A0C9CB] text-black' :'text-white/50 hover:text-white'
                         }`}
                       >
                         أفلام
@@ -2234,7 +2274,7 @@ export default function App() {
                       <button
                         onClick={() => setWatchlistFilter('tv')}
                         className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${
-                          watchlistFilter ==='tv' ?'bg-[#009FA5] text-black' :'text-white/50 hover:text-white'
+                          watchlistFilter ==='tv' ?'bg-[#A0C9CB] text-black' :'text-white/50 hover:text-white'
                         }`}
                       >
                         مسلسلات
@@ -2317,7 +2357,7 @@ export default function App() {
                           {progress > 0 && (
                             <div className="absolute bottom-0 left-0 right-0 z-20 h-1 bg-black/40">
                               <div
-                                className="h-full bg-[#009FA5] transition-all duration-300"
+                                className="h-full bg-[#A0C9CB] transition-all duration-300"
                                 style={{ width: `${progress}%` }}
                               />
 </div>
@@ -2353,9 +2393,12 @@ export default function App() {
 
 
         {activeView ==='search' && (
-          <div className="mx-auto max-w-[1800px] px-4 py-10 sm:px-6 lg:px-8 xl:px-10 lg:py-14 animate-fade-in">
+          <div className="noir-discovery-page mx-auto max-w-[1800px] px-4 py-10 sm:px-6 lg:px-8 xl:px-10 lg:py-14 animate-fade-in">
             {/* Header section on Dedicated Search View */}
-            <div className="mb-10">
+            <div
+              className="noir-discovery-banner mb-10"
+              style={{ backgroundImage: searchResults[0]?.backdrop ? `linear-gradient(90deg, rgba(5,7,11,.96), rgba(5,7,11,.18), rgba(5,7,11,.78)), url(${searchResults[0].backdrop})` : undefined }}
+            >
               <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight leading-tight mb-3">
                 {searchMode ==='tv' ?'دليل المسلسلات' :'دليل الأفلام'}
 </h1>
@@ -2363,6 +2406,18 @@ export default function App() {
                 اكتشف أعمالاً جديدة واختر ما يناسبك.
 </p>
 </div>
+
+            {!isTvApp && !fQuery.trim() && searchResults.length > 0 && (
+              <MovieRow
+                title={searchMode === 'movie' ? 'الأفلام الرائجة' : 'المسلسلات الرائجة'}
+                items={searchResults.slice(0, 14)}
+                portrait
+                onItemClick={handleTitleClick}
+                isSaved={isInWatchlist}
+                onToggleSave={toggleWatchlistItem}
+                compactSaveButton
+              />
+            )}
 
             {/* Direct Input Filter bar — البحث العام في TV موجود بالسايدبار فقط. */}
             {!isTvApp && (
@@ -2411,7 +2466,7 @@ export default function App() {
                     <select
                       value={fSort}
                       onChange={(e) => setFSort(e.target.value)}
-                      className="bg-stone-900 text-white border border-white/5 hover:border-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-[#00BDC2] cursor-pointer"
+                      className="bg-stone-900 text-white border border-white/5 hover:border-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
                     >
                       <option value="trend">الرائج عالمياً</option>
                       <option value="rating">الأعلى تقييماً</option>
@@ -2451,7 +2506,7 @@ export default function App() {
                           data-search-result-index={idx}
                           aria-label={`فتح ${item.title}`}
                           style={{ animationDelay: `${idx * 40}ms` }}
-                          className="group/card card-transition card-cinematic cursor-pointer select-none"
+                          className="noir-discovery-card group/card card-transition card-cinematic cursor-pointer select-none"
                         >
                           <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-[18px] bg-black border border-white/[0.06]">
                             <WatchlistButton
@@ -2499,7 +2554,7 @@ export default function App() {
                         >
                           {isLoadingMore ? (
                             <>
-                              <Loader className="w-4 h-4 text-[#00BDC2] animate-spin" />
+                              <Loader className="w-4 h-4 text-[#A0C9CB] animate-spin" />
                               <span>جاري التحميل...</span>
 </>
                           ) : (
@@ -2569,7 +2624,7 @@ export default function App() {
                           setSelectedGenres(next);
                         }}
                         value={Array.from(selectedGenres)[0] ||""}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00BDC2] cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
                       >
                         <option value="">كل التصنيفات</option>
                         {MOVIE_GENRES.map((g) => (
@@ -2586,7 +2641,7 @@ export default function App() {
                       <select
                         value={selectedYear ||""}
                         onChange={(e) => setSelectedYear(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00BDC2] cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
                       >
                         <option value="">كل السنوات</option>
                         {YEARS.map((y) => (
@@ -2603,7 +2658,7 @@ export default function App() {
                       <select
                         value={selectedRating ||""}
                         onChange={(e) => setSelectedRating(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00BDC2] cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
                       >
                         <option value="">كل التقييمات</option>
                         {RATINGS.map(([val, label]) => (
@@ -2620,7 +2675,7 @@ export default function App() {
                       <select
                         value={selectedCountry ||""}
                         onChange={(e) => setSelectedCountry(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00BDC2] cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
                       >
                         <option value="">كل جهات الإنتاج</option>
                         {COUNTRIES.map(([val, label]) => (
@@ -2637,7 +2692,7 @@ export default function App() {
                       <select
                         value={selectedLanguage ||""}
                         onChange={(e) => setSelectedLanguage(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00BDC2] cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
                       >
                         <option value="">كل اللغات</option>
                         {LANGS.map(([val, label]) => (
@@ -2654,7 +2709,7 @@ export default function App() {
                       <select
                         value={selectedRuntime ||""}
                         onChange={(e) => setSelectedRuntime(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#00BDC2] cursor-pointer"
+                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
                       >
                         <option value="">كل المدد</option>
                         {RUNTIMES.map(([val, label]) => (
@@ -2829,7 +2884,7 @@ export default function App() {
                     {user.name.slice(0, 2)}
 </div>
                 )}
-                <div className={`absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full border border-stone-950 ${user.type ==='google' ?'bg-indigo-500' : user.type === 'email' ? 'bg-[#00BDC2]' : 'bg-emerald-500'}`} />
+                <div className={`absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full border border-stone-950 ${user.type ==='google' ?'bg-indigo-500' : user.type === 'email' ? 'bg-[#A0C9CB]' : 'bg-emerald-500'}`} />
 </div>
 
               {/* User Bio Information */}
@@ -2844,7 +2899,7 @@ export default function App() {
 </span>
                 ) : user.type === 'email' ? (
                   <div className="flex flex-col items-center gap-2 mt-1">
-                    <span className="inline-block bg-[#00BDC2]/10 border border-[#00BDC2]/25 text-[#22CDD0] text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+                    <span className="inline-block bg-[#A0C9CB]/10 border border-[#A0C9CB]/25 text-[#A0C9CB] text-[10px] font-bold px-2.5 py-0.5 rounded-full">
                       حساب نوار سينما
                     </span>
                     {auth.currentUser?.emailVerified === false && (
@@ -2882,7 +2937,7 @@ export default function App() {
                 {user.type ==='guest' ? (
                   <span className="text-amber-500 font-bold block">حساب الزائر محدود ميزات الحفظ والمشاهدة الجماعية. سجل دخولك بجوجل لتفعيلهم!</span>
                 ) : (
-                  <span>مجموع العناوين المضافة لقائمتك الخاصة: <strong className="text-[#22CDD0]">{watchlist.length} عنوان</strong></span>
+                  <span>مجموع العناوين المضافة لقائمتك الخاصة: <strong className="text-[#A0C9CB]">{watchlist.length} عنوان</strong></span>
                 )}
 </div>
 </div>
@@ -2915,7 +2970,7 @@ export default function App() {
                   handleLogout();
                   setIsProfileModalOpen(false);
                 }}
-                className="w-full bg-black/40 border border-white/8 hover:border-[#009FA5]/60 text-[#22CDD0] hover:text-[#55DADD] font-bold py-3 rounded-sm transition-all cursor-pointer text-xs flex items-center justify-center gap-2"
+                className="w-full bg-black/40 border border-white/8 hover:border-[#A0C9CB]/60 text-[#A0C9CB] hover:text-[#55DADD] font-bold py-3 rounded-sm transition-all cursor-pointer text-xs flex items-center justify-center gap-2"
               >
                 <span></span>
                 <span>تسجيل الخروج من الحساب</span>
@@ -2929,7 +2984,7 @@ export default function App() {
       {toastMessage && (
         <div className="fixed bottom-20 md:bottom-6 left-0 right-0 z-[600] flex justify-center pointer-events-none px-4">
           <div className="pointer-events-auto glass-strong text-white text-xs font-semibold rounded-full py-3 px-6 shadow-2xl flex items-center gap-2.5 select-none animate-slide-up [direction:rtl]">
-            <LogoIcon className="w-4 h-4 text-[#00BDC2] shrink-0" />
+            <LogoIcon className="w-4 h-4 text-[#A0C9CB] shrink-0" />
             <span>{toastMessage}</span>
           </div>
         </div>
