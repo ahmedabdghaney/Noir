@@ -54,6 +54,7 @@ import {
   MOVIE_GENRES,
   getPosterUrl,
   getBackdropUrl,
+  resizeTmdbImage,
 } from './lib/tmdb';
 
 // Component Imports
@@ -1817,8 +1818,8 @@ export default function App() {
       type: m.type,
       title: m.title,
       overview: m.overview,
-      poster: m.poster,
-      backdrop: m.backdrop,
+      poster: resizeTmdbImage(m.poster, 'w342'),
+      backdrop: resizeTmdbImage(m.backdrop, 'w780'),
       rating: m.rating,
       year: m.year,
       date: m.year ? `${m.year}-01-01` : '',
@@ -2034,6 +2035,7 @@ export default function App() {
 
   const isTvApp = document.documentElement.classList.contains('noir-tv-app');
   const isPlayerWindow = !isTvApp && new URLSearchParams(window.location.search).get('play') === '1';
+  const browseHeroBg = resizeTmdbImage(searchResults[0]?.backdrop || heroItems[0]?.backdrop || null, 'w1280');
 
   return (
     <div className={`min-h-screen text-white flex flex-row font-sans relative tracking-normal antialiased ${
@@ -2374,7 +2376,7 @@ export default function App() {
             <div className="noir-movies-hero">
               <div
                 className="noir-movies-hero-bg"
-                style={{ backgroundImage: (searchResults[0]?.backdrop || heroItems[0]?.backdrop) ? `url(${searchResults[0]?.backdrop || heroItems[0]?.backdrop})` : undefined }}
+                style={{ backgroundImage: browseHeroBg ? `url(${browseHeroBg})` : undefined }}
               />
               <div className="noir-movies-hero-scrim" />
               <div className="noir-movies-hero-copy">

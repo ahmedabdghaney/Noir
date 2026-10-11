@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Info, Play, Star } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { MovieOrShow } from '../types';
-import { getBackdropUrl } from '../lib/tmdb';
+import { getOriginalBackdropUrl } from '../lib/tmdb';
 import TitleLogo from './TitleLogo';
 
 interface HeroProps {
@@ -33,7 +33,7 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroPr
   }
 
   const activeItem = items[currentIndex];
-  const image = getBackdropUrl((activeItem as any).backdrop_path) || activeItem.backdrop || activeItem.poster || '';
+  const image = getOriginalBackdropUrl((activeItem as any).backdrop_path) || activeItem.backdrop || activeItem.poster || '';
   const genres = Array.isArray(activeItem.genres) ? activeItem.genres.slice(0, 2) : [];
   const goTo = (direction: number) => setCurrentIndex((index) => (index + direction + items.length) % items.length);
 
