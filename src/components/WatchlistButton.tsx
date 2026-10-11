@@ -17,7 +17,7 @@ export default function WatchlistButton({
     return null;
   }
 
-  const label = saved ? 'إزالة من قائمتي' : 'إضافة إلى قائمتي';
+  const label = saved ? 'Remove from Watchlist' : 'Add to Watchlist';
 
   return (
     <button

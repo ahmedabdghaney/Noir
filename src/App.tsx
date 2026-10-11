@@ -89,7 +89,7 @@ const ViewingHistoryPage = lazy(() => import('./components/ViewingHistoryPage'))
 
 function DeferredViewFallback() {
   return (
-    <div className="flex min-h-[55vh] items-center justify-center text-white/55" aria-label="جاري فتح الصفحة">
+    <div className="flex min-h-[55vh] items-center justify-center text-white/55" aria-label="Opening page">
       <Loader className="h-8 w-8 animate-spin text-[#A0C9CB]" />
     </div>
   );
@@ -97,33 +97,33 @@ function DeferredViewFallback() {
 
 // Static Configuration Constants
 const COUNTRIES = [
-  ['US','الولايات المتحدة'],
-  ['GB','المملكة المتحدة'],
-  ['FR','فرنسا'],
-  ['JP','اليابان'],
-  ['KR','كوريا الجنوبية'],
-  ['IN','الهند'],
-  ['EG','الوطن العربي (مصر)'],
-  ['DE','ألمانيا'],
-  ['IT','إيطاليا'],
-  ['ES','إسبانيا'],
+  ['US','United States'],
+  ['GB','United Kingdom'],
+  ['FR','France'],
+  ['JP','Japan'],
+  ['KR','South Korea'],
+  ['IN','India'],
+  ['EG','Egypt'],
+  ['DE','Germany'],
+  ['IT','Italy'],
+  ['ES','Spain'],
 ];
 
 const LANGS = [
-  ['en','الإنجليزية'],
-  ['ar','العربية'],
-  ['fr','الفرنسية'],
-  ['ja','اليابانية'],
-  ['ko','الكورية'],
-  ['es','الإسبانية'],
-  ['hi','الهندية'],
-  ['de','الألمانية'],
+  ['en','English'],
+  ['ar','Arabic'],
+  ['fr','French'],
+  ['ja','Japanese'],
+  ['ko','Korean'],
+  ['es','Spanish'],
+  ['hi','Hindi'],
+  ['de','German'],
 ];
 
 const RATINGS = [
-  ['8','8+ نجوم'],
-  ['7','7+ نجوم'],
-  ['6','6+ نجوم'],
+  ['8','8+ stars'],
+  ['7','7+ stars'],
+  ['6','6+ stars'],
 ];
 
 function resolveArtworkUrl(value: string | null | undefined, kind: 'poster' | 'backdrop') {
@@ -134,9 +134,9 @@ function resolveArtworkUrl(value: string | null | undefined, kind: 'poster' | 'b
 }
 
 const RUNTIMES = [
-  ['lt90','أقل من ساعة ونصف'],
-  ['90_120','ساعة ونصف إلى ساعتين'],
-  ['gt120','أكثر من ساعتين'],
+  ['lt90','Under 90 minutes'],
+  ['90_120','90–120 minutes'],
+  ['gt120','Over 2 hours'],
 ];
 
 const YEARS = (() => {
@@ -145,28 +145,28 @@ const YEARS = (() => {
 })();
 
 const GENRE_ALIASES: Record<string, string> = {
-  action: 'أكشن',
-  adventure: 'مغامرة',
-  animation: 'رسوم متحركة',
-  comedy: 'كوميديا',
-  crime: 'جريمة',
-  documentary: 'وثائقي',
-  drama: 'دراما',
-  family: 'عائلي',
-  fantasy: 'فانتازيا',
-  history: 'تاريخ',
-  horror: 'رعب',
-  music: 'موسيقى',
-  mystery: 'غموض',
-  romance: 'رومانسية',
-  'science fiction': 'خيال علمي',
-  thriller: 'إثارة',
-  war: 'حرب',
-  western: 'غربي',
-  'action & adventure': 'أكشن ومغامرة',
-  'sci-fi & fantasy': 'خيال علمي وفانتازيا',
-  kids: 'أطفال',
-  reality: 'واقع',
+  action: 'Action',
+  adventure: 'Adventure',
+  animation: 'Animation',
+  comedy: 'Comedy',
+  crime: 'Crime',
+  documentary: 'Documentary',
+  drama: 'Drama',
+  family: 'Family',
+  fantasy: 'Fantasy',
+  history: 'History',
+  horror: 'Horror',
+  music: 'Music',
+  mystery: 'Mystery',
+  romance: 'Romance',
+  'science fiction': 'Science Fiction',
+  thriller: 'Thriller',
+  war: 'War',
+  western: 'Western',
+  'action & adventure': 'Action & Adventure',
+  'sci-fi & fantasy': 'Sci-Fi & Fantasy',
+  kids: 'Kids',
+  reality: 'Reality',
 };
 
 function normalizeGenreName(name: string) {

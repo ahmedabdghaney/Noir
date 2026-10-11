@@ -56,10 +56,10 @@ export default function Sidebar({
   }, []);
 
   const items = [
-    { id: 'home', label: 'الرئيسية', icon: Home, active: activeView === 'home', action: goHome },
-    { id: 'movies', label: 'الأفلام', icon: Film, active: activeView === 'search' && searchMode === 'movie', action: () => setSearchMode('movie') },
-    { id: 'tv', label: 'المسلسلات', icon: Tv, active: activeView === 'search' && searchMode === 'tv', action: () => setSearchMode('tv') },
-    { id: 'anime', label: 'أنمي', icon: Sparkles, active: activeView === 'category' && window.location.hash === '#category/animation', action: () => { window.location.hash = '#category/animation'; } },
+    { id: 'home', label: 'Home', icon: Home, active: activeView === 'home', action: goHome },
+    { id: 'movies', label: 'Movies', icon: Film, active: activeView === 'search' && searchMode === 'movie', action: () => setSearchMode('movie') },
+    { id: 'tv', label: 'Shows', icon: Tv, active: activeView === 'search' && searchMode === 'tv', action: () => setSearchMode('tv') },
+    { id: 'anime', label: 'Anime', icon: Sparkles, active: activeView === 'category' && window.location.hash === '#category/animation', action: () => { window.location.hash = '#category/animation'; } },
   ];
 
   const openProfile = () => {
@@ -73,10 +73,10 @@ export default function Sidebar({
   };
 
   return (
-    <header className={`noir-site-header ${scrolled ? 'is-scrolled' : ''}`} dir="rtl">
+    <header className={`noir-site-header ${scrolled ? 'is-scrolled' : ''}`} dir="ltr">
       <div className="noir-site-header-inner">
         <div className={`noir-site-nav-shell ${isSearchOpen ? 'is-searching' : ''}`} ref={menuRef}>
-          <nav className="noir-site-nav" aria-label="التنقل الرئيسي">
+          <nav className="noir-site-nav" aria-label="Main navigation">
             {items.map((item) => {
               const Icon = item.icon;
               return (
@@ -88,23 +88,23 @@ export default function Sidebar({
             })}
           </nav>
           <span className="noir-site-nav-divider" />
-          <button type="button" className="noir-site-search-button" onClick={openSearchOverlay} aria-label="البحث">
+          <button type="button" className="noir-site-search-button" onClick={openSearchOverlay} aria-label="Search">
             <Search className="h-5 w-5" />
           </button>
           {user && <div className="noir-profile-anchor" onMouseEnter={openProfile} onMouseLeave={closeProfileSoon}>
-            <button type="button" onFocus={openProfile} onClick={() => setProfileOpen((open) => !open)} aria-label="فتح قائمة الملف الشخصي" aria-expanded={profileOpen}>
+            <button type="button" onFocus={openProfile} onClick={() => setProfileOpen((open) => !open)} aria-label="Open profile menu" aria-expanded={profileOpen}>
               {user.photoURL ? <img src={user.photoURL} alt={user.name} referrerPolicy="no-referrer" /> : profileAvatar ? <span className="noir-nav-avatar" aria-hidden="true">{profileAvatar}</span> : <UserRound className="h-5 w-5" />}
             </button>
           {profileOpen && (
             <div className="noir-desktop-profile-menu" role="menu" onMouseEnter={openProfile} onMouseLeave={closeProfileSoon}>
               <button type="button" onClick={() => { onViewHistory(); setProfileOpen(false); }} role="menuitem">
-                <Clock3 /><span>سجل المشاهدة</span>
+                <Clock3 /><span>History</span>
               </button>
               <button type="button" onClick={() => { onViewWatchlist(); setProfileOpen(false); }} role="menuitem">
-                <Bookmark /><span>قائمتي</span>
+                <Bookmark /><span>Watchlist</span>
               </button>
               <button type="button" onClick={() => { onOpenProfile(); setProfileOpen(false); }} role="menuitem">
-                <UsersRound /><span>مشاهدة جماعية</span>
+                <UsersRound /><span>Watch Party</span>
               </button>
               <div className="noir-profile-menu-divider" />
               <button
@@ -117,18 +117,18 @@ export default function Sidebar({
                   localStorage.setItem('noir_show_ads', String(next));
                 }}
               >
-                <Megaphone /><span>عرض الإعلانات</span><i className={showAds ? 'is-on' : ''} />
+                <Megaphone /><span>Show ads</span><i className={showAds ? 'is-on' : ''} />
               </button>
               <div className="noir-profile-menu-footer">
                 {user?.type === 'guest' ? (
                   <>
-                    <button type="button" onClick={() => { onLogin(); setProfileOpen(false); }}>تسجيل الدخول</button>
-                    <button type="button" onClick={() => { onSignUp(); setProfileOpen(false); }}>حساب جديد</button>
+                    <button type="button" onClick={() => { onLogin(); setProfileOpen(false); }}>Login</button>
+                    <button type="button" onClick={() => { onSignUp(); setProfileOpen(false); }}>Sign up</button>
                   </>
                 ) : (
                   <>
-                    <button type="button" onClick={() => { onOpenProfile(); setProfileOpen(false); }}>الملف الشخصي</button>
-                    <button type="button" onClick={() => { onLogout(); setProfileOpen(false); }}><LogOut /> خروج</button>
+                    <button type="button" onClick={() => { onOpenProfile(); setProfileOpen(false); }}>Profile</button>
+                    <button type="button" onClick={() => { onLogout(); setProfileOpen(false); }}><LogOut /> Logout</button>
                   </>
                 )}
               </div>

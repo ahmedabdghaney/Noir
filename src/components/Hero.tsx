@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Info, Play, Plus, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Info, Play, Star } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { MovieOrShow } from '../types';
 import { getBackdropUrl } from '../lib/tmdb';
@@ -14,7 +14,7 @@ interface HeroProps {
   onToggleSave?: (item: MovieOrShow) => void;
 }
 
-export default function Hero({ trendingItems, onPlayClick, onInfoClick, isSaved, onToggleSave }: HeroProps) {
+export default function Hero({ trendingItems, onPlayClick, onInfoClick }: HeroProps) {
   const items = trendingItems.slice(0, 6);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -33,13 +33,12 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick, isSaved,
   }
 
   const activeItem = items[currentIndex];
-  const saved = isSaved?.(activeItem) ?? false;
   const image = getBackdropUrl((activeItem as any).backdrop_path) || activeItem.backdrop || activeItem.poster || '';
   const genres = Array.isArray(activeItem.genres) ? activeItem.genres.slice(0, 2) : [];
   const goTo = (direction: number) => setCurrentIndex((index) => (index + direction + items.length) % items.length);
 
   return (
-    <section className="noir-cinema-hero" aria-label="العرض المميز">
+    <section className="noir-cinema-hero" aria-label="Featured title">
       <AnimatePresence mode="wait">
         <motion.div
           key={`${activeItem.type}-${activeItem.id}`}
@@ -59,7 +58,7 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick, isSaved,
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="noir-cinema-kicker">عرض مختار لك</div>
+            <div className="noir-cinema-kicker">Featured for you</div>
             <h1 className="noir-cinema-title-lockup">
               <TitleLogo
                 type={activeItem.type}
@@ -72,38 +71,33 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick, isSaved,
             <div className="noir-cinema-meta">
               {activeItem.rating > 0 && <span><Star className="h-3.5 w-3.5 fill-[#A0C9CB] text-[#A0C9CB]" />{activeItem.rating.toFixed(1)}</span>}
               {activeItem.year && <span>{activeItem.year}</span>}
-              <span>{activeItem.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
+              <span>{activeItem.type === 'movie' ? 'Movie' : 'TV Show'}</span>
               {genres.map((genre) => <span key={genre}>{genre}</span>)}
             </div>
             {activeItem.overview && <p>{activeItem.overview}</p>}
             <div className="noir-cinema-actions">
               <button type="button" className="noir-cinema-play" onClick={() => onPlayClick(activeItem)}>
                 <Play className="h-4 w-4 fill-current" />
-                <span>تشغيل</span>
+                <span>Play</span>
               </button>
               <button type="button" className="noir-cinema-info" onClick={() => onInfoClick(activeItem)}>
                 <Info className="h-4 w-4" />
-                <span>معلومات أكثر</span>
+                <span>More info</span>
               </button>
-              {onToggleSave && (
-                <button type="button" className={`noir-cinema-save ${saved ? 'is-saved' : ''}`} onClick={() => onToggleSave(activeItem)} aria-label={saved ? 'إزالة من قائمتي' : 'إضافة إلى قائمتي'}>
-                  {saved ? <Check className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
-                </button>
-              )}
             </div>
           </motion.div>
 
           <div className="noir-cinema-badges">
-            <span>{activeItem.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
-            {activeItem.rating >= 8 && <span>الأكثر مشاهدة</span>}
+            <span>{activeItem.type === 'movie' ? 'Movie' : 'TV Show'}</span>
+            {activeItem.rating >= 8 && <span>Most watched</span>}
           </div>
         </motion.div>
       </AnimatePresence>
 
       {items.length > 1 && (
         <>
-          <button type="button" className="noir-cinema-arrow is-right" onClick={() => goTo(-1)} aria-label="السابق"><ChevronRight /></button>
-          <button type="button" className="noir-cinema-arrow is-left" onClick={() => goTo(1)} aria-label="التالي"><ChevronLeft /></button>
+          <button type="button" className="noir-cinema-arrow is-right" onClick={() => goTo(-1)} aria-label="Previous"><ChevronRight /></button>
+          <button type="button" className="noir-cinema-arrow is-left" onClick={() => goTo(1)} aria-label="Next"><ChevronLeft /></button>
           <div className="noir-cinema-dots">
             {items.map((item, index) => (
               <button
@@ -111,7 +105,7 @@ export default function Hero({ trendingItems, onPlayClick, onInfoClick, isSaved,
                 key={`${item.type}-${item.id}`}
                 className={index === currentIndex ? 'is-active' : ''}
                 onClick={() => setCurrentIndex(index)}
-                aria-label={`العرض ${index + 1}`}
+                aria-label={`Slide ${index + 1}`}
               />
             ))}
           </div>

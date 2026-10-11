@@ -201,20 +201,20 @@ export default function SearchOverlay({
           : 'z-[190] pt-16 lg:z-[230] lg:pt-24 px-4 sm:px-6 lg:px-12'
       }`}
     >
-      <button type="button" className="noir-search-backdrop" onClick={onClose} aria-label="إغلاق البحث" />
+      <button type="button" className="noir-search-backdrop" onClick={onClose} aria-label="Close search" />
       <div className="noir-search-panel w-full max-w-7xl mx-auto">
         <div className={`flex items-center justify-between gap-4 ${isTvApp ? 'mb-7' : 'mb-4'}`}>
           <div>
-            <h1 id="search-overlay-title" className={`${isTvApp ? 'text-4xl' : 'text-xl sm:text-2xl'} font-bold text-white`}>البحث</h1>
-            <p className={`${isTvApp ? 'text-lg' : 'text-sm'} text-stone-400 mt-1`}>ابحث عن فيلم أو مسلسل، أو تصفّح حسب التصنيف.</p>
+            <h1 id="search-overlay-title" className={`${isTvApp ? 'text-4xl' : 'text-xl sm:text-2xl'} font-bold text-white`}>Search</h1>
+            <p className={`${isTvApp ? 'text-lg' : 'text-sm'} text-stone-400 mt-1`}>Search for a movie, show, or browse by genre.</p>
           </div>
           {!isTvApp && (
             <button
               type="button"
               onClick={onClose}
               className="noir-icon-button hidden shrink-0 lg:inline-flex"
-              aria-label="إغلاق البحث"
-              title="إغلاق البحث"
+              aria-label="Close search"
+              title="Close search"
             >
               <X className="w-5 h-5" />
             </button>
@@ -256,14 +256,14 @@ export default function SearchOverlay({
               }
             }}
             placeholder="Search movies, shows, and anime"
-            aria-label="ابحث عن فيلم أو مسلسل"
+            aria-label="Search movies and shows"
             enterKeyHint="search"
             className={`flex-1 bg-transparent border-0 outline-none text-white font-medium placeholder-gray-500 font-sans ${isTvApp ? 'text-2xl text-right' : 'text-sm text-left'}`}
             autoComplete="off"
           />
           {isLoading && <Loader className="w-4 h-4 text-[#A0C9CB] animate-spin shrink-0" />}
           {!isTvApp && (
-            <button type="button" onClick={onClose} className="noir-search-close-button" aria-label="إغلاق البحث">
+            <button type="button" onClick={onClose} className="noir-search-close-button" aria-label="Close search">
               <X className="w-4 h-4" />
             </button>
           )}
@@ -272,13 +272,13 @@ export default function SearchOverlay({
         {!isTvApp && (
           <div className="noir-search-quick-panel">
             <div className="noir-search-tabs">
-              {([['all', 'الكل'], ['movie', 'أفلام'], ['tv', 'مسلسلات'], ['anime', 'أنمي']] as const).map(([value, label]) => (
+              {([['all', 'All'], ['movie', 'Movies'], ['tv', 'Shows'], ['anime', 'Anime']] as const).map(([value, label]) => (
                 <button key={value} type="button" className={filter === value ? 'is-active' : ''} onClick={() => setFilter(value)}>{label}</button>
               ))}
             </div>
             {!query.trim() && recent.length > 0 && (
               <div className="noir-recent-searches">
-                <div><strong>الأخيرة</strong><button type="button" onClick={() => { setRecent([]); localStorage.removeItem('noir_recent_searches'); }}>مسح</button></div>
+                <div><strong>RECENT</strong><button type="button" onClick={() => { setRecent([]); localStorage.removeItem('noir_recent_searches'); }}>Clear</button></div>
                 {recent.map((entry) => <button type="button" key={entry} onClick={() => setQuery(entry)}>{entry}</button>)}
               </div>
             )}
@@ -290,7 +290,7 @@ export default function SearchOverlay({
           {/* قسم التصفح بالتصنيفات — يظهر لما ماكو بحث */}
           {!query.trim() && !isTvApp && (
             <div className="mb-10">
-              <h2 className="font-display text-xl sm:text-2xl font-bold text-white mb-4 text-right">تصفّح حسب التصنيف</h2>
+              <h2 className="font-display text-xl sm:text-2xl font-bold text-white mb-4 text-right">Browse by genre</h2>
               <div className={`grid gap-3 ${isTvApp ? 'grid-cols-5' : 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3'}`} dir="rtl">
                 {CATEGORIES.map((cat) => (
                   <button
@@ -326,7 +326,7 @@ export default function SearchOverlay({
             visibleResults.length > 0 ? (
               <div className={isTvApp ? 'grid grid-cols-3 gap-4' : 'space-y-0.5'}>
                 <div className={`font-bold text-gray-500 px-5 py-1.5 text-right select-none uppercase ${isTvApp ? 'col-span-3 text-sm' : 'text-[10px]'}`}>
-                   نتائج البحث ({visibleResults.length})
+                   Search results ({visibleResults.length})
                 </div>
                 {visibleResults.slice(0, isTvApp ? 18 : 8).map((item) => (
                   <div
@@ -348,7 +348,7 @@ export default function SearchOverlay({
                     data-tv-card
                     data-tv-search-result
                     tabIndex={0}
-                    aria-label={`فتح ${item.title}`}
+                    aria-label={`Open ${item.title}`}
                     className={`flex items-center gap-4 rounded-xl hover:bg-white/5 cursor-pointer transition-colors text-right ${
                       isTvApp ? 'border border-white/8 bg-white/[0.03] p-4' : 'px-4 sm:px-5 py-3'
                     }`}
@@ -368,7 +368,7 @@ export default function SearchOverlay({
                       <p className="text-gray-400 text-xs mt-1 font-medium flex items-center gap-1.5">
                         <span>{item.year || '—'}</span>
                         <span className="w-1 h-1 bg-stone-700 rounded-full" />
-                        <span>{item.type === 'movie' ? 'فيلم' : 'مسلسل'}</span>
+                        <span>{item.type === 'movie' ? 'Movie' : 'TV Show'}</span>
                         {item.genres.length > 0 && (
                           <>
                             <span className="w-1 h-1 bg-stone-700 rounded-full" />
@@ -399,7 +399,7 @@ export default function SearchOverlay({
               </div>
             ) : (
               <div className="py-12 text-center text-gray-500 text-xs">
-                لا توجد نتائج مطابقة لـ "{query}"، تأكد من صحة الكلمة.
+                No results found for “{query}”. Check the spelling and try again.
               </div>
             )
           ) : (

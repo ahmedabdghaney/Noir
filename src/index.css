@@ -2328,7 +2328,12 @@ html:not(.noir-tv-app) .card-cinematic:hover > div + div > p:first-child { color
 /* Final desktop alignment and Movy navigation behavior. */
 html:not(.noir-tv-app) {
   --noir-page-gutter: clamp(18px, 4.5vw, 74px);
+  direction: ltr;
 }
+
+html:not(.noir-tv-app) body,
+html:not(.noir-tv-app) body [dir="rtl"] { direction: ltr; }
+html:not(.noir-tv-app) body .text-right { text-align: left !important; }
 
 @media (min-width: 1024px) {
   html:not(.noir-tv-app) .noir-site-header {
@@ -2512,8 +2517,64 @@ html:not(.noir-tv-app) .noir-platforms-row > .relative {
 }
 
 html:not(.noir-tv-app) .noir-catalog-heading::after {
-  right: var(--noir-page-gutter);
+  right: auto;
+  left: var(--noir-page-gutter);
 }
+
+html:not(.noir-tv-app) .noir-catalog-heading > div { padding-left: 16px; }
+html:not(.noir-tv-app) .noir-catalog-title { text-align: left; }
+
+html:not(.noir-tv-app) .noir-platforms-row h2 {
+  padding-right: 0;
+  padding-left: 14px;
+  text-align: left;
+}
+
+html:not(.noir-tv-app) .noir-platforms-row h2::before {
+  right: auto;
+  left: 0;
+}
+
+html:not(.noir-tv-app) .noir-platforms-row h2 + p {
+  margin: 4px 0 0 14px;
+  text-align: left;
+}
+
+html:not(.noir-tv-app) .noir-cinema-hero-content {
+  right: auto;
+  left: clamp(24px, 7vw, 112px);
+  text-align: left;
+}
+
+html:not(.noir-tv-app) .noir-cinema-title-lockup,
+html:not(.noir-tv-app) .noir-cinema-title-logo {
+  justify-content: flex-start;
+  object-position: left bottom;
+}
+
+html:not(.noir-tv-app) .noir-cinema-meta span + span::before {
+  margin-right: 8px;
+  margin-left: 0;
+}
+
+html:not(.noir-tv-app) .noir-cinema-actions { gap: 11px; }
+html:not(.noir-tv-app) .noir-cinema-play,
+html:not(.noir-tv-app) .noir-cinema-info {
+  height: 44px;
+  padding: 0 22px;
+  border-radius: 999px;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 500;
+}
+html:not(.noir-tv-app) .noir-cinema-play { min-width: 120px; }
+html:not(.noir-tv-app) .noir-cinema-info {
+  min-width: 150px;
+  border-color: rgba(255, 255, 255, .14);
+  background: rgba(34, 34, 36, .82);
+}
+html:not(.noir-tv-app) .noir-cinema-play svg,
+html:not(.noir-tv-app) .noir-cinema-info svg { width: 18px; height: 18px; }
 
 html:not(.noir-tv-app) .noir-discovery-page {
   width: 100%;

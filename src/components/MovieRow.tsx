@@ -163,7 +163,7 @@ export default function MovieRow({
           <button
             onClick={() => handleScroll('right')}
             className="absolute right-8 top-[41%] z-45 w-9 h-9 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md text-white/90 hover:text-white items-center justify-center cursor-pointer pointer-events-auto transition-all opacity-0 group-hover/row:opacity-100 hidden md:flex"
-            aria-label="قناة سابقة"
+            aria-label="Previous titles"
           >
             <ChevronRight className="w-5 h-5" />
           </button>
@@ -173,7 +173,7 @@ export default function MovieRow({
           <button
             onClick={() => handleScroll('left')}
             className="absolute left-8 top-[41%] z-45 w-9 h-9 rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-md text-white/90 hover:text-white items-center justify-center cursor-pointer pointer-events-auto transition-all opacity-0 group-hover/row:opacity-100 hidden md:flex"
-            aria-label="قناة لاحقة"
+            aria-label="Next titles"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -206,7 +206,7 @@ export default function MovieRow({
                 role="button"
                 tabIndex={0}
                 data-tv-card
-                aria-label={`فتح ${item.title}`}
+                aria-label={`Open ${item.title}`}
                 style={{ animationDelay: `${idx * 45}ms` }}
                 className={`noir-catalog-card group/card card-pop relative flex-none cursor-pointer select-none ${portrait ? 'noir-portrait-card' : ''} ${ranked ? (idx === 0 ? 'noir-top10-featured' : 'noir-top10-poster') : ''}`}
               >
@@ -227,7 +227,7 @@ export default function MovieRow({
                         onRemove(item);
                       }}
                       className="absolute top-2 left-2 z-10 w-8 h-8 rounded-full glass flex items-center justify-center text-white/80 hover:text-white opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-all hover:bg-white/20 cursor-pointer"
-                      title="إزالة من قائمتي"
+                      title="Remove from Watchlist"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -262,7 +262,7 @@ export default function MovieRow({
                         />
                       </h3>
                       <p>{item.overview}</p>
-                      <button type="button" onClick={(event) => { event.stopPropagation(); onItemClick(item); }}><Play /> شاهد الآن</button>
+                      <button type="button" onClick={(event) => { event.stopPropagation(); onItemClick(item); }}><Play /> Watch now</button>
                     </div>
                   )}
                   {/* Watch progression indicator */}
@@ -279,7 +279,7 @@ export default function MovieRow({
                 <div className={`noir-catalog-meta text-right ${ranked && idx === 0 ? 'is-featured' : ''}`}>
                   <p className="truncate text-sm font-semibold text-white/92">{item.title}</p>
                   <p className="mt-1 text-[11px] font-medium text-white/38">
-                    {item.rating > 0 && <><Star className="inline h-3 w-3 fill-current text-[var(--noir-accent)]" /> {item.rating.toFixed(1)} · </>}{item.year || '—'} · {item.type === 'movie' ? 'فيلم' : 'مسلسل'}
+                    {item.rating > 0 && <><Star className="inline h-3 w-3 fill-current text-[var(--noir-accent)]" /> {item.rating.toFixed(1)} · </>}{item.year || '—'} · {item.type === 'movie' ? 'Movie' : 'TV Show'}
                   </p>
                 </div>
 

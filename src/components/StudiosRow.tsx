@@ -29,7 +29,7 @@ const PLATFORM_LOGOS: Record<string, string> = {
 const PLATFORM_ORDER = ['netflix', 'amazon', 'hbo', 'apple', 'paramount', 'hulu'];
 
 export default function StudiosRow({
-  title = 'فقط على',
+  title = 'Only on',
   onSelectTitle,
   isSaved,
   onToggleSave,
@@ -104,17 +104,17 @@ export default function StudiosRow({
           <h2 id="studios-row-title" className="text-lg md:text-xl font-bold text-white">
             {title} <span>{activeStudio.title}</span>
           </h2>
-          <p>أشهر العناوين على منصة {activeStudio.title}</p>
+          <p>Popular titles on this streaming service</p>
         </div>
 
         <div className="relative px-4 sm:px-6 lg:px-12">
           {showRightArrow && (
-            <button onClick={() => handleScroll('right')} className="hidden md:flex absolute right-12 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/row:opacity-100 transition-all cursor-pointer" aria-label="السابق">
+            <button onClick={() => handleScroll('right')} className="hidden md:flex absolute right-12 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/row:opacity-100 transition-all cursor-pointer" aria-label="Previous">
               <ChevronRight className="w-5 h-5" />
             </button>
           )}
           {showLeftArrow && (
-            <button onClick={() => handleScroll('left')} className="hidden md:flex absolute left-12 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/row:opacity-100 transition-all cursor-pointer" aria-label="التالي">
+            <button onClick={() => handleScroll('left')} className="hidden md:flex absolute left-12 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/row:opacity-100 transition-all cursor-pointer" aria-label="Next">
               <ChevronLeft className="w-5 h-5" />
             </button>
           )}
@@ -125,7 +125,7 @@ export default function StudiosRow({
                 key={studio.key}
                 type="button"
                 onClick={() => setActiveKey(studio.key)}
-                aria-label={`عرض أعمال ${studio.title}`}
+                aria-label={`Show ${studio.title} titles`}
                 aria-pressed={studio.key === activeKey}
                 className={`noir-platform-card group/st card-cinematic flex-none cursor-pointer ${studio.key === activeKey ? 'is-active' : ''}`}
               >
@@ -145,7 +145,7 @@ export default function StudiosRow({
 
       <div key={activeStudio.key} className="noir-platform-results noir-section-swipe-in">
         <MovieRow
-          title={`أعمال ${activeStudio.title}`}
+          title={`${activeStudio.title} titles`}
           items={platformItems}
           onItemClick={onSelectTitle}
           isSaved={isSaved}
