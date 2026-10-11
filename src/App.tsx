@@ -4,7 +4,7 @@
  */
 
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Search, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, X, ArrowLeft, Home } from 'lucide-react';
+import { Search, Star, Loader, Filter, Trash2, ArrowUpDown, ChevronDown, CheckCircle, Eye, EyeOff, X, ArrowLeft, Home } from 'lucide-react';
 import LogoIcon from './components/LogoIcon';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
@@ -2376,338 +2376,187 @@ export default function App() {
 
 
         {activeView ==='search' && (
-          <div key={searchMode} className="noir-discovery-page noir-section-swipe-in mx-auto max-w-[1800px] px-4 py-10 sm:px-6 lg:px-8 xl:px-10 lg:py-14">
-            {/* Header section on Dedicated Search View */}
-            <div
-              className="noir-discovery-banner mb-10"
-              style={{ backgroundImage: searchResults[0]?.backdrop ? `linear-gradient(90deg, rgba(5,7,11,.96), rgba(5,7,11,.18), rgba(5,7,11,.78)), url(${searchResults[0].backdrop})` : undefined }}
-            >
-              <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight leading-tight mb-3">
-                {searchMode ==='tv' ?'Browse Shows' :'Browse Movies'}
-</h1>
-              <p className="text-white/45 text-sm">
-                Discover new titles and pick what suits you.
-</p>
-</div>
-
-            {!isTvApp && !fQuery.trim() && searchResults.length > 0 && (
-              <MovieRow
-                title={searchMode === 'movie' ? 'Trending Movies' : 'Trending Shows'}
-                items={searchResults.slice(0, 14)}
-                portrait
-                onItemClick={handleTitleClick}
-                isSaved={isInWatchlist}
-                onToggleSave={toggleWatchlistItem}
-                compactSaveButton
-              />
-            )}
-
-            {/* Direct input filter bar — global search on TV lives in the sidebar only. */}
-            {!isTvApp && (
-            <div className="flex gap-3 mb-10 relative z-10 select-none">
-              <div className="flex-1 flex items-center gap-3 noir-surface focus-within:border-white/20 px-4 min-h-14 transition-all">
-                <Search className="w-5 h-5 text-gray-500 shrink-0" />
-                <input
-                  type="text"
-                  value={fQuery}
-                  onChange={(e) => setFQuery(e.target.value)}
-                  placeholder="Search by title, keywords..."
-                  className="flex-1 bg-transparent border-0 outline-none text-white text-sm md:text-base font-medium placeholder-gray-500 text-left"
-                />
-</div>
-
-              {/* Mobile Filter Toggler Button */}
-              <button
-                onClick={() => setIsFilterSidebarOpen(!isFilterSidebarOpen)}
-                className={`lg:hidden flex items-center justify-center gap-2 px-4 rounded-2xl border text-sm font-semibold cursor-pointer transition-colors ${
-                  isFilterSidebarOpen
-                    ?'bg-stone-800 text-white border-stone-700'
-                    :'bg-stone-900 text-gray-400 border-white/5'
-                }`}
-              >
-                <Filter className="w-4 h-4" />
-                <span>Filters</span>
-</button>
-</div>
-            )}
-
-            {/* Core Search View Layout Box (Grid map) */}
-            <div className={`grid grid-cols-1 gap-8 ${isTvApp ? '' : 'lg:grid-cols-[1fr_260px]'}`}>
-
-              {/* Left Side: Dynamic Grid items */}
-              <div className="order-2 lg:order-1 min-w-0">
-
-                {/* Search Sorting Metrics controller */}
-                <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
-                  <span className="text-xs text-stone-400 font-medium">
-                    {searchResults.length > 0 ?`Found ${searchResults.length} titles` :'No matching results'}
-</span>
-
-                  {!isTvApp && (
-                  <div className="flex items-center gap-1.5 min-w-[140px]">
-                    <ArrowUpDown className="w-4 h-4 text-stone-500" />
-                    <select
-                      value={fSort}
-                      onChange={(e) => setFSort(e.target.value)}
-                      className="bg-stone-900 text-white border border-white/5 hover:border-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
-                    >
-                      <option value="trend">Trending worldwide</option>
-                      <option value="rating">Top rated</option>
-                      <option value="year">Release date</option>
-                      <option value="az">Alphabetical (A-Z)</option>
-</select>
-</div>
-                  )}
-</div>
-
-                {isSearching ? (
-                  // Grid Skeletons loading fallback
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2">
-                    {Array.from({ length: 15 }).map((_, i) => (
-                      <div key={i} className="aspect-video w-full rounded-sm bg-[#121212] border border-white/5 overflow-hidden animate-pulse">
-                        <div className="w-full h-full bg-stone-900 shimmer-bg" />
-</div>
-                    ))}
-</div>
-                ) : searchResults.length > 0 ? (
-                  <div className="space-y-8">
-                    {/* Rendered lists grid layout */}
-                    <div className="grid grid-cols-1 gap-x-4 gap-y-9 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-                      {searchResults.map((item, idx) => (
-                        <div
-                          key={`${item.type}-${item.id}`}
-                          onClick={() => handleTitleClick(item)}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter' || event.key === ' ') {
-                              event.preventDefault();
-                              handleTitleClick(item);
-                            }
-                          }}
-                          role="button"
-                          tabIndex={0}
-                          data-tv-card={isTvApp ? '' : undefined}
-                          data-search-result-index={idx}
-                          aria-label={`Open ${item.title}`}
-                          style={{ animationDelay: `${idx * 40}ms` }}
-                          className="noir-discovery-card group/card card-transition card-cinematic cursor-pointer select-none"
-                        >
-                          <div data-tv-card-artwork className="relative aspect-video overflow-hidden rounded-[18px] bg-black border border-white/[0.06]">
-                            <WatchlistButton
-                              saved={isInWatchlist(item)}
-                              onToggle={() => toggleWatchlistItem(item)}
-                              className="absolute top-2 right-2 z-20"
-                            />
-                            {item.backdrop || item.poster ? (
-                              <img
-                                src={item.backdrop || item.poster || undefined}
-                                alt={item.title}
-                                loading="lazy"
-                                referrerPolicy="no-referrer"
-                                className="w-full h-full object-cover select-none"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex flex-col items-center justify-center p-3 text-stone-600 bg-stone-950">
-                                <span className="text-[10px] sm:text-xs font-semibold text-center leading-normal break-all line-clamp-2">
-                                  {item.title}
-                                </span>
-                              </div>
-                            )}
-
-</div>
-
-                          <div className="px-1 pt-3 text-left">
-                            <p className="text-white text-sm font-bold line-clamp-1">{item.title}</p>
-                            <p className="mt-1 text-[11px] font-medium text-white/40">
-                              {item.type === 'movie' ? 'Movie' : 'TV Show'} · {item.year || '—'}
-                            </p>
-                          </div>
-
-</div>
+          <div key={searchMode} className="noir-discovery-page noir-section-swipe-in">
+            {/* Movy-style hero with a drifting poster collage */}
+            <div className="noir-movies-hero">
+              <div className="noir-movies-hero-collage" aria-hidden="true">
+                {[0, 1, 2].map((row) => {
+                  const posters = (searchResults.map((r) => r.poster).filter(Boolean) as string[]).slice(0, 14);
+                  const set = posters.length ? posters : (heroItems.map((h) => h.poster).filter(Boolean) as string[]).slice(0, 14);
+                  const rotated = set.slice(row * 4).concat(set.slice(0, row * 4));
+                  const loop = [...rotated, ...rotated];
+                  return (
+                    <div className="noir-movies-hero-row" key={row}>
+                      {loop.map((src, i) => (
+                        <img key={i} src={src} alt="" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
                       ))}
-</div>
-
-                    {/* Paginated trigger load more items button */}
-                    {searchPage < searchTotalPages && (
-                      <div className="flex justify-center pt-4">
-                        <button
-                          onClick={() => triggerSearchQuery(true)}
-                          disabled={isLoadingMore}
-                          data-tv-load-more={isTvApp ? '' : undefined}
-                          className="flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-gray-300 hover:text-white border border-white/5 hover:border-white/10 px-8 py-3 rounded-full text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
-                        >
-                          {isLoadingMore ? (
-                            <>
-                              <Loader className="w-4 h-4 text-[#A0C9CB] animate-spin" />
-                              <span>Loading...</span>
-</>
-                          ) : (
-                            <span>Show more titles</span>
-                          )}
-</button>
-</div>
-                    )}
-</div>
-                ) : (
-                  <div className="py-24 text-center flex flex-col items-center justify-center gap-4 border border-white/5 bg-stone-900/10 rounded-3xl">
-                    <span className="text-4xl text-stone-600">∅</span>
-                    <h3 className="text-sm font-bold text-white">No matching titles found</h3>
-                    <p className="text-xs text-gray-500 max-w-xs">
-                      Try changing the selected filters, or shorten your search query for better results.
-</p>
-</div>
-                )}
-</div>
-
-              {/* Right Side / Sidebar: Desktop Filter lists & Mobile panel */}
-              {!isTvApp && (
-              <div
-                className={`order-1 lg:order-2 ${
-                  isFilterSidebarOpen
-                    ?'fixed inset-0 z-40 bg-black/95 pt-20 px-6 overflow-y-auto block'
-                    :'hidden lg:block'
-                }`}
-              >
-                <div className="space-y-6 text-left select-none">
-                  {/* Close button for mobile panel overlay */}
-                  <div className="flex justify-between items-center mb-2 lg:hidden">
-                    <h3 className="text-lg font-extrabold text-white">Filter options</h3>
-                    <button
-                      onClick={() => setIsFilterSidebarOpen(false)}
-                      className="px-4 py-2 bg-stone-800 hover:bg-stone-700 text-white text-xs font-bold rounded-xl cursor-pointer"
-                    >
-                      Close
-</button>
-</div>
-
-                  {/* Header widget */}
-                  <div className="hidden lg:flex justify-between items-baseline border-b border-white/5 pb-3">
-                    <h3 className="text-sm font-bold text-gray-300 flex items-center gap-1.5">
-                      <Filter className="w-4 h-4 text-gray-400" />
-                      <span>Filters</span>
-</h3>
-                    <button
-                      onClick={handleResetFilters}
-                      className="bg-transparent text-gray-400 hover:text-white transition-colors cursor-pointer text-xs font-semibold flex items-center gap-1"
-                      title="Clear all filters"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-stone-500" />
-                      <span>Clear all</span>
-</button>
-</div>
-
-                  {/* Select Dropdown: Genres */}
-                  {MOVIE_GENRES.length > 0 && !fQuery.trim() && (
-                    <div className="space-y-2">
-                      <label className="text-xs text-gray-400 font-bold">Genre</label>
-                      <select
-                        onChange={(e) => {
-                          const id = Number(e.target.value);
-                          const next = new Set<number>();
-                          if (id > 0) next.add(id);
-                          setSelectedGenres(next);
-                        }}
-                        value={Array.from(selectedGenres)[0] ||""}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
-                      >
-                        <option value="">All genres</option>
-                        {MOVIE_GENRES.map((g) => (
-                          <option key={g.id} value={g.id}>{g.name}</option>
-                        ))}
-</select>
-</div>
-                  )}
-
-                  {/* Select Dropdown: Release Year */}
-                  {!fQuery.trim() && (
-                    <div className="space-y-2">
-                      <label className="text-xs text-gray-400 font-bold">Release year</label>
-                      <select
-                        value={selectedYear ||""}
-                        onChange={(e) => setSelectedYear(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
-                      >
-                        <option value="">All years</option>
-                        {YEARS.map((y) => (
-                          <option key={y} value={y}>{y}</option>
-                        ))}
-</select>
-</div>
-                  )}
-
-                  {/* Select Dropdown: Rating */}
-                  {!fQuery.trim() && (
-                    <div className="space-y-2">
-                      <label className="text-xs text-gray-400 font-bold">Minimum rating</label>
-                      <select
-                        value={selectedRating ||""}
-                        onChange={(e) => setSelectedRating(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
-                      >
-                        <option value="">All ratings</option>
-                        {RATINGS.map(([val, label]) => (
-                          <option key={val} value={val}>{label}</option>
-                        ))}
-</select>
-</div>
-                  )}
-
-                  {/* Select Dropdown: Country of origin */}
-                  {!fQuery.trim() && (
-                    <div className="space-y-2">
-                      <label className="text-xs text-gray-400 font-bold">Studio</label>
-                      <select
-                        value={selectedCountry ||""}
-                        onChange={(e) => setSelectedCountry(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
-                      >
-                        <option value="">All studios</option>
-                        {COUNTRIES.map(([val, label]) => (
-                          <option key={val} value={val}>{label}</option>
-                        ))}
-</select>
-</div>
-                  )}
-
-                  {/* Select Dropdown: Language */}
-                  {!fQuery.trim() && (
-                    <div className="space-y-2">
-                      <label className="text-xs text-gray-400 font-bold">Audio language</label>
-                      <select
-                        value={selectedLanguage ||""}
-                        onChange={(e) => setSelectedLanguage(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
-                      >
-                        <option value="">All languages</option>
-                        {LANGS.map(([val, label]) => (
-                          <option key={val} value={val}>{label}</option>
-                        ))}
-</select>
-</div>
-                  )}
-
-                  {/* Select Dropdown: Duration */}
-                  {!fQuery.trim() && (
-                    <div className="space-y-2.5 pb-6">
-                      <label className="text-xs text-gray-400 font-bold">Runtime</label>
-                      <select
-                        value={selectedRuntime ||""}
-                        onChange={(e) => setSelectedRuntime(e.target.value || null)}
-                        className="w-full bg-stone-900 text-white rounded-xl py-2.5 px-3 text-xs font-semibold border border-white/5 focus:outline-none focus:border-[#A0C9CB] cursor-pointer"
-                      >
-                        <option value="">All runtimes</option>
-                        {RUNTIMES.map(([val, label]) => (
-                          <option key={val} value={val}>{label}</option>
-                        ))}
-</select>
-</div>
-                  )}
-
+                    </div>
+                  );
+                })}
               </div>
+              <div className="noir-movies-hero-scrim" />
+              <div className="noir-movies-hero-copy">
+                <h1>{searchMode === 'tv' ? 'Shows' : 'Movies'}</h1>
+                <p>{searchMode === 'tv' ? 'Discover the latest and greatest series' : 'Discover the latest and greatest films'}</p>
               </div>
+            </div>
+
+            <div className="mx-auto max-w-[1800px] px-4 sm:px-6 lg:px-8 xl:px-10 pb-16">
+              {!isTvApp && !fQuery.trim() && searchResults.length > 0 && (
+                <MovieRow
+                  title={searchMode === 'movie' ? 'Trending Movies' : 'Trending Shows'}
+                  items={searchResults.slice(0, 14)}
+                  portrait
+                  onItemClick={handleTitleClick}
+                  isSaved={isInWatchlist}
+                  onToggleSave={toggleWatchlistItem}
+                  compactSaveButton
+                />
               )}
 
-</div>
-</div>
+              {/* Movy-style filter chips */}
+              {!isTvApp && (
+                <div className="noir-filter-bar">
+                  <div className="noir-filter-chips">
+                    {!fQuery.trim() && (
+                      <>
+                        <div className="noir-chip">
+                          <select
+                            value={Array.from(selectedGenres)[0] || ''}
+                            onChange={(e) => {
+                              const id = Number(e.target.value);
+                              const next = new Set<number>();
+                              if (id > 0) next.add(id);
+                              setSelectedGenres(next);
+                            }}
+                          >
+                            <option value="">Genres</option>
+                            {MOVIE_GENRES.map((g) => (
+                              <option key={g.id} value={g.id}>{g.name}</option>
+                            ))}
+                          </select>
+                          <ChevronDown />
+                        </div>
+                        <div className="noir-chip">
+                          <select value={selectedYear || ''} onChange={(e) => setSelectedYear(e.target.value || null)}>
+                            <option value="">Years</option>
+                            {YEARS.map((y) => (
+                              <option key={y} value={y}>{y}</option>
+                            ))}
+                          </select>
+                          <ChevronDown />
+                        </div>
+                        <div className="noir-chip">
+                          <select value={selectedCountry || ''} onChange={(e) => setSelectedCountry(e.target.value || null)}>
+                            <option value="">Countries</option>
+                            {COUNTRIES.map(([val, label]) => (
+                              <option key={val} value={val}>{label}</option>
+                            ))}
+                          </select>
+                          <ChevronDown />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <div className="noir-chip noir-chip-sort">
+                    <select value={fSort} onChange={(e) => setFSort(e.target.value)}>
+                      <option value="trend">Most popular</option>
+                      <option value="rating">Top rated</option>
+                      <option value="year">Newest</option>
+                      <option value="az">A-Z</option>
+                    </select>
+                    <ChevronDown />
+                  </div>
+                </div>
+              )}
+
+              {isSearching ? (
+                <div className="noir-movies-grid">
+                  {Array.from({ length: 18 }).map((_, i) => (
+                    <div key={i} className="aspect-video w-full rounded-[10px] bg-[#121212] border border-white/5 overflow-hidden animate-pulse">
+                      <div className="w-full h-full bg-stone-900 shimmer-bg" />
+                    </div>
+                  ))}
+                </div>
+              ) : searchResults.length > 0 ? (
+                <div className="space-y-10">
+                  <div className="noir-movies-grid">
+                    {searchResults.map((item, idx) => (
+                      <div
+                        key={`${item.type}-${item.id}`}
+                        onClick={() => handleTitleClick(item)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            handleTitleClick(item);
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        data-tv-card={isTvApp ? '' : undefined}
+                        data-search-result-index={idx}
+                        aria-label={`Open ${item.title}`}
+                        style={{ animationDelay: `${idx * 35}ms` }}
+                        className="noir-browse-card group/card card-transition cursor-pointer select-none"
+                      >
+                        <div data-tv-card-artwork className="noir-browse-art relative aspect-video overflow-hidden">
+                          {item.backdrop || item.poster ? (
+                            <img
+                              src={item.backdrop || item.poster || undefined}
+                              alt={item.title}
+                              loading="lazy"
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover select-none"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center p-3 text-stone-600 bg-stone-950">
+                              <span className="text-[10px] sm:text-xs font-semibold text-center leading-normal break-all line-clamp-2">
+                                {item.title}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="noir-browse-meta">
+                          <p className="noir-bm-title">{item.title}</p>
+                          <p className="noir-bm-meta">
+                            {item.rating > 0 && <><Star className="inline h-3 w-3 -mt-0.5 fill-current text-[var(--noir-accent)]" /> {item.rating.toFixed(1)} · </>}{item.year || '—'} · {item.type === 'movie' ? 'Movie' : 'TV Show'}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {searchPage < searchTotalPages && (
+                    <div className="flex justify-center pt-2">
+                      <button
+                        onClick={() => triggerSearchQuery(true)}
+                        disabled={isLoadingMore}
+                        data-tv-load-more={isTvApp ? '' : undefined}
+                        className="flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-gray-300 hover:text-white border border-white/5 hover:border-white/10 px-8 py-3 rounded-full text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {isLoadingMore ? (
+                          <>
+                            <Loader className="w-4 h-4 text-[#A0C9CB] animate-spin" />
+                            <span>Loading...</span>
+                          </>
+                        ) : (
+                          <span>Show more titles</span>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="py-24 text-center flex flex-col items-center justify-center gap-4 border border-white/5 bg-stone-900/10 rounded-3xl">
+                  <span className="text-4xl text-stone-600">∅</span>
+                  <h3 className="text-sm font-bold text-white">No matching titles found</h3>
+                  <p className="text-xs text-gray-500 max-w-xs">
+                    Try changing the selected filters for better results.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {activeView ==='detail' && selectedTitle && (
