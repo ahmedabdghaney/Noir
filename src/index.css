@@ -2978,3 +2978,51 @@ html:not(.noir-tv-app) .noir-glass-btn:hover,
 
 /* home hero: details read left-to-right */
 html:not(.noir-tv-app) .noir-cinema-hero-content { direction: ltr; }
+
+/* ===== Round 6 fixes ===== */
+/* Movies/Shows hero: half height, flush to the very top (sits under the nav) */
+.noir-movies-hero {
+  height: min(290px, 30vh) !important;
+  min-height: 210px !important;
+}
+.noir-movies-hero-copy { bottom: clamp(20px, 4.5vh, 38px); }
+.noir-movies-hero-copy h1 { font-size: clamp(34px, 3.6vw, 50px); }
+.noir-movies-hero-copy p { margin-top: 10px; font-size: 14px; }
+
+/* Nav scrim: pure black at the very top fading down, no visible edge/line */
+html:not(.noir-tv-app) .noir-site-header::before {
+  height: 190px;
+  background: linear-gradient(180deg,
+    rgba(0,0,0,.95) 0%,
+    rgba(0,0,0,.74) 20%,
+    rgba(0,0,0,.46) 44%,
+    rgba(0,0,0,.20) 68%,
+    rgba(0,0,0,.06) 86%,
+    transparent 100%);
+}
+
+/* Detail page buttons: rounded + glass, same language as the hero buttons */
+.noir-button-primary,
+.noir-button-secondary,
+.noir-icon-button { border-radius: 999px !important; }
+
+.noir-button-primary {
+  background: linear-gradient(180deg, #ffffff 0%, #eef1f4 55%, #dfe4ea 100%) !important;
+  color: #090b10 !important;
+  border: 1px solid rgba(255,255,255,.22) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 8px 20px -10px rgba(0,0,0,.55) !important;
+}
+.noir-button-primary:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #f6f8fa 55%, #e9edf1 100%) !important;
+}
+
+.noir-button-secondary,
+.noir-icon-button {
+  background: linear-gradient(180deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,.02) 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18) !important;
+}
+.noir-button-secondary:hover,
+.noir-icon-button:hover {
+  background: linear-gradient(180deg, rgba(255,255,255,.17) 0%, rgba(255,255,255,.05) 100%) !important;
+}
+.noir-icon-button { height: 46px; }

@@ -2104,7 +2104,7 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0">
 
       {/* Main Orchestration Views Switcher */}
-      <main className={`flex-grow selection:bg-[#A0C9CB]/30 ${isPlayerWindow ? 'p-0' : isTvApp ? ((activeView === 'home' || activeView === 'detail') ? 'pb-0 pt-0' : 'pb-0 pt-24') : `pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 ${(activeView === 'home' || activeView === 'detail') ? 'pt-0' : 'pt-14 lg:pt-[68px]'}`}`}>
+      <main className={`flex-grow selection:bg-[#A0C9CB]/30 ${isPlayerWindow ? 'p-0' : isTvApp ? ((activeView === 'home' || activeView === 'detail') ? 'pb-0 pt-0' : 'pb-0 pt-24') : `pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 ${(activeView === 'home' || activeView === 'detail' || activeView === 'search') ? 'pt-0' : 'pt-14 lg:pt-[68px]'}`}`}>
         {activeView ==='home' && (
           isTvApp ? (
             <TvHome

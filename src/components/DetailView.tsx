@@ -1043,7 +1043,7 @@ export default function DetailView({
                     data-tv-primary-action={isTvApp ? '' : undefined}
                     className="noir-button-primary flex items-center gap-2 text-sm"
                   >
-                    <Play className="w-3.5 h-3.5 fill-white text-white" />
+                    <Play className="w-4 h-4 fill-current" />
                     <span>Continue Watching</span>
 </button>
 
@@ -1064,7 +1064,7 @@ export default function DetailView({
                   data-tv-primary-action={isTvApp ? '' : undefined}
                   className="noir-button-primary flex items-center gap-2 text-sm"
                 >
-                  <Play className="w-3.5 h-3.5 fill-white text-white" />
+                  <Play className="w-4 h-4 fill-current" />
                   <span>Watch now</span>
 </button>
               )}

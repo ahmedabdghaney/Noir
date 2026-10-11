@@ -144,6 +144,33 @@ export default function MovieRow({
 
       {/* Row Shell with Overlay Arrows */}
       <div className={`relative ${flush ? "" : "px-4 sm:px-6 lg:px-8 xl:px-10"}`}>
+        {/* Edge shadow + arrows (desktop, revealed on row hover) */}
+        {showLeftArrow && (
+          <>
+            <div className="hidden md:block absolute left-0 top-0 bottom-0 w-24 z-30 pointer-events-none bg-gradient-to-r from-[#05070b] via-[#05070b]/80 to-transparent opacity-0 group-hover/row:opacity-100 transition-opacity duration-300" />
+            <button
+              onClick={() => handleScroll('left')}
+              className="absolute left-6 top-[38%] z-40 w-10 h-10 rounded-full bg-black/55 hover:bg-black/75 backdrop-blur-md text-white items-center justify-center cursor-pointer transition-all opacity-0 group-hover/row:opacity-100 hidden md:flex"
+              aria-label="Previous titles"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          </>
+        )}
+
+        {showRightArrow && (
+          <>
+            <div className="hidden md:block absolute right-0 top-0 bottom-0 w-24 z-30 pointer-events-none bg-gradient-to-l from-[#05070b] via-[#05070b]/80 to-transparent opacity-0 group-hover/row:opacity-100 transition-opacity duration-300" />
+            <button
+              onClick={() => handleScroll('right')}
+              className="absolute right-6 top-[38%] z-40 w-10 h-10 rounded-full bg-black/55 hover:bg-black/75 backdrop-blur-md text-white items-center justify-center cursor-pointer transition-all opacity-0 group-hover/row:opacity-100 hidden md:flex"
+              aria-label="Next titles"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </>
+        )}
+
         {/* Dynamic Carousel Area */}
         <div
           ref={rowRef}
