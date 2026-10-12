@@ -58,7 +58,6 @@ import {
 } from './lib/tmdb';
 
 // Component Imports
-import Header from './components/Header';
 import CategoryRow from './components/CategoryRow';
 import Sidebar from './components/Sidebar';
 import Hero from './components/Hero';
@@ -2083,16 +2082,11 @@ export default function App() {
         />
       )}
 
-      {/* Compact top header — mobile and tablet */}
-      <div className={isTvApp || isPlayerWindow ? 'hidden' : 'lg:hidden'}>
-        <Header
-          goHome={navigateToHome}
-          user={user}
-          onLogout={handleLogout}
-          onOpenProfile={() => setIsProfileModalOpen(true)}
-          onOpenSearch={() => setIsSearchOverlayOpen(true)}
-        />
-      </div>
+      {!isTvApp && !isPlayerWindow && activeView === 'home' && (
+        <button type="button" className="noir-mobile-corner-brand lg:hidden" onClick={navigateToHome} aria-label="Noir home">
+          <LogoIcon />
+        </button>
+      )}
 
       {!isTvApp && !isPlayerWindow && activeView !== 'home' && (
         <div className="noir-global-back" dir="ltr">
@@ -2106,7 +2100,7 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0">
 
       {/* Main Orchestration Views Switcher */}
-      <main className={`flex-grow selection:bg-[#A0C9CB]/30 ${isPlayerWindow ? 'p-0' : isTvApp ? ((activeView === 'home' || activeView === 'detail') ? 'pb-0 pt-0' : 'pb-0 pt-24') : `pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 ${(activeView === 'home' || activeView === 'detail' || activeView === 'search') ? 'pt-0' : 'pt-14 lg:pt-[68px]'}`}`}>
+      <main className={`flex-grow selection:bg-[#A0C9CB]/30 ${isPlayerWindow ? 'p-0' : isTvApp ? ((activeView === 'home' || activeView === 'detail') ? 'pb-0 pt-0' : 'pb-0 pt-24') : `pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0 ${(activeView === 'home' || activeView === 'detail' || activeView === 'search') ? 'pt-0' : 'pt-14 lg:pt-[68px]'}`}`}>
         {activeView ==='home' && (
           isTvApp ? (
             <TvHome
@@ -2632,11 +2626,22 @@ export default function App() {
       {!isTvApp && !isPlayerWindow && (
         <MobileNav
           activeView={activeView}
+          searchMode={searchMode}
           goHome={navigateToHome}
+          setSearchMode={handleSetSearchMode}
+          openAnime={() => { window.location.hash = '#category/animation'; }}
           openSearchOverlay={() => setIsSearchOverlayOpen((open) => !open)}
-          onViewWatchlist={handleViewWatchlist}
           isSearchOpen={isSearchOverlayOpen}
+          user={user}
+          onViewWatchlist={handleViewWatchlist}
+          onViewHistory={handleViewHistory}
           onOpenProfile={() => setIsProfileModalOpen(true)}
+          onLogout={handleLogout}
+          onLogin={() => {
+            localStorage.removeItem('noir_user');
+            setAuthView('signin');
+            setUser(null);
+          }}
         />
       )}
 
@@ -2758,6 +2763,17 @@ export default function App() {
 
             {/* Action buttons */}
             <div className="mt-6 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsProfileModalOpen(false);
+                  handleViewWatchlist();
+                }}
+                className="w-full bg-white/8 border border-white/8 hover:bg-white/14 text-white font-bold py-3 rounded-sm transition-colors cursor-pointer text-xs flex items-center justify-center gap-2"
+              >
+                <span>My list</span>
+                <span className="text-white/45">({watchlist.length})</span>
+              </button>
               <button
                 ref={profileHistoryButtonRef}
                 data-tv-autofocus={isTvApp ? '' : undefined}
