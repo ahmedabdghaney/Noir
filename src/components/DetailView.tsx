@@ -1275,20 +1275,24 @@ export default function DetailView({
 </div>
         )}
 
+        {/* Bottom Synopsis and Cast grids */}
+        <div className="mt-16 sm:mt-24">
+
+          <div className="space-y-12 text-left min-w-0">
         {/* TV Episodes section - full width below info cards */}
             {/* TV Series: season selector + Apple-TV style episode cards */}
             {type ==='tv' && data.seasons && data.seasons.length > 0 && (
-              <div className="w-full mb-16 md:mb-24 mt-4">
+              <div className="w-full">
                 {/* Season selector — Apple TV style */}
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="relative">
+                <div className="noir-section-head mb-5">
+                  <div className="relative inline-block">
                     <button
                       ref={seasonButtonRef}
                       onClick={() => setSeasonMenuOpen((v) => !v)}
                       data-tv-season-button={isTvApp ? '' : undefined}
                       aria-expanded={seasonMenuOpen}
                       aria-haspopup="dialog"
-                      className="flex items-center gap-2 rounded-full border border-transparent px-5 py-3 text-white text-lg sm:text-xl font-bold hover:text-white/80 transition-all cursor-pointer"
+                      className="flex items-center gap-2 text-white text-lg sm:text-xl font-semibold hover:text-white/80 transition-all cursor-pointer"
                     >
                       <span>Season {selectedSeason}</span>
                       <ChevronsUpDown className="w-4 h-4 text-stone-400" />
@@ -1338,7 +1342,7 @@ export default function DetailView({
                       </>
                     )}
                   </div>
-                  <span className="text-stone-500 text-xs font-semibold">{episodesCount} episodes</span>
+                  <p className="mt-1 text-xs text-white/38 sm:text-[13px]">{episodesCount} episodes</p>
                 </div>
 
                 {/* Episode cards row */}
@@ -1404,13 +1408,13 @@ export default function DetailView({
                             setSelectedEpisode(ep.episode_number);
                             handlePlayClick('movie');
                           }}
-                          className={`group/ep flex-none text-left snap-start cursor-pointer ${
-                            isTvApp ? 'w-[330px]' : 'w-[300px] sm:w-[380px]'
+                          className={`group/ep noir-episode-card flex-none text-left snap-start cursor-pointer ${
+                            isTvApp ? 'w-[330px]' : ''
                           }`}
                         >
                           {/* Card with image + overlaid text */}
-                          <div data-tv-card-artwork className={`relative rounded-2xl overflow-hidden bg-stone-900 ${
-                            isTvApp ? 'h-[210px]' : 'h-[280px] sm:h-[320px]'
+                          <div data-tv-card-artwork className={`relative rounded-[8px] overflow-hidden bg-stone-900 ${
+                            isTvApp ? 'h-[210px]' : 'aspect-video'
                           } ${selectedEpisode === ep.episode_number ? 'ring-2 ring-inset ring-white/90' : 'border border-white/[0.08]'}`}>
                             {still ? (
                               <img
@@ -1471,14 +1475,10 @@ export default function DetailView({
               </div>
             )}
 
-        {/* Bottom Synopsis and Cast grids */}
-        <div className="mt-16 sm:mt-24">
-
-          <div className="space-y-12 text-left min-w-0">
             {/* Cast roster row component */}
             {!isTvApp && cast.length > 0 && (
               <div className="space-y-4">
-                <h3 className="text-lg sm:text-xl font-bold text-white">Cast</h3>
+                <h3 className="noir-section-head text-lg sm:text-xl font-semibold text-white">Cast</h3>
                 <div className="flex gap-5 sm:gap-8 overflow-x-auto no-scrollbar pb-4 -mx-1 px-1" dir="ltr">
                   {cast.map((c: CastMember) => (
                     <div
@@ -1553,25 +1553,15 @@ export default function DetailView({
 
         {/* Recomendations module list titles */}
         {recommendations.length > 0 && (
-          <div className="noir-detail-reco border-t border-white/5 pt-12 mt-12 space-y-2">
+          <div className="noir-detail-reco border-t border-white/5 pt-12 mt-12">
             <MovieRow
               title="More like this"
-              items={recommendations.slice(0, Math.ceil(recommendations.length / 2))}
+              items={recommendations}
               onItemClick={onItemClick}
               isSaved={(item) => watchlist.some((savedItem) => savedItem.id === item.id && savedItem.type === item.type)}
               onToggleSave={onToggleWatchlistItem}
               flush
             />
-            {recommendations.length > 3 && (
-              <MovieRow
-                title="You may also like"
-                items={recommendations.slice(Math.ceil(recommendations.length / 2))}
-                onItemClick={onItemClick}
-                isSaved={(item) => watchlist.some((savedItem) => savedItem.id === item.id && savedItem.type === item.type)}
-                onToggleSave={onToggleWatchlistItem}
-                flush
-              />
-            )}
 </div>
         )}
 

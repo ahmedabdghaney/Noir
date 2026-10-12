@@ -62,7 +62,7 @@ async function tmdbFetch(path: string, params: Record<string, any> = {}): Promis
 export const getPosterUrl = (path: string | null) => path ? `${IMG_BASE}/w342${path}` : null;        // row/grid cards
 export const getLargePosterUrl = (path: string | null) => path ? `${IMG_BASE}/w500${path}` : null;   // detail poster
 export const getBackdropUrl = (path: string | null) => path ? `${IMG_BASE}/w780${path}` : null;      // landscape cards
-export const getOriginalBackdropUrl = (path: string | null) => path ? `${IMG_BASE}/w1280${path}` : null; // full-bleed hero
+export const getOriginalBackdropUrl = (path: string | null) => path ? `${IMG_BASE}/original${path}` : null; // full-bleed hero (home + detail)
 export const getProfileUrl = (path: string | null) => path ? `${IMG_BASE}/w185${path}` : null;       // cast avatars
 export const getStillUrl = (path: string | null) => path ? `${IMG_BASE}/w300${path}` : null;         // episode thumbs
 
