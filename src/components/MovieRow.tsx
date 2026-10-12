@@ -36,7 +36,7 @@ export default function MovieRow({
   onToggleSave,
   compactSaveButton = false,
   ranked = false,
-  portrait = true,
+  portrait = false,
 }: MovieRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const scrollSaveFrameRef = useRef<number | null>(null);

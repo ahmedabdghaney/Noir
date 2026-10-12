@@ -2390,7 +2390,6 @@ export default function App() {
                 <MovieRow
                   title={searchMode === 'movie' ? 'Trending Movies' : 'Trending Shows'}
                   items={searchResults.slice(0, 14)}
-                  portrait
                   onItemClick={handleTitleClick}
                   isSaved={isInWatchlist}
                   onToggleSave={toggleWatchlistItem}

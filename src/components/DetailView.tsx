@@ -1472,7 +1472,7 @@ export default function DetailView({
             )}
 
         {/* Bottom Synopsis and Cast grids */}
-        <div className="mt-8">
+        <div className="mt-16 sm:mt-24">
 
           <div className="space-y-12 text-left min-w-0">
             {/* Cast roster row component */}
@@ -1553,15 +1553,25 @@ export default function DetailView({
 
         {/* Recomendations module list titles */}
         {recommendations.length > 0 && (
-          <div className="border-t border-white/5 pt-12 mt-12">
+          <div className="noir-detail-reco border-t border-white/5 pt-12 mt-12 space-y-2">
             <MovieRow
               title="More like this"
-              items={recommendations}
+              items={recommendations.slice(0, Math.ceil(recommendations.length / 2))}
               onItemClick={onItemClick}
               isSaved={(item) => watchlist.some((savedItem) => savedItem.id === item.id && savedItem.type === item.type)}
               onToggleSave={onToggleWatchlistItem}
               flush
             />
+            {recommendations.length > 3 && (
+              <MovieRow
+                title="You may also like"
+                items={recommendations.slice(Math.ceil(recommendations.length / 2))}
+                onItemClick={onItemClick}
+                isSaved={(item) => watchlist.some((savedItem) => savedItem.id === item.id && savedItem.type === item.type)}
+                onToggleSave={onToggleWatchlistItem}
+                flush
+              />
+            )}
 </div>
         )}
 

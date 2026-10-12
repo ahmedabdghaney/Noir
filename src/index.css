@@ -3042,3 +3042,34 @@ html:not(.noir-tv-app) .noir-site-header::before { box-shadow: none !important; 
       transparent 100%) !important;
   }
 }
+
+/* ===== Round 8 ===== */
+/* lighter section headings */
+html:not(.noir-tv-app) .noir-catalog-title { font-weight: 600; }
+
+/* TOP 10 featured card keeps its name / rating / type line */
+.noir-catalog-meta.is-featured { display: block !important; }
+
+/* stripped-down footer: disclaimer only, on the site gutter */
+.noir-footer {
+  border-top: 1px solid rgba(255, 255, 255, .05);
+  margin-top: 56px;
+  padding: 28px var(--noir-page-gutter, 4.5vw) 34px;
+}
+.noir-footer p {
+  max-width: 900px;
+  color: rgba(255, 255, 255, .34);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.75;
+}
+
+/* detail page "More like this": sit on the page gutter, not double-padded */
+html:not(.noir-tv-app) .noir-detail-reco .noir-catalog-heading,
+html:not(.noir-tv-app) .noir-detail-reco .noir-catalog-row > .relative {
+  padding-inline: 0 !important;
+}
+html:not(.noir-tv-app) .noir-detail-reco .noir-catalog-heading::after { left: 0; }
+
+/* back / home buttons: no hover circle, just a brighter icon */
+.noir-global-back button:hover { color: #fff; background: transparent !important; }
