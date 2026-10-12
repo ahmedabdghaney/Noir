@@ -62,7 +62,10 @@ function GridCard({
           />
         )}
         {item.backdrop || item.poster ? (
-          <img src={item.backdrop || item.poster || undefined} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+          <picture className="contents">
+            <source media="(max-width: 1023px)" srcSet={item.poster || item.backdrop || undefined} />
+            <img src={item.backdrop || item.poster || undefined} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+          </picture>
         ) : (
           <div className="w-full h-full flex items-center justify-center text-stone-600 text-xs">No image</div>
         )}
@@ -189,7 +192,7 @@ export default function StudioPage({
         </div>
 
         {/* Grid */}
-        <div dir="ltr" className="grid grid-cols-1 gap-x-4 gap-y-9 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+        <div dir="ltr" className="noir-poster-grid grid grid-cols-1 gap-x-4 gap-y-9 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {allItems.map((item) => (
             <div key={`${item.type}-${item.id}`}>
               <GridCard

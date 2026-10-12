@@ -107,7 +107,7 @@ export default function StudiosRow({
           <p>Popular titles on this streaming service</p>
         </div>
 
-        <div className="relative px-4 sm:px-6 lg:px-12">
+        <div className={`noir-row-viewport relative px-4 sm:px-6 lg:px-12 ${showLeftArrow ? 'has-left-shadow' : ''} ${showRightArrow ? 'has-right-shadow' : ''}`}>
           {showRightArrow && (
             <button onClick={() => handleScroll('right')} className="hidden md:flex absolute right-12 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-strong items-center justify-center text-white opacity-0 group-hover/row:opacity-100 transition-all cursor-pointer" aria-label="Previous">
               <ChevronRight className="w-5 h-5" />

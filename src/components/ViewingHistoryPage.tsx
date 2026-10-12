@@ -14,7 +14,7 @@ export default function ViewingHistoryPage({
 }: ViewingHistoryPageProps) {
   const isTvApp = document.documentElement.classList.contains('noir-tv-app');
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in" dir="ltr">
+    <div className="noir-history-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in" dir="ltr">
       <div className="flex items-end justify-between gap-4 border-b border-white/5 pb-6 mb-8">
         <div>
           <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight">
@@ -33,7 +33,7 @@ export default function ViewingHistoryPage({
           <p className="mt-2 text-sm text-white/45">Start watching any movie or show and it will appear here.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2">
+        <div className="noir-poster-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2">
           {items.map((item) => (
             <article key={`${item.type}_${item.id}`} className="group relative min-w-0">
               <button
@@ -42,15 +42,18 @@ export default function ViewingHistoryPage({
                 data-tv-card={isTvApp ? '' : undefined}
                 className="block w-full text-left cursor-pointer"
               >
-                <div data-tv-card-artwork={isTvApp ? '' : undefined} className="relative aspect-video overflow-hidden rounded-sm bg-black border border-white/[0.06]">
+                <div data-tv-card-artwork={isTvApp ? '' : undefined} className="noir-history-art relative aspect-video overflow-hidden rounded-sm bg-black border border-white/[0.06]">
                   {item.backdrop || item.poster ? (
-                    <img
-                      src={item.backdrop || item.poster || undefined}
-                      alt={item.title}
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover transition-transform duration-300 md:group-hover:scale-[1.03]"
-                    />
+                    <picture className="contents">
+                      <source media="(max-width: 1023px)" srcSet={item.poster || item.backdrop || undefined} />
+                      <img
+                        src={item.backdrop || item.poster || undefined}
+                        alt={item.title}
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover transition-transform duration-300 md:group-hover:scale-[1.03]"
+                      />
+                    </picture>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-white/30 p-3 text-center text-xs">
                       {item.title}

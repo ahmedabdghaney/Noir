@@ -143,7 +143,7 @@ export default function MovieRow({
       </div>
 
       {/* Row Shell with Overlay Arrows */}
-      <div className={`relative ${flush ? "" : "px-4 sm:px-6 lg:px-8 xl:px-10"}`}>
+      <div className={`noir-row-viewport relative ${showLeftArrow ? 'has-left-shadow' : ''} ${showRightArrow ? 'has-right-shadow' : ''} ${flush ? "" : "px-4 sm:px-6 lg:px-8 xl:px-10"}`}>
         {/* Edge shadow + arrows (desktop, revealed on row hover) */}
         {showLeftArrow && (
           <>
@@ -226,14 +226,17 @@ export default function MovieRow({
                     </button>
                   )}
                   {(isPortrait ? item.poster : item.backdrop) || item.poster || item.backdrop ? (
-                    <img
-                      src={(isPortrait ? item.poster : item.backdrop) || item.poster || item.backdrop || undefined}
-                      alt={item.title}
-                      loading="lazy"
-                      decoding="async"
-                      referrerPolicy="no-referrer"
-                      className="h-full w-full select-none object-cover transition-transform duration-500"
-                    />
+                    <picture className="contents">
+                      <source media="(max-width: 1023px)" srcSet={item.poster || item.backdrop || undefined} />
+                      <img
+                        src={(isPortrait ? item.poster : item.backdrop) || item.poster || item.backdrop || undefined}
+                        alt={item.title}
+                        loading="lazy"
+                        decoding="async"
+                        referrerPolicy="no-referrer"
+                        className="h-full w-full select-none object-cover transition-transform duration-500"
+                      />
+                    </picture>
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center p-3 text-stone-600 bg-stone-950">
                       <span className="text-[10px] sm:text-xs font-semibold text-center leading-normal break-all line-clamp-2">

@@ -3445,7 +3445,11 @@ html:not(.noir-tv-app) .noir-detail-reco .noir-movie-row-track {
   }
 
   html:not(.noir-tv-app) .noir-catalog-card {
-    width: min(66vw, 270px);
+    width: min(41vw, 176px);
+  }
+
+  html:not(.noir-tv-app) .noir-catalog-artwork {
+    aspect-ratio: 2 / 3 !important;
   }
 
   html:not(.noir-tv-app) .noir-catalog-meta {
@@ -3453,29 +3457,71 @@ html:not(.noir-tv-app) .noir-detail-reco .noir-movie-row-track {
   }
 
   html:not(.noir-tv-app) .noir-top10-featured {
-    width: min(88vw, 430px);
+    width: min(41vw, 176px);
   }
 
   html:not(.noir-tv-app) .noir-top10-featured .noir-catalog-artwork {
     height: auto;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 2 / 3;
   }
 
   html:not(.noir-tv-app) .noir-top10-featured-copy {
-    width: 66%;
-    padding: 14px;
+    inset: 0 0 auto auto;
+    width: auto;
+    padding: 0;
   }
 
-  html:not(.noir-tv-app) .noir-top10-featured-copy p {
-    -webkit-line-clamp: 1;
+  html:not(.noir-tv-app) .noir-top10-featured-copy > :not(.noir-top10-badge) {
+    display: none;
   }
 
   html:not(.noir-tv-app) .noir-top10-poster {
-    width: min(39vw, 168px);
+    width: min(41vw, 176px);
   }
 
   html:not(.noir-tv-app) .noir-portrait-card {
-    width: min(35vw, 150px);
+    width: min(41vw, 176px);
+  }
+
+  html:not(.noir-tv-app) .noir-poster-grid,
+  html:not(.noir-tv-app) .noir-movies-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px 10px;
+  }
+
+  html:not(.noir-tv-app) .noir-poster-grid [data-tv-card-artwork],
+  html:not(.noir-tv-app) .noir-movies-grid .noir-browse-art,
+  html:not(.noir-tv-app) .noir-history-art,
+  html:not(.noir-tv-app) .noir-movies-grid > .aspect-video {
+    aspect-ratio: 2 / 3 !important;
+  }
+
+  html:not(.noir-tv-app) .noir-row-viewport::before,
+  html:not(.noir-tv-app) .noir-row-viewport::after {
+    content: "";
+    position: absolute;
+    z-index: 35;
+    top: 0;
+    bottom: 0;
+    width: 42px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .22s ease;
+  }
+
+  html:not(.noir-tv-app) .noir-row-viewport::before {
+    left: 0;
+    background: linear-gradient(90deg, rgba(5, 7, 11, .96) 0%, rgba(5, 7, 11, .64) 34%, transparent 100%);
+  }
+
+  html:not(.noir-tv-app) .noir-row-viewport::after {
+    right: 0;
+    background: linear-gradient(270deg, rgba(5, 7, 11, .96) 0%, rgba(5, 7, 11, .64) 34%, transparent 100%);
+  }
+
+  html:not(.noir-tv-app) .noir-row-viewport.has-left-shadow::before,
+  html:not(.noir-tv-app) .noir-row-viewport.has-right-shadow::after {
+    opacity: 1;
   }
 
   html:not(.noir-tv-app) .noir-platforms-row {
@@ -3602,12 +3648,12 @@ html:not(.noir-tv-app) .noir-detail-reco .noir-movie-row-track {
   }
 
   html:not(.noir-tv-app) .noir-detail-reco .noir-movie-row-track {
-    grid-auto-columns: min(66vw, 270px);
+    grid-auto-columns: min(41vw, 176px);
     gap: 18px 8px;
   }
 
   html:not(.noir-tv-app) .noir-episode-card {
-    width: min(66vw, 270px);
+    width: min(41vw, 176px);
   }
 
   .noir-footer {

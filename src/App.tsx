@@ -2280,9 +2280,10 @@ export default function App() {
 </p>
 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-x-4 gap-y-9 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                <div className="noir-poster-grid grid grid-cols-1 gap-x-4 gap-y-9 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                   {processedItems.map((item, idx) => {
                     const artwork = resolveArtworkUrl(item.backdrop, 'backdrop') || resolveArtworkUrl(item.poster, 'poster');
+                    const mobileArtwork = resolveArtworkUrl(item.poster, 'poster') || artwork;
                     const progressKey =`noir_progress_${item.type}_${item.id}`;
                     const storedProgress = localStorage.getItem(progressKey);
                     const progress = storedProgress ? Number(storedProgress) : 0;
@@ -2311,13 +2312,16 @@ export default function App() {
                             className="absolute top-2 right-2 z-20"
                           />
                           {artwork ? (
-                            <img
-                              src={artwork}
-                              alt={item.title}
-                              loading="lazy"
-                              referrerPolicy="no-referrer"
-                              className="w-full h-full object-cover select-none"
-                            />
+                            <picture className="contents">
+                              <source media="(max-width: 1023px)" srcSet={mobileArtwork || undefined} />
+                              <img
+                                src={artwork}
+                                alt={item.title}
+                                loading="lazy"
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover select-none"
+                              />
+                            </picture>
                           ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center p-3 text-stone-600 bg-stone-950">
                               <span className="text-[10px] sm:text-xs font-semibold text-center leading-normal break-all line-clamp-2">
@@ -2478,13 +2482,16 @@ export default function App() {
                       >
                         <div data-tv-card-artwork className="noir-browse-art relative aspect-video overflow-hidden">
                           {item.backdrop || item.poster ? (
-                            <img
-                              src={item.backdrop || item.poster || undefined}
-                              alt={item.title}
-                              loading="lazy"
-                              referrerPolicy="no-referrer"
-                              className="w-full h-full object-cover select-none"
-                            />
+                            <picture className="contents">
+                              <source media="(max-width: 1023px)" srcSet={item.poster || item.backdrop || undefined} />
+                              <img
+                                src={item.backdrop || item.poster || undefined}
+                                alt={item.title}
+                                loading="lazy"
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover select-none"
+                              />
+                            </picture>
                           ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center p-3 text-stone-600 bg-stone-950">
                               <span className="text-[10px] sm:text-xs font-semibold text-center leading-normal break-all line-clamp-2">

@@ -94,7 +94,7 @@ export default function ContinueWatchingRow({
         <h2 id="continue-watching-title" className="noir-catalog-title text-white">{title}</h2>
       </div>
 
-      <div className="relative px-4 sm:px-6 lg:px-8 xl:px-10">
+      <div className={`noir-row-viewport relative px-4 sm:px-6 lg:px-8 xl:px-10 ${showLeftArrow ? 'has-left-shadow' : ''} ${showRightArrow ? 'has-right-shadow' : ''}`}>
         {showRightArrow && (
           <button
             onClick={() => handleScroll('right')}
@@ -141,13 +141,16 @@ export default function ContinueWatchingRow({
               >
                 <div data-tv-card-artwork className="noir-catalog-artwork relative aspect-video overflow-hidden bg-[#101116]">
                   {img ? (
-                    <img
-                      src={img}
-                      alt={item.title}
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover transition-transform duration-500"
-                    />
+                    <picture className="contents">
+                      <source media="(max-width: 1023px)" srcSet={item.poster || img} />
+                      <img
+                        src={img}
+                        alt={item.title}
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover transition-transform duration-500"
+                      />
+                    </picture>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-stone-700">
                       <Play className="w-8 h-8" />
