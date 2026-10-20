@@ -3678,3 +3678,43 @@ html:not(.noir-tv-app) .noir-detail-reco .noir-movie-row-track {
     height: 19px;
   }
 }
+
+
+/* ── Website TV mode (/smart): side rail navigation ── */
+html.noir-web-tv body {
+  padding-left: 6rem;
+}
+
+html.noir-web-tv .noir-web-tv-rail {
+  width: 6rem;
+  background: linear-gradient(90deg, rgba(5, 6, 10, 0.98) 0%, rgba(5, 6, 10, 0.92) 70%, rgba(5, 6, 10, 0) 100%);
+  transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1), background 0.28s ease;
+  overflow: hidden;
+}
+
+/* Widen with labels while the remote is on the rail. */
+html.noir-web-tv .noir-web-tv-rail:focus-within {
+  width: 17rem;
+  background: linear-gradient(90deg, rgba(5, 6, 10, 0.99) 0%, rgba(5, 6, 10, 0.95) 80%, rgba(5, 6, 10, 0.6) 100%);
+}
+
+html.noir-web-tv .noir-web-tv-rail-label {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+html.noir-web-tv .noir-web-tv-rail:focus-within .noir-web-tv-rail-label {
+  opacity: 1;
+}
+
+html.noir-web-tv .noir-web-tv-rail-item {
+  outline: none;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+html.noir-web-tv .noir-web-tv-rail-item:focus-visible,
+html.noir-web-tv .noir-web-tv-rail-item:focus {
+  background: #A0C9CB;
+  color: #05060a;
+  transform: scale(1.02);
+}

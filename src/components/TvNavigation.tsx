@@ -71,6 +71,69 @@ export default function TvNavigation({
     { key: 'watchlist', label: 'My List', icon: Bookmark, active: !isSearchOpen && activeView === 'watchlist', action: openWatchlist },
   ];
 
+  // Website TV mode (noir.aswad-iq.com/smart): a vertical side rail like smart-TV apps.
+  // Icons only; it widens to show labels while the remote is on it. The Android TV app
+  // keeps the top bar below.
+  if (document.documentElement.classList.contains('noir-web-tv')) {
+    const railItems = items.filter((item) => item.key !== 'search');
+    const searchItem = items.find((item) => item.key === 'search')!;
+    const renderRailButton = (item: typeof items[number]) => {
+      const Icon = item.icon;
+      return (
+        <button
+          key={item.key}
+          type="button"
+          onClick={item.action}
+          data-tv-nav-item={item.key}
+          aria-label={item.label}
+          aria-current={item.active ? 'page' : undefined}
+          className={`noir-web-tv-rail-item flex h-14 w-full items-center gap-4 rounded-2xl px-4 text-left ${
+            item.active ? 'text-[#A0C9CB]' : 'text-white/60'
+          }`}
+        >
+          <Icon className="h-7 w-7 shrink-0" />
+          <span className="noir-web-tv-rail-label whitespace-nowrap text-lg font-semibold">{item.label}</span>
+        </button>
+      );
+    };
+    return (
+      <aside
+        ref={navigationRef}
+        data-tv-navigation
+        className="noir-web-tv-rail fixed inset-y-0 left-0 z-[210] flex flex-col items-stretch px-3 py-8"
+        dir="ltr"
+        aria-label="Main navigation"
+      >
+        <div className="flex h-16 items-center gap-3 px-4 text-white" aria-hidden="true">
+          <LogoIcon className="h-8 w-8 shrink-0 text-[#A0C9CB]" />
+          <span className="noir-web-tv-rail-label whitespace-nowrap font-display text-2xl font-bold">Noir</span>
+        </div>
+        <nav className="mt-10 flex flex-col gap-2">
+          {railItems.map(renderRailButton)}
+        </nav>
+        <div className="mt-auto flex flex-col gap-2">
+          {renderRailButton(searchItem)}
+          {user && (
+            <button
+              type="button"
+              onClick={openProfile}
+              data-tv-nav-item="profile"
+              aria-label="Open profile"
+              className="noir-web-tv-rail-item flex h-14 w-full items-center gap-4 rounded-2xl px-3.5 text-left text-white/60"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/8">
+                {user.photoURL
+                  ? <img src={user.photoURL} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                  : <span className="text-sm font-bold text-white">{user.name.slice(0, 2)}</span>}
+              </span>
+              <span className="noir-web-tv-rail-label whitespace-nowrap text-lg font-semibold">{user.name}</span>
+            </button>
+          )}
+        </div>
+      </aside>
+    );
+  }
+
   return (
     <aside
       ref={navigationRef}
