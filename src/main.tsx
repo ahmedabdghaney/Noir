@@ -9,25 +9,33 @@ const isAndroidApp = Capacitor.getPlatform() === 'android';
 const isTvPreview = import.meta.env.DEV && new URLSearchParams(window.location.search).get('tv') === '1';
 
 /* Website TV mode — the smart-TV version of Noir on the same domain:
-   - noir.aswad-iq.com/smart turns it on (and remembers it on that TV);
    - TV browsers (Tizen, webOS, Android TV, Fire TV, ...) get it automatically;
+   - noir.aswad-iq.com/smart turns it on. A TV (no mouse/trackpad) remembers it;
+     a computer or phone only keeps it for that tab, so the normal site comes back;
    - /smart?off=1 turns it off again. */
 const WEB_TV_KEY = 'noir_web_tv_mode';
 const TV_BROWSER_UA = /SMART-TV|SmartTV|Tizen|Web0S|webOS|NetCast|BRAVIA|HbbTV|Android TV|GoogleTV|AFT[A-Z]|CrKey|VIDAA|Hisense|Philips.*TV|Viera/i;
 function shouldUseWebTvMode(): boolean {
+  const hasMouse = window.matchMedia?.('(any-pointer: fine)').matches ?? false;
   const path = window.location.pathname.replace(/\/+$/, '');
   if (path === '/smart') {
     const off = new URLSearchParams(window.location.search).get('off') === '1';
     try {
-      if (off) localStorage.removeItem(WEB_TV_KEY);
-      else localStorage.setItem(WEB_TV_KEY, '1');
+      localStorage.removeItem(WEB_TV_KEY);
+      sessionStorage.removeItem(WEB_TV_KEY);
+      if (!off) (hasMouse ? sessionStorage : localStorage).setItem(WEB_TV_KEY, '1');
     } catch {}
     // The app's routes live at the root; land on home.
     window.history.replaceState(null, '', '/');
     return !off;
   }
   try {
-    if (localStorage.getItem(WEB_TV_KEY) === '1') return true;
+    if (sessionStorage.getItem(WEB_TV_KEY) === '1') return true;
+    if (localStorage.getItem(WEB_TV_KEY) === '1') {
+      if (!hasMouse) return true;
+      // Remembered from an older version on a computer: forget it.
+      localStorage.removeItem(WEB_TV_KEY);
+    }
   } catch {}
   return TV_BROWSER_UA.test(navigator.userAgent);
 }
