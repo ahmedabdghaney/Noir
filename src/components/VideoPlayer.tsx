@@ -247,6 +247,9 @@ export default function VideoPlayer({
   // Vidy داخل iframe من نطاق مختلف، لذلك الموقع لا يستطيع تعديل ترجمته مباشرة.
   // على iPhone نمنع زر Vidy من فتح مشغل Apple الأصلي (الذي يشوّه Subtitles)،
   // ونستخدم ملء شاشة CSS يبقي الفيديو وSubtitles داخل مشغل Vidy نفسه.
+  // Phones (not tablets/TVs): the mobile version has no fullscreen button.
+  const isPhoneDevice =
+    typeof navigator !== 'undefined' && /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
   const isIPhoneBrowser =
     typeof navigator !== 'undefined' && /iPhone|iPod/i.test(navigator.userAgent);
   const useMobileVidyFullscreen =
@@ -2102,7 +2105,7 @@ export default function VideoPlayer({
               }}
             />
 
-            {useMobileVidyFullscreen && (
+            {useMobileVidyFullscreen && !isPhoneDevice && (
               <button
                 type="button"
                 onClick={toggleMobileVidyFullscreen}
@@ -2651,7 +2654,7 @@ export default function VideoPlayer({
                   )}
 
                   {/* fullscreen */}
-                  {!isTvAndroidApp && (
+                  {!isTvAndroidApp && !isPhoneDevice && (
                     <Btn onClick={toggleFullscreen} label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
                       {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
                     </Btn>
