@@ -19,6 +19,10 @@ import {
   type PlayableSource,
   type ResolvedPlayback,
 } from '../lib/noirStreams';
+import { attachOwnSubtitles, isHlsUrl, qualityHeight, useOwnMedia } from '../lib/ownMedia';
+
+// علامة مصادر ملفاتك الخاصة (ownMedia) داخل قائمة المصادر.
+const OWN_PROVIDER = 'noir-own';
 import {
   Loader, Pause, Play, Lock,
   Subtitles, Settings, Maximize2, Minimize2,
@@ -132,6 +136,11 @@ export default function VideoPlayer({
   const vidyHealthyRef = useRef(false);
   const vidyFallbackRequestedRef = useRef(false);
   const resolvedFallbackRef = useRef<ResolvedPlayback | null>(null);
+  // ملفاتك الخاصة لهذا الفلم/الحلقة: تشتغل مباشرة بمشغل Noir بدل المصادر الخارجية.
+  const ownMedia = useOwnMedia(type, id, season, episode);
+  const ownActiveRef = useRef(false);
+  // عند تبديل الجودة: نرجع لنفس الثانية ونكمل التشغيل لو كان شغال.
+  const pendingSeekRef = useRef<{ time: number; play: boolean } | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const closingRef = useRef(false);
   const tvSeekStartTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -172,7 +181,7 @@ export default function VideoPlayer({
   const [cueText,         setCueText]         = useState('');  // نص Subtitles الحالي
   const [speed,           setSpeed]           = useState(1);
   // مستويات جودة HLS: {index الفعلي بـ hls.levels, height} — -1 = Auto
-  const [qualityLevels, setQualityLevels] = useState<{ index: number; height: number }[]>([]);
+  const [qualityLevels, setQualityLevels] = useState<{ index: number; height: number; label?: string }[]>([]);
   const [currentLevel,  setCurrentLevel]  = useState(-1); // -1 = Auto
   const [showQualityMenu, setShowQualityMenu] = useState(false);
   const [showSettings,    setShowSettings]    = useState(false);
@@ -518,6 +527,38 @@ export default function VideoPlayer({
     setShowStillWatching(false);
     return () => clearTimeout(timer);
   }, [type, id, season, episode, playMode, isDedicatedAndroidPlayer]);
+
+  // Your own files win: play them directly in the Noir player (no embed), best quality
+  // first. If every file fails, tryNextSource falls back to the usual providers.
+  useEffect(() => {
+    if (playMode !== 'movie' || !ownMedia || ownMedia.qualities.length === 0) {
+      ownActiveRef.current = false;
+      return;
+    }
+    ownActiveRef.current = true;
+    const hasArabic = ownMedia.subtitles.some((s) => /^ar/i.test(s.lang));
+    const sorted = [...ownMedia.qualities].sort((a, b) => qualityHeight(b.label) - qualityHeight(a.label));
+    clearTimeout(vidyHealthTimerRef.current);
+    vidyFallbackRequestedRef.current = false;
+    setUseVidApi(false);
+    setUseEmbed(false);
+    setResolveError(false);
+    setSources(sorted.map((q) => ({
+      url: q.url,
+      arabicReady: hasArabic,
+      origin: { url: q.url, isHls: isHlsUrl(q.url), isEmbed: false, isMkv: false, provider: OWN_PROVIDER, quality: q.label },
+    })));
+    setSourceIndex(0);
+    setSubEnabled(ownMedia.subtitles.length > 0);
+    setQualityLevels(sorted.length > 1 ? sorted.map((q, i) => ({ index: i, height: qualityHeight(q.label), label: q.label })) : []);
+    setCurrentLevel(0);
+    setIsLoading(true);
+  }, [ownMedia, type, id, season, episode, playMode]);
+
+  const ownQualityMenu = ownActiveRef.current && (ownMedia?.qualities.length || 0) > 1;
+  useEffect(() => {
+    if (ownQualityMenu) setCurrentLevel(sourceIndex);
+  }, [ownQualityMenu, sourceIndex]);
 
   // Prepare CinePro/HLS and the remaining providers while Vidy is playing.
   // This never changes the visible player unless the Vidy health check fails.
@@ -1152,6 +1193,15 @@ export default function VideoPlayer({
     const v = videoRef.current;
     if (!v || !isNative || !hlsUrl) return;
 
+    // Your own MP4 files: plain <video src>, like a normal file player.
+    if (currentSource?.origin?.provider === OWN_PROVIDER && !isHlsUrl(hlsUrl)) {
+      v.src = hlsUrl;
+      return () => {
+        v.removeAttribute('src');
+        v.load();
+      };
+    }
+
     const pickEnglishAudio = (hls?: Hls | null) => {
       // hls.js: اختر مسار الصوت الإنجليزي لو موجود.
       if (hls && hls.audioTracks?.length) {
@@ -1226,8 +1276,10 @@ export default function VideoPlayer({
         // أزل التكرار بنفس الارتفاع (نبقي أول index).
         const seen = new Set<number>();
         const unique = levels.filter((lv) => (seen.has(lv.height) ? false : (seen.add(lv.height), true)));
-        setQualityLevels(unique);
-        setCurrentLevel(hls.autoLevelEnabled ? -1 : hls.currentLevel);
+        if (!(ownActiveRef.current && (ownMedia?.qualities.length || 0) > 1)) {
+          setQualityLevels(unique);
+          setCurrentLevel(hls.autoLevelEnabled ? -1 : hls.currentLevel);
+        }
         setIsLoading(false);
       });
       hls.on(Hls.Events.LEVEL_SWITCHED, (_e, d) => {
@@ -1362,6 +1414,14 @@ export default function VideoPlayer({
     };
   }, [isNative, subEnabled, hlsUrl, iosNativeFs, subOffset, getSubtitleTrack]);
 
+  // Your own subtitle files (Arabic first) become text tracks on the video element;
+  // the Noir subtitle layer then picks the Arabic one automatically.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !isNative || !ownActiveRef.current || !ownMedia?.subtitles.length) return;
+    void attachOwnSubtitles(v, ownMedia.subtitles);
+  }, [isNative, ownMedia, hlsUrl]);
+
   const changeSpeed = (s: number) => {
     if (videoRef.current) videoRef.current.playbackRate = s;
     setSpeed(s); setShowSpeedMenu(false); setShowSettings(false);
@@ -1369,6 +1429,20 @@ export default function VideoPlayer({
 
   // تبديل جودة الفيديو. index = -1 → Auto (ABR). خلاف ذلك index من hls.levels.
   const changeQuality = (index: number) => {
+    if (ownQualityMenu) {
+      // Your own files: swap to that quality's file and continue from the same second.
+      const target = Math.max(0, index);
+      const v = videoRef.current;
+      if (target !== sourceIndex) {
+        pendingSeekRef.current = v ? { time: v.currentTime || 0, play: !v.paused } : null;
+        setSourceIndex(target);
+        setIsLoading(true);
+      }
+      setCurrentLevel(target);
+      setShowQualityMenu(false);
+      setShowSettings(false);
+      return;
+    }
     const hls = hlsRef.current;
     if (hls) {
       // -1 يعيد الوضع الAuto (ABR) بـ hls.js.
@@ -1920,7 +1994,14 @@ export default function VideoPlayer({
                 syncSubtitleTrackMode();
                 const videoDuration = Number(video.duration || 0);
                 setDuration(videoDuration);
-                if (
+                const pending = pendingSeekRef.current;
+                if (pending) {
+                  pendingSeekRef.current = null;
+                  video.currentTime = Math.min(pending.time, Math.max(0, videoDuration - 1));
+                  setCurrentTime(video.currentTime);
+                  if (pending.play) video.play().catch(() => {});
+                  else video.pause();
+                } else if (
                   startAt > 5 &&
                   Number.isFinite(videoDuration) &&
                   startAt < videoDuration - 3
@@ -2472,19 +2553,24 @@ export default function VideoPlayer({
                               <span className="flex items-center gap-1 text-[#A0C9CB] font-semibold text-xs">
                                 {currentLevel === -1
                                   ? 'Auto'
-                                  : `${qualityLevels.find((l) => l.index === currentLevel)?.height || ''}p`}
+                                  : (() => {
+                                      const lv = qualityLevels.find((l) => l.index === currentLevel);
+                                      return lv?.label || `${lv?.height || ''}p`;
+                                    })()}
                                 <ChevronDown className={`w-3 h-3 transition-transform ${showQualityMenu ? 'rotate-180' : ''}`} />
                               </span>
                               <span>Quality</span>
                             </button>
                             {showQualityMenu && (
                               <div className="border-t border-white/10 max-h-48 overflow-y-auto">
+                                {!ownQualityMenu && (
                                 <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeQuality(-1)} className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors ${currentLevel === -1 ? 'text-[#A0C9CB] bg-[#A0C9CB]/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
                                   Auto
                                 </button>
+                                )}
                                 {qualityLevels.map((lv) => (
                                   <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} key={lv.index} onClick={() => changeQuality(lv.index)} className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors ${currentLevel === lv.index ? 'text-[#A0C9CB] bg-[#A0C9CB]/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
-                                    {lv.height}p
+                                    {lv.label || `${lv.height}p`}
                                   </button>
                                 ))}
                               </div>

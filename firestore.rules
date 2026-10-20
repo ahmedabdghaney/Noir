@@ -231,6 +231,14 @@ service cloud.firestore {
         && request.auth.token.email == 'ahmedabdghaney@gmail.com';
     }
 
+    // Your own video/subtitle files per movie or episode. Players read them;
+    // only the owner account can add, change, or remove them.
+    match /ownMedia/{mediaKey} {
+      allow read: if true;
+      allow write: if isSignedIn()
+        && request.auth.token.email == 'ahmedabdghaney@gmail.com';
+    }
+
     // Watch-party room settings (member limit + visibility). Anyone with the
     // code can read a room; only public rooms can be listed. Only the signed-in
     // host can create, refresh, or close their room.

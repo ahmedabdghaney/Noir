@@ -19,6 +19,7 @@ import { fetchDetailedTitle, getPosterUrl, getLargePosterUrl, getBackdropUrl, ge
 import VideoPlayer from './VideoPlayer';
 import MovieRow from './MovieRow';
 import { useWatchTogether } from '../lib/useWatchTogether';
+import { subscribeOwnMedia } from '../lib/ownMedia';
 import {
   WatchRoom,
   WatchRoomVisibility,
@@ -185,7 +186,10 @@ export default function DetailView({
     [id, type],
   );
 
-  // Watch Together - Live (real WebSocket connection)
+  // Load the list of your own video files early so Watch now can start them instantly.
+  useEffect(() => subscribeOwnMedia(() => {}), []);
+
+  // Watch Together - Live
   const [isWatchTogetherOpen, setIsWatchTogetherOpen] = useState(false);
   const [wtRoomCode, setWtRoomCode] = useState('');
   const [wtNewMsg, setWtNewMsg] = useState('');
