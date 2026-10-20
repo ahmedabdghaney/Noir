@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Star, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle, ChevronsUpDown, ChevronLeft, ChevronRight, ThumbsDown, ThumbsUp } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Play, Star, Share2, Plus, Check, RotateCcw, Users, MessageSquare, Send, Copy, AlertCircle, ChevronsUpDown, ChevronLeft, ChevronRight, ThumbsDown, ThumbsUp, Minus, X, Lock, Globe, LogOut } from 'lucide-react';
 import {
   CastMember,
   ContinueWatchingItem,
@@ -18,6 +19,19 @@ import { fetchDetailedTitle, getPosterUrl, getLargePosterUrl, getBackdropUrl, ge
 import VideoPlayer from './VideoPlayer';
 import MovieRow from './MovieRow';
 import { useWatchTogether } from '../lib/useWatchTogether';
+import {
+  WatchRoom,
+  WatchRoomVisibility,
+  WATCH_ROOM_DEFAULT_MEMBERS,
+  WATCH_ROOM_MAX_MEMBERS,
+  WATCH_ROOM_MIN_MEMBERS,
+  clampMembers,
+  closeWatchRoom,
+  createWatchRoom,
+  getWatchRoom,
+  subscribePublicWatchRooms,
+  updateWatchRoomCount,
+} from '../lib/watchRooms';
 import { fetchSeasonEpisodes, EpisodeInfo, getStillUrl, getProfileUrl, getTitleLogoUrl } from '../lib/tmdb';
 import {
   auth,
@@ -176,6 +190,14 @@ export default function DetailView({
   const [wtRoomCode, setWtRoomCode] = useState('');
   const [wtNewMsg, setWtNewMsg] = useState('');
   const [wtCopied, setWtCopied] = useState(false);
+  // إعداد الغرفة قبل الإنشاء: حد الأعضاء + خاص/عام (محفوظة بـ Firestore)
+  const [wtSetupOpen, setWtSetupOpen] = useState(false);
+  const [wtMaxMembers, setWtMaxMembers] = useState(WATCH_ROOM_DEFAULT_MEMBERS);
+  const [wtVisibility, setWtVisibility] = useState<WatchRoomVisibility>('private');
+  const [wtCreating, setWtCreating] = useState(false);
+  const [wtJoinInput, setWtJoinInput] = useState('');
+  const [wtRoomInfo, setWtRoomInfo] = useState<WatchRoom | null>(null);
+  const [wtPublicRooms, setWtPublicRooms] = useState<WatchRoom[]>([]);
 
   // اسم تبويب المتصفح = اسم الفلم/المسلسل ويرجع لـ "Noir Cinema" عند الإغلاق
   // نستخدم data?.title لأن data قد تكون null في بداية التحميل
@@ -189,6 +211,7 @@ export default function DetailView({
   const {
     connected: wtConnected,
     isHost: wtIsHost,
+    selfId: wtSelfId,
     members: wtMembers,
     messages: wtMessages,
     error: wtError,
@@ -442,14 +465,101 @@ export default function DetailView({
     type,
   ]);
 
+  // Join a room by code. If the room has saved settings and is already full, refuse
+  // before connecting. Old links without a room doc still join as before.
+  const joinWatchRoom = useCallback(async (rawCode: string) => {
+    const code = rawCode.trim().toUpperCase();
+    if (!code) return;
+    const info = await getWatchRoom(code);
+    if (info && info.memberCount >= info.maxMembers) {
+      showToast(`Room ${code} is full (${info.maxMembers} members)`);
+      return;
+    }
+    setWtRoomInfo(info);
+    setWtRoomCode(code);
+    setWtSetupOpen(false);
+    setIsWatchTogetherOpen(true);
+  }, [showToast]);
+
   // Auto-join a room from a shared link
   useEffect(() => {
     if (autoOpenWatchTogether) {
-      setIsWatchTogetherOpen(true);
-      setWtRoomCode(autoOpenWatchTogether);
+      joinWatchRoom(autoOpenWatchTogether);
       onClearAutoOpenWatchTogether?.();
     }
   }, [autoOpenWatchTogether]);
+
+  const openWatchPartySetup = () => {
+    if (isWatchTogetherOpen) return;
+    setWtSetupOpen(true);
+  };
+
+  const handleCreateWatchRoom = async () => {
+    if (!auth.currentUser) {
+      showToast('Sign in to create a watch party');
+      return;
+    }
+    setWtCreating(true);
+    try {
+      const room = await createWatchRoom({
+        type,
+        tmdbId: id,
+        title: data?.title || (data as any)?.name || manualData?.title || '',
+        hostName: wtName,
+        maxMembers: wtMaxMembers,
+        visibility: wtVisibility,
+      });
+      setWtRoomInfo(room);
+      setWtRoomCode(room.code);
+      setWtSetupOpen(false);
+      setIsWatchTogetherOpen(true);
+    } catch (err) {
+      console.error('Failed to create watch room:', err);
+      showToast('Could not create the room. Try again.');
+    } finally {
+      setWtCreating(false);
+    }
+  };
+
+  const handleLeaveWatchParty = () => {
+    if (wtIsHost && wtRoomCode) closeWatchRoom(wtRoomCode);
+    setIsWatchTogetherOpen(false);
+    setWtRoomCode('');
+    setWtRoomInfo(null);
+  };
+
+  // Public rooms for this title, listed in the setup sheet
+  useEffect(() => {
+    if (!wtSetupOpen) return;
+    return subscribePublicWatchRooms(type, id, setWtPublicRooms);
+  }, [wtSetupOpen, type, id]);
+
+  // Host keeps the saved member count (and freshness) in sync with who is online
+  useEffect(() => {
+    if (!wtConnected || !wtIsHost || !wtRoomInfo || !wtRoomCode) return;
+    updateWatchRoomCount(wtRoomCode, wtMembers.length);
+    const heartbeat = setInterval(() => updateWatchRoomCount(wtRoomCode, wtMembers.length), 10 * 60 * 1000);
+    return () => clearInterval(heartbeat);
+  }, [wtConnected, wtIsHost, wtRoomInfo, wtRoomCode, wtMembers.length]);
+
+  // Enforce the member limit: anyone who joined past the limit leaves on their own
+  useEffect(() => {
+    if (!wtConnected || wtIsHost || !wtRoomInfo || !wtSelfId) return;
+    const myIndex = wtMembers.findIndex((m) => m.id === wtSelfId);
+    if (myIndex >= wtRoomInfo.maxMembers) {
+      showToast(`Room ${wtRoomCode} is full (${wtRoomInfo.maxMembers} members)`);
+      setIsWatchTogetherOpen(false);
+      setWtRoomCode('');
+      setWtRoomInfo(null);
+    }
+  }, [wtConnected, wtIsHost, wtRoomInfo, wtSelfId, wtMembers, wtRoomCode, showToast]);
+
+  // Host leaving the page closes the room so it drops off the public list
+  const wtHostRoomRef = useRef('');
+  wtHostRoomRef.current = wtIsHost && wtRoomInfo ? wtRoomCode : '';
+  useEffect(() => () => {
+    if (wtHostRoomRef.current) closeWatchRoom(wtHostRoomRef.current);
+  }, []);
 
   // Late joiner: if the host is already mid-movie, auto-open the player at the host's time
   const didAutoOpenForHostTimeRef = useRef(false);
@@ -528,13 +638,6 @@ export default function DetailView({
     };
   }, [episodes, loadingEpisodes]);
 
-  // When the panel opens without a room code, create one (this client becomes host on the server)
-  useEffect(() => {
-    if (isWatchTogetherOpen && !wtRoomCode) {
-      const code = 'NOIR-' + Math.floor(1000 + Math.random() * 9000);
-      setWtRoomCode(code);
-    }
-  }, [isWatchTogetherOpen, wtRoomCode]);
 
   const handleSendWtMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1131,6 +1234,17 @@ export default function DetailView({
 
               {!isTvApp && (
               <button
+                onClick={openWatchPartySetup}
+                className={`noir-icon-button shrink-0 ${isWatchTogetherOpen ? '!border-[#A0C9CB]/40 !text-[#A0C9CB]' : ''}`}
+                title="Watch party"
+                aria-label="Watch party"
+              >
+                <Users className="w-4 h-4" />
+              </button>
+              )}
+
+              {!isTvApp && (
+              <button
                 onClick={() => onOpenShare(`${window.location.origin}/${type}/${id}`)}
                 className="noir-icon-button shrink-0"
                 title="Share current link"
@@ -1161,6 +1275,146 @@ export default function DetailView({
 </div>
 
 </div>
+
+        {/* Watch party setup: member limit + private/public, join by code, public rooms */}
+        {wtSetupOpen && !isWatchTogetherOpen && createPortal(
+          <div
+            className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4 animate-fade-in"
+            onClick={() => setWtSetupOpen(false)}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Watch party"
+          >
+            <div
+              className="w-full sm:max-w-md bg-stone-950 border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-5 text-left max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-[#A0C9CB]/10 border border-[#A0C9CB]/20 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-[#A0C9CB]" />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-bold text-base">Watch party</h3>
+                    <p className="text-gray-400 text-xs line-clamp-1">{data?.title || (data as any)?.name || manualData?.title}</p>
+                  </div>
+                </div>
+                <button onClick={() => setWtSetupOpen(false)} className="p-2 rounded-full text-white/70 hover:bg-white/10" aria-label="Close">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <p className="text-gray-400 text-xs leading-relaxed">
+                Start a room, choose who can find it and how many people fit, then send the code to your friends. Everyone stays in sync with the host.
+              </p>
+
+              <div className="space-y-2">
+                <span className="text-xs font-bold text-gray-300">Member limit</span>
+                <div className="flex items-center justify-between bg-stone-900 border border-white/5 rounded-2xl p-2">
+                  <button
+                    type="button"
+                    onClick={() => setWtMaxMembers((n) => clampMembers(n - 1))}
+                    disabled={wtMaxMembers <= WATCH_ROOM_MIN_MEMBERS}
+                    className="w-10 h-10 rounded-xl bg-white/5 text-white flex items-center justify-center disabled:opacity-30"
+                    aria-label="Fewer members"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="text-white font-bold text-lg tabular-nums" dir="ltr" aria-live="polite">{wtMaxMembers}</span>
+                  <button
+                    type="button"
+                    onClick={() => setWtMaxMembers((n) => clampMembers(n + 1))}
+                    disabled={wtMaxMembers >= WATCH_ROOM_MAX_MEMBERS}
+                    className="w-10 h-10 rounded-xl bg-white/5 text-white flex items-center justify-center disabled:opacity-30"
+                    aria-label="More members"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-xs font-bold text-gray-300">Visibility</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { v: 'private' as const, label: 'Private', hint: 'Only people with the code', Icon: Lock },
+                    { v: 'public' as const, label: 'Public', hint: 'Listed on this title', Icon: Globe },
+                  ]).map(({ v, label, hint, Icon }) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setWtVisibility(v)}
+                      aria-pressed={wtVisibility === v}
+                      className={`rounded-2xl border p-3 text-left transition-colors ${
+                        wtVisibility === v
+                          ? 'border-[#A0C9CB]/60 bg-[#A0C9CB]/10 text-white'
+                          : 'border-white/5 bg-stone-900 text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 mb-1.5 ${wtVisibility === v ? 'text-[#A0C9CB]' : ''}`} />
+                      <span className="block text-sm font-bold">{label}</span>
+                      <span className="block text-[11px] opacity-70">{hint}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCreateWatchRoom}
+                disabled={wtCreating || !user || user.type === 'guest'}
+                className="w-full h-12 rounded-2xl bg-[#A0C9CB] text-black font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {wtCreating ? 'Creating…' : 'Create room'}
+              </button>
+              {(!user || user.type === 'guest') && (
+                <p className="text-[11px] text-amber-300/80 -mt-3 text-center">Sign in to create a room. You can still join one with a code.</p>
+              )}
+
+              <form
+                onSubmit={(e) => { e.preventDefault(); joinWatchRoom(wtJoinInput); }}
+                className="flex items-center gap-2 border-t border-white/5 pt-4"
+              >
+                <input
+                  value={wtJoinInput}
+                  onChange={(e) => setWtJoinInput(e.target.value)}
+                  placeholder="Room code, e.g. NOIR-1234"
+                  dir="ltr"
+                  className="flex-grow bg-stone-900 text-white text-xs px-3.5 py-3 rounded-xl border border-white/5 focus:outline-none focus:border-[#A0C9CB] font-mono"
+                />
+                <button type="submit" disabled={!wtJoinInput.trim()} className="px-4 py-3 rounded-xl bg-white text-black text-xs font-bold disabled:opacity-40">
+                  Join
+                </button>
+              </form>
+
+              {wtPublicRooms.length > 0 && (
+                <div className="space-y-2">
+                  <span className="text-xs font-bold text-gray-300">Open public rooms</span>
+                  {wtPublicRooms.map((room) => {
+                    const full = room.memberCount >= room.maxMembers;
+                    return (
+                      <div key={room.code} className="flex items-center justify-between bg-stone-900 border border-white/5 rounded-2xl px-3.5 py-2.5">
+                        <div className="flex flex-col">
+                          <span className="text-white text-xs font-bold">{room.hostName}</span>
+                          <span className="text-[11px] text-gray-500 font-mono" dir="ltr">{room.code} · {room.memberCount}/{room.maxMembers}</span>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={full}
+                          onClick={() => joinWatchRoom(room.code)}
+                          className="px-3.5 py-1.5 rounded-full bg-[#A0C9CB] text-black text-xs font-bold disabled:opacity-40"
+                        >
+                          {full ? 'Full' : 'Join'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>,
+          document.body,
+        )}
 
         {/* Watch Together Live Synchronization Panel */}
         {isWatchTogetherOpen && (
@@ -1198,6 +1452,13 @@ export default function DetailView({
                   <Copy className="w-3 h-3" />
                   <span>{wtCopied ?'Copied!' :'Copy link'}</span>
 </button>
+                <button
+                  onClick={handleLeaveWatchParty}
+                  className="flex items-center gap-1 border border-white/10 hover:bg-white/10 text-white font-bold text-xs px-3.5 py-1.5 rounded-full transition-all cursor-pointer"
+                >
+                  <LogOut className="w-3 h-3" />
+                  <span>{wtIsHost ? 'End' : 'Leave'}</span>
+                </button>
 </div>
 </div>
 
@@ -1253,7 +1514,14 @@ export default function DetailView({
 
               {/* Members status bar */}
               <div className="bg-stone-900 border border-white/5 p-4 rounded-2xl flex flex-col gap-3 text-left">
-                <span className="text-xs text-gray-500 font-bold border-b border-white/5 pb-2 block">Online now ({wtMembers.length})</span>
+                <span className="text-xs text-gray-500 font-bold border-b border-white/5 pb-2 block">Online now ({wtMembers.length}{wtRoomInfo ? `/${wtRoomInfo.maxMembers}` : ''})
+                  {wtRoomInfo && (
+                    <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-gray-400">
+                      {wtRoomInfo.visibility === 'public' ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                      {wtRoomInfo.visibility === 'public' ? 'Public' : 'Private'}
+                    </span>
+                  )}
+                </span>
                 <div className="flex flex-col gap-2.5">
                   {wtMembers.length === 0 && (
                     <span className="text-[11px] text-gray-600 font-medium">No one yet. Copy the link and send it to your friends.</span>

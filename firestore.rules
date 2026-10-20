@@ -230,5 +230,40 @@ service cloud.firestore {
       allow write: if isSignedIn()
         && request.auth.token.email == 'ahmedabdghaney@gmail.com';
     }
+
+    // Watch-party room settings (member limit + visibility). Anyone with the
+    // code can read a room; only public rooms can be listed. Only the signed-in
+    // host can create, refresh, or close their room.
+    function isValidWatchRoom(data, code) {
+      return data.keys().hasOnly([
+          'code', 'hostUid', 'hostName', 'type', 'tmdbId', 'title',
+          'maxMembers', 'visibility', 'memberCount', 'createdAtMs', 'updatedAtMs'
+        ])
+        && data.keys().size() == 11
+        && data.code == code
+        && code.matches('^NOIR-[0-9]{4}$')
+        && data.hostUid == request.auth.uid
+        && data.hostName is string && data.hostName.size() <= 60
+        && (data.type == 'movie' || data.type == 'tv')
+        && data.tmdbId is int
+        && data.title is string && data.title.size() <= 200
+        && data.maxMembers is int && data.maxMembers >= 2 && data.maxMembers <= 20
+        && (data.visibility == 'private' || data.visibility == 'public')
+        && data.memberCount is int && data.memberCount >= 0 && data.memberCount <= 50
+        && data.createdAtMs is int
+        && data.updatedAtMs is int;
+    }
+
+    match /watchRooms/{code} {
+      allow get: if true;
+      allow list: if resource.data.visibility == 'public';
+      allow create: if isSignedIn() && isValidWatchRoom(incoming(), code);
+      allow update: if isSignedIn()
+        && resource.data.hostUid == request.auth.uid
+        && incoming().diff(resource.data).affectedKeys().hasOnly(['memberCount', 'updatedAtMs'])
+        && incoming().memberCount is int && incoming().memberCount >= 0 && incoming().memberCount <= 50
+        && incoming().updatedAtMs is int;
+      allow delete: if isSignedIn() && resource.data.hostUid == request.auth.uid;
+    }
   }
 }

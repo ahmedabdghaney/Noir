@@ -50,6 +50,7 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
   const [error, setError] = useState<string>('');
   // Latest playback time reported by the host (seconds). 0 = not started / unknown.
   const [hostTime, setHostTime] = useState(0);
+  const [selfId, setSelfId] = useState('');
 
   const pushMessage = useCallback((m: WtMessage) => {
     setMessages((prev) => [...prev, m]);
@@ -92,6 +93,7 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
 
         if (msg.type === 'joined') {
           selfIdRef.current = msg.selfId;
+          setSelfId(msg.selfId || '');
           setIsHost(!!msg.isHost);
           setMembers(msg.members || []);
           if (typeof msg.hostTime === 'number') setHostTime(msg.hostTime);
@@ -147,6 +149,7 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
       setMessages([]);
       setIsHost(false);
       setHostTime(0);
+      setSelfId('');
     };
   }, [enabled, room, name, pushMessage]);
 
@@ -171,5 +174,5 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
     }
   }, []);
 
-  return { connected, isHost, members, messages, error, hostTime, sendChat, sendPlayer, sendTime };
+  return { connected, isHost, selfId, members, messages, error, hostTime, sendChat, sendPlayer, sendTime };
 }
