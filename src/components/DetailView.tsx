@@ -470,7 +470,16 @@ export default function DetailView({
   const joinWatchRoom = useCallback(async (rawCode: string) => {
     const code = rawCode.trim().toUpperCase();
     if (!code) return;
+    await auth.authStateReady();
+    if (!auth.currentUser) {
+      showToast('Sign in to join the watch party');
+      return;
+    }
     const info = await getWatchRoom(code);
+    if (!info) {
+      showToast(`Room ${code} was not found or has ended`);
+      return;
+    }
     if (info && info.memberCount >= info.maxMembers) {
       showToast(`Room ${code} is full (${info.maxMembers} members)`);
       return;
@@ -1368,7 +1377,7 @@ export default function DetailView({
                 {wtCreating ? 'Creating…' : 'Create room'}
               </button>
               {(!user || user.type === 'guest') && (
-                <p className="text-[11px] text-amber-300/80 -mt-3 text-center">Sign in to create a room. You can still join one with a code.</p>
+                <p className="text-[11px] text-amber-300/80 -mt-3 text-center">Sign in to create or join a room.</p>
               )}
 
               <form

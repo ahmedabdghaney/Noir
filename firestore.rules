@@ -260,10 +260,45 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidWatchRoom(incoming(), code);
       allow update: if isSignedIn()
         && resource.data.hostUid == request.auth.uid
-        && incoming().diff(resource.data).affectedKeys().hasOnly(['memberCount', 'updatedAtMs'])
+        && incoming().diff(resource.data).affectedKeys().hasOnly(['memberCount', 'updatedAtMs', 'playback', 'hostTime', 'hostTimeAtMs'])
         && incoming().memberCount is int && incoming().memberCount >= 0 && incoming().memberCount <= 50
-        && incoming().updatedAtMs is int;
+        && incoming().updatedAtMs is int
+        && (!('hostTime' in incoming()) || incoming().hostTime is number)
+        && (!('hostTimeAtMs' in incoming()) || incoming().hostTimeAtMs is int)
+        && (!('playback' in incoming()) || (
+          incoming().playback.keys().hasOnly(['action', 'time', 'byUid', 'byName', 'atMs'])
+          && incoming().playback.action in ['play', 'pause', 'seek']
+          && incoming().playback.time is number
+          && incoming().playback.byUid == request.auth.uid
+          && incoming().playback.byName is string && incoming().playback.byName.size() <= 60
+          && incoming().playback.atMs is int
+        ));
       allow delete: if isSignedIn() && resource.data.hostUid == request.auth.uid;
+
+      // Presence: each signed-in member writes only their own heartbeat.
+      match /members/{memberId} {
+        allow read: if isSignedIn();
+        allow create, update: if isOwner(memberId)
+          && exists(/databases/$(database)/documents/watchRooms/$(code))
+          && incoming().keys().hasOnly(['name', 'joinedAtMs', 'lastSeenMs'])
+          && incoming().name is string && incoming().name.size() <= 60
+          && incoming().joinedAtMs is int
+          && incoming().lastSeenMs is int;
+        allow delete: if isOwner(memberId)
+          || (isSignedIn() && get(/databases/$(database)/documents/watchRooms/$(code)).data.hostUid == request.auth.uid);
+      }
+
+      // Chat: signed-in members post as themselves; messages are never edited.
+      match /messages/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+          && exists(/databases/$(database)/documents/watchRooms/$(code))
+          && incoming().keys().hasOnly(['uid', 'name', 'text', 'atMs'])
+          && incoming().uid == request.auth.uid
+          && incoming().name is string && incoming().name.size() <= 60
+          && incoming().text is string && incoming().text.size() >= 1 && incoming().text.size() <= 500
+          && incoming().atMs is int;
+      }
     }
   }
 }
