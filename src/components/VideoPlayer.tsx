@@ -454,6 +454,7 @@ export default function VideoPlayer({
   // Member's Vidy reloaded (host resumed/seeked) but the browser didn't let it start.
   const [needsTapToPlay, setNeedsTapToPlay] = useState(false);
   const embedStartedRef = useRef(false);
+  const embedFirstTimeRef = useRef<number | null>(null);
   const onAutoplayBlockedRef = useRef(onAutoplayBlocked);
   onAutoplayBlockedRef.current = onAutoplayBlocked;
   // Latest callbacks without re-subscribing: re-subscribing reset the last known time,
@@ -506,9 +507,20 @@ export default function VideoPlayer({
       // top level or under data. The host's play/pause goes to the watch party.
       if (isVidyOrigin) {
         const playerEvent = String(d.event || d.data?.event || '').toLowerCase();
-        if (playerEvent === 'play' || playerEvent === 'timeupdate' || playerEvent === 'playing') {
-          embedStartedRef.current = true;
-          setNeedsTapToPlay(false);
+        // "Started" only once the time actually moves forward: a reload at ?progress=
+        // reports a time update while still stopped (iPhone blocks the auto-start),
+        // and a blocked play() can still fire "play".
+        if (playerEvent === 'timeupdate') {
+          const t = Number(d.currentTime ?? d.data?.currentTime);
+          if (Number.isFinite(t)) {
+            const prev = embedFirstTimeRef.current;
+            // Normal playback moves in small steps; a jump to ?progress= does not count.
+            if (prev != null && t - prev > 0.05 && t - prev < 3) {
+              embedStartedRef.current = true;
+              setNeedsTapToPlay(false);
+            }
+            embedFirstTimeRef.current = t;
+          }
         }
         if (playerEvent === 'play' || playerEvent === 'pause') {
           const at = Number(d.currentTime ?? d.data?.currentTime ?? lastWatchedRef.current);
@@ -1942,6 +1954,7 @@ export default function VideoPlayer({
     setNeedsTapToPlay(false);
     if (!memberVidySrc) return;
     embedStartedRef.current = false;
+    embedFirstTimeRef.current = null;
     const timer = setTimeout(() => {
       if (embedStartedRef.current) return;
       setNeedsTapToPlay(true);
@@ -2181,22 +2194,6 @@ export default function VideoPlayer({
                 }
               }}
             />
-
-            {/* iPhone + Vidy only: Vidy's own fullscreen opens Apple's native player, which
-                shows Arabic subtitles garbled (UTF-8 read as Latin-1). This button fills the
-                screen with CSS instead and keeps Vidy's correct subtitles. */}
-            {useMobileVidyFullscreen && (
-              <button
-                type="button"
-                onClick={toggleMobileVidyFullscreen}
-                aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-                className="absolute bottom-[max(.75rem,env(safe-area-inset-bottom))] right-[max(.75rem,env(safe-area-inset-right))] z-50 flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-black/70 text-white backdrop-blur-md active:scale-95 transition-transform"
-              >
-                {isFullscreen
-                  ? <Minimize2 className="h-5 w-5" />
-                  : <Maximize2 className="h-5 w-5" />}
-              </button>
-            )}
 
             {isDedicatedAndroidPlayer && !isPausedByHost && (
               <div className="absolute top-3 right-3 z-40" dir="ltr">
