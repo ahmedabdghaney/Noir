@@ -52,6 +52,8 @@ interface VideoPlayerProps {
   onSeek?: (seconds: number) => void;
   onHostPause?: () => void;
   onHostResume?: () => void;
+  // Host's play/pause inside an embedded player (Vidy), reported for the watch party.
+  onEmbedPlayback?: (action: 'play' | 'pause', time: number) => void;
   onClose: () => void;
   onSwitchMode: (mode: 'movie' | 'trailer') => void;
   onNextEpisode?: () => void;
@@ -108,7 +110,7 @@ export default function VideoPlayer({
   isPausedByHost = false, hostPauseByName = '',
   isLiveHost = false, isLiveSession = false,
   startAt = 0,
-  onTimeUpdate, onPlaybackProgress, onSeek,
+  onTimeUpdate, onPlaybackProgress, onSeek, onEmbedPlayback,
   onClose, onSwitchMode, onNextEpisode,
 }: VideoPlayerProps) {
   const isMobileAndroidApp =
@@ -427,6 +429,14 @@ export default function VideoPlayer({
   /* ── postMessage ── */
   const lastWatchedRef   = useRef(0);
   const lastWatchedAtRef = useRef(0);
+  const onEmbedPlaybackRef = useRef(onEmbedPlayback);
+  onEmbedPlaybackRef.current = onEmbedPlayback;
+  // Latest callbacks without re-subscribing: re-subscribing reset the last known time,
+  // which hid the host's seeks from the watch party.
+  const onTimeUpdateRef = useRef(onTimeUpdate);
+  onTimeUpdateRef.current = onTimeUpdate;
+  const onSeekRef = useRef(onSeek);
+  onSeekRef.current = onSeek;
   useEffect(() => {
     if (playMode !== 'movie') return;
     lastWatchedRef.current = lastWatchedAtRef.current = 0;
@@ -467,6 +477,16 @@ export default function VideoPlayer({
         }
       }
 
+      // Vidy PLAYER_EVENT: { event: "play" | "pause" | ..., currentTime } — either at the
+      // top level or under data. The host's play/pause goes to the watch party.
+      if (isVidyOrigin) {
+        const playerEvent = String(d.event || d.data?.event || '').toLowerCase();
+        if (playerEvent === 'play' || playerEvent === 'pause') {
+          const at = Number(d.currentTime ?? d.data?.currentTime ?? lastWatchedRef.current);
+          onEmbedPlaybackRef.current?.(playerEvent, Number.isFinite(at) ? at : 0);
+        }
+      }
+
       let w: number | null = null;
       if      (d.type === 'MEDIA_DATA'   && d.data?.progress?.watched != null) w = Number(d.data.progress.watched);
       else if (d.type === 'PLAYER_EVENT' && d.data?.player_progress   != null) w = Number(d.data.player_progress);
@@ -476,9 +496,9 @@ export default function VideoPlayer({
       if (w == null || isNaN(w) || w < 0) return;
       const now = Date.now(), prev = lastWatchedRef.current, prevAt = lastWatchedAtRef.current;
       lastWatchedRef.current = w; lastWatchedAtRef.current = now;
-      if (!prev || !prevAt) { onTimeUpdate?.(w); return; }
+      if (!prev || !prevAt) { onTimeUpdateRef.current?.(w); return; }
       const isSeek = (w - prev - (now - prevAt) / 1000) > 5 || (w - prev) < -3;
-      isSeek ? onSeek?.(w) : onTimeUpdate?.(w);
+      isSeek ? onSeekRef.current?.(w) : onTimeUpdateRef.current?.(w);
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
@@ -489,8 +509,6 @@ export default function VideoPlayer({
     season,
     episode,
     startAt,
-    onTimeUpdate,
-    onSeek,
     useVidApi,
     serverIndex,
     useEmbed,
@@ -1867,7 +1885,9 @@ export default function VideoPlayer({
       color: 'FF2E29',
       autoplay: 'true',
     });
-    const resumeAt = Math.max(startAt, currentTime);
+    // Watch-party members start exactly where the host is (startAt), even if that is
+    // earlier than their own position; everyone else resumes from the furthest point.
+    const resumeAt = isLiveSession && !isLiveHost ? startAt : Math.max(startAt, currentTime);
     if (resumeAt > 5) params.set('progress', String(Math.floor(resumeAt)));
     if (type === 'tv') {
       params.set('nextEpisode', 'true');
@@ -2105,7 +2125,10 @@ export default function VideoPlayer({
               }}
             />
 
-            {useMobileVidyFullscreen && !isPhoneDevice && (
+            {/* iPhone + Vidy only: Vidy's own fullscreen opens Apple's native player, which
+                shows Arabic subtitles garbled (UTF-8 read as Latin-1). This button fills the
+                screen with CSS instead and keeps Vidy's correct subtitles. */}
+            {useMobileVidyFullscreen && (
               <button
                 type="button"
                 onClick={toggleMobileVidyFullscreen}

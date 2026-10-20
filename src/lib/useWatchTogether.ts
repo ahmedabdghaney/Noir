@@ -71,6 +71,10 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
   const [system, setSystem] = useState<TimedMessage[]>([]);
   const [error, setError] = useState<string>('');
   const [hostTime, setHostTime] = useState(0);
+  // When hostTime was measured (local clock) and whether the host is paused,
+  // so members can estimate where the host is right now.
+  const [hostTimeAt, setHostTimeAt] = useState(0);
+  const [hostPaused, setHostPaused] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => onAuthStateChanged(auth, (u) => setUid(u?.uid || '')), []);
@@ -119,16 +123,22 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
         setError('');
 
         const pb = d.playback;
+        const playing = !pb || pb.action !== 'pause';
+        setHostPaused(!playing);
         if (typeof d.hostTime === 'number') {
           // While the host is playing, their position keeps moving since the last report.
-          const playing = !pb || pb.action !== 'pause';
           const drift = playing && d.hostTimeAtMs ? (Date.now() - d.hostTimeAtMs) / 1000 : 0;
           setHostTime(d.hostTime + Math.max(0, drift));
+          setHostTimeAt(Date.now());
         }
         if (pb && typeof pb.atMs === 'number') {
           // Skip the action already in place when we joined; react to new ones only.
+          // Exception: joining while the host is paused should start paused.
           if (firstRoomSnap) {
             lastSignalAt = pb.atMs;
+            if (pb.action === 'pause' && pb.byUid !== uid) {
+              signalRef.current?.({ action: 'pause', time: pb.time, byName: pb.byName });
+            }
           } else if (pb.atMs > lastSignalAt && pb.byUid !== uid) {
             lastSignalAt = pb.atMs;
             signalRef.current?.({ action: pb.action, time: pb.time, byName: pb.byName });
@@ -207,6 +217,8 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
       setChat([]);
       setSystem([]);
       setHostTime(0);
+      setHostTimeAt(0);
+      setHostPaused(false);
       setError('');
     };
   }, [enabled, room, uid]);
@@ -252,5 +264,5 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
     updateDoc(doc(db, 'watchRooms', room), { hostTime: Math.max(0, time), hostTimeAtMs: at, updatedAtMs: at }).catch(() => {});
   }, [enabled, room, uid, hostUid]);
 
-  return { connected, isHost, selfId: uid, members, messages, error, hostTime, sendChat, sendPlayer, sendTime };
+  return { connected, isHost, selfId: uid, members, messages, error, hostTime, hostTimeAt, hostPaused, sendChat, sendPlayer, sendTime };
 }

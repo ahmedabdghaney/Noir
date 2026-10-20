@@ -220,6 +220,8 @@ export default function DetailView({
     messages: wtMessages,
     error: wtError,
     hostTime: wtHostTime,
+    hostTimeAt: wtHostTimeAt,
+    hostPaused: wtHostPaused,
     sendChat: wtSendChat,
     sendPlayer: wtSendPlayer,
     sendTime: wtSendTime,
@@ -828,12 +830,42 @@ export default function DetailView({
   // Non-host: just keep it as a local hint (we don't broadcast).
   const handleTimeUpdate = (seconds: number) => {
     localTimeRef.current = seconds;
+    correctMemberDrift(seconds);
     if (!wtConnected || !wtIsHost) return;
     const now = Date.now();
     if (now - lastTimeBroadcastRef.current >= 4000) {
       lastTimeBroadcastRef.current = now;
       wtSendTime(seconds);
     }
+  };
+
+  // Host pressed play/pause inside the Vidy player: tell the room (the host's own
+  // player keeps going as is — only members follow).
+  const lastEmbedActionRef = useRef<'play' | 'pause' | ''>('');
+  const handleEmbedPlayback = (action: 'play' | 'pause', time: number) => {
+    localTimeRef.current = time;
+    if (!wtConnected || !wtIsHost || !isWatchTogetherOpen) return;
+    if (lastEmbedActionRef.current === action) return;
+    lastEmbedActionRef.current = action;
+    lastTimeBroadcastRef.current = Date.now();
+    wtSendPlayer(action, time);
+  };
+
+  // Members: if their player drifts from the host, restart it at the host's position.
+  // (Vidy can't be seeked from outside, so a reload at ?progress= is the only way.)
+  const hostSyncRef = useRef({ time: 0, at: 0, paused: false });
+  hostSyncRef.current = { time: wtHostTime, at: wtHostTimeAt, paused: wtHostPaused };
+  const lastDriftFixRef = useRef(0);
+  const correctMemberDrift = (seconds: number) => {
+    if (!wtConnected || wtIsHost || !isWatchTogetherOpen || isPausedByHost) return;
+    const host = hostSyncRef.current;
+    if (!host.at || host.paused) return;
+    const expected = host.time + (Date.now() - host.at) / 1000;
+    if (Math.abs(seconds - expected) < 8) return;
+    if (Date.now() - lastDriftFixRef.current < 25000) return;
+    lastDriftFixRef.current = Date.now();
+    // +2s covers the player's start-up time.
+    setStartAtSnapshot(Math.max(0, Math.floor(expected + 2)));
   };
 
   // Host scrubbed inside the iframe — push the new position to everyone immediately.
@@ -1821,6 +1853,7 @@ export default function DetailView({
             onTimeUpdate={handleTimeUpdate}
             onPlaybackProgress={handleNativePlaybackProgress}
             onSeek={handleSeek}
+            onEmbedPlayback={handleEmbedPlayback}
             onHostPause={handleHostPause}
             onHostResume={handleHostResume}
             onClose={() => {
