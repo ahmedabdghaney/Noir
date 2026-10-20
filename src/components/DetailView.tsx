@@ -768,7 +768,10 @@ export default function DetailView({
   };
 
   const handlePlayClick = (mode: 'movie' | 'trailer', startOverride?: number) => {
-    if (!isTvApp && mode === 'movie' && new URLSearchParams(window.location.search).get('play') !== '1') {
+    // In a watch party the player must stay on this page: a new tab is not in the room,
+    // so the host's play would never reach members.
+    const inWatchParty = isWatchTogetherOpen && !!wtRoomCode;
+    if (!isTvApp && !inWatchParty && mode === 'movie' && new URLSearchParams(window.location.search).get('play') !== '1') {
       const playUrl = new URL(window.location.href);
       playUrl.searchParams.set('play', '1');
       playUrl.hash = type === 'tv'
