@@ -54,6 +54,10 @@ interface VideoPlayerProps {
   onHostResume?: () => void;
   // Host's play/pause inside an embedded player (Vidy), reported for the watch party.
   onEmbedPlayback?: (action: 'play' | 'pause', time: number) => void;
+  // Watch-party members whose browser blocks auto-start (iPhone/Safari):
+  onAutoplayBlocked?: () => void;
+  syncBehindSeconds?: number | null;   // how far behind the host (shows a Sync button)
+  onSyncToHost?: () => void;
   onClose: () => void;
   onSwitchMode: (mode: 'movie' | 'trailer') => void;
   onNextEpisode?: () => void;
@@ -111,6 +115,7 @@ export default function VideoPlayer({
   isLiveHost = false, isLiveSession = false,
   startAt = 0,
   onTimeUpdate, onPlaybackProgress, onSeek, onEmbedPlayback,
+  onAutoplayBlocked, syncBehindSeconds = null, onSyncToHost,
   onClose, onSwitchMode, onNextEpisode,
 }: VideoPlayerProps) {
   const isMobileAndroidApp =
@@ -422,6 +427,21 @@ export default function VideoPlayer({
     }
   }, [id, isNative, episode, season, startAt, type]);
 
+  // Watch-party member in Noir's own player: pause and resume in place with the host
+  // (no reload). If the browser refuses to resume without a tap, ask for one.
+  useEffect(() => {
+    if (!isNative || !isLiveSession || isLiveHost) return;
+    const video = videoRef.current;
+    if (!video) return;
+    if (isPausedByHost) {
+      if (!video.paused) video.pause();
+      return;
+    }
+    if (video.paused && !video.ended) {
+      video.play().catch(() => setNeedsTapToPlay(true));
+    }
+  }, [isPausedByHost, isNative, isLiveSession, isLiveHost]);
+
   // تحميل HLS البطيء ليس فشل مصدر — لا نحوّل Autoاً لـ embed بسببه (قاعدة #9).
   // hls.js يتولّى إعادة محاولة التحميل عند تذبذب الشبكة، وشاشة التحميل تبقى
   // حتى يبدأ الPlay أو يرجع خطأ fatal (يُعالَج بـ ERROR handler بالأعلى).
@@ -431,6 +451,11 @@ export default function VideoPlayer({
   const lastWatchedAtRef = useRef(0);
   const onEmbedPlaybackRef = useRef(onEmbedPlayback);
   onEmbedPlaybackRef.current = onEmbedPlayback;
+  // Member's Vidy reloaded (host resumed/seeked) but the browser didn't let it start.
+  const [needsTapToPlay, setNeedsTapToPlay] = useState(false);
+  const embedStartedRef = useRef(false);
+  const onAutoplayBlockedRef = useRef(onAutoplayBlocked);
+  onAutoplayBlockedRef.current = onAutoplayBlocked;
   // Latest callbacks without re-subscribing: re-subscribing reset the last known time,
   // which hid the host's seeks from the watch party.
   const onTimeUpdateRef = useRef(onTimeUpdate);
@@ -481,6 +506,10 @@ export default function VideoPlayer({
       // top level or under data. The host's play/pause goes to the watch party.
       if (isVidyOrigin) {
         const playerEvent = String(d.event || d.data?.event || '').toLowerCase();
+        if (playerEvent === 'play' || playerEvent === 'timeupdate' || playerEvent === 'playing') {
+          embedStartedRef.current = true;
+          setNeedsTapToPlay(false);
+        }
         if (playerEvent === 'play' || playerEvent === 'pause') {
           const at = Number(d.currentTime ?? d.data?.currentTime ?? lastWatchedRef.current);
           onEmbedPlaybackRef.current?.(playerEvent, Number.isFinite(at) ? at : 0);
@@ -1902,6 +1931,25 @@ export default function VideoPlayer({
 
   const getEmbedUrl = () => (serverIndex === 0 ? getVidApiUrl() : getVidyUrl());
 
+  // Watch-party member: after each reload of Vidy (host resumed or jumped), check that
+  // it actually started. iPhone/Safari block starting with sound until the viewer taps.
+  const isLiveMember = isLiveSession && !isLiveHost;
+  const memberVidySrc =
+    isLiveMember && playMode === 'movie' && useVidApi && serverIndex === 1 && !useEmbed && !isPausedByHost
+      ? getVidyUrl()
+      : '';
+  useEffect(() => {
+    setNeedsTapToPlay(false);
+    if (!memberVidySrc) return;
+    embedStartedRef.current = false;
+    const timer = setTimeout(() => {
+      if (embedStartedRef.current) return;
+      setNeedsTapToPlay(true);
+      onAutoplayBlockedRef.current?.();
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [memberVidySrc]);
+
   const progressPct = duration > 0 ? Math.max(0, Math.min(100, (currentTime / duration) * 100)) : 0;
   const bufferedPct = duration > 0 ? Math.max(0, Math.min(100, (buffered / duration) * 100)) : 0;
   const hasNextEp = type === 'tv' && !!onNextEpisode && (
@@ -2043,13 +2091,22 @@ export default function VideoPlayer({
                 // فننتقل للتالي. على Chrome يدير hls.js الأخطاء فنتجاهل هنا.
                 if (!hlsRef.current) tryNextSource();
               }}
-              onPlay={() => { setIsPlaying(true); resetHideTimer(); }}
+              onPlay={() => {
+                setIsPlaying(true);
+                resetHideTimer();
+                setNeedsTapToPlay(false);
+                // Watch party: the host's play in Noir's own player goes to the room.
+                if (isLiveHost) onEmbedPlaybackRef.current?.('play', videoRef.current?.currentTime || 0);
+              }}
               onPlaying={() => { setIsLoading(false); setIsBuffering(false); }}
               onWaiting={() => setIsBuffering(true)}
               onSeeking={() => setIsBuffering(true)}
               onSeeked={() => setIsBuffering(false)}
               onPause={() => {
                 setIsPlaying(false);
+                // Watch party: the host's pause (not the end of the video) goes to the room.
+                const v = videoRef.current;
+                if (isLiveHost && v && !v.ended) onEmbedPlaybackRef.current?.('pause', v.currentTime || 0);
                 setControlsVisible(true);
                 clearTimeout(hideTimer.current);
                 reportNativeProgress(videoRef.current, false, true);
@@ -2403,6 +2460,27 @@ export default function VideoPlayer({
                 {isLiveHost && <p className="text-gray-500 text-[11px] mt-3">Press resume to keep watching</p>}
                 {!isLiveHost && isLiveSession && <p className="text-gray-500 text-[11px] mt-3 flex items-center justify-center gap-1.5"><Lock className="w-3 h-3" /> Only the host has control</p>}
               </div>
+            </div>
+          )}
+
+          {/* Watch-party member prompts (Vidy): tap to start after a resume, or re-sync. */}
+          {isLiveMember && !isPausedByHost && playMode === 'movie' && (needsTapToPlay || (syncBehindSeconds ?? 0) > 0) && (
+            <div className="pointer-events-none absolute inset-x-0 top-[max(1rem,env(safe-area-inset-top))] z-40 flex justify-center px-4" dir="ltr">
+              {needsTapToPlay ? (
+                <div className="flex items-center gap-2 rounded-full border border-[#A0C9CB]/40 bg-black/80 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur-md">
+                  <Play className="h-4 w-4 fill-[#A0C9CB] text-[#A0C9CB]" />
+                  Tap ▶ in the player to continue with the host
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onSyncToHost}
+                  className="pointer-events-auto flex items-center gap-2 rounded-full border border-[#A0C9CB]/40 bg-black/80 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur-md active:scale-95"
+                >
+                  You're {Math.round(syncBehindSeconds || 0)}s off the host
+                  <span className="rounded-full bg-[#A0C9CB] px-2.5 py-0.5 text-xs font-bold text-black">Sync</span>
+                </button>
+              )}
             </div>
           )}
 

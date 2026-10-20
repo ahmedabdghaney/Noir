@@ -239,6 +239,8 @@ export default function DetailView({
         setIsPausedByHost(false);
         setHostPauseByName('');
       } else if (sig.action === 'pause') {
+        // Stop on the host's frame (Noir's own player seeks in place while paused).
+        setStartAtSnapshot(Math.max(0, Math.floor(sig.time || 0)));
         setIsPausedByHost(true);
         setHostPauseByName(sig.byName);
         showToast(`${sig.byName} paused playback`);
@@ -856,16 +858,34 @@ export default function DetailView({
   const hostSyncRef = useRef({ time: 0, at: 0, paused: false });
   hostSyncRef.current = { time: wtHostTime, at: wtHostTimeAt, paused: wtHostPaused };
   const lastDriftFixRef = useRef(0);
+  // On iPhone/Safari a reloaded player waits for a tap, so automatic re-syncs would
+  // stop the video every time. There we show a "Sync" button instead.
+  const memberAutoplayBlockedRef = useRef(false);
+  const [memberDrift, setMemberDrift] = useState<number | null>(null);
+  const hostPositionNow = () => {
+    const host = hostSyncRef.current;
+    return host.time + (host.paused ? 0 : (Date.now() - host.at) / 1000);
+  };
   const correctMemberDrift = (seconds: number) => {
     if (!wtConnected || wtIsHost || !isWatchTogetherOpen || isPausedByHost) return;
     const host = hostSyncRef.current;
     if (!host.at || host.paused) return;
-    const expected = host.time + (Date.now() - host.at) / 1000;
-    if (Math.abs(seconds - expected) < 8) return;
+    const off = Math.abs(seconds - hostPositionNow());
+    if (memberAutoplayBlockedRef.current) {
+      const shown = off >= 8 ? Math.round(off) : null;
+      setMemberDrift((prev) => (prev === shown || (prev !== null && shown !== null && Math.abs(prev - shown) < 3) ? prev : shown));
+      return;
+    }
+    if (off < 8) return;
     if (Date.now() - lastDriftFixRef.current < 25000) return;
     lastDriftFixRef.current = Date.now();
     // +2s covers the player's start-up time.
-    setStartAtSnapshot(Math.max(0, Math.floor(expected + 2)));
+    setStartAtSnapshot(Math.max(0, Math.floor(hostPositionNow() + 2)));
+  };
+  const syncMemberToHost = () => {
+    setMemberDrift(null);
+    lastDriftFixRef.current = Date.now();
+    setStartAtSnapshot(Math.max(0, Math.floor(hostPositionNow() + 3)));
   };
 
   // Host scrubbed inside the iframe — push the new position to everyone immediately.
@@ -1854,6 +1874,9 @@ export default function DetailView({
             onPlaybackProgress={handleNativePlaybackProgress}
             onSeek={handleSeek}
             onEmbedPlayback={handleEmbedPlayback}
+            onAutoplayBlocked={() => { memberAutoplayBlockedRef.current = true; }}
+            syncBehindSeconds={memberDrift}
+            onSyncToHost={syncMemberToHost}
             onHostPause={handleHostPause}
             onHostResume={handleHostResume}
             onClose={() => {
