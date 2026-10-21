@@ -230,6 +230,20 @@ export default function VideoPlayer({
   // offers "Fullscreen" and leaving it returns to the tab view (not a black page).
   const [isFullscreen,    setIsFullscreen]    = useState(isDedicatedAndroidPlayer);
   const fillsWindow = isDedicatedPlayer || isFullscreen;
+  // Watch party: only the room's host controls playback. Members keep volume,
+  // subtitles, brightness and quality.
+  const controlsLocked = isLiveSession && !isLiveHost && playMode === 'movie';
+  const controlsLockedRef = useRef(controlsLocked);
+  controlsLockedRef.current = controlsLocked;
+  const isPausedByHostRef = useRef(isPausedByHost);
+  isPausedByHostRef.current = isPausedByHost;
+  const [lockNotice, setLockNotice] = useState(false);
+  const lockNoticeTimer = useRef<ReturnType<typeof setTimeout>>();
+  const flashLockNotice = () => {
+    setLockNotice(true);
+    clearTimeout(lockNoticeTimer.current);
+    lockNoticeTimer.current = setTimeout(() => setLockNotice(false), 2200);
+  };
   const [iosNativeFs,     setIosNativeFs]     = useState(false); // iPhone native video fullscreen
   const [autoplayNext, setAutoplayNext] = useState(
     () => localStorage.getItem('noir_autoplay_next') !== 'false',
@@ -459,6 +473,32 @@ export default function VideoPlayer({
       setCurrentTime(target);
     }
   }, [id, isNative, episode, season, startAt, type]);
+
+  // Watch-party member: playback follows the host only. If the member's video gets
+  // paused some other way (headphones, lock screen) while the host plays, resume.
+  useEffect(() => {
+    if (!isNative || !controlsLocked) return;
+    const video = videoRef.current;
+    if (!video) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onPause = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (!controlsLockedRef.current || isPausedByHostRef.current) return;
+        if (video.paused && !video.ended && !closingRef.current) {
+          video.play().catch(() => setNeedsTapToPlay(true));
+        }
+      }, 400);
+    };
+    const onRate = () => { if (video.playbackRate !== 1) video.playbackRate = 1; };
+    video.addEventListener('pause', onPause);
+    video.addEventListener('ratechange', onRate);
+    return () => {
+      clearTimeout(timer);
+      video.removeEventListener('pause', onPause);
+      video.removeEventListener('ratechange', onRate);
+    };
+  }, [isNative, controlsLocked, hlsUrl]);
 
   // Watch-party member in Noir's own player: pause and resume in place with the host
   // (no reload). If the browser refuses to resume without a tap, ask for one.
@@ -1022,7 +1062,7 @@ export default function VideoPlayer({
 
   const startSpeedBoost = useCallback(() => {
     const vid = videoRef.current;
-    if (!vid || speedBoostActiveRef.current) return;
+    if (!vid || speedBoostActiveRef.current || controlsLockedRef.current) return;
     speedBoostActiveRef.current = true;
     wasPlayingRef.current = !vid.paused;
     if (vid.paused) void vid.play().catch(() => {});
@@ -1267,7 +1307,7 @@ export default function VideoPlayer({
         default:
           if (e.code.startsWith('Digit')) {
             const n = Number(e.code.replace('Digit', ''));
-            if (!isNaN(n) && duration) {
+            if (!isNaN(n) && duration && !controlsLockedRef.current) {
               e.preventDefault();
               const target = (n / 10) * duration;
               vid.currentTime = target;
@@ -1604,6 +1644,7 @@ export default function VideoPlayer({
   }, [isNative, ownMedia, hlsUrl]);
 
   const changeSpeed = (s: number) => {
+    if (controlsLockedRef.current) return;
     if (videoRef.current) videoRef.current.playbackRate = s;
     setSpeed(s); setShowSpeedMenu(false); setShowSettings(false);
   };
@@ -1656,6 +1697,7 @@ export default function VideoPlayer({
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
+    if (controlsLockedRef.current) { flashLockNotice(); return; }
     markUserActive();
     clearTimeout(playPulseTimer.current);
     if (v.paused) {
@@ -1698,6 +1740,7 @@ export default function VideoPlayer({
 
   const seekBy = (s: number) => {
     if (!videoRef.current) return;
+    if (controlsLockedRef.current) { flashLockNotice(); return; }
     markUserActive();
     const nextTime = Math.max(
       0,
@@ -1924,6 +1967,7 @@ export default function VideoPlayer({
 
   const startScrub = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (!videoRef.current || !duration) return;
+    if (controlsLockedRef.current) { flashLockNotice(); return; }
     e.preventDefault();
     markUserActive();
     activeScrubPointerRef.current = e.pointerId;
@@ -2084,7 +2128,7 @@ export default function VideoPlayer({
 
   const progressPct = duration > 0 ? Math.max(0, Math.min(100, (currentTime / duration) * 100)) : 0;
   const bufferedPct = duration > 0 ? Math.max(0, Math.min(100, (buffered / duration) * 100)) : 0;
-  const hasNextEp = type === 'tv' && !!onNextEpisode && (
+  const hasNextEp = type === 'tv' && !!onNextEpisode && !controlsLocked && (
     hasNextEpisode ?? (episodesCount === 0 || episode < episodesCount)
   );
 
@@ -2444,7 +2488,7 @@ export default function VideoPlayer({
           )}
 
           {/* زر Play/إيقاف ثابت بمنتصف الشاشة وقت ظهور الأدوات — لمس الشاشة وحده لا يوقف الفيلم. */}
-          {isNative && controlsVisible && !playPulse && !isLoading && !isBuffering && (!isTvAndroidApp || !isPlaying) && (
+          {isNative && !controlsLocked && controlsVisible && !playPulse && !isLoading && !isBuffering && (!isTvAndroidApp || !isPlaying) && (
             <button
               type="button"
               tabIndex={isTvAndroidApp ? -1 : undefined}
@@ -2471,7 +2515,7 @@ export default function VideoPlayer({
             </div>
           )}
 
-          {isNative && introEndSeconds > 0 && currentTime >= 2 && currentTime < introEndSeconds && (
+          {isNative && !controlsLocked && introEndSeconds > 0 && currentTime >= 2 && currentTime < introEndSeconds && (
             <button
               type="button"
               onClick={() => {
@@ -2579,6 +2623,16 @@ export default function VideoPlayer({
             </div>
           )}
 
+          {/* Member tried to control playback */}
+          {controlsLocked && lockNotice && (
+            <div className="pointer-events-none absolute inset-x-0 top-1/2 z-40 flex -translate-y-1/2 justify-center px-4" dir="ltr">
+              <div className="flex items-center gap-2 rounded-full border border-white/15 bg-black/80 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur-md">
+                <Lock className="h-4 w-4 text-[#A0C9CB]" />
+                Only the host can pause or skip
+              </div>
+            </div>
+          )}
+
           {/* Watch-party member prompts (Vidy): tap to start after a resume, or re-sync. */}
           {isLiveMember && !isPausedByHost && playMode === 'movie' && (needsTapToPlay || (syncBehindSeconds ?? 0) > 0) && (
             <div className="pointer-events-none absolute inset-x-0 top-[max(1rem,env(safe-area-inset-top))] z-40 flex justify-center px-4" dir="ltr">
@@ -2666,16 +2720,24 @@ export default function VideoPlayer({
                   }}
                 >
 
-                  {/* back 10s · play/pause · forward 10s */}
-                  {!isTvAndroidApp && (
+                  {/* back 10s · play/pause · forward 10s (host / normal viewing only) */}
+                  {controlsLocked && (
+                    <span className="flex h-10 items-center gap-1.5 rounded-full bg-white/[0.08] px-3 text-xs font-semibold text-white/75">
+                      <Lock className="h-3.5 w-3.5 text-[#A0C9CB]" />
+                      Host controls playback
+                    </span>
+                  )}
+                  {!isTvAndroidApp && !controlsLocked && (
                     <Btn onClick={() => { markUserActive(); seekBy(-10); }} label="Back 10 seconds">
                       <SkipIcon direction="back" />
                     </Btn>
                   )}
+                  {!controlsLocked && (
                   <Btn onClick={togglePlay} label={isPlaying ? 'Pause' : 'Play'} big tvControl={isTvAndroidApp}>
                     {isPlaying ? <Pause className="w-6 h-6 fill-white" /> : <Play className="w-6 h-6 fill-white" />}
                   </Btn>
-                  {!isTvAndroidApp && (
+                  )}
+                  {!isTvAndroidApp && !controlsLocked && (
                     <Btn onClick={() => { markUserActive(); seekBy(10); }} label="Forward 10 seconds">
                       <SkipIcon direction="forward" />
                     </Btn>
@@ -2795,12 +2857,14 @@ export default function VideoPlayer({
                           </>
                         ) : (
                           <>
+                            {!controlsLocked && (
                             <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => setShowSpeedMenu(true)} className="noir-settings-row text-white">
                               <Gauge className="h-[18px] w-[18px] text-white/55" />
                               <span className="flex-1">Playback speed</span>
                               <span className="text-white/45">{speed === 1 ? 'Normal' : `${speed}×`}</span>
                               <ChevronRight className="h-4 w-4 text-white/35" />
                             </button>
+                            )}
                             {qualityLevels.length > 0 && (
                               <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => setShowQualityMenu(true)} className="noir-settings-row text-white">
                                 <MonitorPlay className="h-[18px] w-[18px] text-white/55" />
