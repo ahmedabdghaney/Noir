@@ -187,6 +187,17 @@ export default function App() {
   const [selectedEpisodeRoute, setSelectedEpisodeRoute] = useState<{ season: number; episode: number } | null>(null);
   const [joinRoomCode, setJoinRoomCode] = useState<string>('');
   const [autoPlayRequested, setAutoPlayRequested] = useState(false);
+  // ?play=1 marks the full-page player; DetailView pushes/pops it in the same tab.
+  const [playRoute, setPlayRoute] = useState(() => new URLSearchParams(window.location.search).get('play') === '1');
+  useEffect(() => {
+    const sync = () => setPlayRoute(new URLSearchParams(window.location.search).get('play') === '1');
+    window.addEventListener('popstate', sync);
+    window.addEventListener('noir:route', sync);
+    return () => {
+      window.removeEventListener('popstate', sync);
+      window.removeEventListener('noir:route', sync);
+    };
+  }, []);
   const homeScrollRef = useRef(Number(localStorage.getItem('noir_home_scroll') || 0));
   const scrollSaveFrameRef = useRef<number | null>(null);
   const previousViewRef = useRef(activeView);
@@ -2033,7 +2044,7 @@ export default function App() {
   }
 
   const isTvApp = document.documentElement.classList.contains('noir-tv-app');
-  const isPlayerWindow = !isTvApp && new URLSearchParams(window.location.search).get('play') === '1';
+  const isPlayerWindow = !isTvApp && playRoute;
   const browseHeroBg = resizeTmdbImage(searchResults[0]?.backdrop || heroItems[0]?.backdrop || null, 'w1280');
 
   return (

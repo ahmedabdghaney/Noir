@@ -784,19 +784,25 @@ export default function DetailView({
     }
   };
 
-  const handlePlayClick = (mode: 'movie' | 'trailer', startOverride?: number) => {
-    // In a watch party the player must stay on this page: a new tab is not in the room,
-    // so the host's play would never reach members.
-    const inWatchParty = isWatchTogetherOpen && !!wtRoomCode;
-    if (!isTvApp && !inWatchParty && mode === 'movie' && new URLSearchParams(window.location.search).get('play') !== '1') {
-      const playUrl = new URL(window.location.href);
-      playUrl.searchParams.set('play', '1');
-      playUrl.hash = type === 'tv'
-        ? `#tv/${id}/s${selectedSeason}/e${selectedEpisode}`
-        : `#movie/${id}`;
-      window.open(playUrl.toString(), '_blank');
-      return;
+  // The movie player is its own page in the same tab (like a route): opening it keeps
+  // the tap, so mobile browsers let it play straight away, and the room stays connected.
+  const playerFullPage = !isTvApp && playerMode === 'movie';
+  useEffect(() => {
+    if (!isPlayerOpen || !playerFullPage) return;
+    if (new URLSearchParams(window.location.search).get('play') !== '1') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('play', '1');
+      window.history.pushState({ ...(window.history.state || {}), noirPlayer: true }, '', url.toString());
+      window.dispatchEvent(new Event('noir:route'));
     }
+    const onPop = () => {
+      if (new URLSearchParams(window.location.search).get('play') !== '1') setIsPlayerOpen(false);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [isPlayerOpen, playerFullPage]);
+
+  const handlePlayClick = (mode: 'movie' | 'trailer', startOverride?: number) => {
     setPlayerMode(mode);
     setIsPlayerOpen(true);
     setIsPausedByHost(false);
@@ -1937,10 +1943,18 @@ export default function DetailView({
             onSyncToHost={syncMemberToHost}
             onHostPause={handleHostPause}
             onHostResume={handleHostResume}
+            fullPage={playerFullPage}
             onClose={() => {
-              if (new URLSearchParams(window.location.search).get('play') === '1') {
-                window.close();
+              // Back out of the player page; popstate then closes it.
+              if ((window.history.state as { noirPlayer?: boolean } | null)?.noirPlayer) {
+                window.history.back();
                 return;
+              }
+              if (new URLSearchParams(window.location.search).get('play') === '1') {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('play');
+                window.history.replaceState(window.history.state, '', url.toString());
+                window.dispatchEvent(new Event('noir:route'));
               }
               setIsPlayerOpen(false);
             }}

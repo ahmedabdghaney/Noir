@@ -65,6 +65,8 @@ interface VideoPlayerProps {
   syncRate?: number;  // watch-party member: speed used to catch up with / wait for the host
   videoElementRef?: { current: HTMLVideoElement | null };  // lets the page check what is buffered
   onSyncToHost?: () => void;
+  /** Show as a full-window player page (same tab). */
+  fullPage?: boolean;
   onClose: () => void;
   onSwitchMode: (mode: 'movie' | 'trailer') => void;
   onNextEpisode?: () => void;
@@ -148,6 +150,7 @@ export default function VideoPlayer({
   startAt = 0,
   onTimeUpdate, onPlaybackProgress, onSeek, onEmbedPlayback,
   onAutoplayBlocked, onNativeChange, syncBehindSeconds = null, onSyncToHost, hostNotice = null, hostPauseReason = '', syncRate = 1, videoElementRef,
+  fullPage = false,
   onClose, onSwitchMode, onNextEpisode,
 }: VideoPlayerProps) {
   const isMobileAndroidApp =
@@ -162,7 +165,7 @@ export default function VideoPlayer({
   const isWebsitePlayer = !isDedicatedAndroidPlayer;
   const isDedicatedPopupPlayer =
     !document.documentElement.classList.contains('noir-tv-app') &&
-    new URLSearchParams(window.location.search).get('play') === '1';
+    (fullPage || new URLSearchParams(window.location.search).get('play') === '1');
   const isDedicatedPlayer = isDedicatedAndroidPlayer || isDedicatedPopupPlayer;
 
   const containerRef  = useRef<HTMLDivElement>(null);
@@ -236,6 +239,14 @@ export default function VideoPlayer({
   // offers "Fullscreen" and leaving it returns to the tab view (not a black page).
   const [isFullscreen,    setIsFullscreen]    = useState(isDedicatedAndroidPlayer);
   const fillsWindow = isDedicatedPlayer || isFullscreen;
+
+  // The page under a full-window player must not scroll (mobile rubber-banding).
+  useEffect(() => {
+    if (!isDedicatedPopupPlayer) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [isDedicatedPopupPlayer]);
   // Watch party: only the room's host controls playback. Members keep volume,
   // subtitles, brightness and quality.
   const controlsLocked = isLiveSession && !isLiveHost && playMode === 'movie';
@@ -2510,6 +2521,11 @@ export default function VideoPlayer({
             <div className={`absolute inset-x-0 top-0 z-30 transition-opacity duration-200 ease-out ${controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
               <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-transparent pointer-events-none h-24" />
               <div className="relative flex items-center gap-3 px-4 pt-3">
+                {isDedicatedPopupPlayer && (
+                  <Btn onClick={closePlayer} label="Back">
+                    <ChevronLeft className="w-6 h-6" />
+                  </Btn>
+                )}
                 <div className="min-w-0 flex-1" dir="ltr">
                   <h2 className="text-white text-sm md:text-base font-semibold truncate drop-shadow">{title}</h2>
                   {type === 'tv' && (
