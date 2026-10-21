@@ -8,6 +8,38 @@ import './index.css';
 const isAndroidApp = Capacitor.getPlatform() === 'android';
 const isTvPreview = import.meta.env.DEV && new URLSearchParams(window.location.search).get('tv') === '1';
 
+/* Website TV mode — the smart-TV version of Noir on the same domain:
+   - TV browsers (Tizen, webOS, Android TV, Fire TV, ...) get it automatically;
+   - noir.aswad-iq.com/smart turns it on. A TV (no mouse/trackpad) remembers it;
+     a computer or phone only keeps it for that tab, so the normal site comes back;
+   - /smart?off=1 turns it off again. */
+const WEB_TV_KEY = 'noir_web_tv_mode';
+const TV_BROWSER_UA = /SMART-TV|SmartTV|Tizen|Web0S|webOS|NetCast|BRAVIA|HbbTV|Android TV|GoogleTV|AFT[A-Z]|CrKey|VIDAA|Hisense|Philips.*TV|Viera/i;
+function shouldUseWebTvMode(): boolean {
+  const hasMouse = window.matchMedia?.('(any-pointer: fine)').matches ?? false;
+  const path = window.location.pathname.replace(/\/+$/, '');
+  if (path === '/smart') {
+    const off = new URLSearchParams(window.location.search).get('off') === '1';
+    try {
+      localStorage.removeItem(WEB_TV_KEY);
+      sessionStorage.removeItem(WEB_TV_KEY);
+      if (!off) (hasMouse ? sessionStorage : localStorage).setItem(WEB_TV_KEY, '1');
+    } catch {}
+    // The app's routes live at the root; land on home.
+    window.history.replaceState(null, '', '/');
+    return !off;
+  }
+  try {
+    if (sessionStorage.getItem(WEB_TV_KEY) === '1') return true;
+    if (localStorage.getItem(WEB_TV_KEY) === '1') {
+      if (!hasMouse) return true;
+      // Remembered from an older version on a computer: forget it.
+      localStorage.removeItem(WEB_TV_KEY);
+    }
+  } catch {}
+  return TV_BROWSER_UA.test(navigator.userAgent);
+}
+
 const enableTvSupport = () => {
   if (document.documentElement.classList.contains('noir-tv-capabilities')) return;
   document.documentElement.classList.remove('noir-mobile-app');
@@ -26,6 +58,16 @@ const enableTvSupport = () => {
     '[tabindex]:not([tabindex="-1"])',
   ];
   const tvFocusableSelector = tvFocusableSelectors.join(',');
+
+  const isWebTvRail = () => document.documentElement.classList.contains('noir-web-tv');
+  // Last focused element outside the navigation (where Right from the rail goes back to).
+  let lastContentFocus: HTMLElement | null = null;
+  document.addEventListener('focusin', (event) => {
+    const target = event.target;
+    if (target instanceof HTMLElement && !target.closest('[data-tv-navigation]')) {
+      lastContentFocus = target;
+    }
+  });
 
   const isVisible = (element: HTMLElement) => {
     const rect = element.getBoundingClientRect();
@@ -234,6 +276,21 @@ const enableTvSupport = () => {
       ? document.activeElement
       : null;
     const currentIsNavigation = Boolean(current?.closest('[data-tv-navigation]'));
+    // Website TV mode: Right from the side rail returns to the card you came from.
+    if (currentIsNavigation && direction === 'right' && isWebTvRail()) {
+      const remembered =
+        lastContentFocus && document.contains(lastContentFocus) && isVisible(lastContentFocus)
+          ? lastContentFocus
+          : null;
+      const target =
+        remembered ||
+        allCandidates.find((candidate) => !candidate.closest('[data-tv-navigation]'));
+      if (target) {
+        target.focus({ preventScroll: true });
+        target.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
+      }
+      return;
+    }
     const candidates =
       !currentIsNavigation
         ? allCandidates.filter((candidate) => !candidate.closest('[data-tv-navigation]'))
@@ -372,6 +429,11 @@ const enableTvSupport = () => {
           return;
         }
 
+        // Website TV mode: the menu is a side rail, so Left at the row's start opens it.
+        if (direction === 'left' && !isRtl && currentIndex === 0 && isWebTvRail()) {
+          focusTopNavigation();
+          return;
+        }
         // At either edge keep focus in the row; the top navigation is reached with Up.
         return;
       }
@@ -420,6 +482,10 @@ const enableTvSupport = () => {
       }
     }
     if (!next && direction === 'up' && !currentIsNavigation) {
+      focusTopNavigation();
+      return;
+    }
+    if (!next && direction === 'left' && !currentIsNavigation && isWebTvRail()) {
       focusTopNavigation();
       return;
     }
@@ -492,7 +558,8 @@ if (isAndroidApp) {
         document.documentElement.classList.add('noir-mobile-app');
       });
   }
-} else if (isTvPreview) {
+} else if (isTvPreview || shouldUseWebTvMode()) {
+  document.documentElement.classList.add('noir-web-tv');
   enableTvSupport();
 }
 

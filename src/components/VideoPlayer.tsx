@@ -19,6 +19,10 @@ import {
   type PlayableSource,
   type ResolvedPlayback,
 } from '../lib/noirStreams';
+import { attachOwnSubtitles, isHlsUrl, qualityHeight, useOwnMedia } from '../lib/ownMedia';
+
+// علامة مصادر ملفاتك الخاصة (ownMedia) داخل قائمة المصادر.
+const OWN_PROVIDER = 'noir-own';
 import {
   Loader, Pause, Play, Lock,
   Subtitles, Settings, Maximize2, Minimize2,
@@ -48,6 +52,12 @@ interface VideoPlayerProps {
   onSeek?: (seconds: number) => void;
   onHostPause?: () => void;
   onHostResume?: () => void;
+  // Host's play/pause inside an embedded player (Vidy), reported for the watch party.
+  onEmbedPlayback?: (action: 'play' | 'pause', time: number) => void;
+  // Watch-party members whose browser blocks auto-start (iPhone/Safari):
+  onAutoplayBlocked?: () => void;
+  syncBehindSeconds?: number | null;   // how far behind the host (shows a Sync button)
+  onSyncToHost?: () => void;
   onClose: () => void;
   onSwitchMode: (mode: 'movie' | 'trailer') => void;
   onNextEpisode?: () => void;
@@ -104,7 +114,8 @@ export default function VideoPlayer({
   isPausedByHost = false, hostPauseByName = '',
   isLiveHost = false, isLiveSession = false,
   startAt = 0,
-  onTimeUpdate, onPlaybackProgress, onSeek,
+  onTimeUpdate, onPlaybackProgress, onSeek, onEmbedPlayback,
+  onAutoplayBlocked, syncBehindSeconds = null, onSyncToHost,
   onClose, onSwitchMode, onNextEpisode,
 }: VideoPlayerProps) {
   const isMobileAndroidApp =
@@ -114,9 +125,6 @@ export default function VideoPlayer({
     document.documentElement.classList.contains('noir-android-app') &&
     document.documentElement.classList.contains('noir-tv-capabilities');
   const isDedicatedAndroidPlayer = isMobileAndroidApp || isTvAndroidApp;
-  // Vidy stays available for the installed Android apps, but is disabled on
-  // the website. Web playback starts by resolving the full provider pool.
-  const isWebsitePlayer = !isDedicatedAndroidPlayer;
   const isDedicatedPopupPlayer =
     !document.documentElement.classList.contains('noir-tv-app') &&
     new URLSearchParams(window.location.search).get('play') === '1';
@@ -135,6 +143,11 @@ export default function VideoPlayer({
   const vidyHealthyRef = useRef(false);
   const vidyFallbackRequestedRef = useRef(false);
   const resolvedFallbackRef = useRef<ResolvedPlayback | null>(null);
+  // ملفاتك الخاصة لهذا الفلم/الحلقة: تشتغل مباشرة بمشغل Noir بدل المصادر الخارجية.
+  const ownMedia = useOwnMedia(type, id, season, episode);
+  const ownActiveRef = useRef(false);
+  // عند تبديل الجودة: نرجع لنفس الثانية ونكمل التشغيل لو كان شغال.
+  const pendingSeekRef = useRef<{ time: number; play: boolean } | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const closingRef = useRef(false);
   const tvSeekStartTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -154,9 +167,9 @@ export default function VideoPlayer({
   const [isLoading,       setIsLoading]       = useState(true);
   const [isBuffering,     setIsBuffering]     = useState(false);
   const [customMp4Failed, setCustomMp4Failed] = useState(false);
-  // Android apps keep their existing immediate Vidy path. The website starts
-  // with the multi-provider resolver instead.
-  const [useVidApi,       setUseVidApi]       = useState(isDedicatedAndroidPlayer);
+  // Vidy opens immediately. Other providers resolve silently in the background
+  // and are activated only when Vidy reports no content or never becomes ready.
+  const [useVidApi,       setUseVidApi]       = useState(true);
   // 0 = VidAPI (player.aswad-iq.com, Premium) · 1 = Vidy (vidy.st)
   // 1 = Vidy (default, via proxy) · 0 = VidAPI fallback
   const [serverIndex,     setServerIndex]     = useState(1);
@@ -175,7 +188,7 @@ export default function VideoPlayer({
   const [cueText,         setCueText]         = useState('');  // نص Subtitles الحالي
   const [speed,           setSpeed]           = useState(1);
   // مستويات جودة HLS: {index الفعلي بـ hls.levels, height} — -1 = Auto
-  const [qualityLevels, setQualityLevels] = useState<{ index: number; height: number }[]>([]);
+  const [qualityLevels, setQualityLevels] = useState<{ index: number; height: number; label?: string }[]>([]);
   const [currentLevel,  setCurrentLevel]  = useState(-1); // -1 = Auto
   const [showQualityMenu, setShowQualityMenu] = useState(false);
   const [showSettings,    setShowSettings]    = useState(false);
@@ -241,6 +254,9 @@ export default function VideoPlayer({
   // Vidy داخل iframe من نطاق مختلف، لذلك الموقع لا يستطيع تعديل ترجمته مباشرة.
   // على iPhone نمنع زر Vidy من فتح مشغل Apple الأصلي (الذي يشوّه Subtitles)،
   // ونستخدم ملء شاشة CSS يبقي الفيديو وSubtitles داخل مشغل Vidy نفسه.
+  // Phones (not tablets/TVs): the mobile version has no fullscreen button.
+  const isPhoneDevice =
+    typeof navigator !== 'undefined' && /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
   const isIPhoneBrowser =
     typeof navigator !== 'undefined' && /iPhone|iPod/i.test(navigator.userAgent);
   const useMobileVidyFullscreen =
@@ -411,6 +427,21 @@ export default function VideoPlayer({
     }
   }, [id, isNative, episode, season, startAt, type]);
 
+  // Watch-party member in Noir's own player: pause and resume in place with the host
+  // (no reload). If the browser refuses to resume without a tap, ask for one.
+  useEffect(() => {
+    if (!isNative || !isLiveSession || isLiveHost) return;
+    const video = videoRef.current;
+    if (!video) return;
+    if (isPausedByHost) {
+      if (!video.paused) video.pause();
+      return;
+    }
+    if (video.paused && !video.ended) {
+      video.play().catch(() => setNeedsTapToPlay(true));
+    }
+  }, [isPausedByHost, isNative, isLiveSession, isLiveHost]);
+
   // تحميل HLS البطيء ليس فشل مصدر — لا نحوّل Autoاً لـ embed بسببه (قاعدة #9).
   // hls.js يتولّى إعادة محاولة التحميل عند تذبذب الشبكة، وشاشة التحميل تبقى
   // حتى يبدأ الPlay أو يرجع خطأ fatal (يُعالَج بـ ERROR handler بالأعلى).
@@ -418,6 +449,20 @@ export default function VideoPlayer({
   /* ── postMessage ── */
   const lastWatchedRef   = useRef(0);
   const lastWatchedAtRef = useRef(0);
+  const onEmbedPlaybackRef = useRef(onEmbedPlayback);
+  onEmbedPlaybackRef.current = onEmbedPlayback;
+  // Member's Vidy reloaded (host resumed/seeked) but the browser didn't let it start.
+  const [needsTapToPlay, setNeedsTapToPlay] = useState(false);
+  const embedStartedRef = useRef(false);
+  const embedFirstTimeRef = useRef<number | null>(null);
+  const onAutoplayBlockedRef = useRef(onAutoplayBlocked);
+  onAutoplayBlockedRef.current = onAutoplayBlocked;
+  // Latest callbacks without re-subscribing: re-subscribing reset the last known time,
+  // which hid the host's seeks from the watch party.
+  const onTimeUpdateRef = useRef(onTimeUpdate);
+  onTimeUpdateRef.current = onTimeUpdate;
+  const onSeekRef = useRef(onSeek);
+  onSeekRef.current = onSeek;
   useEffect(() => {
     if (playMode !== 'movie') return;
     lastWatchedRef.current = lastWatchedAtRef.current = 0;
@@ -458,6 +503,31 @@ export default function VideoPlayer({
         }
       }
 
+      // Vidy PLAYER_EVENT: { event: "play" | "pause" | ..., currentTime } — either at the
+      // top level or under data. The host's play/pause goes to the watch party.
+      if (isVidyOrigin) {
+        const playerEvent = String(d.event || d.data?.event || '').toLowerCase();
+        // "Started" only once the time actually moves forward: a reload at ?progress=
+        // reports a time update while still stopped (iPhone blocks the auto-start),
+        // and a blocked play() can still fire "play".
+        if (playerEvent === 'timeupdate') {
+          const t = Number(d.currentTime ?? d.data?.currentTime);
+          if (Number.isFinite(t)) {
+            const prev = embedFirstTimeRef.current;
+            // Normal playback moves in small steps; a jump to ?progress= does not count.
+            if (prev != null && t - prev > 0.05 && t - prev < 3) {
+              embedStartedRef.current = true;
+              setNeedsTapToPlay(false);
+            }
+            embedFirstTimeRef.current = t;
+          }
+        }
+        if (playerEvent === 'play' || playerEvent === 'pause') {
+          const at = Number(d.currentTime ?? d.data?.currentTime ?? lastWatchedRef.current);
+          onEmbedPlaybackRef.current?.(playerEvent, Number.isFinite(at) ? at : 0);
+        }
+      }
+
       let w: number | null = null;
       if      (d.type === 'MEDIA_DATA'   && d.data?.progress?.watched != null) w = Number(d.data.progress.watched);
       else if (d.type === 'PLAYER_EVENT' && d.data?.player_progress   != null) w = Number(d.data.player_progress);
@@ -467,9 +537,9 @@ export default function VideoPlayer({
       if (w == null || isNaN(w) || w < 0) return;
       const now = Date.now(), prev = lastWatchedRef.current, prevAt = lastWatchedAtRef.current;
       lastWatchedRef.current = w; lastWatchedAtRef.current = now;
-      if (!prev || !prevAt) { onTimeUpdate?.(w); return; }
+      if (!prev || !prevAt) { onTimeUpdateRef.current?.(w); return; }
       const isSeek = (w - prev - (now - prevAt) / 1000) > 5 || (w - prev) < -3;
-      isSeek ? onSeek?.(w) : onTimeUpdate?.(w);
+      isSeek ? onSeekRef.current?.(w) : onTimeUpdateRef.current?.(w);
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
@@ -480,8 +550,6 @@ export default function VideoPlayer({
     season,
     episode,
     startAt,
-    onTimeUpdate,
-    onSeek,
     useVidApi,
     serverIndex,
     useEmbed,
@@ -503,9 +571,8 @@ export default function VideoPlayer({
     resolvedFallbackRef.current = null;
     mediaRetryCountRef.current = 0;
     setIsLoading(true); setCustomMp4Failed(false);
-    // Website: search the complete provider pool first. Installed Android apps
-    // keep their current immediate Vidy behaviour.
-    setUseVidApi(isDedicatedAndroidPlayer);
+    // Start with Vidy immediately; provider discovery must not block playback.
+    setUseVidApi(true);
     setServerIndex(1);
     setUseEmbed(false);
     setEmbedIndex(0);
@@ -523,8 +590,40 @@ export default function VideoPlayer({
     return () => clearTimeout(timer);
   }, [type, id, season, episode, playMode, isDedicatedAndroidPlayer]);
 
-  // Resolve the complete provider pool. On the website this is the primary
-  // playback path; in installed Android apps it remains Vidy's silent fallback.
+  // Your own files win: play them directly in the Noir player (no embed), best quality
+  // first. If every file fails, tryNextSource falls back to the usual providers.
+  useEffect(() => {
+    if (playMode !== 'movie' || !ownMedia || ownMedia.qualities.length === 0) {
+      ownActiveRef.current = false;
+      return;
+    }
+    ownActiveRef.current = true;
+    const hasArabic = ownMedia.subtitles.some((s) => /^ar/i.test(s.lang));
+    const sorted = [...ownMedia.qualities].sort((a, b) => qualityHeight(b.label) - qualityHeight(a.label));
+    clearTimeout(vidyHealthTimerRef.current);
+    vidyFallbackRequestedRef.current = false;
+    setUseVidApi(false);
+    setUseEmbed(false);
+    setResolveError(false);
+    setSources(sorted.map((q) => ({
+      url: q.url,
+      arabicReady: hasArabic,
+      origin: { url: q.url, isHls: isHlsUrl(q.url), isEmbed: false, isMkv: false, provider: OWN_PROVIDER, quality: q.label },
+    })));
+    setSourceIndex(0);
+    setSubEnabled(ownMedia.subtitles.length > 0);
+    setQualityLevels(sorted.length > 1 ? sorted.map((q, i) => ({ index: i, height: qualityHeight(q.label), label: q.label })) : []);
+    setCurrentLevel(0);
+    setIsLoading(true);
+  }, [ownMedia, type, id, season, episode, playMode]);
+
+  const ownQualityMenu = ownActiveRef.current && (ownMedia?.qualities.length || 0) > 1;
+  useEffect(() => {
+    if (ownQualityMenu) setCurrentLevel(sourceIndex);
+  }, [ownQualityMenu, sourceIndex]);
+
+  // Prepare CinePro/HLS and the remaining providers while Vidy is playing.
+  // This never changes the visible player unless the Vidy health check fails.
   useEffect(() => {
     if (playMode !== 'movie') return;
     const controller = new AbortController();
@@ -537,40 +636,9 @@ export default function VideoPlayer({
     })
       .then((result) => {
         if (!active) return;
-        const webResult = isWebsitePlayer
-          ? {
-              ...result,
-              embeds: result.embeds.filter((stream) => {
-                const identity = `${stream.provider || ''} ${stream.name || ''} ${stream.url}`.toLowerCase();
-                return !identity.includes('vidy');
-              }),
-            }
-          : result;
-        resolvedFallbackRef.current = webResult;
-
-        if (isWebsitePlayer) {
-          setEmbedFallback(webResult.embeds);
-          if (webResult.sources.length > 0) {
-            setSources(webResult.sources);
-            setSourceIndex(0);
-            setSubEnabled(webResult.sources[0].arabicReady);
-            setUseEmbed(false);
-            setUseVidApi(false);
-          } else if (webResult.embeds.length > 0) {
-            setEmbedIndex(0);
-            setUseEmbed(true);
-            setUseVidApi(false);
-          } else {
-            // Final legacy fallback is VidAPI, never Vidy.
-            setServerIndex(0);
-            setUseEmbed(false);
-            setUseVidApi(true);
-          }
-          return;
-        }
-
+        resolvedFallbackRef.current = result;
         if (vidyFallbackRequestedRef.current && !vidyHealthyRef.current) {
-          activateAutomaticFallback(webResult);
+          activateAutomaticFallback(result);
         }
       })
       .catch(() => {
@@ -588,7 +656,7 @@ export default function VideoPlayer({
       active = false;
       controller.abort();
     };
-  }, [type, id, season, episode, playMode, activateAutomaticFallback, isWebsitePlayer]);
+  }, [type, id, season, episode, playMode, activateAutomaticFallback]);
 
   /* ── resolve Noir playback: يجيب المصادر من الخادم ويجهّز Subtitles العربية ──
      يُشغَّل عند فتح المشغل بوضع الفيلم، ويعيد الطلب عند تغيّر العنوان/الحلقة.
@@ -613,24 +681,17 @@ export default function VideoPlayer({
     })
       .then((result) => {
         if (nonce !== resolveNonceRef.current) return;
-        const enabledEmbeds = isWebsitePlayer
-          ? result.embeds.filter((stream) => {
-              const identity = `${stream.provider || ''} ${stream.name || ''} ${stream.url}`.toLowerCase();
-              return !identity.includes('vidy');
-            })
-          : result.embeds;
-        setEmbedFallback(enabledEmbeds);
+        setEmbedFallback(result.embeds);
         if (result.sources.length > 0) {
           setSources(result.sources);
           setSourceIndex(0);
           setSubEnabled(result.sources[0].arabicReady); // العربية Autoاً لو جاهزة
-        } else if (enabledEmbeds.length > 0) {
-          // ما في مصدر native — ننتقل لمصدر embed مفعّل.
+        } else if (result.embeds.length > 0) {
+          // ما في مصدر native — ننتقل للـ embed الاحتياطي (Vidy).
           setUseEmbed(true);
         } else {
-          // Vidy مطفأ على الموقع؛ VidAPI يبقى الملاذ الأخير.
-          setServerIndex(0);
-          setUseVidApi(true);
+          setResolveError(true);
+          setIsLoading(false);
         }
       })
       .catch(() => {
@@ -641,7 +702,7 @@ export default function VideoPlayer({
       });
 
     return () => controller.abort();
-  }, [type, id, season, episode, playMode, isWebsitePlayer]);
+  }, [type, id, season, episode, playMode]);
 
   /* ينتقل للمصدر native التالي عند فشل الحالي؛ وإذا خلصت المصادر ينتقل
      Autoاً إلى embed احتياطي أو VidAPI بدون إظهار اختيار للمستخدم. */
@@ -1194,6 +1255,15 @@ export default function VideoPlayer({
     const v = videoRef.current;
     if (!v || !isNative || !hlsUrl) return;
 
+    // Your own MP4 files: plain <video src>, like a normal file player.
+    if (currentSource?.origin?.provider === OWN_PROVIDER && !isHlsUrl(hlsUrl)) {
+      v.src = hlsUrl;
+      return () => {
+        v.removeAttribute('src');
+        v.load();
+      };
+    }
+
     const pickEnglishAudio = (hls?: Hls | null) => {
       // hls.js: اختر مسار الصوت الإنجليزي لو موجود.
       if (hls && hls.audioTracks?.length) {
@@ -1268,8 +1338,10 @@ export default function VideoPlayer({
         // أزل التكرار بنفس الارتفاع (نبقي أول index).
         const seen = new Set<number>();
         const unique = levels.filter((lv) => (seen.has(lv.height) ? false : (seen.add(lv.height), true)));
-        setQualityLevels(unique);
-        setCurrentLevel(hls.autoLevelEnabled ? -1 : hls.currentLevel);
+        if (!(ownActiveRef.current && (ownMedia?.qualities.length || 0) > 1)) {
+          setQualityLevels(unique);
+          setCurrentLevel(hls.autoLevelEnabled ? -1 : hls.currentLevel);
+        }
         setIsLoading(false);
       });
       hls.on(Hls.Events.LEVEL_SWITCHED, (_e, d) => {
@@ -1404,6 +1476,14 @@ export default function VideoPlayer({
     };
   }, [isNative, subEnabled, hlsUrl, iosNativeFs, subOffset, getSubtitleTrack]);
 
+  // Your own subtitle files (Arabic first) become text tracks on the video element;
+  // the Noir subtitle layer then picks the Arabic one automatically.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !isNative || !ownActiveRef.current || !ownMedia?.subtitles.length) return;
+    void attachOwnSubtitles(v, ownMedia.subtitles);
+  }, [isNative, ownMedia, hlsUrl]);
+
   const changeSpeed = (s: number) => {
     if (videoRef.current) videoRef.current.playbackRate = s;
     setSpeed(s); setShowSpeedMenu(false); setShowSettings(false);
@@ -1411,6 +1491,20 @@ export default function VideoPlayer({
 
   // تبديل جودة الفيديو. index = -1 → Auto (ABR). خلاف ذلك index من hls.levels.
   const changeQuality = (index: number) => {
+    if (ownQualityMenu) {
+      // Your own files: swap to that quality's file and continue from the same second.
+      const target = Math.max(0, index);
+      const v = videoRef.current;
+      if (target !== sourceIndex) {
+        pendingSeekRef.current = v ? { time: v.currentTime || 0, play: !v.paused } : null;
+        setSourceIndex(target);
+        setIsLoading(true);
+      }
+      setCurrentLevel(target);
+      setShowQualityMenu(false);
+      setShowSettings(false);
+      return;
+    }
     const hls = hlsRef.current;
     if (hls) {
       // -1 يعيد الوضع الAuto (ABR) بـ hls.js.
@@ -1832,7 +1926,9 @@ export default function VideoPlayer({
       color: 'FF2E29',
       autoplay: 'true',
     });
-    const resumeAt = Math.max(startAt, currentTime);
+    // Watch-party members start exactly where the host is (startAt), even if that is
+    // earlier than their own position; everyone else resumes from the furthest point.
+    const resumeAt = isLiveSession && !isLiveHost ? startAt : Math.max(startAt, currentTime);
     if (resumeAt > 5) params.set('progress', String(Math.floor(resumeAt)));
     if (type === 'tv') {
       params.set('nextEpisode', 'true');
@@ -1846,6 +1942,26 @@ export default function VideoPlayer({
   };
 
   const getEmbedUrl = () => (serverIndex === 0 ? getVidApiUrl() : getVidyUrl());
+
+  // Watch-party member: after each reload of Vidy (host resumed or jumped), check that
+  // it actually started. iPhone/Safari block starting with sound until the viewer taps.
+  const isLiveMember = isLiveSession && !isLiveHost;
+  const memberVidySrc =
+    isLiveMember && playMode === 'movie' && useVidApi && serverIndex === 1 && !useEmbed && !isPausedByHost
+      ? getVidyUrl()
+      : '';
+  useEffect(() => {
+    setNeedsTapToPlay(false);
+    if (!memberVidySrc) return;
+    embedStartedRef.current = false;
+    embedFirstTimeRef.current = null;
+    const timer = setTimeout(() => {
+      if (embedStartedRef.current) return;
+      setNeedsTapToPlay(true);
+      onAutoplayBlockedRef.current?.();
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [memberVidySrc]);
 
   const progressPct = duration > 0 ? Math.max(0, Math.min(100, (currentTime / duration) * 100)) : 0;
   const bufferedPct = duration > 0 ? Math.max(0, Math.min(100, (buffered / duration) * 100)) : 0;
@@ -1962,7 +2078,14 @@ export default function VideoPlayer({
                 syncSubtitleTrackMode();
                 const videoDuration = Number(video.duration || 0);
                 setDuration(videoDuration);
-                if (
+                const pending = pendingSeekRef.current;
+                if (pending) {
+                  pendingSeekRef.current = null;
+                  video.currentTime = Math.min(pending.time, Math.max(0, videoDuration - 1));
+                  setCurrentTime(video.currentTime);
+                  if (pending.play) video.play().catch(() => {});
+                  else video.pause();
+                } else if (
                   startAt > 5 &&
                   Number.isFinite(videoDuration) &&
                   startAt < videoDuration - 3
@@ -1981,13 +2104,22 @@ export default function VideoPlayer({
                 // فننتقل للتالي. على Chrome يدير hls.js الأخطاء فنتجاهل هنا.
                 if (!hlsRef.current) tryNextSource();
               }}
-              onPlay={() => { setIsPlaying(true); resetHideTimer(); }}
+              onPlay={() => {
+                setIsPlaying(true);
+                resetHideTimer();
+                setNeedsTapToPlay(false);
+                // Watch party: the host's play in Noir's own player goes to the room.
+                if (isLiveHost) onEmbedPlaybackRef.current?.('play', videoRef.current?.currentTime || 0);
+              }}
               onPlaying={() => { setIsLoading(false); setIsBuffering(false); }}
               onWaiting={() => setIsBuffering(true)}
               onSeeking={() => setIsBuffering(true)}
               onSeeked={() => setIsBuffering(false)}
               onPause={() => {
                 setIsPlaying(false);
+                // Watch party: the host's pause (not the end of the video) goes to the room.
+                const v = videoRef.current;
+                if (isLiveHost && v && !v.ended) onEmbedPlaybackRef.current?.('pause', v.currentTime || 0);
                 setControlsVisible(true);
                 clearTimeout(hideTimer.current);
                 reportNativeProgress(videoRef.current, false, true);
@@ -2062,19 +2194,6 @@ export default function VideoPlayer({
                 }
               }}
             />
-
-            {useMobileVidyFullscreen && (
-              <button
-                type="button"
-                onClick={toggleMobileVidyFullscreen}
-                aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-                className="absolute bottom-[max(.75rem,env(safe-area-inset-bottom))] right-[max(.75rem,env(safe-area-inset-right))] z-50 flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-black/70 text-white backdrop-blur-md active:scale-95 transition-transform"
-              >
-                {isFullscreen
-                  ? <Minimize2 className="h-5 w-5" />
-                  : <Maximize2 className="h-5 w-5" />}
-              </button>
-            )}
 
             {isDedicatedAndroidPlayer && !isPausedByHost && (
               <div className="absolute top-3 right-3 z-40" dir="ltr">
@@ -2341,6 +2460,27 @@ export default function VideoPlayer({
             </div>
           )}
 
+          {/* Watch-party member prompts (Vidy): tap to start after a resume, or re-sync. */}
+          {isLiveMember && !isPausedByHost && playMode === 'movie' && (needsTapToPlay || (syncBehindSeconds ?? 0) > 0) && (
+            <div className="pointer-events-none absolute inset-x-0 top-[max(1rem,env(safe-area-inset-top))] z-40 flex justify-center px-4" dir="ltr">
+              {needsTapToPlay ? (
+                <div className="flex items-center gap-2 rounded-full border border-[#A0C9CB]/40 bg-black/80 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur-md">
+                  <Play className="h-4 w-4 fill-[#A0C9CB] text-[#A0C9CB]" />
+                  Tap ▶ in the player to continue with the host
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onSyncToHost}
+                  className="pointer-events-auto flex items-center gap-2 rounded-full border border-[#A0C9CB]/40 bg-black/80 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur-md active:scale-95"
+                >
+                  You're {Math.round(syncBehindSeconds || 0)}s off the host
+                  <span className="rounded-full bg-[#A0C9CB] px-2.5 py-0.5 text-xs font-bold text-black">Sync</span>
+                </button>
+              )}
+            </div>
+          )}
+
           {/* ══ bottom controls (glass) ══ */}
           {isNative && (
             <div
@@ -2514,19 +2654,24 @@ export default function VideoPlayer({
                               <span className="flex items-center gap-1 text-[#A0C9CB] font-semibold text-xs">
                                 {currentLevel === -1
                                   ? 'Auto'
-                                  : `${qualityLevels.find((l) => l.index === currentLevel)?.height || ''}p`}
+                                  : (() => {
+                                      const lv = qualityLevels.find((l) => l.index === currentLevel);
+                                      return lv?.label || `${lv?.height || ''}p`;
+                                    })()}
                                 <ChevronDown className={`w-3 h-3 transition-transform ${showQualityMenu ? 'rotate-180' : ''}`} />
                               </span>
                               <span>Quality</span>
                             </button>
                             {showQualityMenu && (
                               <div className="border-t border-white/10 max-h-48 overflow-y-auto">
+                                {!ownQualityMenu && (
                                 <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeQuality(-1)} className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors ${currentLevel === -1 ? 'text-[#A0C9CB] bg-[#A0C9CB]/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
                                   Auto
                                 </button>
+                                )}
                                 {qualityLevels.map((lv) => (
                                   <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} key={lv.index} onClick={() => changeQuality(lv.index)} className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors ${currentLevel === lv.index ? 'text-[#A0C9CB] bg-[#A0C9CB]/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
-                                    {lv.height}p
+                                    {lv.label || `${lv.height}p`}
                                   </button>
                                 ))}
                               </div>
@@ -2607,7 +2752,7 @@ export default function VideoPlayer({
                   )}
 
                   {/* fullscreen */}
-                  {!isTvAndroidApp && (
+                  {!isTvAndroidApp && !isPhoneDevice && (
                     <Btn onClick={toggleFullscreen} label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
                       {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
                     </Btn>

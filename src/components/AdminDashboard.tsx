@@ -20,6 +20,7 @@ import {
   upsertCustomSection, removeCustomSection, setSectionOrder,
   addHeroExtra, removeHeroExtra, setHeroOrder,
 } from '../lib/adminStore';
+import OwnMediaAdmin from './OwnMediaAdmin';
 
 interface SiteSection {
   key: string;
@@ -47,7 +48,7 @@ const NATIVE_SECTIONS: { key: string; title: string }[] = [
   { key: 'popularMovies', title: 'Popular Movies' },
 ];
 
-type Tab = 'library' | 'hero' | 'site' | 'add' | 'sections';
+type Tab = 'library' | 'hero' | 'site' | 'add' | 'sections' | 'files';
 
 // عنصر فورم فارغ
 const emptyForm = (): ManualItem => ({
@@ -383,10 +384,10 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
       </div>
 
       {/* تبويبات */}
-      <div className="flex gap-2 mb-8 border-b border-white/5 pb-3">
-        {([['library', 'Library'], ['hero', 'Hero'], ['site', 'Site content'], ['add', form ? 'Edit' : 'Add'], ['sections', 'Sections']] as [Tab, string][]).map(([k, label]) => (
+      <div className="flex gap-2 mb-8 border-b border-white/5 pb-3 overflow-x-auto no-scrollbar">
+        {([['library', 'Library'], ['hero', 'Hero'], ['site', 'Site content'], ['add', form ? 'Edit' : 'Add'], ['sections', 'Sections'], ['files', 'Video files']] as [Tab, string][]).map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
-            className={`px-4 py-2 rounded-full text-xs font-bold cursor-pointer transition-all ${tab === k ? 'bg-[#A0C9CB] text-white' : 'bg-stone-900 text-gray-400 hover:text-white'}`}>
+            className={`shrink-0 px-4 py-2 rounded-full text-xs font-bold cursor-pointer transition-all ${tab === k ? 'bg-[#A0C9CB] text-white' : 'bg-stone-900 text-gray-400 hover:text-white'}`}>
             {label}
           </button>
         ))}
@@ -807,6 +808,9 @@ export default function AdminDashboard({ userEmail, onBack, siteSections = [], h
       )}
 
       {/* ══ Sections ══ */}
+      {/* ══ Video files ══ */}
+      {tab === 'files' && <OwnMediaAdmin />}
+
       {tab === 'sections' && (
         <div>
           {/* المحرر (يطفو فوق القائمة لما يكون مفتوح) */}

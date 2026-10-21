@@ -5,3 +5,8 @@ dist/
 postcss.config.js
 tsconfig.node.json
 vite.config.js
+
+# local secrets
+.env
+.env.*
+!.env.example
