@@ -18,7 +18,8 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { ref as rtdbRef, remove as rtdbRemove } from 'firebase/database';
+import { auth, db, rtdb } from './firebase';
 
 export type WatchRoomVisibility = 'private' | 'public';
 
@@ -96,6 +97,7 @@ export async function updateWatchRoomCount(code: string, memberCount: number): P
 }
 
 export async function closeWatchRoom(code: string): Promise<void> {
+  rtdbRemove(rtdbRef(rtdb, `watchParty/${code}`)).catch(() => {});
   try {
     await deleteDoc(doc(roomsCol(), code));
   } catch {}

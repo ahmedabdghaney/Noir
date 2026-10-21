@@ -22,7 +22,8 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth, db } from './firebase';
+import { onValue, ref as rtdbRef, update as rtdbUpdate } from 'firebase/database';
+import { auth, db, rtdb } from './firebase';
 
 export interface WtMember {
   id: string;
@@ -100,6 +101,8 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
     let firstRoomSnap = true;
     let firstMembersSnap = true;
     let lastHostTimeAtMs = 0;
+    let firstPlayback = true;
+    let roomHostUid = '';
     let knownMembers = new Map<string, string>();
 
     const writePresence = () =>
@@ -119,29 +122,60 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
           return;
         }
         const d = snap.data() as any;
-        setHostUid(d.hostUid || '');
+        roomHostUid = d.hostUid || '';
+        setHostUid(roomHostUid);
         setConnected(true);
         setError('');
+        applyPlayback(d);
+        firstRoomSnap = false;
+      },
+      () => {
+        setConnected(false);
+        setError('Could not reach the watch party. Check your connection.');
+      },
+    );
 
+    // Same playback state over Realtime Database (much faster between devices).
+    // Whichever channel delivers first wins; duplicates are ignored by timestamp.
+    let unsubFast = () => {};
+    try {
+      unsubFast = onValue(
+        rtdbRef(rtdb, `watchParty/${room}`),
+        (snap) => {
+          const d = snap.val();
+          // Only this room's host (per Firestore) counts; ignore leftovers of an old room.
+          if (d && roomHostUid && d.hostUid === roomHostUid) applyPlayback(d);
+        },
+        () => {},
+      );
+    } catch {}
+
+    function applyPlayback(d: any) {
         const pb = d.playback;
+        // Ignore a stale copy (older action than one already applied) from the slower channel.
+        if (pb && typeof pb.atMs === 'number' && pb.atMs < lastSignalAt) return;
         const playing = !pb || pb.action !== 'pause';
         setHostPaused(!playing);
         if (typeof d.hostTime === 'number') {
           // A fresh report arrives right after the host writes it, so its arrival time is
           // the reference (device clocks can differ by seconds). Only an old report — the
           // first snapshot when joining — is aged using the host's clock, capped at 1 min.
-          const isFreshReport = !firstRoomSnap && d.hostTimeAtMs !== lastHostTimeAtMs;
-          const age = isFreshReport || !d.hostTimeAtMs
-            ? 0
-            : Math.min(60, Math.max(0, (Date.now() - d.hostTimeAtMs) / 1000));
-          lastHostTimeAtMs = d.hostTimeAtMs || 0;
-          setHostTime(d.hostTime + (playing ? age : 0));
-          setHostTimeAt(Date.now());
+          // Two channels can deliver out of order: only a newer report than the last one
+          // (host's own timestamps) may move the host position.
+          const isNewerReport = (d.hostTimeAtMs || 0) > lastHostTimeAtMs;
+          if (isNewerReport || !lastHostTimeAtMs) {
+            const age = !firstPlayback || !d.hostTimeAtMs
+              ? 0
+              : Math.min(60, Math.max(0, (Date.now() - d.hostTimeAtMs) / 1000));
+            lastHostTimeAtMs = d.hostTimeAtMs || 0;
+            setHostTime(d.hostTime + (playing ? age : 0));
+            setHostTimeAt(Date.now());
+          }
         }
         if (pb && typeof pb.atMs === 'number') {
           // Skip the action already in place when we joined; react to new ones only.
           // Exception: joining while the host is paused should start paused.
-          if (firstRoomSnap) {
+          if (firstPlayback) {
             lastSignalAt = pb.atMs;
             if (pb.action === 'pause' && pb.byUid !== uid) {
               signalRef.current?.({ action: 'pause', time: pb.time, byName: pb.byName });
@@ -151,13 +185,8 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
             signalRef.current?.({ action: pb.action, time: pb.time, byName: pb.byName });
           }
         }
-        firstRoomSnap = false;
-      },
-      () => {
-        setConnected(false);
-        setError('Could not reach the watch party. Check your connection.');
-      },
-    );
+        firstPlayback = false;
+    }
 
     const unsubMembers = onSnapshot(
       collection(db, 'watchRooms', room, 'members'),
@@ -213,6 +242,7 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
 
     return () => {
       unsubRoom();
+      unsubFast();
       unsubMembers();
       unsubChat();
       clearInterval(heartbeat);
@@ -254,8 +284,10 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
   const sendPlayer = useCallback((action: PlayerAction, time: number) => {
     if (!enabled || !room || !uid || uid !== hostUid) return;
     const at = Date.now();
+    const playback = { action, time: Math.max(0, time), byUid: uid, byName: (nameRef.current || 'Host').slice(0, 60), atMs: at };
+    rtdbUpdate(rtdbRef(rtdb, `watchParty/${room}`), { hostUid: uid, playback, hostTime: Math.max(0, time), hostTimeAtMs: at }).catch(() => {});
     updateDoc(doc(db, 'watchRooms', room), {
-      playback: { action, time: Math.max(0, time), byUid: uid, byName: (nameRef.current || 'Host').slice(0, 60), atMs: at },
+      playback,
       hostTime: Math.max(0, time),
       hostTimeAtMs: at,
       updatedAtMs: at,
@@ -268,6 +300,7 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
     const at = Date.now();
     if (at - lastTimeWriteRef.current < 1800) return;
     lastTimeWriteRef.current = at;
+    rtdbUpdate(rtdbRef(rtdb, `watchParty/${room}`), { hostUid: uid, hostTime: Math.max(0, time), hostTimeAtMs: at }).catch(() => {});
     updateDoc(doc(db, 'watchRooms', room), { hostTime: Math.max(0, time), hostTimeAtMs: at, updatedAtMs: at }).catch(() => {});
   }, [enabled, room, uid, hostUid]);
 

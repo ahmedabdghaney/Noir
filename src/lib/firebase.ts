@@ -1,4 +1,5 @@
 import { initializeApp } from 'firebase/app';
+import { getDatabase } from 'firebase/database';
 import { Capacitor } from '@capacitor/core';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import {
@@ -51,6 +52,13 @@ const firebaseConfig = {
 
 // Initialize Firebase App
 const app = initializeApp(firebaseConfig);
+
+// Realtime Database: low-latency channel for watch-party playback signals
+// (play / pause / seek / host position). Firestore stays the source for rooms,
+// members and chat. Until this instance exists the channel stays silent and the
+// watch party keeps working over Firestore.
+export const WATCH_PARTY_RTDB_URL = 'https://ios-app-498810-default-rtdb.firebaseio.com';
+export const rtdb = getDatabase(app, WATCH_PARTY_RTDB_URL);
 
 // Initialize Firebase Auth with persistent standard configs
 export const auth = Capacitor.isNativePlatform()
