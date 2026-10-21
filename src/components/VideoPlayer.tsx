@@ -28,6 +28,7 @@ import {
   Subtitles, Settings, Maximize2, Minimize2,
   Plus, Minus, ChevronDown,
   Volume2, VolumeX, Volume1, SkipForward, X,
+  Check, ChevronLeft, ChevronRight, Gauge, MonitorPlay, Captions, RotateCcw, RotateCw,
 } from 'lucide-react';
 
 interface VideoPlayerProps {
@@ -206,7 +207,11 @@ export default function VideoPlayer({
   const showSettingsRef = useRef(false);
   const showSpeedMenuRef = useRef(false);
   const subSheetOpenRef = useRef(false);
-  const [isFullscreen,    setIsFullscreen]    = useState(isDedicatedPlayer);
+  // isFullscreen = real browser fullscreen (Android apps start in it). A player opened
+  // in its own tab (?play=1) fills the tab without being in fullscreen, so the button
+  // offers "Fullscreen" and leaving it returns to the tab view (not a black page).
+  const [isFullscreen,    setIsFullscreen]    = useState(isDedicatedAndroidPlayer);
+  const fillsWindow = isDedicatedPlayer || isFullscreen;
   const [iosNativeFs,     setIosNativeFs]     = useState(false); // iPhone native video fullscreen
   const [autoplayNext, setAutoplayNext] = useState(
     () => localStorage.getItem('noir_autoplay_next') !== 'false',
@@ -1157,9 +1162,9 @@ export default function VideoPlayer({
         case 'KeyK':
           e.preventDefault(); togglePlay(); break;
         case 'ArrowRight':
-          e.preventDefault(); seekBy(5); setSeekHold('fwd'); seekKeyHeldRef.current = true; break;
+          e.preventDefault(); seekBy(10); setSeekHold('fwd'); seekKeyHeldRef.current = true; break;
         case 'ArrowLeft':
-          e.preventDefault(); seekBy(-5); setSeekHold('back'); seekKeyHeldRef.current = true; break;
+          e.preventDefault(); seekBy(-10); setSeekHold('back'); seekKeyHeldRef.current = true; break;
         case 'KeyL':
           e.preventDefault(); seekBy(10); setSeekHold('fwd'); seekKeyHeldRef.current = true; break;
         case 'KeyJ':
@@ -2055,7 +2060,7 @@ export default function VideoPlayer({
       data-tv-player={isTvAndroidApp ? '' : undefined}
       tabIndex={isTvAndroidApp ? 0 : undefined}
       className={`${isMobileAndroidApp ? 'noir-mobile-app-player' : ''} ${isTvAndroidApp ? 'noir-tv-app-player' : ''} ${isClosing ? 'noir-player-is-closing' : ''} ${
-        isFullscreen
+        fillsWindow
           ? 'fixed inset-0 z-[9999] w-screen h-[100dvh] max-w-none m-0 rounded-none'
           : 'w-full mt-16 sm:mt-20 mb-6 mx-auto max-w-[94%] md:max-w-6xl xl:max-w-7xl'
       }`}
@@ -2064,12 +2069,12 @@ export default function VideoPlayer({
       <style>{hideCueStyle}</style>
       <div
         data-tv-player
-        className={`group/player relative bg-black overflow-hidden shadow-[0_24px_64px_-12px_rgba(0,0,0,0.95)] ${isFullscreen ? 'w-full h-full rounded-none border-0' : 'rounded-2xl border border-white/10'}`}
+        className={`group/player relative bg-black overflow-hidden shadow-[0_24px_64px_-12px_rgba(0,0,0,0.95)] ${fillsWindow ? 'w-full h-full rounded-none border-0' : 'rounded-2xl border border-white/10'}`}
         dir="ltr"
         onMouseMove={resetHideTimer}
         onMouseLeave={() => { if (videoRef.current && !videoRef.current.paused && !showSettings) setControlsVisible(false); }}
       >
-        <div className={`relative w-full bg-black ${isFullscreen ? 'h-full' : 'aspect-video'}`}>
+        <div className={`relative w-full bg-black ${fillsWindow ? 'h-full' : 'aspect-video'}`}>
 
           {/* loading */}
           {(isLoading || isBuffering) && !isPausedByHost && (
@@ -2555,7 +2560,7 @@ export default function VideoPlayer({
                     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
                     event.preventDefault();
                     event.stopPropagation();
-                    seekBy(event.key === 'ArrowRight' ? 5 : -5);
+                    seekBy(event.key === 'ArrowRight' ? 10 : -10);
                   }}
                 >
                   {/* hover time tooltip */}
@@ -2589,10 +2594,20 @@ export default function VideoPlayer({
                   }}
                 >
 
-                  {/* play/pause */}
+                  {/* back 10s · play/pause · forward 10s */}
+                  {!isTvAndroidApp && (
+                    <Btn onClick={() => { markUserActive(); seekBy(-10); }} label="Back 10 seconds">
+                      <SkipIcon direction="back" />
+                    </Btn>
+                  )}
                   <Btn onClick={togglePlay} label={isPlaying ? 'Pause' : 'Play'} big tvControl={isTvAndroidApp}>
                     {isPlaying ? <Pause className="w-6 h-6 fill-white" /> : <Play className="w-6 h-6 fill-white" />}
                   </Btn>
+                  {!isTvAndroidApp && (
+                    <Btn onClick={() => { markUserActive(); seekBy(10); }} label="Forward 10 seconds">
+                      <SkipIcon direction="forward" />
+                    </Btn>
+                  )}
 
                   {/* next episode */}
                   {hasNextEp && (
@@ -2668,130 +2683,118 @@ export default function VideoPlayer({
                       <div
                         dir="ltr"
                         data-tv-player-settings={isTvAndroidApp ? '' : undefined}
-                        className="fixed sm:absolute inset-x-3 sm:inset-x-auto sm:right-0 bottom-[max(.75rem,env(safe-area-inset-bottom))] sm:bottom-full sm:mb-3 bg-[#111]/95 sm:bg-black/75 backdrop-blur-2xl border border-white/15 rounded-[22px] sm:rounded-2xl shadow-2xl w-auto sm:w-60 max-h-[min(70vh,28rem)] overflow-y-auto z-50"
+                        className="noir-player-settings fixed sm:absolute inset-x-3 sm:inset-x-auto sm:right-0 bottom-[max(.75rem,env(safe-area-inset-bottom))] sm:bottom-full sm:mb-3 w-auto sm:w-72 max-h-[min(70vh,26rem)] overflow-y-auto rounded-[22px] sm:rounded-2xl border border-white/10 bg-[#0b0d12]/92 p-1.5 text-left shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)] backdrop-blur-2xl z-50"
                       >
-                        <div className="sm:hidden flex justify-center pt-2">
+                        <div className="sm:hidden flex justify-center pt-1 pb-2">
                           <span className="w-9 h-1 rounded-full bg-white/20" />
                         </div>
-                        <div className="px-3.5 py-2.5 text-[10px] text-white/40 uppercase tracking-widest border-b border-white/10 text-left">Settings</div>
-                        <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => setShowSpeedMenu(p => !p)} className="w-full flex items-center justify-between px-3.5 py-3 text-sm text-white hover:bg-white/10 transition-colors">
-                          <span className="flex items-center gap-1 text-[#A0C9CB] font-semibold text-xs">
-                            {speed === 1 ? 'Normal' : `${speed}×`}
-                            <ChevronDown className={`w-3 h-3 transition-transform ${showSpeedMenu ? 'rotate-180' : ''}`} />
-                          </span>
-                          <span>Speed</span>
-                        </button>
-                        {showSpeedMenu && (
-                          <div className="border-t border-white/10 max-h-48 overflow-y-auto">
+
+                        {showSpeedMenu ? (
+                          <>
+                            <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => setShowSpeedMenu(false)} className="noir-settings-row mb-1 text-white/70">
+                              <ChevronLeft className="h-4 w-4" />
+                              <span className="flex-1 font-semibold text-white">Playback speed</span>
+                            </button>
                             {SPEEDS.map(s => (
-                              <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} key={s} onClick={() => changeSpeed(s)} className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors ${speed === s ? 'text-[#A0C9CB] bg-[#A0C9CB]/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
-                                {s === 1 ? 'Normal (1×)' : `${s}×`}
+                              <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} key={s} onClick={() => changeSpeed(s)} className={`noir-settings-row ${speed === s ? 'text-[#A0C9CB]' : 'text-white/85'}`}>
+                                <span className="flex-1">{s === 1 ? 'Normal' : `${s}×`}</span>
+                                {speed === s && <Check className="h-4 w-4" />}
                               </button>
                             ))}
-                          </div>
-                        )}
-                        {qualityLevels.length > 0 && (
+                          </>
+                        ) : showQualityMenu ? (
                           <>
-                            <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => setShowQualityMenu(p => !p)} className="w-full border-t border-white/10 flex items-center justify-between px-3.5 py-3 text-sm text-white hover:bg-white/10 transition-colors">
-                              <span className="flex items-center gap-1 text-[#A0C9CB] font-semibold text-xs">
-                                {currentLevel === -1
-                                  ? 'Auto'
-                                  : (() => {
-                                      const lv = qualityLevels.find((l) => l.index === currentLevel);
-                                      return lv?.label || `${lv?.height || ''}p`;
-                                    })()}
-                                <ChevronDown className={`w-3 h-3 transition-transform ${showQualityMenu ? 'rotate-180' : ''}`} />
-                              </span>
-                              <span>Quality</span>
+                            <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => setShowQualityMenu(false)} className="noir-settings-row mb-1 text-white/70">
+                              <ChevronLeft className="h-4 w-4" />
+                              <span className="flex-1 font-semibold text-white">Quality</span>
                             </button>
-                            {showQualityMenu && (
-                              <div className="border-t border-white/10 max-h-48 overflow-y-auto">
-                                {!ownQualityMenu && (
-                                <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeQuality(-1)} className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors ${currentLevel === -1 ? 'text-[#A0C9CB] bg-[#A0C9CB]/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
-                                  Auto
-                                </button>
-                                )}
-                                {qualityLevels.map((lv) => (
-                                  <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} key={lv.index} onClick={() => changeQuality(lv.index)} className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors ${currentLevel === lv.index ? 'text-[#A0C9CB] bg-[#A0C9CB]/10 font-semibold' : 'text-white/85 hover:bg-white/10'}`}>
-                                    {lv.label || `${lv.height}p`}
-                                  </button>
-                                ))}
-                              </div>
+                            {!ownQualityMenu && (
+                              <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeQuality(-1)} className={`noir-settings-row ${currentLevel === -1 ? 'text-[#A0C9CB]' : 'text-white/85'}`}>
+                                <span className="flex-1">Auto</span>
+                                {currentLevel === -1 && <Check className="h-4 w-4" />}
+                              </button>
                             )}
+                            {qualityLevels.map((lv) => (
+                              <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} key={lv.index} onClick={() => changeQuality(lv.index)} className={`noir-settings-row ${currentLevel === lv.index ? 'text-[#A0C9CB]' : 'text-white/85'}`}>
+                                <span className="flex-1">{lv.label || `${lv.height}p`}</span>
+                                {currentLevel === lv.index && <Check className="h-4 w-4" />}
+                              </button>
+                            ))}
+                          </>
+                        ) : (
+                          <>
+                            <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => setShowSpeedMenu(true)} className="noir-settings-row text-white">
+                              <Gauge className="h-[18px] w-[18px] text-white/55" />
+                              <span className="flex-1">Playback speed</span>
+                              <span className="text-white/45">{speed === 1 ? 'Normal' : `${speed}×`}</span>
+                              <ChevronRight className="h-4 w-4 text-white/35" />
+                            </button>
+                            {qualityLevels.length > 0 && (
+                              <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => setShowQualityMenu(true)} className="noir-settings-row text-white">
+                                <MonitorPlay className="h-[18px] w-[18px] text-white/55" />
+                                <span className="flex-1">Quality</span>
+                                <span className="text-white/45">
+                                  {currentLevel === -1
+                                    ? 'Auto'
+                                    : (() => {
+                                        const lv = qualityLevels.find((l) => l.index === currentLevel);
+                                        return lv?.label || `${lv?.height || ''}p`;
+                                      })()}
+                                </span>
+                                <ChevronRight className="h-4 w-4 text-white/35" />
+                              </button>
+                            )}
+                            {type === 'tv' && (
+                              <button
+                                type="button"
+                                data-tv-settings-item={isTvAndroidApp ? '' : undefined}
+                                onClick={() => {
+                                  setAutoplayNext((current) => {
+                                    const next = !current;
+                                    persistPlaybackSettings(next, subSize, subOffset);
+                                    return next;
+                                  });
+                                }}
+                                className="noir-settings-row text-white"
+                                aria-pressed={autoplayNext}
+                                role="switch"
+                              >
+                                <SkipForward className="h-[18px] w-[18px] text-white/55" />
+                                <span className="flex-1">Autoplay next episode</span>
+                                <span
+                                  className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                                    autoplayNext ? 'bg-[#A0C9CB]' : 'bg-white/15'
+                                  }`}
+                                >
+                                  <span
+                                    className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
+                                    style={{ transform: `translateX(${autoplayNext ? '20px' : '0px'})` }}
+                                  />
+                                </span>
+                              </button>
+                            )}
+                            {/* Subtitle delay */}
+                            <div className="noir-settings-row cursor-default text-white">
+                              <Captions className="h-[18px] w-[18px] text-white/55" />
+                              <span className="flex-1">Subtitle delay</span>
+                              <div className="flex items-center gap-1">
+                                <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeSubOffset(-0.5)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/[0.08] hover:bg-white/15 text-white transition-colors active:scale-90" aria-label="-0.5s">
+                                  <Minus className="w-3.5 h-3.5" />
+                                </button>
+                                <span className={`text-xs font-semibold w-12 text-center tabular-nums select-none ${subOffset === 0 ? 'text-white/45' : 'text-[#A0C9CB]'}`}>
+                                  {subOffset === 0 ? '0.0s' : `${subOffset > 0 ? '+' : ''}${subOffset.toFixed(1)}s`}
+                                </span>
+                                <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeSubOffset(0.5)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/[0.08] hover:bg-white/15 text-white transition-colors active:scale-90" aria-label="+0.5s">
+                                  <Plus className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
                           </>
                         )}
-                        {type === 'tv' && (
-                          <button
-                            type="button"
-                            data-tv-settings-item={isTvAndroidApp ? '' : undefined}
-                            onClick={() => {
-                              setAutoplayNext((current) => {
-                                const next = !current;
-                                persistPlaybackSettings(next, subSize, subOffset);
-                                return next;
-                              });
-                            }}
-                            className="w-full border-t border-white/10 px-3.5 py-3 flex items-center justify-between gap-4 text-sm text-white hover:bg-white/10"
-                            aria-pressed={autoplayNext}
-                            role="switch"
-                          >
-                            <span
-                              dir="ltr"
-                              className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${
-                                autoplayNext
-                                  ? 'border-[#A0C9CB]/70 bg-[#A0C9CB]'
-                                  : 'border-white/15 bg-white/10'
-                              }`}
-                            >
-                              <span
-                                className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
-                                style={{
-                                  transform: `translateX(${autoplayNext ? '20px' : '0px'})`,
-                                }}
-                              />
-                            </span>
-                            <span className="flex flex-1 items-center justify-between">
-                              <span>Autoplay next episode</span>
-                              <span className={autoplayNext ? 'text-[#A0C9CB]' : 'text-white/40'}>
-                                {autoplayNext ? 'On' : 'Off'}
-                              </span>
-                            </span>
-                          </button>
-                        )}
-                        {/* Subtitle delay */}
-                        <div className="border-t border-white/10 px-3.5 py-3 flex items-center justify-between">
-                          <div className="flex items-center gap-1.5">
-                            <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeSubOffset(0.5)} className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="+0.5s">
-                              <Plus className="w-3 h-3" />
-                            </button>
-                            <span className={`text-xs font-semibold w-14 text-center tabular-nums select-none ${subOffset === 0 ? 'text-white/40' : subOffset > 0 ? 'text-[#A0C9CB]' : 'text-blue-400'}`}>
-                              {subOffset === 0 ? '0.0s' : `${subOffset > 0 ? '+' : ''}${subOffset.toFixed(1)}s`}
-                            </span>
-                            <button data-tv-settings-item={isTvAndroidApp ? '' : undefined} onClick={() => changeSubOffset(-0.5)} className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors active:scale-90" aria-label="-0.5s">
-                              <Minus className="w-3 h-3" />
-                            </button>
-                          </div>
-                          <span className="text-sm text-white">Subtitle delay</span>
-                        </div>
                       </div>
                       </>
                     )}
                   </div>
-
-                  {/* Fit / Fill */}
-                  {!isTvAndroidApp && (
-                    <Btn
-                      onClick={() => setVideoFit((f) => (f === 'contain' ? 'cover' : 'contain'))}
-                      label={videoFit === 'contain' ? 'Fill video' : 'Fit video'}
-                      active={videoFit === 'cover'}
-                    >
-                      {videoFit === 'contain' ? (
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
-                      ) : (
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M4 8V5a2 2 0 0 1 2-2h3M15 3h3a2 2 0 0 1 2 2v3M20 16v3a2 2 0 0 1-2 2h-3M9 21H6a2 2 0 0 1-2-2v-3"/></svg>
-                      )}
-                    </Btn>
-                  )}
 
                   {/* fullscreen */}
                   {!isTvAndroidApp && !isPhoneDevice && (
@@ -2904,6 +2907,17 @@ export default function VideoPlayer({
   );
 
   return isDedicatedPlayer ? createPortal(player, document.body) : player;
+}
+
+// Curved arrow with "10" inside: skip back / forward 10 seconds.
+function SkipIcon({ direction }: { direction: 'back' | 'forward' }) {
+  const Arrow = direction === 'back' ? RotateCcw : RotateCw;
+  return (
+    <span className="relative flex h-6 w-6 items-center justify-center">
+      <Arrow className="absolute inset-0 h-6 w-6" strokeWidth={1.8} />
+      <span className="relative mt-[2px] text-[8.5px] font-bold leading-none tabular-nums">10</span>
+    </span>
+  );
 }
 
 function Btn({ onClick, label, children, active = false, small = false, big = false, tvControl = false }: {

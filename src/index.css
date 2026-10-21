@@ -3718,3 +3718,24 @@ html.noir-web-tv .noir-web-tv-rail-item:focus {
   color: #05060a;
   transform: scale(1.02);
 }
+
+
+/* ── Player settings panel rows ── */
+.noir-settings-row {
+  display: flex;
+  width: 100%;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  text-align: left;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.noir-settings-row:hover,
+.noir-settings-row:focus-visible {
+  background: rgba(255, 255, 255, 0.07);
+  outline: none;
+}
