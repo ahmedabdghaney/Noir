@@ -876,6 +876,8 @@ export default function DetailView({
   const hostSyncRef = useRef({ time: 0, at: 0, paused: false });
   hostSyncRef.current = { time: wtHostTime, at: wtHostTimeAt, paused: wtHostPaused };
   const lastDriftFixRef = useRef(0);
+  const lastDriftCheckRef = useRef(0);
+  const driftAvgRef = useRef<number | null>(null);
   // On iPhone/Safari a reloaded player waits for a tap, so automatic re-syncs would
   // stop the video every time. There we show a "Sync" button instead.
   const memberAutoplayBlockedRef = useRef(false);
@@ -899,35 +901,32 @@ export default function DetailView({
     if (!host.at || host.paused) return;
     const off = Math.abs(seconds - hostPositionNow());
     if (memberNativeRef.current) {
-      // 1) Gap of 0.6s+ and the host's spot is already downloaded here: jump straight
-      //    there (instant, no loading) — like Cinema Box does.
-      // 2) Not downloaded: close small gaps by playing slightly faster (behind, up to
-      //    1.25×) or slower (ahead, down to 0.85×) — no stop, no loading.
-      // 3) Big gap (4s+): jump, landing 1s ahead to cover loading time.
-      const diff = seconds - hostPositionNow(); // + ahead, − behind
-      const abs = Math.abs(diff);
+      // Smooth catch-up: check once a second, average out the noise in the host's
+      // reports, and close gaps by playing a little faster/slower — no stops.
+      // Jumping makes a phone stall (and fall behind again), so it only jumps on
+      // big gaps (5s+), at most every 10s, then lets the player settle.
+      const now = Date.now();
+      if (now - lastDriftCheckRef.current < 1000) return;
+      lastDriftCheckRef.current = now;
       setMemberDrift(null);
-      const video = memberVideoRef.current;
-      const target = hostPositionNow() + 0.15;
-      const targetBuffered = !!video && Array.from({ length: video.buffered.length }, (_, i) => i)
-        .some((i) => video.buffered.start(i) <= target && target <= video.buffered.end(i) - 0.5);
-      if (abs >= 0.6 && targetBuffered && Date.now() - lastDriftFixRef.current >= 1500) {
-        lastDriftFixRef.current = Date.now();
-        setSyncRate(1);
-        setStartAtSnapshot(Math.max(0, target));
-        return;
-      }
-      if (abs > 4) {
-        if (Date.now() - lastDriftFixRef.current < 3000) return;
-        lastDriftFixRef.current = Date.now();
+      if (now - lastDriftFixRef.current < 4000) { driftAvgRef.current = null; return; }
+      const raw = seconds - hostPositionNow(); // + ahead, − behind
+      const avg = driftAvgRef.current == null ? raw : driftAvgRef.current * 0.6 + raw * 0.4;
+      driftAvgRef.current = avg;
+      const abs = Math.abs(avg);
+      if (abs > 5 && now - lastDriftFixRef.current >= 10000) {
+        lastDriftFixRef.current = now;
+        driftAvgRef.current = null;
         setSyncRate(1);
         setStartAtSnapshot(Math.max(0, hostPositionNow() + 1));
         return;
       }
-      let rate = 1;
-      if (abs > 0.2) rate = diff < 0 ? 1 + Math.min(0.25, abs * 0.25) : 1 - Math.min(0.15, abs * 0.15);
-      rate = Math.round(rate * 50) / 50;
-      setSyncRate((prev) => (prev === rate ? prev : rate));
+      setSyncRate((prev) => {
+        if (abs < 0.35 || (prev === 1 && abs < 0.8)) return 1;
+        const rate = avg < 0 ? 1 + Math.min(0.15, abs * 0.06 + 0.03) : 1 - Math.min(0.1, abs * 0.05 + 0.02);
+        const rounded = Math.round(rate * 20) / 20;
+        return prev === rounded ? prev : rounded;
+      });
       return;
     }
     if (memberAutoplayBlockedRef.current) {
