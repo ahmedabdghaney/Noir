@@ -148,8 +148,10 @@ async function getJson(url: string, signal?: AbortSignal): Promise<any> {
 export async function fetchMovieStreams(
   tmdbId: number,
   signal?: AbortSignal,
+  fast = false,
 ): Promise<NoirStreamsResult> {
-  const data = await getJson(`${NOIR_API_BASE}/api/streams/movie/${tmdbId}`, signal);
+  const suffix = fast ? '?fast=1' : '';
+  const data = await getJson(`${NOIR_API_BASE}/api/streams/movie/${tmdbId}${suffix}`, signal);
   return parseStreamsResponse(data);
 }
 
@@ -159,11 +161,13 @@ export async function fetchSeriesStreams(
   season: number,
   episode: number,
   signal?: AbortSignal,
+  fast = false,
 ): Promise<NoirStreamsResult> {
   const qs = new URLSearchParams({
     season: String(season),
     episode: String(episode),
   });
+  if (fast) qs.set('fast', '1');
   const data = await getJson(
     `${NOIR_API_BASE}/api/streams/series/${tmdbId}?${qs}`,
     signal,
@@ -327,6 +331,26 @@ export async function orderHlsByResolution(
   ];
 }
 
+function declaredQualityHeight(stream: NoirStream): number {
+  const value = `${stream.quality || ''} ${stream.title || ''} ${stream.name || ''}`.toLowerCase();
+  if (value.includes('4k') || value.includes('2160')) return 2160;
+  if (value.includes('1440')) return 1440;
+  if (value.includes('1080') || value.includes('auto')) return 1080;
+  if (value.includes('720') || value.includes('hd')) return 720;
+  if (value.includes('576')) return 576;
+  if (value.includes('480') || value.includes('sd')) return 480;
+  if (value.includes('360')) return 360;
+  return 0;
+}
+
+/** Fast-start ordering uses provider metadata and does no extra network probes. */
+function orderNativeByDeclaredQuality(streams: NoirStream[]): NoirStream[] {
+  return orderNativeStreams(streams)
+    .map((stream, index) => ({ stream, index, height: declaredQualityHeight(stream) }))
+    .sort((a, b) => Number(a.stream.isMkv) - Number(b.stream.isMkv) || b.height - a.height || a.index - b.index)
+    .map(item => item.stream);
+}
+
 /**
  * التدفق الكامل لتحديد ما يُشغَّل، مطابق لتطبيق iOS:
  * 1) يجيب المصادر من الخادم.
@@ -343,27 +367,39 @@ export async function orderHlsByResolution(
 export async function resolvePlayback(
   type: 'movie' | 'tv',
   tmdbId: number,
-  opts: { season?: number; episode?: number; signal?: AbortSignal } = {},
+  opts: { season?: number; episode?: number; signal?: AbortSignal; fastStart?: boolean } = {},
 ): Promise<ResolvedPlayback> {
-  const { season = 1, episode = 1, signal } = opts;
+  const { season = 1, episode = 1, signal, fastStart = false } = opts;
 
   const streamsResult =
     type === 'tv'
-      ? await fetchSeriesStreams(tmdbId, season, episode, signal)
-      : await fetchMovieStreams(tmdbId, signal);
+      ? await fetchSeriesStreams(tmdbId, season, episode, signal, fastStart)
+      : await fetchMovieStreams(tmdbId, signal, fastStart);
 
   const embeds = pickEmbedStreams(streamsResult.streams);
   // نفحص دقة كل مصادر HLS ونرتّبهن بالأعلى دقة أولاً (يفحص بالتوازي، timeout قصير).
-  const native = await orderHlsByResolution(streamsResult.streams, signal);
+  const native = fastStart
+    ? orderNativeByDeclaredQuality(streamsResult.streams)
+    : await orderHlsByResolution(streamsResult.streams, signal);
 
   // IMDb: من الخادم لو موجود، وإلا من TMDB.
   let imdbId = streamsResult.imdbId || null;
-  if (!imdbId) {
+  if (!imdbId && !fastStart) {
     imdbId = await fetchImdbId(type, tmdbId).catch(() => null);
   }
 
   if (native.length === 0) {
     return { sources: [], embeds, imdbId };
+  }
+
+  // Fast start returns immediately. Manifest probing and Arabic preparation
+  // continue in the full background resolution without delaying first frame.
+  if (fastStart) {
+    return {
+      sources: native.map((stream) => ({ url: stream.url, arabicReady: false, origin: stream })),
+      embeds,
+      imdbId,
+    };
   }
 
   // نجهّز الترجمة العربية للمصدر المفضّل (الأول). فشلها لا يكسر التشغيل.

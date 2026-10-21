@@ -111,6 +111,24 @@ function excludeVidyEmbeds(embeds: NoirStream[]): NoirStream[] {
   });
 }
 
+function mergePlayableSources(first: PlayableSource[], second: PlayableSource[]): PlayableSource[] {
+  const seen = new Set<string>();
+  return [...first, ...second].filter((source) => {
+    if (!source.url || seen.has(source.url)) return false;
+    seen.add(source.url);
+    return true;
+  });
+}
+
+function mergeEmbedSources(first: NoirStream[], second: NoirStream[]): NoirStream[] {
+  const seen = new Set<string>();
+  return [...first, ...second].filter((source) => {
+    if (!source.url || seen.has(source.url)) return false;
+    seen.add(source.url);
+    return true;
+  });
+}
+
 export default function VideoPlayer({
   type, id, title,
   posterPath = null,
@@ -637,12 +655,82 @@ export default function VideoPlayer({
     if (ownQualityMenu) setCurrentLevel(sourceIndex);
   }, [ownQualityMenu, sourceIndex]);
 
-  // Resolve the complete provider pool. This is the primary path on the website
-  // and remains a silent Vidy fallback in the installed Android apps.
+  // Website: start from the best source collected in the short fast window,
+  // then append the completed provider pool as fallbacks without interrupting
+  // the source that is already playing. Android keeps its existing full path.
   useEffect(() => {
     if (playMode !== 'movie') return;
     const controller = new AbortController();
     let active = true;
+    let websitePlaybackStarted = false;
+
+    const enableWebsiteResult = (result: ResolvedPlayback, allowFinalFallback: boolean) => {
+      const enabledResult = { ...result, embeds: excludeVidyEmbeds(result.embeds) };
+      resolvedFallbackRef.current = enabledResult;
+      if (!active || ownActiveRef.current) return;
+
+      setEmbedFallback((current) => mergeEmbedSources(current, enabledResult.embeds));
+      if (enabledResult.sources.length > 0) {
+        if (websitePlaybackStarted) {
+          setSources((current) => mergePlayableSources(current, enabledResult.sources));
+        } else {
+          websitePlaybackStarted = true;
+          setSources(enabledResult.sources);
+          setSourceIndex(0);
+          setSubEnabled(enabledResult.sources[0].arabicReady);
+          setUseEmbed(false);
+          setUseVidApi(false);
+        }
+      } else if (!websitePlaybackStarted && enabledResult.embeds.length > 0) {
+        websitePlaybackStarted = true;
+        setEmbedIndex(0);
+        setUseEmbed(true);
+        setUseVidApi(false);
+      } else if (!websitePlaybackStarted && allowFinalFallback) {
+        // Full provider discovery finished without a playable result.
+        setServerIndex(0);
+        setUseEmbed(false);
+        setUseVidApi(true);
+      }
+    };
+
+    if (isWebsitePlayer) {
+      void (async () => {
+        try {
+          const quick = await resolvePlayback(type, id, {
+            season,
+            episode,
+            signal: controller.signal,
+            fastStart: true,
+          });
+          if (active) enableWebsiteResult(quick, false);
+        } catch {
+          // The full request below can still finish the same provider search.
+        }
+
+        try {
+          const complete = await resolvePlayback(type, id, {
+            season,
+            episode,
+            signal: controller.signal,
+          });
+          if (active) enableWebsiteResult(complete, true);
+        } catch {
+          if (active && !websitePlaybackStarted) {
+            const empty: ResolvedPlayback = { sources: [], embeds: [], imdbId: null };
+            resolvedFallbackRef.current = empty;
+            setServerIndex(0);
+            setUseEmbed(false);
+            setUseVidApi(true);
+          }
+        }
+      })();
+
+      return () => {
+        active = false;
+        controller.abort();
+      };
+    }
 
     void resolvePlayback(type, id, {
       season,
@@ -651,34 +739,8 @@ export default function VideoPlayer({
     })
       .then((result) => {
         if (!active) return;
-        const enabledResult = isWebsitePlayer
-          ? { ...result, embeds: excludeVidyEmbeds(result.embeds) }
-          : result;
+        const enabledResult = result;
         resolvedFallbackRef.current = enabledResult;
-
-        if (isWebsitePlayer) {
-          // User-owned media always has priority over external providers.
-          if (ownActiveRef.current) return;
-
-          setEmbedFallback(enabledResult.embeds);
-          if (enabledResult.sources.length > 0) {
-            setSources(enabledResult.sources);
-            setSourceIndex(0);
-            setSubEnabled(enabledResult.sources[0].arabicReady);
-            setUseEmbed(false);
-            setUseVidApi(false);
-          } else if (enabledResult.embeds.length > 0) {
-            setEmbedIndex(0);
-            setUseEmbed(true);
-            setUseVidApi(false);
-          } else {
-            // Keep the legacy VidAPI fallback; Vidy remains disabled.
-            setServerIndex(0);
-            setUseEmbed(false);
-            setUseVidApi(true);
-          }
-          return;
-        }
 
         if (vidyFallbackRequestedRef.current && !vidyHealthyRef.current) {
           activateAutomaticFallback(enabledResult);
@@ -721,6 +783,7 @@ export default function VideoPlayer({
       season,
       episode,
       signal: controller.signal,
+      fastStart: isWebsitePlayer,
     })
       .then((result) => {
         if (nonce !== resolveNonceRef.current) return;
