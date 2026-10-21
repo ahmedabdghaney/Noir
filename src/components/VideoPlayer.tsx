@@ -114,6 +114,9 @@ export default function VideoPlayer({
     document.documentElement.classList.contains('noir-android-app') &&
     document.documentElement.classList.contains('noir-tv-capabilities');
   const isDedicatedAndroidPlayer = isMobileAndroidApp || isTvAndroidApp;
+  // Vidy stays available for the installed Android apps, but is disabled on
+  // the website. Web playback starts by resolving the full provider pool.
+  const isWebsitePlayer = !isDedicatedAndroidPlayer;
   const isDedicatedPopupPlayer =
     !document.documentElement.classList.contains('noir-tv-app') &&
     new URLSearchParams(window.location.search).get('play') === '1';
@@ -151,9 +154,9 @@ export default function VideoPlayer({
   const [isLoading,       setIsLoading]       = useState(true);
   const [isBuffering,     setIsBuffering]     = useState(false);
   const [customMp4Failed, setCustomMp4Failed] = useState(false);
-  // Vidy opens immediately. Other providers resolve silently in the background
-  // and are activated only when Vidy reports no content or never becomes ready.
-  const [useVidApi,       setUseVidApi]       = useState(true);
+  // Android apps keep their existing immediate Vidy path. The website starts
+  // with the multi-provider resolver instead.
+  const [useVidApi,       setUseVidApi]       = useState(isDedicatedAndroidPlayer);
   // 0 = VidAPI (player.aswad-iq.com, Premium) · 1 = Vidy (vidy.st)
   // 1 = Vidy (default, via proxy) · 0 = VidAPI fallback
   const [serverIndex,     setServerIndex]     = useState(1);
@@ -500,8 +503,9 @@ export default function VideoPlayer({
     resolvedFallbackRef.current = null;
     mediaRetryCountRef.current = 0;
     setIsLoading(true); setCustomMp4Failed(false);
-    // Start with Vidy immediately; provider discovery must not block playback.
-    setUseVidApi(true);
+    // Website: search the complete provider pool first. Installed Android apps
+    // keep their current immediate Vidy behaviour.
+    setUseVidApi(isDedicatedAndroidPlayer);
     setServerIndex(1);
     setUseEmbed(false);
     setEmbedIndex(0);
@@ -519,8 +523,8 @@ export default function VideoPlayer({
     return () => clearTimeout(timer);
   }, [type, id, season, episode, playMode, isDedicatedAndroidPlayer]);
 
-  // Prepare CinePro/HLS and the remaining providers while Vidy is playing.
-  // This never changes the visible player unless the Vidy health check fails.
+  // Resolve the complete provider pool. On the website this is the primary
+  // playback path; in installed Android apps it remains Vidy's silent fallback.
   useEffect(() => {
     if (playMode !== 'movie') return;
     const controller = new AbortController();
@@ -533,9 +537,40 @@ export default function VideoPlayer({
     })
       .then((result) => {
         if (!active) return;
-        resolvedFallbackRef.current = result;
+        const webResult = isWebsitePlayer
+          ? {
+              ...result,
+              embeds: result.embeds.filter((stream) => {
+                const identity = `${stream.provider || ''} ${stream.name || ''} ${stream.url}`.toLowerCase();
+                return !identity.includes('vidy');
+              }),
+            }
+          : result;
+        resolvedFallbackRef.current = webResult;
+
+        if (isWebsitePlayer) {
+          setEmbedFallback(webResult.embeds);
+          if (webResult.sources.length > 0) {
+            setSources(webResult.sources);
+            setSourceIndex(0);
+            setSubEnabled(webResult.sources[0].arabicReady);
+            setUseEmbed(false);
+            setUseVidApi(false);
+          } else if (webResult.embeds.length > 0) {
+            setEmbedIndex(0);
+            setUseEmbed(true);
+            setUseVidApi(false);
+          } else {
+            // Final legacy fallback is VidAPI, never Vidy.
+            setServerIndex(0);
+            setUseEmbed(false);
+            setUseVidApi(true);
+          }
+          return;
+        }
+
         if (vidyFallbackRequestedRef.current && !vidyHealthyRef.current) {
-          activateAutomaticFallback(result);
+          activateAutomaticFallback(webResult);
         }
       })
       .catch(() => {
@@ -553,7 +588,7 @@ export default function VideoPlayer({
       active = false;
       controller.abort();
     };
-  }, [type, id, season, episode, playMode, activateAutomaticFallback]);
+  }, [type, id, season, episode, playMode, activateAutomaticFallback, isWebsitePlayer]);
 
   /* ── resolve Noir playback: يجيب المصادر من الخادم ويجهّز Subtitles العربية ──
      يُشغَّل عند فتح المشغل بوضع الفيلم، ويعيد الطلب عند تغيّر العنوان/الحلقة.
@@ -578,17 +613,24 @@ export default function VideoPlayer({
     })
       .then((result) => {
         if (nonce !== resolveNonceRef.current) return;
-        setEmbedFallback(result.embeds);
+        const enabledEmbeds = isWebsitePlayer
+          ? result.embeds.filter((stream) => {
+              const identity = `${stream.provider || ''} ${stream.name || ''} ${stream.url}`.toLowerCase();
+              return !identity.includes('vidy');
+            })
+          : result.embeds;
+        setEmbedFallback(enabledEmbeds);
         if (result.sources.length > 0) {
           setSources(result.sources);
           setSourceIndex(0);
           setSubEnabled(result.sources[0].arabicReady); // العربية Autoاً لو جاهزة
-        } else if (result.embeds.length > 0) {
-          // ما في مصدر native — ننتقل للـ embed الاحتياطي (Vidy).
+        } else if (enabledEmbeds.length > 0) {
+          // ما في مصدر native — ننتقل لمصدر embed مفعّل.
           setUseEmbed(true);
         } else {
-          setResolveError(true);
-          setIsLoading(false);
+          // Vidy مطفأ على الموقع؛ VidAPI يبقى الملاذ الأخير.
+          setServerIndex(0);
+          setUseVidApi(true);
         }
       })
       .catch(() => {
@@ -599,7 +641,7 @@ export default function VideoPlayer({
       });
 
     return () => controller.abort();
-  }, [type, id, season, episode, playMode]);
+  }, [type, id, season, episode, playMode, isWebsitePlayer]);
 
   /* ينتقل للمصدر native التالي عند فشل الحالي؛ وإذا خلصت المصادر ينتقل
      Autoاً إلى embed احتياطي أو VidAPI بدون إظهار اختيار للمستخدم. */
