@@ -1450,7 +1450,16 @@ export default function VideoPlayer({
         const unique = levels.filter((lv) => (seen.has(lv.height) ? false : (seen.add(lv.height), true)));
         if (!(ownActiveRef.current && (ownMedia?.qualities.length || 0) > 1)) {
           setQualityLevels(unique);
-          setCurrentLevel(hls.autoLevelEnabled ? -1 : hls.currentLevel);
+          // Always begin at the highest real level exposed by this manifest.
+          // This also prevents an "Auto" label from silently settling at 800p
+          // when a verified 1080p level is available.
+          const highest = unique[0];
+          if (highest) {
+            hls.currentLevel = highest.index;
+            setCurrentLevel(highest.index);
+          } else {
+            setCurrentLevel(-1);
+          }
         }
         setIsLoading(false);
       });

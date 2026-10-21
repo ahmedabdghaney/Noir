@@ -306,6 +306,7 @@ export async function probeHlsMaxHeight(
 export async function orderHlsByResolution(
   streams: NoirStream[],
   signal?: AbortSignal,
+  timeoutMs = 4000,
 ): Promise<NoirStream[]> {
   const native = streams.filter((s) => !s.isEmbed);
   const hls = native.filter((s) => s.isHls);
@@ -317,7 +318,7 @@ export async function orderHlsByResolution(
   }
 
   const heights = await Promise.all(
-    hls.map((s) => probeHlsMaxHeight(s.url, signal).catch(() => 0)),
+    hls.map((s) => probeHlsMaxHeight(s.url, signal, timeoutMs).catch(() => 0)),
   );
   const ranked = hls
     .map((s, i) => ({ s, h: heights[i] }))
@@ -329,26 +330,6 @@ export async function orderHlsByResolution(
     ...rest.filter((s) => !s.isMkv),
     ...rest.filter((s) => s.isMkv),
   ];
-}
-
-function declaredQualityHeight(stream: NoirStream): number {
-  const value = `${stream.quality || ''} ${stream.title || ''} ${stream.name || ''}`.toLowerCase();
-  if (value.includes('4k') || value.includes('2160')) return 2160;
-  if (value.includes('1440')) return 1440;
-  if (value.includes('1080') || value.includes('auto')) return 1080;
-  if (value.includes('720') || value.includes('hd')) return 720;
-  if (value.includes('576')) return 576;
-  if (value.includes('480') || value.includes('sd')) return 480;
-  if (value.includes('360')) return 360;
-  return 0;
-}
-
-/** Fast-start ordering uses provider metadata and does no extra network probes. */
-function orderNativeByDeclaredQuality(streams: NoirStream[]): NoirStream[] {
-  return orderNativeStreams(streams)
-    .map((stream, index) => ({ stream, index, height: declaredQualityHeight(stream) }))
-    .sort((a, b) => Number(a.stream.isMkv) - Number(b.stream.isMkv) || b.height - a.height || a.index - b.index)
-    .map(item => item.stream);
 }
 
 /**
@@ -377,10 +358,14 @@ export async function resolvePlayback(
       : await fetchMovieStreams(tmdbId, signal, fastStart);
 
   const embeds = pickEmbedStreams(streamsResult.streams);
-  // نفحص دقة كل مصادر HLS ونرتّبهن بالأعلى دقة أولاً (يفحص بالتوازي، timeout قصير).
-  const native = fastStart
-    ? orderNativeByDeclaredQuality(streamsResult.streams)
-    : await orderHlsByResolution(streamsResult.streams, signal);
+  // Provider labels are not reliable: some say 1080p while their manifest tops
+  // out at 800p. Read the real HLS levels in parallel and choose the true max.
+  // Fast start uses a shorter probe limit so one dead manifest cannot delay play.
+  const native = await orderHlsByResolution(
+    streamsResult.streams,
+    signal,
+    fastStart ? 1500 : 4000,
+  );
 
   // IMDb: من الخادم لو موجود، وإلا من TMDB.
   let imdbId = streamsResult.imdbId || null;
@@ -392,8 +377,8 @@ export async function resolvePlayback(
     return { sources: [], embeds, imdbId };
   }
 
-  // Fast start returns immediately. Manifest probing and Arabic preparation
-  // continue in the full background resolution without delaying first frame.
+  // Fast start skips Arabic preparation; the full background resolution adds
+  // that later without delaying first frame.
   if (fastStart) {
     return {
       sources: native.map((stream) => ({ url: stream.url, arabicReady: false, origin: stream })),
