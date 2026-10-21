@@ -492,7 +492,7 @@ export default function VideoPlayer({
       timer = setTimeout(() => {
         if (!controlsLockedRef.current || isPausedByHostRef.current) return;
         if (video.paused && !video.ended && !closingRef.current) {
-          video.play().catch(() => setNeedsTapToPlay(true));
+          void playOrStartMuted(video);
         }
       }, 400);
     };
@@ -517,7 +517,7 @@ export default function VideoPlayer({
       return;
     }
     if (video.paused && !video.ended) {
-      video.play().catch(() => setNeedsTapToPlay(true));
+      void playOrStartMuted(video);
     }
   }, [isPausedByHost, isNative, isLiveSession, isLiveHost]);
 
@@ -532,6 +532,30 @@ export default function VideoPlayer({
   onEmbedPlaybackRef.current = onEmbedPlayback;
   // Member's Vidy reloaded (host resumed/seeked) but the browser didn't let it start.
   const [needsTapToPlay, setNeedsTapToPlay] = useState(false);
+  // Started muted because the browser blocked starting with sound (iPhone/Safari).
+  const [autoMuted, setAutoMuted] = useState(false);
+  // Play now; if sound isn't allowed yet, start muted (always allowed) and offer
+  // "Tap for sound". Only if even muted play fails do we ask for a tap.
+  const playOrStartMuted = (video: HTMLVideoElement) =>
+    video.play().catch(() => {
+      if (video.muted) { setNeedsTapToPlay(true); return; }
+      video.muted = true;
+      setIsMuted(true);
+      setAutoMuted(true);
+      return video.play().catch(() => setNeedsTapToPlay(true));
+    });
+  const unmuteFromAuto = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = false;
+    if (v.volume === 0) v.volume = 0.8;
+    setIsMuted(false);
+    setAutoMuted(false);
+    if (v.paused) void v.play().catch(() => {});
+  };
+  // First time each source can play: start it (muted if needed) unless the host
+  // has the room paused. The <video autoplay> attribute alone fails silently.
+  const autoStartedSrcRef = useRef('');
   const embedStartedRef = useRef(false);
   const embedFirstTimeRef = useRef<number | null>(null);
   const onAutoplayBlockedRef = useRef(onAutoplayBlocked);
@@ -1733,6 +1757,7 @@ export default function VideoPlayer({
   const toggleMute = () => {
     const v = videoRef.current;
     if (!v) return;
+    setAutoMuted(false);
     if (v.muted || v.volume === 0) {
       v.muted  = false;
       v.volume = volume > 0 ? volume : 0.8;
@@ -1935,6 +1960,7 @@ export default function VideoPlayer({
   const handleVideoClick = (e: ReactMouseEvent) => {
     if (!isNative) return;
     e.stopPropagation();
+    if (autoMuted) { unmuteFromAuto(); return; }
     // Member whose browser blocked the start: a tap anywhere joins the host's playback.
     if (controlsLockedRef.current && needsTapToPlay && videoRef.current) {
       videoRef.current.play().then(() => setNeedsTapToPlay(false)).catch(() => {});
@@ -2272,7 +2298,16 @@ export default function VideoPlayer({
                 setIsLoading(false);
                 setDuration(videoRef.current?.duration || 0);
               }}
-              onCanPlay={() => { setIsLoading(false); setIsBuffering(false); }}
+              onCanPlay={() => {
+                setIsLoading(false);
+                setIsBuffering(false);
+                const video = videoRef.current;
+                if (!video || !hlsUrl || autoStartedSrcRef.current === hlsUrl) return;
+                autoStartedSrcRef.current = hlsUrl;
+                if (video.paused && !video.ended && !isPausedByHostRef.current && !pendingSeekRef.current) {
+                  void playOrStartMuted(video);
+                }
+              }}
               onError={() => {
                 // على Safari (HLS أصلي، بلا hls.js) فشل العنصر = فشل المصدر،
                 // فننتقل للتالي. على Chrome يدير hls.js الأخطاء فنتجاهل هنا.
@@ -2639,6 +2674,20 @@ export default function VideoPlayer({
                 {isLiveHost && <p className="text-gray-500 text-[11px] mt-3">Press resume to keep watching</p>}
                 {!isLiveHost && isLiveSession && <p className="text-gray-500 text-[11px] mt-3 flex items-center justify-center gap-1.5"><Lock className="w-3 h-3" /> Only the host has control</p>}
               </div>
+            </div>
+          )}
+
+          {/* Started muted because the browser blocked sound: one tap turns it on. */}
+          {isNative && autoMuted && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-24 z-40 flex justify-center px-4" dir="ltr">
+              <button
+                type="button"
+                onClick={(event) => { event.stopPropagation(); unmuteFromAuto(); }}
+                className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-black/75 px-3.5 py-2 text-xs font-semibold text-white backdrop-blur-md active:scale-95"
+              >
+                <VolumeX className="h-3.5 w-3.5 text-[#A0C9CB]" />
+                Tap for sound
+              </button>
             </div>
           )}
 
