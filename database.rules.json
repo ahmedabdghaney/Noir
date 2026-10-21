@@ -9,6 +9,7 @@
         "hostUid": { ".validate": "newData.isString() && newData.val() === auth.uid" },
         "hostTime": { ".validate": "newData.isNumber() && newData.val() >= 0" },
         "hostTimeAtMs": { ".validate": "newData.isNumber()" },
+        "hostTimeAtServerMs": { ".validate": "newData.isNumber()" },
         "playback": {
           ".validate": "newData.hasChildren(['action', 'time', 'byUid', 'byName', 'atMs'])",
           "action": { ".validate": "newData.val() === 'play' || newData.val() === 'pause' || newData.val() === 'seek'" },

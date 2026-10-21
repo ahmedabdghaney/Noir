@@ -50,6 +50,22 @@ interface UseWatchTogetherOpts {
   onPlayerSignal?: (sig: PlayerSignal) => void;
 }
 
+// Realtime Database tells each device how far its clock is from the server's.
+// Host positions carry server time, so members know exactly how old an update is.
+let serverOffsetMs: number | null = null;
+let offsetSubscribed = false;
+function ensureServerOffset() {
+  if (offsetSubscribed) return;
+  offsetSubscribed = true;
+  try {
+    onValue(rtdbRef(rtdb, '.info/serverTimeOffset'), (snap) => {
+      const v = snap.val();
+      if (typeof v === 'number') serverOffsetMs = v;
+    });
+  } catch {}
+}
+const serverNow = () => (serverOffsetMs == null ? null : Date.now() + serverOffsetMs);
+
 // عضو بدون نبضة لأكثر من دقيقة يعتبر خارج الغرفة.
 const HEARTBEAT_MS = 20_000;
 const ONLINE_WINDOW_MS = 60_000;
@@ -95,6 +111,7 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
       return;
     }
 
+    ensureServerOffset();
     const roomRef = doc(db, 'watchRooms', room);
     const memberRef = doc(db, 'watchRooms', room, 'members', uid);
     const joinedAt = Date.now();
@@ -165,9 +182,12 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
           // (host's own timestamps) may move the host position.
           const isNewerReport = (d.hostTimeAtMs || 0) > lastHostTimeAtMs;
           if (isNewerReport || !lastHostTimeAtMs) {
-            const age = !firstPlayback || !d.hostTimeAtMs
-              ? 0
-              : Math.min(60, Math.max(0, (Date.now() - d.hostTimeAtMs) / 1000));
+            const now = serverNow();
+            const age = typeof d.hostTimeAtServerMs === 'number' && now != null
+              ? Math.min(60, Math.max(0, (now - d.hostTimeAtServerMs) / 1000))
+              : !firstPlayback || !d.hostTimeAtMs
+                ? 0
+                : Math.min(60, Math.max(0, (Date.now() - d.hostTimeAtMs) / 1000));
             lastHostTimeAtMs = d.hostTimeAtMs || 0;
             setHostTime(d.hostTime + (playing ? age : 0));
             setHostTimeAt(Date.now());
@@ -287,7 +307,11 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
     const at = Date.now();
     const playback: Record<string, unknown> = { action, time: Math.max(0, time), byUid: uid, byName: (nameRef.current || 'Host').slice(0, 60), atMs: at };
     if (reason && action === 'pause') playback.reason = reason;
-    rtdbUpdate(rtdbRef(rtdb, `watchParty/${room}`), { hostUid: uid, playback, hostTime: Math.max(0, time), hostTimeAtMs: at }).catch(() => {});
+    const atServer = serverNow();
+    rtdbUpdate(rtdbRef(rtdb, `watchParty/${room}`), {
+      hostUid: uid, playback, hostTime: Math.max(0, time), hostTimeAtMs: at,
+      ...(atServer != null ? { hostTimeAtServerMs: atServer } : {}),
+    }).catch(() => {});
     updateDoc(doc(db, 'watchRooms', room), {
       playback,
       hostTime: Math.max(0, time),
@@ -297,13 +321,22 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
   }, [enabled, room, uid, hostUid]);
 
   const lastTimeWriteRef = useRef(0);
+  const lastSlowWriteRef = useRef(0);
   const sendTime = useCallback((time: number) => {
     if (!enabled || !room || !uid || uid !== hostUid) return;
     const at = Date.now();
-    if (at - lastTimeWriteRef.current < 1800) return;
+    if (at - lastTimeWriteRef.current < 900) return;
     lastTimeWriteRef.current = at;
-    rtdbUpdate(rtdbRef(rtdb, `watchParty/${room}`), { hostUid: uid, hostTime: Math.max(0, time), hostTimeAtMs: at }).catch(() => {});
-    updateDoc(doc(db, 'watchRooms', room), { hostTime: Math.max(0, time), hostTimeAtMs: at, updatedAtMs: at }).catch(() => {});
+    const atServer = serverNow();
+    rtdbUpdate(rtdbRef(rtdb, `watchParty/${room}`), {
+      hostUid: uid, hostTime: Math.max(0, time), hostTimeAtMs: at,
+      ...(atServer != null ? { hostTimeAtServerMs: atServer } : {}),
+    }).catch(() => {});
+    // Firestore is the backup channel: every 5s is enough (and stays within free-plan writes).
+    if (at - lastSlowWriteRef.current >= 5000) {
+      lastSlowWriteRef.current = at;
+      updateDoc(doc(db, 'watchRooms', room), { hostTime: Math.max(0, time), hostTimeAtMs: at, updatedAtMs: at }).catch(() => {});
+    }
   }, [enabled, room, uid, hostUid]);
 
   return { connected, isHost, selfId: uid, members, messages, error, hostTime, hostTimeAt, hostPaused, sendChat, sendPlayer, sendTime };

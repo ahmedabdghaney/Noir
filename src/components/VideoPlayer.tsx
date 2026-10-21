@@ -62,6 +62,8 @@ interface VideoPlayerProps {
   syncBehindSeconds?: number | null;   // how far behind the host (shows a Sync button)
   hostNotice?: { text: string; key: number } | null;  // small pill for the host's pause/resume/skip
   hostPauseReason?: '' | 'buffering';  // host paused on purpose, or its video is loading
+  syncRate?: number;  // watch-party member: speed used to catch up with / wait for the host
+  videoElementRef?: { current: HTMLVideoElement | null };  // lets the page check what is buffered
   onSyncToHost?: () => void;
   onClose: () => void;
   onSwitchMode: (mode: 'movie' | 'trailer') => void;
@@ -145,7 +147,7 @@ export default function VideoPlayer({
   isLiveHost = false, isLiveSession = false,
   startAt = 0,
   onTimeUpdate, onPlaybackProgress, onSeek, onEmbedPlayback,
-  onAutoplayBlocked, onNativeChange, syncBehindSeconds = null, onSyncToHost, hostNotice = null, hostPauseReason = '',
+  onAutoplayBlocked, onNativeChange, syncBehindSeconds = null, onSyncToHost, hostNotice = null, hostPauseReason = '', syncRate = 1, videoElementRef,
   onClose, onSwitchMode, onNextEpisode,
 }: VideoPlayerProps) {
   const isMobileAndroidApp =
@@ -241,6 +243,8 @@ export default function VideoPlayer({
   controlsLockedRef.current = controlsLocked;
   const isPausedByHostRef = useRef(isPausedByHost);
   isPausedByHostRef.current = isPausedByHost;
+  const syncRateRef = useRef(syncRate);
+  syncRateRef.current = controlsLocked ? syncRate : 1;
   // Small notice for the host's actions (members only), visible for ~2s.
   const [visibleHostNotice, setVisibleHostNotice] = useState<string | null>(null);
   useEffect(() => {
@@ -482,6 +486,19 @@ export default function VideoPlayer({
 
   useEffect(() => { onNativeChange?.(isNative); }, [isNative]);
 
+  useEffect(() => {
+    if (!videoElementRef) return;
+    videoElementRef.current = isNative ? videoRef.current : null;
+    return () => { videoElementRef.current = null; };
+  }, [isNative, hlsUrl, videoElementRef]);
+
+  // Apply the member's catch-up speed (browsers keep the voice pitch).
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!isNative || !controlsLocked || !video) return;
+    if (video.playbackRate !== syncRate) video.playbackRate = syncRate;
+  }, [isNative, controlsLocked, syncRate, hlsUrl]);
+
   // Watch-party host (Noir's player): members follow what the host's video is
   // ACTUALLY doing. "play" only once frames are playing; if the host's video is
   // loading for more than 0.3s (slow internet, after a jump) members hold with
@@ -535,7 +552,8 @@ export default function VideoPlayer({
         }
       }, 400);
     };
-    const onRate = () => { if (video.playbackRate !== 1) video.playbackRate = 1; };
+    // Members can't change speed themselves; only the sync speed is allowed.
+    const onRate = () => { if (video.playbackRate !== syncRateRef.current) video.playbackRate = syncRateRef.current; };
     video.addEventListener('pause', onPause);
     video.addEventListener('ratechange', onRate);
     return () => {

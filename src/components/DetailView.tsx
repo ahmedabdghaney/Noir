@@ -846,7 +846,7 @@ export default function DetailView({
     correctMemberDrift(seconds);
     if (!wtConnected || !wtIsHost) return;
     const now = Date.now();
-    if (now - lastTimeBroadcastRef.current >= 2000) {
+    if (now - lastTimeBroadcastRef.current >= 900) {
       lastTimeBroadcastRef.current = now;
       wtSendTime(seconds);
     }
@@ -881,17 +881,47 @@ export default function DetailView({
   // Noir's own player can jump in place, so members follow the host closely there
   // (1.5s). Embedded players (Vidy) reload to move, so they only re-sync on big gaps.
   const memberNativeRef = useRef(false);
+  const memberVideoRef = useRef<HTMLVideoElement | null>(null);
+  // Playback speed the member's player uses to close small gaps with the host.
+  const [syncRate, setSyncRate] = useState(1);
+  useEffect(() => {
+    if (!isWatchTogetherOpen || wtIsHost || isPausedByHost) setSyncRate(1);
+  }, [isWatchTogetherOpen, wtIsHost, isPausedByHost]);
   const correctMemberDrift = (seconds: number) => {
     if (!wtConnected || wtIsHost || !isWatchTogetherOpen || isPausedByHost) return;
     const host = hostSyncRef.current;
     if (!host.at || host.paused) return;
     const off = Math.abs(seconds - hostPositionNow());
     if (memberNativeRef.current) {
-      if (off < 1.5 || Date.now() - lastDriftFixRef.current < 3000) return;
-      lastDriftFixRef.current = Date.now();
+      // 1) Gap of 0.6s+ and the host's spot is already downloaded here: jump straight
+      //    there (instant, no loading) — like Cinema Box does.
+      // 2) Not downloaded: close small gaps by playing slightly faster (behind, up to
+      //    1.25×) or slower (ahead, down to 0.85×) — no stop, no loading.
+      // 3) Big gap (4s+): jump, landing 1s ahead to cover loading time.
+      const diff = seconds - hostPositionNow(); // + ahead, − behind
+      const abs = Math.abs(diff);
       setMemberDrift(null);
-      // +0.3s covers the short pause while the video jumps.
-      setStartAtSnapshot(Math.max(0, hostPositionNow() + 0.3));
+      const video = memberVideoRef.current;
+      const target = hostPositionNow() + 0.15;
+      const targetBuffered = !!video && Array.from({ length: video.buffered.length }, (_, i) => i)
+        .some((i) => video.buffered.start(i) <= target && target <= video.buffered.end(i) - 0.5);
+      if (abs >= 0.6 && targetBuffered && Date.now() - lastDriftFixRef.current >= 1500) {
+        lastDriftFixRef.current = Date.now();
+        setSyncRate(1);
+        setStartAtSnapshot(Math.max(0, target));
+        return;
+      }
+      if (abs > 4) {
+        if (Date.now() - lastDriftFixRef.current < 3000) return;
+        lastDriftFixRef.current = Date.now();
+        setSyncRate(1);
+        setStartAtSnapshot(Math.max(0, hostPositionNow() + 1));
+        return;
+      }
+      let rate = 1;
+      if (abs > 0.2) rate = diff < 0 ? 1 + Math.min(0.25, abs * 0.25) : 1 - Math.min(0.15, abs * 0.15);
+      rate = Math.round(rate * 50) / 50;
+      setSyncRate((prev) => (prev === rate ? prev : rate));
       return;
     }
     if (memberAutoplayBlockedRef.current) {
@@ -1902,6 +1932,8 @@ export default function DetailView({
             syncBehindSeconds={memberDrift}
             hostNotice={hostNotice}
             hostPauseReason={hostPauseReason}
+            syncRate={syncRate}
+            videoElementRef={memberVideoRef}
             onSyncToHost={syncMemberToHost}
             onHostPause={handleHostPause}
             onHostResume={handleHostResume}
