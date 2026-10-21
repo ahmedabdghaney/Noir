@@ -57,6 +57,7 @@ interface VideoPlayerProps {
   onEmbedPlayback?: (action: 'play' | 'pause', time: number) => void;
   // Watch-party members whose browser blocks auto-start (iPhone/Safari):
   onAutoplayBlocked?: () => void;
+  onNativeChange?: (native: boolean) => void;  // Noir's own player (can jump in place) or an embed
   syncBehindSeconds?: number | null;   // how far behind the host (shows a Sync button)
   hostNotice?: { text: string; key: number } | null;  // small pill for the host's pause/resume/skip
   onSyncToHost?: () => void;
@@ -142,7 +143,7 @@ export default function VideoPlayer({
   isLiveHost = false, isLiveSession = false,
   startAt = 0,
   onTimeUpdate, onPlaybackProgress, onSeek, onEmbedPlayback,
-  onAutoplayBlocked, syncBehindSeconds = null, onSyncToHost, hostNotice = null,
+  onAutoplayBlocked, onNativeChange, syncBehindSeconds = null, onSyncToHost, hostNotice = null,
   onClose, onSwitchMode, onNextEpisode,
 }: VideoPlayerProps) {
   const isMobileAndroidApp =
@@ -470,11 +471,14 @@ export default function VideoPlayer({
     const video = videoRef.current;
     if (!video || !Number.isFinite(video.duration) || video.duration <= 0) return;
     const target = Math.max(0, Math.min(startAt, Math.max(0, video.duration - 3)));
-    if (Math.abs(video.currentTime - target) > 2) {
+    // Watch-party members follow the host closely; otherwise only real jumps move us.
+    if (Math.abs(video.currentTime - target) > (isLiveSession && !isLiveHost ? 0.8 : 2)) {
       video.currentTime = target;
       setCurrentTime(target);
     }
   }, [id, isNative, episode, season, startAt, type]);
+
+  useEffect(() => { onNativeChange?.(isNative); }, [isNative]);
 
   // Watch-party member: playback follows the host only. If the member's video gets
   // paused some other way (headphones, lock screen) while the host plays, resume.

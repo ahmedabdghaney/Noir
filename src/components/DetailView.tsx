@@ -611,13 +611,14 @@ export default function DetailView({
   useEffect(() => {
     if (!wtConnected || wtIsHost) return;
     if (didAutoOpenForHostTimeRef.current) return;
-    if (!isPlayerOpen && wtHostTime > 5) {
+    // Late joiner: open the player at the host's position as soon as it is known.
+    if (!isPlayerOpen && wtHostTimeAt > 0) {
       didAutoOpenForHostTimeRef.current = true;
-      setStartAtSnapshot(Math.floor(wtHostTime));
+      setStartAtSnapshot(Math.max(0, hostPositionNow()));
       setPlayerMode('movie');
       setIsPlayerOpen(true);
     }
-  }, [wtConnected, wtIsHost, wtHostTime, isPlayerOpen]);
+  }, [wtConnected, wtIsHost, wtHostTime, wtHostTimeAt, isPlayerOpen]);
 
   // Reset the auto-open guard whenever the live session state changes
   useEffect(() => {
@@ -812,10 +813,8 @@ export default function DetailView({
       setStartAtSnapshot(startFrom);
       localTimeRef.current = startFrom;
     }
-    // If host in a live session, tell everyone to open the stream too
-    if (isWatchTogetherOpen && wtConnected && wtIsHost && mode === 'movie') {
-      wtSendPlayer('play', localTimeRef.current);
-    }
+    // The host's "play" goes to the room when their video actually starts (the player
+    // reports it), not on this click: if the host's video waits, members wait too.
   };
 
   // Host-only pause/resume handlers for live sessions
@@ -843,7 +842,7 @@ export default function DetailView({
     correctMemberDrift(seconds);
     if (!wtConnected || !wtIsHost) return;
     const now = Date.now();
-    if (now - lastTimeBroadcastRef.current >= 4000) {
+    if (now - lastTimeBroadcastRef.current >= 2000) {
       lastTimeBroadcastRef.current = now;
       wtSendTime(seconds);
     }
@@ -874,11 +873,22 @@ export default function DetailView({
     const host = hostSyncRef.current;
     return host.time + (host.paused ? 0 : (Date.now() - host.at) / 1000);
   };
+  // Noir's own player can jump in place, so members follow the host closely there
+  // (1.5s). Embedded players (Vidy) reload to move, so they only re-sync on big gaps.
+  const memberNativeRef = useRef(false);
   const correctMemberDrift = (seconds: number) => {
     if (!wtConnected || wtIsHost || !isWatchTogetherOpen || isPausedByHost) return;
     const host = hostSyncRef.current;
     if (!host.at || host.paused) return;
     const off = Math.abs(seconds - hostPositionNow());
+    if (memberNativeRef.current) {
+      if (off < 1.5 || Date.now() - lastDriftFixRef.current < 3000) return;
+      lastDriftFixRef.current = Date.now();
+      setMemberDrift(null);
+      // +0.3s covers the short pause while the video jumps.
+      setStartAtSnapshot(Math.max(0, hostPositionNow() + 0.3));
+      return;
+    }
     if (memberAutoplayBlockedRef.current) {
       const shown = off >= 8 ? Math.round(off) : null;
       setMemberDrift((prev) => (prev === shown || (prev !== null && shown !== null && Math.abs(prev - shown) < 3) ? prev : shown));
@@ -1883,6 +1893,7 @@ export default function DetailView({
             onSeek={handleSeek}
             onEmbedPlayback={handleEmbedPlayback}
             onAutoplayBlocked={() => { memberAutoplayBlockedRef.current = true; }}
+            onNativeChange={(native) => { memberNativeRef.current = native; }}
             syncBehindSeconds={memberDrift}
             hostNotice={hostNotice}
             onSyncToHost={syncMemberToHost}

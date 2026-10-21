@@ -99,6 +99,7 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
     let lastSignalAt = 0;
     let firstRoomSnap = true;
     let firstMembersSnap = true;
+    let lastHostTimeAtMs = 0;
     let knownMembers = new Map<string, string>();
 
     const writePresence = () =>
@@ -126,9 +127,15 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
         const playing = !pb || pb.action !== 'pause';
         setHostPaused(!playing);
         if (typeof d.hostTime === 'number') {
-          // While the host is playing, their position keeps moving since the last report.
-          const drift = playing && d.hostTimeAtMs ? (Date.now() - d.hostTimeAtMs) / 1000 : 0;
-          setHostTime(d.hostTime + Math.max(0, drift));
+          // A fresh report arrives right after the host writes it, so its arrival time is
+          // the reference (device clocks can differ by seconds). Only an old report — the
+          // first snapshot when joining — is aged using the host's clock, capped at 1 min.
+          const isFreshReport = !firstRoomSnap && d.hostTimeAtMs !== lastHostTimeAtMs;
+          const age = isFreshReport || !d.hostTimeAtMs
+            ? 0
+            : Math.min(60, Math.max(0, (Date.now() - d.hostTimeAtMs) / 1000));
+          lastHostTimeAtMs = d.hostTimeAtMs || 0;
+          setHostTime(d.hostTime + (playing ? age : 0));
           setHostTimeAt(Date.now());
         }
         if (pb && typeof pb.atMs === 'number') {
@@ -259,7 +266,7 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
   const sendTime = useCallback((time: number) => {
     if (!enabled || !room || !uid || uid !== hostUid) return;
     const at = Date.now();
-    if (at - lastTimeWriteRef.current < 5000) return;
+    if (at - lastTimeWriteRef.current < 1800) return;
     lastTimeWriteRef.current = at;
     updateDoc(doc(db, 'watchRooms', room), { hostTime: Math.max(0, time), hostTimeAtMs: at, updatedAtMs: at }).catch(() => {});
   }, [enabled, room, uid, hostUid]);
