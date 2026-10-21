@@ -162,6 +162,9 @@ export default function DetailView({
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [playerMode, setPlayerMode] = useState<'movie' | 'trailer'>('movie');
   const [isPausedByHost, setIsPausedByHost] = useState(false);
+  // Small notice shown inside members' players for the host's actions.
+  const [hostNotice, setHostNotice] = useState<{ text: string; key: number } | null>(null);
+  const noticeHost = (text: string) => setHostNotice({ text, key: Date.now() });
   const [hostPauseByName, setHostPauseByName] = useState<string>('');
   // Local playback time reported by the iframe (for the host)
   const localTimeRef = useRef<number>(0);
@@ -232,6 +235,7 @@ export default function DetailView({
     onPlayerSignal: (sig) => {
       // A remote host opened/controlled the player: mirror the action locally
       if (sig.action === 'play') {
+        if (isPausedByHost) noticeHost('▶ Host resumed');
         // Snapshot the host's current time so the iframe boots from that point.
         setStartAtSnapshot(Math.max(0, Math.floor(sig.time || 0)));
         setIsPlayerOpen(true);
@@ -243,17 +247,21 @@ export default function DetailView({
         setStartAtSnapshot(Math.max(0, Math.floor(sig.time || 0)));
         setIsPausedByHost(true);
         setHostPauseByName(sig.byName);
-        showToast(`${sig.byName} paused playback`);
       } else if (sig.action === 'seek') {
         // Host scrubbed the timeline. Reload the iframe at the new position.
         const t = Math.max(0, Math.floor(sig.time || 0));
+        const jump = (sig.time || 0) - localTimeRef.current;
+        noticeHost(
+          Math.abs(jump - 10) < 2.5 ? '⏩ Host +10s'
+            : Math.abs(jump + 10) < 2.5 ? '⏪ Host −10s'
+              : `Host jumped to ${formatHms(t)}`,
+        );
         setStartAtSnapshot(t);
         localTimeRef.current = t;
         if (!isPlayerOpen) {
           setIsPlayerOpen(true);
           setPlayerMode('movie');
         }
-        showToast(`${sig.byName} jumped to ${formatHms(t)}`);
       }
     },
   });
@@ -1876,6 +1884,7 @@ export default function DetailView({
             onEmbedPlayback={handleEmbedPlayback}
             onAutoplayBlocked={() => { memberAutoplayBlockedRef.current = true; }}
             syncBehindSeconds={memberDrift}
+            hostNotice={hostNotice}
             onSyncToHost={syncMemberToHost}
             onHostPause={handleHostPause}
             onHostResume={handleHostResume}

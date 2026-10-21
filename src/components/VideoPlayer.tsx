@@ -58,6 +58,7 @@ interface VideoPlayerProps {
   // Watch-party members whose browser blocks auto-start (iPhone/Safari):
   onAutoplayBlocked?: () => void;
   syncBehindSeconds?: number | null;   // how far behind the host (shows a Sync button)
+  hostNotice?: { text: string; key: number } | null;  // small pill for the host's pause/resume/skip
   onSyncToHost?: () => void;
   onClose: () => void;
   onSwitchMode: (mode: 'movie' | 'trailer') => void;
@@ -141,7 +142,7 @@ export default function VideoPlayer({
   isLiveHost = false, isLiveSession = false,
   startAt = 0,
   onTimeUpdate, onPlaybackProgress, onSeek, onEmbedPlayback,
-  onAutoplayBlocked, syncBehindSeconds = null, onSyncToHost,
+  onAutoplayBlocked, syncBehindSeconds = null, onSyncToHost, hostNotice = null,
   onClose, onSwitchMode, onNextEpisode,
 }: VideoPlayerProps) {
   const isMobileAndroidApp =
@@ -237,13 +238,14 @@ export default function VideoPlayer({
   controlsLockedRef.current = controlsLocked;
   const isPausedByHostRef = useRef(isPausedByHost);
   isPausedByHostRef.current = isPausedByHost;
-  const [lockNotice, setLockNotice] = useState(false);
-  const lockNoticeTimer = useRef<ReturnType<typeof setTimeout>>();
-  const flashLockNotice = () => {
-    setLockNotice(true);
-    clearTimeout(lockNoticeTimer.current);
-    lockNoticeTimer.current = setTimeout(() => setLockNotice(false), 2200);
-  };
+  // Small notice for the host's actions (members only), visible for ~2s.
+  const [visibleHostNotice, setVisibleHostNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!hostNotice?.text) return;
+    setVisibleHostNotice(hostNotice.text);
+    const timer = setTimeout(() => setVisibleHostNotice(null), 2200);
+    return () => clearTimeout(timer);
+  }, [hostNotice?.key]);
   const [iosNativeFs,     setIosNativeFs]     = useState(false); // iPhone native video fullscreen
   const [autoplayNext, setAutoplayNext] = useState(
     () => localStorage.getItem('noir_autoplay_next') !== 'false',
@@ -1697,7 +1699,7 @@ export default function VideoPlayer({
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
-    if (controlsLockedRef.current) { flashLockNotice(); return; }
+    if (controlsLockedRef.current) return;
     markUserActive();
     clearTimeout(playPulseTimer.current);
     if (v.paused) {
@@ -1740,7 +1742,7 @@ export default function VideoPlayer({
 
   const seekBy = (s: number) => {
     if (!videoRef.current) return;
-    if (controlsLockedRef.current) { flashLockNotice(); return; }
+    if (controlsLockedRef.current) return;
     markUserActive();
     const nextTime = Math.max(
       0,
@@ -1929,6 +1931,11 @@ export default function VideoPlayer({
   const handleVideoClick = (e: ReactMouseEvent) => {
     if (!isNative) return;
     e.stopPropagation();
+    // Member whose browser blocked the start: a tap anywhere joins the host's playback.
+    if (controlsLockedRef.current && needsTapToPlay && videoRef.current) {
+      videoRef.current.play().then(() => setNeedsTapToPlay(false)).catch(() => {});
+      return;
+    }
     if (ignoreNextClickRef.current) {
       ignoreNextClickRef.current = false;
       return;
@@ -1967,7 +1974,7 @@ export default function VideoPlayer({
 
   const startScrub = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (!videoRef.current || !duration) return;
-    if (controlsLockedRef.current) { flashLockNotice(); return; }
+    if (controlsLockedRef.current) return;
     e.preventDefault();
     markUserActive();
     activeScrubPointerRef.current = e.pointerId;
@@ -2609,7 +2616,15 @@ export default function VideoPlayer({
           )}
 
           {/* host paused overlay */}
-          {isPausedByHost && playMode === 'movie' && (
+          {isPausedByHost && playMode === 'movie' && isNative && (
+            <div className="pointer-events-none absolute inset-x-0 top-3 z-40 flex justify-center px-4" dir="ltr">
+              <div className="flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md">
+                <Pause className="h-3 w-3 fill-amber-400 text-amber-400" />
+                Host paused
+              </div>
+            </div>
+          )}
+          {isPausedByHost && playMode === 'movie' && !isNative && (
             <div className="absolute inset-0 z-20 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center gap-4 select-none" dir="ltr">
               <div className="w-16 h-16 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center">
                 <Pause className="w-7 h-7 text-amber-400 fill-amber-400" />
@@ -2623,32 +2638,32 @@ export default function VideoPlayer({
             </div>
           )}
 
-          {/* Member tried to control playback */}
-          {controlsLocked && lockNotice && (
-            <div className="pointer-events-none absolute inset-x-0 top-1/2 z-40 flex -translate-y-1/2 justify-center px-4" dir="ltr">
-              <div className="flex items-center gap-2 rounded-full border border-white/15 bg-black/80 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur-md">
-                <Lock className="h-4 w-4 text-[#A0C9CB]" />
-                Only the host can pause or skip
-              </div>
-            </div>
-          )}
-
-          {/* Watch-party member prompts (Vidy): tap to start after a resume, or re-sync. */}
-          {isLiveMember && !isPausedByHost && playMode === 'movie' && (needsTapToPlay || (syncBehindSeconds ?? 0) > 0) && (
-            <div className="pointer-events-none absolute inset-x-0 top-[max(1rem,env(safe-area-inset-top))] z-40 flex justify-center px-4" dir="ltr">
-              {needsTapToPlay ? (
-                <div className="flex items-center gap-2 rounded-full border border-[#A0C9CB]/40 bg-black/80 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur-md">
-                  <Play className="h-4 w-4 fill-[#A0C9CB] text-[#A0C9CB]" />
-                  Tap ▶ in the player to continue with the host
+          {/* Watch-party member: small pills — host's action, tap-to-join (iPhone), re-sync. */}
+          {isLiveMember && playMode === 'movie' && (visibleHostNotice || (!isPausedByHost && (needsTapToPlay || (syncBehindSeconds ?? 0) > 0))) && (
+            <div className="pointer-events-none absolute inset-x-0 top-3 z-40 flex justify-center px-4" dir="ltr">
+              {visibleHostNotice ? (
+                <div className="rounded-full bg-black/70 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md">
+                  {visibleHostNotice}
                 </div>
+              ) : needsTapToPlay ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    if (isNative) videoRef.current?.play().then(() => setNeedsTapToPlay(false)).catch(() => {});
+                  }}
+                  className={`${isNative ? 'pointer-events-auto' : ''} flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md`}
+                >
+                  <Play className="h-3 w-3 fill-[#A0C9CB] text-[#A0C9CB]" />
+                  Tap to join
+                </button>
               ) : (
                 <button
                   type="button"
                   onClick={onSyncToHost}
-                  className="pointer-events-auto flex items-center gap-2 rounded-full border border-[#A0C9CB]/40 bg-black/80 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur-md active:scale-95"
+                  className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md active:scale-95"
                 >
-                  You're {Math.round(syncBehindSeconds || 0)}s off the host
-                  <span className="rounded-full bg-[#A0C9CB] px-2.5 py-0.5 text-xs font-bold text-black">Sync</span>
+                  {Math.round(syncBehindSeconds || 0)}s off · <span className="text-[#A0C9CB]">Sync</span>
                 </button>
               )}
             </div>
@@ -2722,9 +2737,9 @@ export default function VideoPlayer({
 
                   {/* back 10s · play/pause · forward 10s (host / normal viewing only) */}
                   {controlsLocked && (
-                    <span className="flex h-10 items-center gap-1.5 rounded-full bg-white/[0.08] px-3 text-xs font-semibold text-white/75">
+                    <span className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-white/[0.08] px-2.5 text-xs font-semibold text-white/75" title="Host controls playback">
                       <Lock className="h-3.5 w-3.5 text-[#A0C9CB]" />
-                      Host controls playback
+                      <span className="hidden whitespace-nowrap sm:inline">Host controls playback</span>
                     </span>
                   )}
                   {!isTvAndroidApp && !controlsLocked && (
@@ -2933,7 +2948,7 @@ export default function VideoPlayer({
                   </div>
 
                   {/* fullscreen */}
-                  {!isTvAndroidApp && !isPhoneDevice && (
+                  {!isTvAndroidApp && (isNative || !isPhoneDevice) && (
                     <Btn onClick={toggleFullscreen} label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
                       {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
                     </Btn>
