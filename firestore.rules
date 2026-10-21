@@ -274,7 +274,8 @@ service cloud.firestore {
         && (!('hostTime' in incoming()) || incoming().hostTime is number)
         && (!('hostTimeAtMs' in incoming()) || incoming().hostTimeAtMs is int)
         && (!('playback' in incoming()) || (
-          incoming().playback.keys().hasOnly(['action', 'time', 'byUid', 'byName', 'atMs'])
+          incoming().playback.keys().hasOnly(['action', 'time', 'byUid', 'byName', 'atMs', 'reason'])
+          && (!('reason' in incoming().playback) || incoming().playback.reason == 'buffering')
           && incoming().playback.action in ['play', 'pause', 'seek']
           && incoming().playback.time is number
           && incoming().playback.byUid == request.auth.uid

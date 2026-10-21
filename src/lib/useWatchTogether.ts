@@ -40,7 +40,8 @@ export interface WtMessage {
 }
 
 type PlayerAction = 'play' | 'pause' | 'seek';
-type PlayerSignal = { action: PlayerAction; time: number; byName: string };
+// reason 'buffering' = the host's video is loading (not an intentional pause).
+type PlayerSignal = { action: PlayerAction; time: number; byName: string; reason?: 'buffering' };
 
 interface UseWatchTogetherOpts {
   enabled: boolean;
@@ -178,11 +179,11 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
           if (firstPlayback) {
             lastSignalAt = pb.atMs;
             if (pb.action === 'pause' && pb.byUid !== uid) {
-              signalRef.current?.({ action: 'pause', time: pb.time, byName: pb.byName });
+              signalRef.current?.({ action: 'pause', time: pb.time, byName: pb.byName, reason: pb.reason });
             }
           } else if (pb.atMs > lastSignalAt && pb.byUid !== uid) {
             lastSignalAt = pb.atMs;
-            signalRef.current?.({ action: pb.action, time: pb.time, byName: pb.byName });
+            signalRef.current?.({ action: pb.action, time: pb.time, byName: pb.byName, reason: pb.reason });
           }
         }
         firstPlayback = false;
@@ -281,10 +282,11 @@ export function useWatchTogether({ enabled, room, name, onPlayerSignal }: UseWat
     }).catch(() => setError('Message not sent. Try again.'));
   }, [enabled, room, uid]);
 
-  const sendPlayer = useCallback((action: PlayerAction, time: number) => {
+  const sendPlayer = useCallback((action: PlayerAction, time: number, reason?: 'buffering') => {
     if (!enabled || !room || !uid || uid !== hostUid) return;
     const at = Date.now();
-    const playback = { action, time: Math.max(0, time), byUid: uid, byName: (nameRef.current || 'Host').slice(0, 60), atMs: at };
+    const playback: Record<string, unknown> = { action, time: Math.max(0, time), byUid: uid, byName: (nameRef.current || 'Host').slice(0, 60), atMs: at };
+    if (reason && action === 'pause') playback.reason = reason;
     rtdbUpdate(rtdbRef(rtdb, `watchParty/${room}`), { hostUid: uid, playback, hostTime: Math.max(0, time), hostTimeAtMs: at }).catch(() => {});
     updateDoc(doc(db, 'watchRooms', room), {
       playback,

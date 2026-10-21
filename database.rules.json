@@ -16,6 +16,7 @@
           "byUid": { ".validate": "newData.val() === auth.uid" },
           "byName": { ".validate": "newData.isString() && newData.val().length <= 60" },
           "atMs": { ".validate": "newData.isNumber()" },
+          "reason": { ".validate": "newData.val() === 'buffering'" },
           "$other": { ".validate": false }
         },
         "$other": { ".validate": false }

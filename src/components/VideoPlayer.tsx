@@ -54,12 +54,14 @@ interface VideoPlayerProps {
   onHostPause?: () => void;
   onHostResume?: () => void;
   // Host's play/pause inside an embedded player (Vidy), reported for the watch party.
-  onEmbedPlayback?: (action: 'play' | 'pause', time: number) => void;
+  // 'buffering' = the host's video is loading (members hold until it plays again).
+  onEmbedPlayback?: (action: 'play' | 'pause' | 'buffering', time: number) => void;
   // Watch-party members whose browser blocks auto-start (iPhone/Safari):
   onAutoplayBlocked?: () => void;
   onNativeChange?: (native: boolean) => void;  // Noir's own player (can jump in place) or an embed
   syncBehindSeconds?: number | null;   // how far behind the host (shows a Sync button)
   hostNotice?: { text: string; key: number } | null;  // small pill for the host's pause/resume/skip
+  hostPauseReason?: '' | 'buffering';  // host paused on purpose, or its video is loading
   onSyncToHost?: () => void;
   onClose: () => void;
   onSwitchMode: (mode: 'movie' | 'trailer') => void;
@@ -143,7 +145,7 @@ export default function VideoPlayer({
   isLiveHost = false, isLiveSession = false,
   startAt = 0,
   onTimeUpdate, onPlaybackProgress, onSeek, onEmbedPlayback,
-  onAutoplayBlocked, onNativeChange, syncBehindSeconds = null, onSyncToHost, hostNotice = null,
+  onAutoplayBlocked, onNativeChange, syncBehindSeconds = null, onSyncToHost, hostNotice = null, hostPauseReason = '',
   onClose, onSwitchMode, onNextEpisode,
 }: VideoPlayerProps) {
   const isMobileAndroidApp =
@@ -479,6 +481,43 @@ export default function VideoPlayer({
   }, [id, isNative, episode, season, startAt, type]);
 
   useEffect(() => { onNativeChange?.(isNative); }, [isNative]);
+
+  // Watch-party host (Noir's player): members follow what the host's video is
+  // ACTUALLY doing. "play" only once frames are playing; if the host's video is
+  // loading for more than 0.3s (slow internet, after a jump) members hold with
+  // it; a deliberate pause is a normal pause.
+  useEffect(() => {
+    if (!isNative || !isLiveHost) return;
+    const video = videoRef.current;
+    if (!video) return;
+    let state: 'playing' | 'paused' | 'loading' | '' = '';
+    let loadingTimer: ReturnType<typeof setTimeout> | undefined;
+    const report = (action: 'play' | 'pause' | 'buffering') =>
+      onEmbedPlaybackRef.current?.(action, video.currentTime || 0);
+    const evaluate = () => {
+      const next = video.ended
+        ? 'paused'
+        : video.paused
+          ? 'paused'
+          : video.seeking || video.readyState < 3
+            ? 'loading'
+            : 'playing';
+      if (next === state) return;
+      const prev = state;
+      state = next;
+      clearTimeout(loadingTimer);
+      if (next === 'playing') report('play');
+      else if (next === 'paused') { if (prev) report('pause'); }
+      else loadingTimer = setTimeout(() => { if (state === 'loading') report('buffering'); }, 300);
+    };
+    const events = ['play', 'playing', 'pause', 'waiting', 'seeking', 'seeked', 'canplay', 'canplaythrough', 'stalled', 'timeupdate', 'ended'];
+    events.forEach((e) => video.addEventListener(e, evaluate));
+    evaluate();
+    return () => {
+      clearTimeout(loadingTimer);
+      events.forEach((e) => video.removeEventListener(e, evaluate));
+    };
+  }, [isNative, isLiveHost, hlsUrl]);
 
   // Watch-party member: playback follows the host only. If the member's video gets
   // paused some other way (headphones, lock screen) while the host plays, resume.
@@ -2317,8 +2356,6 @@ export default function VideoPlayer({
                 setIsPlaying(true);
                 resetHideTimer();
                 setNeedsTapToPlay(false);
-                // Watch party: the host's play in Noir's own player goes to the room.
-                if (isLiveHost) onEmbedPlaybackRef.current?.('play', videoRef.current?.currentTime || 0);
               }}
               onPlaying={() => { setIsLoading(false); setIsBuffering(false); }}
               onWaiting={() => setIsBuffering(true)}
@@ -2326,9 +2363,6 @@ export default function VideoPlayer({
               onSeeked={() => setIsBuffering(false)}
               onPause={() => {
                 setIsPlaying(false);
-                // Watch party: the host's pause (not the end of the video) goes to the room.
-                const v = videoRef.current;
-                if (isLiveHost && v && !v.ended) onEmbedPlaybackRef.current?.('pause', v.currentTime || 0);
                 setControlsVisible(true);
                 clearTimeout(hideTimer.current);
                 reportNativeProgress(videoRef.current, false, true);
@@ -2658,8 +2692,11 @@ export default function VideoPlayer({
           {isPausedByHost && playMode === 'movie' && isNative && (
             <div className="pointer-events-none absolute inset-x-0 top-3 z-40 flex justify-center px-4" dir="ltr">
               <div className="flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md">
-                <Pause className="h-3 w-3 fill-amber-400 text-amber-400" />
-                Host paused
+                {hostPauseReason === 'buffering' ? (
+                  <><Loader className="h-3 w-3 animate-spin text-[#A0C9CB]" /> Host is loading…</>
+                ) : (
+                  <><Pause className="h-3 w-3 fill-amber-400 text-amber-400" /> Host paused</>
+                )}
               </div>
             </div>
           )}

@@ -162,6 +162,8 @@ export default function DetailView({
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [playerMode, setPlayerMode] = useState<'movie' | 'trailer'>('movie');
   const [isPausedByHost, setIsPausedByHost] = useState(false);
+  // Why the host is paused: 'buffering' = the host's video is loading.
+  const [hostPauseReason, setHostPauseReason] = useState<'' | 'buffering'>('');
   // Small notice shown inside members' players for the host's actions.
   const [hostNotice, setHostNotice] = useState<{ text: string; key: number } | null>(null);
   const noticeHost = (text: string) => setHostNotice({ text, key: Date.now() });
@@ -235,7 +237,8 @@ export default function DetailView({
     onPlayerSignal: (sig) => {
       // A remote host opened/controlled the player: mirror the action locally
       if (sig.action === 'play') {
-        if (isPausedByHost) noticeHost('▶ Host resumed');
+        if (isPausedByHost && hostPauseReason !== 'buffering') noticeHost('▶ Host resumed');
+        setHostPauseReason('');
         // Snapshot the host's current time so the iframe boots from that point.
         setStartAtSnapshot(Math.max(0, Math.floor(sig.time || 0)));
         setIsPlayerOpen(true);
@@ -244,9 +247,10 @@ export default function DetailView({
         setHostPauseByName('');
       } else if (sig.action === 'pause') {
         // Stop on the host's frame (Noir's own player seeks in place while paused).
-        setStartAtSnapshot(Math.max(0, Math.floor(sig.time || 0)));
+        setStartAtSnapshot(Math.max(0, sig.time || 0));
         setIsPausedByHost(true);
         setHostPauseByName(sig.byName);
+        setHostPauseReason(sig.reason === 'buffering' ? 'buffering' : '');
       } else if (sig.action === 'seek') {
         // Host scrubbed the timeline. Reload the iframe at the new position.
         const t = Math.max(0, Math.floor(sig.time || 0));
@@ -850,14 +854,15 @@ export default function DetailView({
 
   // Host pressed play/pause inside the Vidy player: tell the room (the host's own
   // player keeps going as is — only members follow).
-  const lastEmbedActionRef = useRef<'play' | 'pause' | ''>('');
-  const handleEmbedPlayback = (action: 'play' | 'pause', time: number) => {
+  const lastEmbedActionRef = useRef<'play' | 'pause' | 'buffering' | ''>('');
+  const handleEmbedPlayback = (action: 'play' | 'pause' | 'buffering', time: number) => {
     localTimeRef.current = time;
     if (!wtConnected || !wtIsHost || !isWatchTogetherOpen) return;
     if (lastEmbedActionRef.current === action) return;
     lastEmbedActionRef.current = action;
     lastTimeBroadcastRef.current = Date.now();
-    wtSendPlayer(action, time);
+    if (action === 'buffering') wtSendPlayer('pause', time, 'buffering');
+    else wtSendPlayer(action, time);
   };
 
   // Members: if their player drifts from the host, restart it at the host's position.
@@ -1896,6 +1901,7 @@ export default function DetailView({
             onNativeChange={(native) => { memberNativeRef.current = native; }}
             syncBehindSeconds={memberDrift}
             hostNotice={hostNotice}
+            hostPauseReason={hostPauseReason}
             onSyncToHost={syncMemberToHost}
             onHostPause={handleHostPause}
             onHostResume={handleHostResume}
